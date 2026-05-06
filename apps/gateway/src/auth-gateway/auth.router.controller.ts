@@ -133,6 +133,11 @@ export class AuthGatewayController implements OnModuleInit {
 
 	@Get('google/tokens')
 	@IsPublic()
+	@ApiOperation({
+		summary: 'Get access and refresh tokens from login token',
+		description:
+			"Get access and refresh tokens from login token after /google/callback redirected to Frontend's redirection URL",
+	})
 	@ApiResponseEntity(ResponseTokensDto)
 	@SerializeOptions({ type: ResponseTokensDto })
 	async getGoogleTokens(@Query('loginToken') loginToken: string) {
