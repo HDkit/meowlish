@@ -461,12 +461,14 @@ message UsersAttemptHistory {
 
 	message MinimalAttemptInfo {
 		string                             id             = 1;
-		google.protobuf.Timestamp          started_at     = 2;
-		optional google.protobuf.Timestamp ended_at       = 3;
-		int32                              duration_limit = 4;
-		optional double                    score          = 5;
-		optional double                    total_points   = 6;
-		bool                               is_strict      = 7;
+		string                             exam_id        = 2;
+		string                             exam_name      = 3;
+		google.protobuf.Timestamp          started_at     = 4;
+		optional google.protobuf.Timestamp ended_at       = 5;
+		int32                              duration_limit = 6;
+		optional double                    score          = 7;
+		optional double                    total_points   = 8;
+		bool                               is_strict      = 9;
 	}
 }
 

@@ -416,6 +416,8 @@ export interface UsersAttemptHistory {
 
 export interface UsersAttemptHistory_MinimalAttemptInfo {
   id: string;
+  examId: string;
+  examName: string;
   startedAt: Date | undefined;
   endedAt?: Date | undefined;
   durationLimit: number;
@@ -4604,7 +4606,7 @@ export const UsersAttemptHistory: MessageFns<UsersAttemptHistory> = {
 };
 
 function createBaseUsersAttemptHistory_MinimalAttemptInfo(): UsersAttemptHistory_MinimalAttemptInfo {
-  return { id: "", startedAt: undefined, durationLimit: 0, isStrict: false };
+  return { id: "", examId: "", examName: "", startedAt: undefined, durationLimit: 0, isStrict: false };
 }
 
 export const UsersAttemptHistory_MinimalAttemptInfo: MessageFns<UsersAttemptHistory_MinimalAttemptInfo> = {
@@ -4612,23 +4614,29 @@ export const UsersAttemptHistory_MinimalAttemptInfo: MessageFns<UsersAttemptHist
     if (message.id !== "") {
       writer.uint32(10).string(message.id);
     }
+    if (message.examId !== "") {
+      writer.uint32(18).string(message.examId);
+    }
+    if (message.examName !== "") {
+      writer.uint32(26).string(message.examName);
+    }
     if (message.startedAt !== undefined) {
-      Timestamp.encode(toTimestamp(message.startedAt), writer.uint32(18).fork()).join();
+      Timestamp.encode(toTimestamp(message.startedAt), writer.uint32(34).fork()).join();
     }
     if (message.endedAt !== undefined) {
-      Timestamp.encode(toTimestamp(message.endedAt), writer.uint32(26).fork()).join();
+      Timestamp.encode(toTimestamp(message.endedAt), writer.uint32(42).fork()).join();
     }
     if (message.durationLimit !== 0) {
-      writer.uint32(32).int32(message.durationLimit);
+      writer.uint32(48).int32(message.durationLimit);
     }
     if (message.score !== undefined) {
-      writer.uint32(41).double(message.score);
+      writer.uint32(57).double(message.score);
     }
     if (message.totalPoints !== undefined) {
-      writer.uint32(49).double(message.totalPoints);
+      writer.uint32(65).double(message.totalPoints);
     }
     if (message.isStrict !== false) {
-      writer.uint32(56).bool(message.isStrict);
+      writer.uint32(72).bool(message.isStrict);
     }
     return writer;
   },
@@ -4653,7 +4661,7 @@ export const UsersAttemptHistory_MinimalAttemptInfo: MessageFns<UsersAttemptHist
             break;
           }
 
-          message.startedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+          message.examId = reader.string();
           continue;
         }
         case 3: {
@@ -4661,35 +4669,51 @@ export const UsersAttemptHistory_MinimalAttemptInfo: MessageFns<UsersAttemptHist
             break;
           }
 
-          message.endedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+          message.examName = reader.string();
           continue;
         }
         case 4: {
-          if (tag !== 32) {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.startedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.endedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 6: {
+          if (tag !== 48) {
             break;
           }
 
           message.durationLimit = reader.int32();
           continue;
         }
-        case 5: {
-          if (tag !== 41) {
+        case 7: {
+          if (tag !== 57) {
             break;
           }
 
           message.score = reader.double();
           continue;
         }
-        case 6: {
-          if (tag !== 49) {
+        case 8: {
+          if (tag !== 65) {
             break;
           }
 
           message.totalPoints = reader.double();
           continue;
         }
-        case 7: {
-          if (tag !== 56) {
+        case 9: {
+          if (tag !== 72) {
             break;
           }
 
