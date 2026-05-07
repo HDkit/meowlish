@@ -558,7 +558,7 @@ message SectionManagementInfo {
 	optional string          name         = 4;
 	string                   directive    = 5;
 	string                   content_type = 6;
-	repeated string          question_ids = 7;
+	repeated string          children_ids = 7;
 	repeated FilePreviewInfo files        = 8;
 	repeated string          tags         = 9;
 }

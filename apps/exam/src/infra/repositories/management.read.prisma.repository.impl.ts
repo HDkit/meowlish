@@ -6,6 +6,7 @@ import { QuestionManagementInfo } from '../../domain/read-models/management/ques
 import { SectionManagementInfo } from '../../domain/read-models/management/section-info.read-model';
 import { IManagementReadRepository } from '../../domain/repositories/management.read.repository';
 import { ExamStatus } from '../../enums/exam-status.enum';
+import { SectionType } from '../../enums/section-type.enum';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { BadRequestException, Injectable } from '@nestjs/common';
@@ -109,6 +110,7 @@ export class ManagementPrismaRepositoryImpl implements IManagementReadRepository
 				directive: true,
 				contentType: true,
 				questions: { select: { id: true }, orderBy: [{ order: 'asc' }] },
+				childSections: { select: { id: true }, orderBy: [{ order: 'asc' }] },
 				sectionFiles: { select: { fileId: true }, orderBy: [{ updatedAt: 'asc' }] },
 				sectionTags: { select: { tag: { select: { name: true } } } },
 			},
@@ -120,7 +122,10 @@ export class ManagementPrismaRepositoryImpl implements IManagementReadRepository
 			...foundSection,
 			name: foundSection.name ?? undefined,
 			parentId: foundSection.parentId ?? undefined,
-			questionIds: foundSection.questions.map(q => q.id),
+			childrenIds:
+				foundSection.contentType === String(SectionType.Question) ?
+					foundSection.questions.map(q => q.id)
+				:	foundSection.childSections.map(q => q.id),
 			files: foundSection.sectionFiles.map(f => ({ id: f.fileId })),
 			tags: foundSection.sectionTags.map(t => t.tag.name),
 		};

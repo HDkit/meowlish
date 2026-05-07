@@ -26,7 +26,7 @@ export class SectionManagementInfoDto implements exam.SectionManagementInfo {
 	parentId?: string;
 
 	@Expose()
-	questionIds!: string[];
+	childrenIds!: string[];
 
 	@Expose()
 	tags!: string[];

@@ -510,7 +510,7 @@ export interface SectionManagementInfo {
   name?: string | undefined;
   directive: string;
   contentType: string;
-  questionIds: string[];
+  childrenIds: string[];
   files: FilePreviewInfo[];
   tags: string[];
 }
@@ -5490,7 +5490,7 @@ export const QuestionManagementInfo_ChoiceManagementInfo: MessageFns<QuestionMan
 };
 
 function createBaseSectionManagementInfo(): SectionManagementInfo {
-  return { id: "", examId: "", directive: "", contentType: "", questionIds: [], files: [], tags: [] };
+  return { id: "", examId: "", directive: "", contentType: "", childrenIds: [], files: [], tags: [] };
 }
 
 export const SectionManagementInfo: MessageFns<SectionManagementInfo> = {
@@ -5513,7 +5513,7 @@ export const SectionManagementInfo: MessageFns<SectionManagementInfo> = {
     if (message.contentType !== "") {
       writer.uint32(50).string(message.contentType);
     }
-    for (const v of message.questionIds) {
+    for (const v of message.childrenIds) {
       writer.uint32(58).string(v!);
     }
     for (const v of message.files) {
@@ -5585,7 +5585,7 @@ export const SectionManagementInfo: MessageFns<SectionManagementInfo> = {
             break;
           }
 
-          message.questionIds.push(reader.string());
+          message.childrenIds.push(reader.string());
           continue;
         }
         case 8: {
