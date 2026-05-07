@@ -172,22 +172,6 @@ export class AuthGatewayController implements OnModuleInit {
 		return this.authService.removeCredential({ id: id, identityId: request.user.sub });
 	}
 
-	@Post(':id/roles')
-	@HasRoles(Role.Admin)
-	@ApiEmptyResponseEntity()
-	@ApiOperation({ summary: 'Assign a role to someone' })
-	assignRoleTo(@Body() body: AssignRoleToDto, @Param('id') identityId: string) {
-		return this.authService.assignRoleTo({ ...body, identityId: identityId });
-	}
-
-	@Delete(':id/roles')
-	@HasRoles(Role.Admin)
-	@ApiEmptyResponseEntity()
-	@ApiOperation({ summary: 'Remove a role of someone' })
-	removeRoleFrom(@Body() body: RemoveRoleFromDto, @Param('id') identityId: string) {
-		return this.authService.removeRoleFrom({ ...body, identityId: identityId });
-	}
-
 	@Get('identities')
 	@HasRoles(Role.Admin)
 	@ApiOperation({ summary: 'Find identities with roles and permissions' })
@@ -285,5 +269,21 @@ export class AuthGatewayController implements OnModuleInit {
 	@SerializeOptions({ type: HydratedIdentityDto })
 	hydrateIdentity(@Query('id') id: string) {
 		return this.authService.hydrateIdentity({ identityId: id });
+	}
+
+	@Post(':id/roles')
+	@HasRoles(Role.Admin)
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Assign a role to someone' })
+	assignRoleTo(@Body() body: AssignRoleToDto, @Param('id') identityId: string) {
+		return this.authService.assignRoleTo({ ...body, identityId: identityId });
+	}
+
+	@Delete(':id/roles')
+	@HasRoles(Role.Admin)
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Remove a role of someone' })
+	removeRoleFrom(@Body() body: RemoveRoleFromDto, @Param('id') identityId: string) {
+		return this.authService.removeRoleFrom({ ...body, identityId: identityId });
 	}
 }

@@ -52,6 +52,14 @@ export class AchievementGatewayController implements OnModuleInit {
 		return this.achievementService.getUsersBadges({ ...query, userId: req.user.sub });
 	}
 
+	@Get('my/progress')
+	@ApiOperation({ summary: 'Get the authenticated user badges progress' })
+	@ApiResponseEntity(ProgressDto)
+	@SerializeOptions({ type: ProgressDto })
+	getMyProgress(@Req() req: AuthenticatedRequest) {
+		return this.achievementService.getUsersProgess({ userId: req.user.sub });
+	}
+
 	@Get(':uid')
 	@IsPublic()
 	@ApiOperation({ summary: 'Get badges earned by a specific user' })
@@ -59,13 +67,5 @@ export class AchievementGatewayController implements OnModuleInit {
 	@SerializeOptions({ type: FoundUsersBadgesDto })
 	getSomeonesBadges(@Query() query: GetUsersBadgesDto, @Param('uid') uid: string) {
 		return this.achievementService.getUsersBadges({ ...query, userId: uid });
-	}
-
-	@Get('my/progress')
-	@ApiOperation({ summary: 'Get the authenticated user badges progress' })
-	@ApiResponseEntity(ProgressDto)
-	@SerializeOptions({ type: ProgressDto })
-	getMyProgress(@Req() req: AuthenticatedRequest) {
-		return this.achievementService.getUsersProgess({ userId: req.user.sub });
 	}
 }
