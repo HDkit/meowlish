@@ -34,7 +34,7 @@ service ExamPracticeService {
 	rpc AddNote(AddNoteDto) returns (google.protobuf.Empty) {}
 	rpc ToggleFlag(ToggleFlagDto) returns (FlagStateDto) {}
     // query methods
-	rpc GetUsesStats(GetUserStatsDto) returns(UserStats) {}
+	rpc GetUserStats(GetUserStatsDto) returns(UserStats) {}
 	rpc GetUsersAttemptSummary(GetUsersAttemptSummaryDto) returns(AttemptHistorySummary) {}
 	rpc GetUsersAttemptHistory(GetUsersAttemptHistoryDto) returns(UsersAttemptHistory) {}
 	rpc FindExams(FindExamsDto) returns (Exams) {}

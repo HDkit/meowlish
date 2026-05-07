@@ -214,8 +214,8 @@ export class ExamPracticeGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Get the authenticated user practice stats' })
 	@ApiResponseEntity(UserStatsDto)
 	@SerializeOptions({ type: UserStatsDto, strategy: 'exposeAll' })
-	getUsesStats(@Req() request: AuthenticatedRequest) {
-		const res = this.examPracticeService.getUsersAttemptHistory({ uid: request.user.sub });
+	getUserStats(@Req() request: AuthenticatedRequest) {
+		const res = this.examPracticeService.getUserStats({ uid: request.user.sub });
 		return res;
 	}
 }

@@ -6701,7 +6701,7 @@ export interface ExamPracticeServiceClient {
 
   /** query methods */
 
-  getUsesStats(request: GetUserStatsDto, metadata?: Metadata): Observable<UserStats>;
+  getUserStats(request: GetUserStatsDto, metadata?: Metadata): Observable<UserStats>;
 
   getUsersAttemptSummary(request: GetUsersAttemptSummaryDto, metadata?: Metadata): Observable<AttemptHistorySummary>;
 
@@ -6741,7 +6741,7 @@ export interface ExamPracticeServiceController {
 
   /** query methods */
 
-  getUsesStats(request: GetUserStatsDto, metadata?: Metadata): Promise<UserStats> | Observable<UserStats> | UserStats;
+  getUserStats(request: GetUserStatsDto, metadata?: Metadata): Promise<UserStats> | Observable<UserStats> | UserStats;
 
   getUsersAttemptSummary(
     request: GetUsersAttemptSummaryDto,
@@ -6790,7 +6790,7 @@ export function ExamPracticeServiceControllerMethods() {
       "removeAnswer",
       "addNote",
       "toggleFlag",
-      "getUsesStats",
+      "getUserStats",
       "getUsersAttemptSummary",
       "getUsersAttemptHistory",
       "findExams",
@@ -6871,8 +6871,8 @@ export const ExamPracticeServiceService = {
     responseDeserialize: (value: Buffer): FlagStateDto => FlagStateDto.decode(value),
   },
   /** query methods */
-  getUsesStats: {
-    path: "/exam.ExamPracticeService/GetUsesStats" as const,
+  getUserStats: {
+    path: "/exam.ExamPracticeService/GetUserStats" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: GetUserStatsDto): Buffer => Buffer.from(GetUserStatsDto.encode(value).finish()),
@@ -6969,7 +6969,7 @@ export interface ExamPracticeServiceServer extends UntypedServiceImplementation 
   addNote: handleUnaryCall<AddNoteDto, Empty>;
   toggleFlag: handleUnaryCall<ToggleFlagDto, FlagStateDto>;
   /** query methods */
-  getUsesStats: handleUnaryCall<GetUserStatsDto, UserStats>;
+  getUserStats: handleUnaryCall<GetUserStatsDto, UserStats>;
   getUsersAttemptSummary: handleUnaryCall<GetUsersAttemptSummaryDto, AttemptHistorySummary>;
   getUsersAttemptHistory: handleUnaryCall<GetUsersAttemptHistoryDto, UsersAttemptHistory>;
   findExams: handleUnaryCall<FindExamsDto, Exams>;
