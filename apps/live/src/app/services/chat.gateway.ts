@@ -1,5 +1,15 @@
+import {
+	type IRoomRepository,
+	IRoomRepositoryToken,
+} from '../../domain/repositories/room.repository';
 import { ChatDto } from '../presentation/dtos/req/chat.req.dto';
-import { ForbiddenException, UseFilters, UsePipes } from '@nestjs/common';
+import {
+	ForbiddenException,
+	Inject,
+	UnauthorizedException,
+	UseFilters,
+	UsePipes,
+} from '@nestjs/common';
 import {
 	ConnectedSocket,
 	MessageBody,
@@ -24,7 +34,10 @@ type ModifiedSocket = Omit<Socket, 'data'> & { data: { uid: string } };
 	},
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
-	constructor(private logger: AppLoggerService) {}
+	constructor(
+		private logger: AppLoggerService,
+		@Inject(IRoomRepositoryToken) private readonly roomRepository: IRoomRepository,
+	) {}
 
 	@WebSocketServer()
 	server!: Server;
@@ -49,6 +62,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
 	@SubscribeMessage('join-room')
 	async handleJoin(@MessageBody() roomId: string, @ConnectedSocket() socket: ModifiedSocket) {
+		if (!(await this.roomRepository.canJoinRoom(roomId, socket.data.uid)))
+			throw new UnauthorizedException('User is not allowed to join this room');
 		await socket.join(roomId);
 	}
 

@@ -6,37 +6,47 @@ import "google/protobuf/wrappers.proto";
 
 package live;
 
-service LiveService {
-	rpc GetChatOf(GetChatOfRequest) returns(GetChatOfResponse);
-	rpc GetChatLog(GetChatLogRequest) returns(GetChatLogResponse);
-	rpc CreateRoom(CreateRoomRequest) returns(google.protobuf.Empty);
-	rpc RemoveRoom(RemoveRoomRequest) returns(google.protobuf.Empty);
-	rpc UpdateRoomSchedule(UpdateRoomScheduleRequest) returns(google.protobuf.Empty);
-	rpc BanUserFromRoom(BanUserFromRoomRequest) returns(google.protobuf.Empty);
-	rpc UnbanUserFromRoom(UnbanUserFromRoomRequest) returns(google.protobuf.Empty);
+service ChatService {
+	rpc GetRoomList(GetRoomListDto) returns(Rooms) {}
+	rpc GetChatLog(GetChatLogRequest) returns(GetChatLogResponse) {}
+	rpc CreateRoom(CreateRoomRequest) returns(google.protobuf.Empty) {}
+	rpc RemoveRoom(RemoveRoomRequest) returns(google.protobuf.Empty) {}
+	rpc UpdateRoomSchedule(UpdateRoomScheduleRequest) returns(google.protobuf.Empty) {}
+	rpc BanUserFromRoom(BanUserFromRoomRequest) returns(google.protobuf.Empty) {}
+	rpc UnbanUserFromRoom(UnbanUserFromRoomRequest) returns(google.protobuf.Empty) {}
+}
+
+message GetRoomListDto {
+	optional google.protobuf.StringValue cursor = 1;
+	optional google.protobuf.Int32Value  limit  = 2;
+}
+
+message Rooms {
+	repeated Room rooms       = 1;
+	string        prev_cursor = 2;
+	string        next_cursor = 3;
+
+	message Room {
+		string                             id                 = 1;
+		string                             name               = 2;
+		optional string                    scheduled_live_url = 3;
+		optional google.protobuf.Timestamp scheduled_date     = 4;
+	}
 }
 
 message Chat {
-	string                    uid        = 1;
-	string                    message    = 2;
-	google.protobuf.Timestamp created_at = 3;
-}
-
-message GetChatOfRequest {
-	google.protobuf.StringValue room_id = 1;
-}
-
-message GetChatOfResponse {
-	repeated Chat chats = 1;
+	string                    id         = 1;
+	string                    uid        = 2;
+	string                    message    = 3;
+	google.protobuf.Timestamp created_at = 4;
 }
 
 message GetChatLogRequest {
-	google.protobuf.StringValue          room_id     = 1;
-	optional google.protobuf.StringValue uid         = 2;
-	optional DateRange                   date        = 3;
-	optional google.protobuf.StringValue next_cursor = 4;
-	optional google.protobuf.StringValue prev_cursor = 5;
-	optional google.protobuf.Int32Value  limit       = 6;
+	google.protobuf.StringValue          room_id    = 1;
+	optional google.protobuf.StringValue uid        = 2;
+	optional DateRange                   date_range = 3;
+	optional google.protobuf.StringValue cursor     = 4;
+	optional google.protobuf.Int32Value  limit      = 5;
 
 	message DateRange {
 		google.protobuf.Timestamp from = 1;
@@ -51,7 +61,7 @@ message GetChatLogResponse {
 }
 
 message CreateRoomRequest {
-	google.protobuf.StringValue room_id = 1;
+	google.protobuf.StringValue name = 1;
 }
 
 message RemoveRoomRequest {
@@ -60,9 +70,9 @@ message RemoveRoomRequest {
 
 message UpdateRoomScheduleRequest {
 	google.protobuf.StringValue          room_id       = 1;
-	optional google.protobuf.StringValue link          = 2;
+	optional google.protobuf.StringValue url           = 2;
 	optional google.protobuf.Timestamp   time          = 3;
-	optional google.protobuf.BoolValue   set_link_null = 4;
+	optional google.protobuf.BoolValue   set_url_null  = 4;
 	optional google.protobuf.BoolValue   set_time_null = 5;
 }
 

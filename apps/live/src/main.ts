@@ -31,7 +31,7 @@ async function bootstrap() {
 			url: `${process.env.GRPC_HOST ?? '127.0.0.1'}:${process.env.GRPC_PORT ?? 50050}`,
 			package: 'live',
 			packageDefinition: {
-				[`live.${live.LIVE_SERVICE_NAME}`]: live.LiveServiceService,
+				[`live.${live.CHAT_SERVICE_NAME}`]: live.ChatServiceService,
 			} satisfies PackageDefinition,
 		},
 	});

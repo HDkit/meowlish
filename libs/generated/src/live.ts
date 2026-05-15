@@ -14,26 +14,36 @@ import { Empty } from "./google/protobuf/empty";
 import { Timestamp } from "./google/protobuf/timestamp";
 import { BoolValue, Int32Value, StringValue } from "./google/protobuf/wrappers";
 
+export interface GetRoomListDto {
+  cursor?: string | undefined;
+  limit?: number | undefined;
+}
+
+export interface Rooms {
+  rooms: Rooms_Room[];
+  prevCursor: string;
+  nextCursor: string;
+}
+
+export interface Rooms_Room {
+  id: string;
+  name: string;
+  scheduledLiveUrl?: string | undefined;
+  scheduledDate?: Date | undefined;
+}
+
 export interface Chat {
+  id: string;
   uid: string;
   message: string;
   createdAt: Date | undefined;
 }
 
-export interface GetChatOfRequest {
-  roomId: string | undefined;
-}
-
-export interface GetChatOfResponse {
-  chats: Chat[];
-}
-
 export interface GetChatLogRequest {
   roomId: string | undefined;
   uid?: string | undefined;
-  date?: GetChatLogRequest_DateRange | undefined;
-  nextCursor?: string | undefined;
-  prevCursor?: string | undefined;
+  dateRange?: GetChatLogRequest_DateRange | undefined;
+  cursor?: string | undefined;
   limit?: number | undefined;
 }
 
@@ -49,7 +59,7 @@ export interface GetChatLogResponse {
 }
 
 export interface CreateRoomRequest {
-  roomId: string | undefined;
+  name: string | undefined;
 }
 
 export interface RemoveRoomRequest {
@@ -58,9 +68,9 @@ export interface RemoveRoomRequest {
 
 export interface UpdateRoomScheduleRequest {
   roomId: string | undefined;
-  link?: string | undefined;
+  url?: string | undefined;
   time?: Date | undefined;
-  setLinkNull?: boolean | undefined;
+  setUrlNull?: boolean | undefined;
   setTimeNull?: boolean | undefined;
 }
 
@@ -84,20 +94,200 @@ wrappers[".google.protobuf.Timestamp"] = {
   },
 } as any;
 
+function createBaseGetRoomListDto(): GetRoomListDto {
+  return {};
+}
+
+export const GetRoomListDto: MessageFns<GetRoomListDto> = {
+  encode(message: GetRoomListDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.cursor !== undefined) {
+      StringValue.encode({ value: message.cursor! }, writer.uint32(10).fork()).join();
+    }
+    if (message.limit !== undefined) {
+      Int32Value.encode({ value: message.limit! }, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetRoomListDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGetRoomListDto();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.cursor = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.limit = Int32Value.decode(reader, reader.uint32()).value;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseRooms(): Rooms {
+  return { rooms: [], prevCursor: "", nextCursor: "" };
+}
+
+export const Rooms: MessageFns<Rooms> = {
+  encode(message: Rooms, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.rooms) {
+      Rooms_Room.encode(v!, writer.uint32(10).fork()).join();
+    }
+    if (message.prevCursor !== "") {
+      writer.uint32(18).string(message.prevCursor);
+    }
+    if (message.nextCursor !== "") {
+      writer.uint32(26).string(message.nextCursor);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Rooms {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRooms();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.rooms.push(Rooms_Room.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.prevCursor = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.nextCursor = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseRooms_Room(): Rooms_Room {
+  return { id: "", name: "" };
+}
+
+export const Rooms_Room: MessageFns<Rooms_Room> = {
+  encode(message: Rooms_Room, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.name !== "") {
+      writer.uint32(18).string(message.name);
+    }
+    if (message.scheduledLiveUrl !== undefined) {
+      writer.uint32(26).string(message.scheduledLiveUrl);
+    }
+    if (message.scheduledDate !== undefined) {
+      Timestamp.encode(toTimestamp(message.scheduledDate), writer.uint32(34).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Rooms_Room {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRooms_Room();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.id = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.name = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.scheduledLiveUrl = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.scheduledDate = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
 function createBaseChat(): Chat {
-  return { uid: "", message: "", createdAt: undefined };
+  return { id: "", uid: "", message: "", createdAt: undefined };
 }
 
 export const Chat: MessageFns<Chat> = {
   encode(message: Chat, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
     if (message.uid !== "") {
-      writer.uint32(10).string(message.uid);
+      writer.uint32(18).string(message.uid);
     }
     if (message.message !== "") {
-      writer.uint32(18).string(message.message);
+      writer.uint32(26).string(message.message);
     }
     if (message.createdAt !== undefined) {
-      Timestamp.encode(toTimestamp(message.createdAt), writer.uint32(26).fork()).join();
+      Timestamp.encode(toTimestamp(message.createdAt), writer.uint32(34).fork()).join();
     }
     return writer;
   },
@@ -114,7 +304,7 @@ export const Chat: MessageFns<Chat> = {
             break;
           }
 
-          message.uid = reader.string();
+          message.id = reader.string();
           continue;
         }
         case 2: {
@@ -122,7 +312,7 @@ export const Chat: MessageFns<Chat> = {
             break;
           }
 
-          message.message = reader.string();
+          message.uid = reader.string();
           continue;
         }
         case 3: {
@@ -130,81 +320,15 @@ export const Chat: MessageFns<Chat> = {
             break;
           }
 
+          message.message = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
           message.createdAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
-          continue;
-        }
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
-};
-
-function createBaseGetChatOfRequest(): GetChatOfRequest {
-  return { roomId: undefined };
-}
-
-export const GetChatOfRequest: MessageFns<GetChatOfRequest> = {
-  encode(message: GetChatOfRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.roomId !== undefined) {
-      StringValue.encode({ value: message.roomId! }, writer.uint32(10).fork()).join();
-    }
-    return writer;
-  },
-
-  decode(input: BinaryReader | Uint8Array, length?: number): GetChatOfRequest {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseGetChatOfRequest();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 10) {
-            break;
-          }
-
-          message.roomId = StringValue.decode(reader, reader.uint32()).value;
-          continue;
-        }
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
-};
-
-function createBaseGetChatOfResponse(): GetChatOfResponse {
-  return { chats: [] };
-}
-
-export const GetChatOfResponse: MessageFns<GetChatOfResponse> = {
-  encode(message: GetChatOfResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    for (const v of message.chats) {
-      Chat.encode(v!, writer.uint32(10).fork()).join();
-    }
-    return writer;
-  },
-
-  decode(input: BinaryReader | Uint8Array, length?: number): GetChatOfResponse {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseGetChatOfResponse();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 10) {
-            break;
-          }
-
-          message.chats.push(Chat.decode(reader, reader.uint32()));
           continue;
         }
       }
@@ -229,17 +353,14 @@ export const GetChatLogRequest: MessageFns<GetChatLogRequest> = {
     if (message.uid !== undefined) {
       StringValue.encode({ value: message.uid! }, writer.uint32(18).fork()).join();
     }
-    if (message.date !== undefined) {
-      GetChatLogRequest_DateRange.encode(message.date, writer.uint32(26).fork()).join();
+    if (message.dateRange !== undefined) {
+      GetChatLogRequest_DateRange.encode(message.dateRange, writer.uint32(26).fork()).join();
     }
-    if (message.nextCursor !== undefined) {
-      StringValue.encode({ value: message.nextCursor! }, writer.uint32(34).fork()).join();
-    }
-    if (message.prevCursor !== undefined) {
-      StringValue.encode({ value: message.prevCursor! }, writer.uint32(42).fork()).join();
+    if (message.cursor !== undefined) {
+      StringValue.encode({ value: message.cursor! }, writer.uint32(34).fork()).join();
     }
     if (message.limit !== undefined) {
-      Int32Value.encode({ value: message.limit! }, writer.uint32(50).fork()).join();
+      Int32Value.encode({ value: message.limit! }, writer.uint32(42).fork()).join();
     }
     return writer;
   },
@@ -272,7 +393,7 @@ export const GetChatLogRequest: MessageFns<GetChatLogRequest> = {
             break;
           }
 
-          message.date = GetChatLogRequest_DateRange.decode(reader, reader.uint32());
+          message.dateRange = GetChatLogRequest_DateRange.decode(reader, reader.uint32());
           continue;
         }
         case 4: {
@@ -280,19 +401,11 @@ export const GetChatLogRequest: MessageFns<GetChatLogRequest> = {
             break;
           }
 
-          message.nextCursor = StringValue.decode(reader, reader.uint32()).value;
+          message.cursor = StringValue.decode(reader, reader.uint32()).value;
           continue;
         }
         case 5: {
           if (tag !== 42) {
-            break;
-          }
-
-          message.prevCursor = StringValue.decode(reader, reader.uint32()).value;
-          continue;
-        }
-        case 6: {
-          if (tag !== 50) {
             break;
           }
 
@@ -417,13 +530,13 @@ export const GetChatLogResponse: MessageFns<GetChatLogResponse> = {
 };
 
 function createBaseCreateRoomRequest(): CreateRoomRequest {
-  return { roomId: undefined };
+  return { name: undefined };
 }
 
 export const CreateRoomRequest: MessageFns<CreateRoomRequest> = {
   encode(message: CreateRoomRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.roomId !== undefined) {
-      StringValue.encode({ value: message.roomId! }, writer.uint32(10).fork()).join();
+    if (message.name !== undefined) {
+      StringValue.encode({ value: message.name! }, writer.uint32(10).fork()).join();
     }
     return writer;
   },
@@ -440,7 +553,7 @@ export const CreateRoomRequest: MessageFns<CreateRoomRequest> = {
             break;
           }
 
-          message.roomId = StringValue.decode(reader, reader.uint32()).value;
+          message.name = StringValue.decode(reader, reader.uint32()).value;
           continue;
         }
       }
@@ -499,14 +612,14 @@ export const UpdateRoomScheduleRequest: MessageFns<UpdateRoomScheduleRequest> = 
     if (message.roomId !== undefined) {
       StringValue.encode({ value: message.roomId! }, writer.uint32(10).fork()).join();
     }
-    if (message.link !== undefined) {
-      StringValue.encode({ value: message.link! }, writer.uint32(18).fork()).join();
+    if (message.url !== undefined) {
+      StringValue.encode({ value: message.url! }, writer.uint32(18).fork()).join();
     }
     if (message.time !== undefined) {
       Timestamp.encode(toTimestamp(message.time), writer.uint32(26).fork()).join();
     }
-    if (message.setLinkNull !== undefined) {
-      BoolValue.encode({ value: message.setLinkNull! }, writer.uint32(34).fork()).join();
+    if (message.setUrlNull !== undefined) {
+      BoolValue.encode({ value: message.setUrlNull! }, writer.uint32(34).fork()).join();
     }
     if (message.setTimeNull !== undefined) {
       BoolValue.encode({ value: message.setTimeNull! }, writer.uint32(42).fork()).join();
@@ -534,7 +647,7 @@ export const UpdateRoomScheduleRequest: MessageFns<UpdateRoomScheduleRequest> = 
             break;
           }
 
-          message.link = StringValue.decode(reader, reader.uint32()).value;
+          message.url = StringValue.decode(reader, reader.uint32()).value;
           continue;
         }
         case 3: {
@@ -550,7 +663,7 @@ export const UpdateRoomScheduleRequest: MessageFns<UpdateRoomScheduleRequest> = 
             break;
           }
 
-          message.setLinkNull = BoolValue.decode(reader, reader.uint32()).value;
+          message.setUrlNull = BoolValue.decode(reader, reader.uint32()).value;
           continue;
         }
         case 5: {
@@ -678,8 +791,8 @@ export const UnbanUserFromRoomRequest: MessageFns<UnbanUserFromRoomRequest> = {
   },
 };
 
-export interface LiveServiceClient {
-  getChatOf(request: GetChatOfRequest, metadata?: Metadata): Observable<GetChatOfResponse>;
+export interface ChatServiceClient {
+  getRoomList(request: GetRoomListDto, metadata?: Metadata): Observable<Rooms>;
 
   getChatLog(request: GetChatLogRequest, metadata?: Metadata): Observable<GetChatLogResponse>;
 
@@ -694,11 +807,8 @@ export interface LiveServiceClient {
   unbanUserFromRoom(request: UnbanUserFromRoomRequest, metadata?: Metadata): Observable<Empty>;
 }
 
-export interface LiveServiceController {
-  getChatOf(
-    request: GetChatOfRequest,
-    metadata?: Metadata,
-  ): Promise<GetChatOfResponse> | Observable<GetChatOfResponse> | GetChatOfResponse;
+export interface ChatServiceController {
+  getRoomList(request: GetRoomListDto, metadata?: Metadata): Promise<Rooms> | Observable<Rooms> | Rooms;
 
   getChatLog(
     request: GetChatLogRequest,
@@ -716,10 +826,10 @@ export interface LiveServiceController {
   unbanUserFromRoom(request: UnbanUserFromRoomRequest, metadata?: Metadata): void | Promise<void>;
 }
 
-export function LiveServiceControllerMethods() {
+export function ChatServiceControllerMethods() {
   return function (constructor: Function) {
     const grpcMethods: string[] = [
-      "getChatOf",
+      "getRoomList",
       "getChatLog",
       "createRoom",
       "removeRoom",
@@ -729,31 +839,31 @@ export function LiveServiceControllerMethods() {
     ];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
-      GrpcMethod("LiveService", method)(constructor.prototype[method], method, descriptor);
+      GrpcMethod("ChatService", method)(constructor.prototype[method], method, descriptor);
     }
     const grpcStreamMethods: string[] = [];
     for (const method of grpcStreamMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
-      GrpcStreamMethod("LiveService", method)(constructor.prototype[method], method, descriptor);
+      GrpcStreamMethod("ChatService", method)(constructor.prototype[method], method, descriptor);
     }
   };
 }
 
-export const LIVE_SERVICE_NAME = "LiveService";
+export const CHAT_SERVICE_NAME = "ChatService";
 
-export type LiveServiceService = typeof LiveServiceService;
-export const LiveServiceService = {
-  getChatOf: {
-    path: "/live.LiveService/GetChatOf" as const,
+export type ChatServiceService = typeof ChatServiceService;
+export const ChatServiceService = {
+  getRoomList: {
+    path: "/live.ChatService/GetRoomList" as const,
     requestStream: false as const,
     responseStream: false as const,
-    requestSerialize: (value: GetChatOfRequest): Buffer => Buffer.from(GetChatOfRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetChatOfRequest => GetChatOfRequest.decode(value),
-    responseSerialize: (value: GetChatOfResponse): Buffer => Buffer.from(GetChatOfResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetChatOfResponse => GetChatOfResponse.decode(value),
+    requestSerialize: (value: GetRoomListDto): Buffer => Buffer.from(GetRoomListDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetRoomListDto => GetRoomListDto.decode(value),
+    responseSerialize: (value: Rooms): Buffer => Buffer.from(Rooms.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Rooms => Rooms.decode(value),
   },
   getChatLog: {
-    path: "/live.LiveService/GetChatLog" as const,
+    path: "/live.ChatService/GetChatLog" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: GetChatLogRequest): Buffer => Buffer.from(GetChatLogRequest.encode(value).finish()),
@@ -762,7 +872,7 @@ export const LiveServiceService = {
     responseDeserialize: (value: Buffer): GetChatLogResponse => GetChatLogResponse.decode(value),
   },
   createRoom: {
-    path: "/live.LiveService/CreateRoom" as const,
+    path: "/live.ChatService/CreateRoom" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: CreateRoomRequest): Buffer => Buffer.from(CreateRoomRequest.encode(value).finish()),
@@ -771,7 +881,7 @@ export const LiveServiceService = {
     responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
   },
   removeRoom: {
-    path: "/live.LiveService/RemoveRoom" as const,
+    path: "/live.ChatService/RemoveRoom" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: RemoveRoomRequest): Buffer => Buffer.from(RemoveRoomRequest.encode(value).finish()),
@@ -780,7 +890,7 @@ export const LiveServiceService = {
     responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
   },
   updateRoomSchedule: {
-    path: "/live.LiveService/UpdateRoomSchedule" as const,
+    path: "/live.ChatService/UpdateRoomSchedule" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: UpdateRoomScheduleRequest): Buffer =>
@@ -790,7 +900,7 @@ export const LiveServiceService = {
     responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
   },
   banUserFromRoom: {
-    path: "/live.LiveService/BanUserFromRoom" as const,
+    path: "/live.ChatService/BanUserFromRoom" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: BanUserFromRoomRequest): Buffer =>
@@ -800,7 +910,7 @@ export const LiveServiceService = {
     responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
   },
   unbanUserFromRoom: {
-    path: "/live.LiveService/UnbanUserFromRoom" as const,
+    path: "/live.ChatService/UnbanUserFromRoom" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: UnbanUserFromRoomRequest): Buffer =>
@@ -811,8 +921,8 @@ export const LiveServiceService = {
   },
 } as const;
 
-export interface LiveServiceServer extends UntypedServiceImplementation {
-  getChatOf: handleUnaryCall<GetChatOfRequest, GetChatOfResponse>;
+export interface ChatServiceServer extends UntypedServiceImplementation {
+  getRoomList: handleUnaryCall<GetRoomListDto, Rooms>;
   getChatLog: handleUnaryCall<GetChatLogRequest, GetChatLogResponse>;
   createRoom: handleUnaryCall<CreateRoomRequest, Empty>;
   removeRoom: handleUnaryCall<RemoveRoomRequest, Empty>;
