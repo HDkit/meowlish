@@ -1,18 +1,17 @@
-import { RABBIT_CONTEXT_TYPE_KEY } from '@golevelup/nestjs-rabbitmq';
 import { status } from '@grpc/grpc-js';
 import {
-	ArgumentsHost,
+	type ArgumentsHost,
 	Catch,
-	ContextType,
+	type ContextType,
 	ExceptionFilter,
 	HttpException,
 	HttpStatus,
 } from '@nestjs/common';
 import { AppLoggerService } from '@server/logger';
-import { Observable, throwError } from 'rxjs';
+import { throwError } from 'rxjs';
 
-@Catch(HttpException)
-export class Http2gRPCExceptionFilter implements ExceptionFilter {
+@Catch()
+export class GlobalRpcExceptionFilter implements ExceptionFilter {
 	constructor(private readonly logger: AppLoggerService) {}
 
 	static HttpStatusCode: Record<number, number> = {
@@ -38,26 +37,48 @@ export class Http2gRPCExceptionFilter implements ExceptionFilter {
 		[HttpStatus.PRECONDITION_FAILED]: status.FAILED_PRECONDITION,
 	};
 
-	catch(exception: HttpException, host: ArgumentsHost): Observable<never> | void {
-		const httpStatus = exception.getStatus();
-		const httpRes = exception.getResponse() as {
-			details?: unknown;
-			message: string;
-		};
+	catch(exception: Error, host: ArgumentsHost) {
+		const contextType = host.getType<ContextType>();
+		if (contextType !== 'rpc') throw exception;
 
 		this.logger.error(
-			`[${this.constructor.name}] Exception Caught - ${exception.message}: ${httpRes.message}`,
+			`[${this.constructor.name}] Exception Caught - ${exception.message}`,
 			'',
 			exception.stack,
 		);
 
-		const contextType = host.getType<ContextType | typeof RABBIT_CONTEXT_TYPE_KEY>();
-		if (contextType === RABBIT_CONTEXT_TYPE_KEY) throw exception;
-
 		return throwError(() => ({
-			code: Http2gRPCExceptionFilter.HttpStatusCode[httpStatus] ?? status.UNKNOWN,
-			message: httpRes.message || exception.message,
-			details: Array.isArray(httpRes.details) ? httpRes.details.join(', ') : httpRes.message,
+			code: this.getCode(exception),
+			message: this.getMessage(exception),
+			details: this.getDetails(exception),
 		}));
+	}
+
+	private getCode(exception: Error): status {
+		if (exception instanceof HttpException)
+			return GlobalRpcExceptionFilter.HttpStatusCode[exception.getStatus()] ?? status.UNKNOWN;
+		return status.UNKNOWN;
+	}
+
+	private getMessage(exception: Error): string {
+		if (exception instanceof HttpException) {
+			const httpRes = exception.getResponse() as {
+				details?: unknown;
+				message: string;
+			};
+			return httpRes.message ?? exception.message;
+		}
+		return exception.message;
+	}
+
+	private getDetails(exception: Error): string {
+		if (exception instanceof HttpException) {
+			const httpRes = exception.getResponse() as {
+				details?: unknown;
+				message: string;
+			};
+			return Array.isArray(httpRes.details) ? httpRes.details.join(', ') : httpRes.message;
+		}
+		return "Check the app's log";
 	}
 }

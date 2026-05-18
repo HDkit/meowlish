@@ -1,5 +1,5 @@
 import { ResponseEntity } from '../data/response-entity.type';
-import { ArgumentsHost, Catch, ExceptionFilter, HttpStatus } from '@nestjs/common';
+import { ArgumentsHost, Catch, ContextType, ExceptionFilter, HttpStatus } from '@nestjs/common';
 import { AppLoggerService } from '@server/logger';
 import { Request, Response } from 'express';
 
@@ -8,6 +8,9 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
 	constructor(private readonly logger: AppLoggerService) {}
 
 	catch(exception: Error, host: ArgumentsHost) {
+		const contextType = host.getType<ContextType>();
+		if (contextType !== 'http') throw exception;
+
 		const ctx = host.switchToHttp();
 		const res = ctx.getResponse<Response>();
 		const req = ctx.getRequest<Request>();

@@ -41,6 +41,7 @@ static_resources:
   clusters:
     - name: app_b_cluster
       type: STRICT_DNS
+      dns_lookup_family: V4_ONLY
       lb_policy: ROUND_ROBIN
       load_assignment:
         cluster_name: app_b_cluster

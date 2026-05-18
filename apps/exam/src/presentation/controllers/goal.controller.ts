@@ -4,10 +4,12 @@ import { GetGoalDto } from '../dtos/req/goal/get-goal.rerq.dto';
 import { SetGoalDto } from '../dtos/req/goal/set-goal.req.dto';
 import { UpdateGoalDto } from '../dtos/req/goal/update-goal.req.dto';
 import { GoalResDto } from '../dtos/res/goal/goal.res.dto';
-import { Controller, SerializeOptions } from '@nestjs/common';
+import { Controller, SerializeOptions, UseFilters } from '@nestjs/common';
 import { Payload } from '@nestjs/microservices';
 import { exam } from '@server/generated';
+import { GlobalRpcExceptionFilter } from '@server/utils';
 
+@UseFilters(GlobalRpcExceptionFilter)
 @exam.GoalServiceControllerMethods()
 @Controller()
 export class GoalController implements exam.GoalServiceController {

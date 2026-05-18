@@ -1,18 +1,34 @@
 services:
-  api:
-    container_name: english-app
+  # api:
+  #   container_name: english-app
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - db
+  #   volumes:
+  #     - .:/app
+  #     - /app/node_modules
+  #   networks:
+  #     - api-network
+
+  envoy:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.envoy
     ports:
-      - "3000:3000"
-    depends_on:
-      - db
+      - "8082:8082"
+      - "9902:9902"
     volumes:
-      - .:/app
-      - /app/node_modules
+      - ./envoy.yaml:/tmpl/envoy.yaml
+    environment:
+      - BACKEND_PORT=1510
+    command: >
+      sh -c 'envsubst < /tmpl/envoy.yaml > /tmp/envoy.yaml
+      && envoy -c /tmp/envoy.yaml'
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - api-network
-
-volumes:
-  postgresql-data:

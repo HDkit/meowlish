@@ -61,11 +61,13 @@ import { FlagStateDto } from '../dtos/res/practice/flag-state.res.dto';
 import { QuestionDetailDto } from '../dtos/res/practice/question-detail.res.dto';
 import { UserCalendarDto } from '../dtos/res/practice/user-calendar.res.dto';
 import { UserStatsDto } from '../dtos/res/practice/user-stats.res.dto';
-import { Controller, Inject, SerializeOptions } from '@nestjs/common';
+import { Controller, Inject, SerializeOptions, UseFilters } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { Payload } from '@nestjs/microservices';
 import { exam } from '@server/generated';
+import { GlobalRpcExceptionFilter } from '@server/utils';
 
+@UseFilters(GlobalRpcExceptionFilter)
 @exam.ExamPracticeServiceControllerMethods()
 @Controller()
 export class ExamPracticeController implements exam.ExamPracticeServiceController {

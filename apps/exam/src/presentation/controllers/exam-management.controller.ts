@@ -73,11 +73,13 @@ import { ExamDetailedManagementInfoDto } from '../dtos/res/management/exam.res.d
 import { ExamsManagementInfoDto } from '../dtos/res/management/exams.res.dto';
 import { QuestionManagementInfoDto } from '../dtos/res/management/question.res.dto';
 import { SectionManagementInfoDto } from '../dtos/res/management/sections.res.dto';
-import { Controller, SerializeOptions } from '@nestjs/common';
+import { Controller, SerializeOptions, UseFilters } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { Payload } from '@nestjs/microservices';
 import { exam } from '@server/generated';
+import { GlobalRpcExceptionFilter } from '@server/utils';
 
+@UseFilters(GlobalRpcExceptionFilter)
 @exam.ExamManagementServiceControllerMethods()
 @Controller()
 export class ExamManagementController implements exam.ExamManagementServiceController {
