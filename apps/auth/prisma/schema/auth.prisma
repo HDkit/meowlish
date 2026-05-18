@@ -14,7 +14,7 @@ model Credential {
 
 model Identity {
   id            String         @id @default(uuid())
-  version       Int            @default(0)
+  version       Int            @default(1)
   username      String
   fullName      String?        @map("full_name") @db.VarChar(255)
   bio           String?        @db.VarChar(500)

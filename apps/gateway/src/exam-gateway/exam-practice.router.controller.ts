@@ -52,7 +52,7 @@ export class ExamPracticeGatewayController implements OnModuleInit {
 		);
 	}
 
-	@Post(':id')
+	@Post('new/:id')
 	@ApiOperation({ summary: 'Start a practice attempt for an exam' })
 	@ApiResponseEntity(CreatedAttemptDto)
 	@SerializeOptions({ type: CreatedAttemptDto })
@@ -135,7 +135,7 @@ export class ExamPracticeGatewayController implements OnModuleInit {
 		return res;
 	}
 
-	@Get(':id/details')
+	@Get('info/:id/details')
 	@IsPublic()
 	@ApiOperation({ summary: 'Get exam details for practice' })
 	@ApiResponseEntity(ExamDetailDto)
@@ -155,7 +155,7 @@ export class ExamPracticeGatewayController implements OnModuleInit {
 		return res;
 	}
 
-	@Get(':id/stats')
+	@Get('info/:id/stats')
 	@IsPublic()
 	@ApiOperation({ summary: 'Get aggregate exam statistics' })
 	@ApiResponseEntity(ExamStatsDto)
@@ -214,8 +214,8 @@ export class ExamPracticeGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Get the authenticated user practice stats' })
 	@ApiResponseEntity(UserStatsDto)
 	@SerializeOptions({ type: UserStatsDto, strategy: 'exposeAll' })
-	getUsesStats(@Req() request: AuthenticatedRequest) {
-		const res = this.examPracticeService.getUsersAttemptHistory({ uid: request.user.sub });
+	getUserStats(@Req() request: AuthenticatedRequest) {
+		const res = this.examPracticeService.getUserStats({ uid: request.user.sub });
 		return res;
 	}
 }

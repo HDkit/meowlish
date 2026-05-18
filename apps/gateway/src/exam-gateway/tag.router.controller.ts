@@ -46,6 +46,24 @@ export class TagGatewayController implements OnModuleInit {
 		return this.tagService.addTag(body);
 	}
 
+	@Get('tree')
+	@IsPublic()
+	@ApiOperation({ summary: 'Fetch all tags in a tree format' })
+	@ApiResponseEntity(TagTreesDto)
+	@SerializeOptions({ type: TagTreesDto, strategy: 'exposeAll' })
+	getTagTree() {
+		return this.tagService.getTagTree({});
+	}
+
+	@Get('list')
+	@IsPublic()
+	@ApiOperation({ summary: 'Fetch all tags as a list' })
+	@ApiResponseEntity(TagListDto)
+	@SerializeOptions({ type: TagListDto, strategy: 'exposeAll' })
+	getTagList() {
+		return this.tagService.getTagList({});
+	}
+
 	@Delete(':id')
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Delete a tag' })
@@ -65,23 +83,5 @@ export class TagGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Rename a tag' })
 	updateTag(@Body() body: UpdateTagDto, @Param('id') id: string) {
 		return this.tagService.updateTag({ ...body, id: id });
-	}
-
-	@Get('tree')
-	@IsPublic()
-	@ApiOperation({ summary: 'Fetch all tags in a tree format' })
-	@ApiResponseEntity(TagTreesDto)
-	@SerializeOptions({ type: TagTreesDto, strategy: 'exposeAll' })
-	getTagTree() {
-		return this.tagService.getTagTree({});
-	}
-
-	@Get('list')
-	@IsPublic()
-	@ApiOperation({ summary: 'Fetch all tags as a list' })
-	@ApiResponseEntity(TagListDto)
-	@SerializeOptions({ type: TagListDto, strategy: 'exposeAll' })
-	getTagList() {
-		return this.tagService.getTagList({});
 	}
 }

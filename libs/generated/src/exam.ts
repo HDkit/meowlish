@@ -416,6 +416,8 @@ export interface UsersAttemptHistory {
 
 export interface UsersAttemptHistory_MinimalAttemptInfo {
   id: string;
+  examId: string;
+  examName: string;
   startedAt: Date | undefined;
   endedAt?: Date | undefined;
   durationLimit: number;
@@ -508,7 +510,7 @@ export interface SectionManagementInfo {
   name?: string | undefined;
   directive: string;
   contentType: string;
-  questionIds: string[];
+  childrenIds: string[];
   files: FilePreviewInfo[];
   tags: string[];
 }
@@ -545,8 +547,9 @@ export interface TagList {
 }
 
 export interface TagList_TagNode {
+  id: string;
   name: string;
-  parent?: string | undefined;
+  parentId?: string | undefined;
 }
 
 export interface TagTrees {
@@ -554,6 +557,7 @@ export interface TagTrees {
 }
 
 export interface TagTrees_TagTree {
+  id: string;
   name: string;
   children: TagTrees_TagTree[];
 }
@@ -4602,7 +4606,7 @@ export const UsersAttemptHistory: MessageFns<UsersAttemptHistory> = {
 };
 
 function createBaseUsersAttemptHistory_MinimalAttemptInfo(): UsersAttemptHistory_MinimalAttemptInfo {
-  return { id: "", startedAt: undefined, durationLimit: 0, isStrict: false };
+  return { id: "", examId: "", examName: "", startedAt: undefined, durationLimit: 0, isStrict: false };
 }
 
 export const UsersAttemptHistory_MinimalAttemptInfo: MessageFns<UsersAttemptHistory_MinimalAttemptInfo> = {
@@ -4610,23 +4614,29 @@ export const UsersAttemptHistory_MinimalAttemptInfo: MessageFns<UsersAttemptHist
     if (message.id !== "") {
       writer.uint32(10).string(message.id);
     }
+    if (message.examId !== "") {
+      writer.uint32(18).string(message.examId);
+    }
+    if (message.examName !== "") {
+      writer.uint32(26).string(message.examName);
+    }
     if (message.startedAt !== undefined) {
-      Timestamp.encode(toTimestamp(message.startedAt), writer.uint32(18).fork()).join();
+      Timestamp.encode(toTimestamp(message.startedAt), writer.uint32(34).fork()).join();
     }
     if (message.endedAt !== undefined) {
-      Timestamp.encode(toTimestamp(message.endedAt), writer.uint32(26).fork()).join();
+      Timestamp.encode(toTimestamp(message.endedAt), writer.uint32(42).fork()).join();
     }
     if (message.durationLimit !== 0) {
-      writer.uint32(32).int32(message.durationLimit);
+      writer.uint32(48).int32(message.durationLimit);
     }
     if (message.score !== undefined) {
-      writer.uint32(41).double(message.score);
+      writer.uint32(57).double(message.score);
     }
     if (message.totalPoints !== undefined) {
-      writer.uint32(49).double(message.totalPoints);
+      writer.uint32(65).double(message.totalPoints);
     }
     if (message.isStrict !== false) {
-      writer.uint32(56).bool(message.isStrict);
+      writer.uint32(72).bool(message.isStrict);
     }
     return writer;
   },
@@ -4651,7 +4661,7 @@ export const UsersAttemptHistory_MinimalAttemptInfo: MessageFns<UsersAttemptHist
             break;
           }
 
-          message.startedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+          message.examId = reader.string();
           continue;
         }
         case 3: {
@@ -4659,35 +4669,51 @@ export const UsersAttemptHistory_MinimalAttemptInfo: MessageFns<UsersAttemptHist
             break;
           }
 
-          message.endedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+          message.examName = reader.string();
           continue;
         }
         case 4: {
-          if (tag !== 32) {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.startedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.endedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 6: {
+          if (tag !== 48) {
             break;
           }
 
           message.durationLimit = reader.int32();
           continue;
         }
-        case 5: {
-          if (tag !== 41) {
+        case 7: {
+          if (tag !== 57) {
             break;
           }
 
           message.score = reader.double();
           continue;
         }
-        case 6: {
-          if (tag !== 49) {
+        case 8: {
+          if (tag !== 65) {
             break;
           }
 
           message.totalPoints = reader.double();
           continue;
         }
-        case 7: {
-          if (tag !== 56) {
+        case 9: {
+          if (tag !== 72) {
             break;
           }
 
@@ -5464,7 +5490,7 @@ export const QuestionManagementInfo_ChoiceManagementInfo: MessageFns<QuestionMan
 };
 
 function createBaseSectionManagementInfo(): SectionManagementInfo {
-  return { id: "", examId: "", directive: "", contentType: "", questionIds: [], files: [], tags: [] };
+  return { id: "", examId: "", directive: "", contentType: "", childrenIds: [], files: [], tags: [] };
 }
 
 export const SectionManagementInfo: MessageFns<SectionManagementInfo> = {
@@ -5487,7 +5513,7 @@ export const SectionManagementInfo: MessageFns<SectionManagementInfo> = {
     if (message.contentType !== "") {
       writer.uint32(50).string(message.contentType);
     }
-    for (const v of message.questionIds) {
+    for (const v of message.childrenIds) {
       writer.uint32(58).string(v!);
     }
     for (const v of message.files) {
@@ -5559,7 +5585,7 @@ export const SectionManagementInfo: MessageFns<SectionManagementInfo> = {
             break;
           }
 
-          message.questionIds.push(reader.string());
+          message.childrenIds.push(reader.string());
           continue;
         }
         case 8: {
@@ -5917,16 +5943,19 @@ export const TagList: MessageFns<TagList> = {
 };
 
 function createBaseTagList_TagNode(): TagList_TagNode {
-  return { name: "" };
+  return { id: "", name: "" };
 }
 
 export const TagList_TagNode: MessageFns<TagList_TagNode> = {
   encode(message: TagList_TagNode, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.name !== "") {
-      writer.uint32(10).string(message.name);
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
     }
-    if (message.parent !== undefined) {
-      writer.uint32(18).string(message.parent);
+    if (message.name !== "") {
+      writer.uint32(18).string(message.name);
+    }
+    if (message.parentId !== undefined) {
+      writer.uint32(26).string(message.parentId);
     }
     return writer;
   },
@@ -5943,7 +5972,7 @@ export const TagList_TagNode: MessageFns<TagList_TagNode> = {
             break;
           }
 
-          message.name = reader.string();
+          message.id = reader.string();
           continue;
         }
         case 2: {
@@ -5951,7 +5980,15 @@ export const TagList_TagNode: MessageFns<TagList_TagNode> = {
             break;
           }
 
-          message.parent = reader.string();
+          message.name = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.parentId = reader.string();
           continue;
         }
       }
@@ -6002,16 +6039,19 @@ export const TagTrees: MessageFns<TagTrees> = {
 };
 
 function createBaseTagTrees_TagTree(): TagTrees_TagTree {
-  return { name: "", children: [] };
+  return { id: "", name: "", children: [] };
 }
 
 export const TagTrees_TagTree: MessageFns<TagTrees_TagTree> = {
   encode(message: TagTrees_TagTree, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
     if (message.name !== "") {
-      writer.uint32(10).string(message.name);
+      writer.uint32(18).string(message.name);
     }
     for (const v of message.children) {
-      TagTrees_TagTree.encode(v!, writer.uint32(18).fork()).join();
+      TagTrees_TagTree.encode(v!, writer.uint32(26).fork()).join();
     }
     return writer;
   },
@@ -6028,11 +6068,19 @@ export const TagTrees_TagTree: MessageFns<TagTrees_TagTree> = {
             break;
           }
 
-          message.name = reader.string();
+          message.id = reader.string();
           continue;
         }
         case 2: {
           if (tag !== 18) {
+            break;
+          }
+
+          message.name = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
             break;
           }
 
@@ -6653,7 +6701,7 @@ export interface ExamPracticeServiceClient {
 
   /** query methods */
 
-  getUsesStats(request: GetUserStatsDto, metadata?: Metadata): Observable<UserStats>;
+  getUserStats(request: GetUserStatsDto, metadata?: Metadata): Observable<UserStats>;
 
   getUsersAttemptSummary(request: GetUsersAttemptSummaryDto, metadata?: Metadata): Observable<AttemptHistorySummary>;
 
@@ -6693,7 +6741,7 @@ export interface ExamPracticeServiceController {
 
   /** query methods */
 
-  getUsesStats(request: GetUserStatsDto, metadata?: Metadata): Promise<UserStats> | Observable<UserStats> | UserStats;
+  getUserStats(request: GetUserStatsDto, metadata?: Metadata): Promise<UserStats> | Observable<UserStats> | UserStats;
 
   getUsersAttemptSummary(
     request: GetUsersAttemptSummaryDto,
@@ -6742,7 +6790,7 @@ export function ExamPracticeServiceControllerMethods() {
       "removeAnswer",
       "addNote",
       "toggleFlag",
-      "getUsesStats",
+      "getUserStats",
       "getUsersAttemptSummary",
       "getUsersAttemptHistory",
       "findExams",
@@ -6823,8 +6871,8 @@ export const ExamPracticeServiceService = {
     responseDeserialize: (value: Buffer): FlagStateDto => FlagStateDto.decode(value),
   },
   /** query methods */
-  getUsesStats: {
-    path: "/exam.ExamPracticeService/GetUsesStats" as const,
+  getUserStats: {
+    path: "/exam.ExamPracticeService/GetUserStats" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: GetUserStatsDto): Buffer => Buffer.from(GetUserStatsDto.encode(value).finish()),
@@ -6921,7 +6969,7 @@ export interface ExamPracticeServiceServer extends UntypedServiceImplementation 
   addNote: handleUnaryCall<AddNoteDto, Empty>;
   toggleFlag: handleUnaryCall<ToggleFlagDto, FlagStateDto>;
   /** query methods */
-  getUsesStats: handleUnaryCall<GetUserStatsDto, UserStats>;
+  getUserStats: handleUnaryCall<GetUserStatsDto, UserStats>;
   getUsersAttemptSummary: handleUnaryCall<GetUsersAttemptSummaryDto, AttemptHistorySummary>;
   getUsersAttemptHistory: handleUnaryCall<GetUsersAttemptHistoryDto, UsersAttemptHistory>;
   findExams: handleUnaryCall<FindExamsDto, Exams>;

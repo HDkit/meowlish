@@ -3,6 +3,7 @@ import { IsPublic } from '../auth/decorators/public.decorator';
 import { HasRoles } from '../auth/decorators/roles.decorator';
 import { GoogleOAuth2Guard } from '../auth/guards/google-oauth2.guard';
 import { JwtRefreshAuthGuard } from '../auth/guards/jwt-refresh-auth.guard';
+import { IEnvVars } from '../configs/config';
 import { type AuthenticatedRequest } from '../types/authenticated-request';
 import { AUTH_CLIENT } from './constants/auth';
 import { AddMailCredDto } from './dtos/req/add-mail-cred.req.dto';
@@ -23,6 +24,7 @@ import { IdentityIdsDto } from './dtos/res/identity-ids.res.dto';
 import { LimitedIdentitiesDto } from './dtos/res/limited-identities.res.dto';
 import { PermissionsDto } from './dtos/res/permissions.res.dto';
 import { RolesDto } from './dtos/res/roles.res.dto';
+import { RedisService } from '@liaoliaots/nestjs-redis';
 import {
 	Body,
 	Controller,
@@ -34,22 +36,33 @@ import {
 	Post,
 	Query,
 	Req,
+	Res,
 	SerializeOptions,
 	UseGuards,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { type ClientGrpc } from '@nestjs/microservices';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { auth } from '@server/generated';
 import { Permission, Role } from '@server/typing';
 import { ApiEmptyResponseEntity, ApiResponseEntity } from '@server/utils';
+import { Response } from 'express';
+import Redis from 'ioredis';
 
 @ApiBearerAuth()
 @ApiTags('Auth')
 @Controller()
 export class AuthGatewayController implements OnModuleInit {
 	private authService!: auth.AuthServiceClient;
+	private readonly redis: Redis;
 
-	constructor(@Inject(AUTH_CLIENT) private readonly authClient: ClientGrpc) {}
+	constructor(
+		@Inject(AUTH_CLIENT) private readonly authClient: ClientGrpc,
+		private readonly configService: ConfigService<IEnvVars>,
+		private readonly redisService: RedisService,
+	) {
+		this.redis = this.redisService.getOrThrow();
+	}
 
 	onModuleInit() {
 		this.authService = this.authClient.getService<auth.AuthServiceClient>(auth.AUTH_SERVICE_NAME);
@@ -105,11 +118,37 @@ export class AuthGatewayController implements OnModuleInit {
 	@Get('google/callback')
 	@UseGuards(GoogleOAuth2Guard)
 	@IsPublic()
+	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Callback url for OAuth2' })
+	async googleCallback(@Req() request: { user: auth.Tokens | boolean }, @Res() res: Response) {
+		const loginToken = crypto.randomUUID();
+		await this.redis.setex(
+			`oauth2:google:loginToken:${loginToken}`,
+			60,
+			JSON.stringify(request.user),
+		);
+		const url = new URL(this.configService.getOrThrow('vps', { infer: true }).feLoginRedirectUrl);
+		url.searchParams.set('loginToken', loginToken);
+		return res.redirect(url.toString());
+	}
+
+	@Get('google/tokens')
+	@IsPublic()
+	@ApiOperation({
+		summary: 'Get access and refresh tokens from login token',
+		description:
+			"Get access and refresh tokens from login token after /google/callback redirected to Frontend's redirection URL",
+	})
 	@ApiResponseEntity(ResponseTokensDto)
 	@SerializeOptions({ type: ResponseTokensDto })
-	googleCallback(@Req() request: { user: auth.Tokens | boolean }): auth.Tokens | boolean {
-		return request.user;
+	async getGoogleTokens(@Query('loginToken') loginToken: string) {
+		const data = await this.redis.get(`oauth2:google:loginToken:${loginToken}`);
+		if (!data) {
+			throw new Error('Invalid or expired login token');
+		}
+		await this.redis.del(`oauth2:google:loginToken:${loginToken}`);
+		const tokens = JSON.parse(data) as auth.Tokens;
+		return tokens;
 	}
 
 	@Get('credentials/google')
@@ -132,22 +171,6 @@ export class AuthGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Delete credential from existing account' })
 	removeCredential(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
 		return this.authService.removeCredential({ id: id, identityId: request.user.sub });
-	}
-
-	@Post(':id/roles')
-	@HasRoles(Role.Admin)
-	@ApiEmptyResponseEntity()
-	@ApiOperation({ summary: 'Assign a role to someone' })
-	assignRoleTo(@Body() body: AssignRoleToDto, @Param('id') identityId: string) {
-		return this.authService.assignRoleTo({ ...body, identityId: identityId });
-	}
-
-	@Delete(':id/roles')
-	@HasRoles(Role.Admin)
-	@ApiEmptyResponseEntity()
-	@ApiOperation({ summary: 'Remove a role of someone' })
-	removeRoleFrom(@Body() body: RemoveRoleFromDto, @Param('id') identityId: string) {
-		return this.authService.removeRoleFrom({ ...body, identityId: identityId });
 	}
 
 	@Get('identities')
@@ -307,5 +330,21 @@ export class AuthGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Get Google Calendar token' })
 	getGoogleCalendarToken(@Req() request: AuthenticatedRequest) {
 		return this.authService.getGoogleCalendarToken({ identityId: request.user.sub });
+	}
+
+	@Post(':id/roles')
+	@HasRoles(Role.Admin)
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Assign a role to someone' })
+	assignRoleTo(@Body() body: AssignRoleToDto, @Param('id') identityId: string) {
+		return this.authService.assignRoleTo({ ...body, identityId: identityId });
+	}
+
+	@Delete(':id/roles')
+	@HasRoles(Role.Admin)
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Remove a role of someone' })
+	removeRoleFrom(@Body() body: RemoveRoleFromDto, @Param('id') identityId: string) {
+		return this.authService.removeRoleFrom({ ...body, identityId: identityId });
 	}
 }

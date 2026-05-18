@@ -34,7 +34,7 @@ service ExamPracticeService {
 	rpc AddNote(AddNoteDto) returns (google.protobuf.Empty) {}
 	rpc ToggleFlag(ToggleFlagDto) returns (FlagStateDto) {}
     // query methods
-	rpc GetUsesStats(GetUserStatsDto) returns(UserStats) {}
+	rpc GetUserStats(GetUserStatsDto) returns(UserStats) {}
 	rpc GetUsersAttemptSummary(GetUsersAttemptSummaryDto) returns(AttemptHistorySummary) {}
 	rpc GetUsersAttemptHistory(GetUsersAttemptHistoryDto) returns(UsersAttemptHistory) {}
 	rpc FindExams(FindExamsDto) returns (Exams) {}
@@ -461,12 +461,14 @@ message UsersAttemptHistory {
 
 	message MinimalAttemptInfo {
 		string                             id             = 1;
-		google.protobuf.Timestamp          started_at     = 2;
-		optional google.protobuf.Timestamp ended_at       = 3;
-		int32                              duration_limit = 4;
-		optional double                    score          = 5;
-		optional double                    total_points   = 6;
-		bool                               is_strict      = 7;
+		string                             exam_id        = 2;
+		string                             exam_name      = 3;
+		google.protobuf.Timestamp          started_at     = 4;
+		optional google.protobuf.Timestamp ended_at       = 5;
+		int32                              duration_limit = 6;
+		optional double                    score          = 7;
+		optional double                    total_points   = 8;
+		bool                               is_strict      = 9;
 	}
 }
 
@@ -556,7 +558,7 @@ message SectionManagementInfo {
 	optional string          name         = 4;
 	string                   directive    = 5;
 	string                   content_type = 6;
-	repeated string          question_ids = 7;
+	repeated string          children_ids = 7;
 	repeated FilePreviewInfo files        = 8;
 	repeated string          tags         = 9;
 }
@@ -592,8 +594,9 @@ message TagList {
 	repeated TagNode list = 1;
 
 	message TagNode {
-		string          name   = 1;
-		optional string parent = 2;
+		string          id        = 1;
+		string          name      = 2;
+		optional string parent_id = 3;
 
 	}
 }
@@ -602,8 +605,9 @@ message TagTrees {
 	repeated TagTree trees = 1;
 
 	message TagTree {
-		string           name     = 1;
-		repeated TagTree children = 2;
+		string           id       = 1;
+		string           name     = 2;
+		repeated TagTree children = 3;
 	}
 }
 

@@ -3,7 +3,7 @@ model Exam {
   createdBy   String   @map("created_by")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  version     Int      @default(0)
+  version     Int      @default(1)
   title       String
   description String?
   status      String

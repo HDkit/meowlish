@@ -37,6 +37,7 @@ const servicesSchema = z.object({
 
 const vpsEnvSchema = z.object({
 	baseUrl: z.url(),
+	feLoginRedirectUrl: z.url(),
 });
 
 export const envFileSchema = z.object({
@@ -83,7 +84,10 @@ const loadEnv = (): DeepStringify<IEnvVars> => ({
 			host: process.env.ACHIEVEMENT_SERVICE_HOST,
 		},
 	},
-	vps: { baseUrl: process.env.BASE_URL?.trim().replace(/\/+$/, '') },
+	vps: {
+		baseUrl: process.env.BASE_URL?.trim().replace(/\/+$/, ''),
+		feLoginRedirectUrl: process.env.FE_LOGIN_REDIRECT_URL?.trim().replace(/\/+$/, ''),
+	},
 });
 
 // validate and optionally transform your env variables here

@@ -3,6 +3,14 @@ import { Expose, Type } from 'class-transformer';
 
 class MinimalAttemptInfoDto {
 	@Expose()
+	@ApiProperty()
+	examId!: string;
+
+	@Expose()
+	@ApiProperty()
+	examName!: string;
+
+	@Expose()
 	@ApiProperty({ type: Number })
 	durationLimit!: number;
 

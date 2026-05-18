@@ -1,6 +1,6 @@
 model AttemptCriteria {
   uid     String @id
-  version Int    @default(0)
+  version Int    @default(1)
   total   Int    @default(0)
   perfect Int    @default(0)
   good    Int    @default(0)

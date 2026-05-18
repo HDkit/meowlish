@@ -14,6 +14,7 @@ export class TagReadPrismaRepositoryImpl implements ITagReadRepository {
 		const tags = await this.txHost.tx.tag.findMany({
 			orderBy: { lft: 'asc' },
 			select: {
+				id: true,
 				name: true,
 				lft: true,
 				rgt: true,
@@ -23,6 +24,7 @@ export class TagReadPrismaRepositoryImpl implements ITagReadRepository {
 		const stack: { node: TagTree; rgt: number }[] = [];
 		for (const tag of tags) {
 			const node: TagTree = {
+				id: tag.id,
 				name: tag.name,
 				children: [],
 			};
@@ -46,22 +48,25 @@ export class TagReadPrismaRepositoryImpl implements ITagReadRepository {
 		const tags = await this.txHost.tx.tag.findMany({
 			orderBy: { lft: 'asc' },
 			select: {
+				id: true,
 				name: true,
 				lft: true,
 				rgt: true,
 			},
 		});
 		const list: TagNode[] = [];
-		const stack: { name: string; rgt: number }[] = [];
+		const stack: { id: string; name: string; rgt: number }[] = [];
 		for (const tag of tags) {
 			while (stack.length && stack[stack.length - 1].rgt < tag.rgt) {
 				stack.pop();
 			}
 			list.push({
+				id: tag.id,
 				name: tag.name,
-				parent: stack.length > 0 ? stack[stack.length - 1].name : undefined,
+				parentId: stack.length > 0 ? stack[stack.length - 1].id : undefined,
 			});
 			stack.push({
+				id: tag.id,
 				name: tag.name,
 				rgt: tag.rgt,
 			});

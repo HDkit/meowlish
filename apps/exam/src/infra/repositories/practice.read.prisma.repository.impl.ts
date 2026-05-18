@@ -137,6 +137,12 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 			where: { attemptedBy: uid, ...(options?.examId ? { examId: options.examId } : {}) },
 			select: {
 				id: true,
+				exam: {
+					select: {
+						id: true,
+						title: true,
+					},
+				},
 				startedAt: true,
 				endedAt: true,
 				durationLimit: true,
@@ -160,6 +166,8 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 
 		return foundHistory.map(a => ({
 			...a,
+			examId: a.exam.id,
+			examName: a.exam.title,
 			endedAt: a.endedAt ?? undefined,
 			score: a.score ?? undefined,
 			totalPoints: a.totalPoints ?? undefined,

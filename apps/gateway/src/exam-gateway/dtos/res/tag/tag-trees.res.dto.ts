@@ -4,6 +4,10 @@ import { Expose, Type } from 'class-transformer';
 class TagTreeDto {
 	@Expose()
 	@ApiProperty()
+	id!: string;
+
+	@Expose()
+	@ApiProperty()
 	name!: string;
 
 	@Expose()
