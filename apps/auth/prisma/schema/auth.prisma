@@ -47,7 +47,7 @@ model IdentityRole {
 
 model Role {
   id              String           @id @default(uuid())
-  name            String           @db.VarChar(255)
+  name            String           @unique @db.VarChar(255)
   rolePermissions RolePermission[]
   identityRoles   IdentityRole[]
 
@@ -58,7 +58,7 @@ model RolePermission {
   roleId       String @map("role_id")
   permissionId String @map("permission_id")
 
-  role       Role       @relation(fields: [roleId], references: [id])
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission Permission @relation(fields: [permissionId], references: [id])
 
   @@id([roleId, permissionId])
@@ -67,7 +67,7 @@ model RolePermission {
 
 model Permission {
   id              String           @id @default(uuid())
-  name            String           @db.VarChar(255)
+  name            String           @unique @db.VarChar(255)
   rolePermissions RolePermission[]
 
   @@map("permissions")

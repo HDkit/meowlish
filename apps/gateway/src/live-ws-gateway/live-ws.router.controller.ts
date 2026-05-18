@@ -1,3 +1,4 @@
+import { IsPublic } from '../auth/decorators/public.decorator';
 import { type AuthenticatedRequest } from '../types/authenticated-request';
 import { All, Controller, Next, Req, Res } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -5,7 +6,9 @@ import { NextFunction, Response } from 'express';
 import { ClientRequest } from 'http';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import { ExtractJwt } from 'passport-jwt';
+import jwt from 'jsonwebtoken';
 
+@IsPublic()
 @ApiBearerAuth()
 @ApiTags('Live Service Websocket')
 @Controller('socket.io')
@@ -22,11 +25,18 @@ export class LiveWsGatewayController {
 		on: {
 			proxyReqWs: function (proxyReq: ClientRequest, req: AuthenticatedRequest) {
 				try {
-					const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
-					if (!token) throw Error('Error while getting bearer token when upgrading to websocket');
-					const payload = token.split('.')[1];
-					const user = JSON.parse(Buffer.from(payload, 'base64url').toString()) as typeof req.user;
-					proxyReq.setHeader('Authorization', user.sub);
+					let token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
+					if (!token) {
+						const query = req.url?.split('?')[1];
+						if (query) {
+							token = new URLSearchParams(query).get('token');
+						}
+					}
+					if (!token) throw Error('No token found');
+					const secret = process.env.JWT_SECRET;
+					if (!secret) throw Error('JWT_SECRET not configured');
+					const payload = jwt.verify(token, secret) as { sub: string };
+					proxyReq.setHeader('Authorization', payload.sub);
 				} catch (e) {
 					console.error(e);
 				}

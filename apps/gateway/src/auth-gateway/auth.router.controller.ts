@@ -8,8 +8,10 @@ import { type AuthenticatedRequest } from '../types/authenticated-request';
 import { AUTH_CLIENT } from './constants/auth';
 import { AddMailCredDto } from './dtos/req/add-mail-cred.req.dto';
 import { AssignRoleToDto } from './dtos/req/assign-role-to.req.dto';
-import { FindIdentitiesLimitedDto } from './dtos/req/find-identities-limited.req.dto';
+import { ConnectGoogleCalendarDto } from './dtos/req/connect-google-calendar.req.dto';
+import { ExchangeGoogleCalendarCodeDto } from './dtos/req/exchange-google-calendar-code.req.dto';
 import { FindIdentitiesDto } from './dtos/req/find-identities.req.dto';
+import { FindIdentitiesLimitedDto } from './dtos/req/find-identities-limited.req.dto';
 import { FindIdentityIdsDto } from './dtos/req/find-identity-ids.req.dto';
 import { LoginMailDto } from './dtos/req/login-mail.req.dto';
 import { RegisterMailDto } from './dtos/req/register-mail.req.dto';
@@ -38,6 +40,7 @@ import {
 	Req,
 	Res,
 	SerializeOptions,
+	UnauthorizedException,
 	UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -48,6 +51,7 @@ import { Permission, Role } from '@server/typing';
 import { ApiEmptyResponseEntity, ApiResponseEntity } from '@server/utils';
 import { Response } from 'express';
 import Redis from 'ioredis';
+import { lastValueFrom } from 'rxjs';
 
 @ApiBearerAuth()
 @ApiTags('Auth')
@@ -260,7 +264,7 @@ export class AuthGatewayController implements OnModuleInit {
 	@ApiResponseEntity(HydratedIdentitiesDto)
 	@SerializeOptions({ type: HydratedIdentitiesDto })
 	hydrateIdentities(@Query('ids') ids: string[]) {
-		return this.authService.hydrateIdentities({ identityIds: ids });
+		return this.authService.hydrateIdentities({ identityIds: ids ?? [] });
 	}
 
 	@Get('hydrate')
@@ -304,10 +308,52 @@ export class AuthGatewayController implements OnModuleInit {
 		});
 	}
 
+	@Post('google/calendar/exchange-code')
+	@ApiOperation({ summary: 'Exchange Google auth code for Calendar tokens and connect' })
+	async exchangeGoogleCalendarCode(
+		@Body() body: ExchangeGoogleCalendarCodeDto,
+		@Req() request: AuthenticatedRequest,
+	) {
+		const config = this.configService.getOrThrow('googleOAuth2', { infer: true });
+
+		const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+			body: new URLSearchParams({
+				code: body.code,
+				client_id: config.clientId,
+				client_secret: config.secret,
+				redirect_uri: 'postmessage',
+				grant_type: 'authorization_code',
+			}),
+		});
+
+		if (!tokenRes.ok) {
+			throw new UnauthorizedException('Failed to exchange Google authorization code');
+		}
+
+		const tokens = (await tokenRes.json()) as {
+			access_token: string;
+			refresh_token?: string;
+			expires_in?: number;
+			scope?: string;
+		};
+
+		return lastValueFrom(
+			this.authService.connectGoogleCalendar({
+				identityId: request.user.sub,
+				accessToken: tokens.access_token,
+				refreshToken: tokens.refresh_token ?? '',
+				expiresAt: Date.now() + (tokens.expires_in ?? 3600) * 1000,
+				scopes: tokens.scope ?? '',
+			}),
+		);
+	}
+
 	@Post('google/calendar/connect')
 	@ApiOperation({ summary: 'Connect Google Calendar account' })
 	connectGoogleCalendar(
-		@Body() body: { accessToken: string; refreshToken: string; expiresAt: number; scopes: string },
+		@Body() body: ConnectGoogleCalendarDto,
 		@Req() request: AuthenticatedRequest,
 	) {
 		return this.authService.connectGoogleCalendar({

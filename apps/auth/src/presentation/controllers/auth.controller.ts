@@ -234,7 +234,7 @@ export class AuthController implements auth.AuthServiceController {
 		return await this.queryBus.execute(
 			new FindIdentitiesByPhoneQuery({
 				phoneNumber: request.phoneNumber,
-				lastId: request.cursor,
+				cursor: request.cursor,
 				limit: request.limit,
 			}),
 		);

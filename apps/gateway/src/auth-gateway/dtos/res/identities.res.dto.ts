@@ -47,5 +47,9 @@ export class IdentitiesDto {
 
 	@Expose()
 	@ApiProperty()
-	cursor!: string;
+	nextCursor!: string;
+
+	@Expose()
+	@ApiProperty()
+	prevCursor!: string;
 }

@@ -1,10 +1,12 @@
 import { IntegrationEventHandlers } from './app/events/handlers';
 import { NotificationPreferencesService } from './app/services/notification-preferences.service';
+import { NotificationSseService } from './app/services/notification-sse.service';
 import { NotificationService } from './app/services/notification.service';
 import { config } from './configs/config';
 import { rmqPubConfig } from './configs/rmq.pub.config';
 import { rmqSubConfig } from './configs/rmq.sub.config';
 import { NotificationPreferencesController } from './presentation/controllers/notification-preferences.controller';
+import { NotificationSseController } from './presentation/controllers/notification-sse.controller';
 import { NotificationController } from './presentation/controllers/notification.controller';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { ClsPluginTransactional } from '@nestjs-cls/transactional';
@@ -13,19 +15,24 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { CqrsModule } from '@nestjs/cqrs';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PrismaClient } from '@prisma-client/notification';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { LoggerModule } from '@server/logger';
 import {
-	Any2RpcExceptionFilter,
 	GlobalClassSerializerInterceptor,
+	GlobalRpcExceptionFilter,
 	GlobalValidationPipe,
-	Http2gRPCExceptionFilter,
+	gRPC2HttpExceptionFilter,
 } from '@server/utils';
 import { ClsGuard, ClsModule } from 'nestjs-cls';
 
 @Module({
-	controllers: [NotificationController, NotificationPreferencesController],
+	controllers: [
+		NotificationController,
+		NotificationPreferencesController,
+		NotificationSseController,
+	],
 	imports: [
 		ConfigModule.forRoot({
 			expandVariables: true,
@@ -34,6 +41,7 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 			load: [config],
 		}),
 		CqrsModule.forRoot(),
+		EventEmitterModule.forRoot(),
 		ClsModule.forRoot({
 			global: true,
 			guard: { mount: false },
@@ -54,6 +62,7 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 	providers: [
 		NotificationService,
 		NotificationPreferencesService,
+		NotificationSseService,
 		...IntegrationEventHandlers,
 		{
 			provide: APP_GUARD,
@@ -61,11 +70,11 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 		},
 		{
 			provide: APP_FILTER,
-			useClass: Any2RpcExceptionFilter,
+			useClass: GlobalRpcExceptionFilter,
 		},
 		{
 			provide: APP_FILTER,
-			useClass: Http2gRPCExceptionFilter,
+			useClass: gRPC2HttpExceptionFilter,
 		},
 		{
 			provide: APP_PIPE,

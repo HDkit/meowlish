@@ -1,41 +1,42 @@
 import { NotificationService } from '../../app/services/notification.service';
-import { Controller } from '@nestjs/common';
+import { Controller, UseFilters } from '@nestjs/common';
+import { Payload } from '@nestjs/microservices';
 import { notification } from '@server/generated';
+import { GlobalRpcExceptionFilter } from '@server/utils';
+import { CreateNotificationReqDto } from '../dtos/req/create-notification.req.dto';
+import { GetNotificationReqDto } from '../dtos/req/get-notification.req.dto';
+import { DeleteNotificationReqDto } from '../dtos/req/delete-notification.req.dto';
+import { ListNotificationsReqDto } from '../dtos/req/list-notifications.req.dto';
+import { MarkAsReadReqDto } from '../dtos/req/mark-as-read.req.dto';
+import { MarkAllAsReadReqDto } from '../dtos/req/mark-all-as-read.req.dto';
 
+@UseFilters(GlobalRpcExceptionFilter)
 @notification.NotificationServiceControllerMethods()
 @Controller()
 export class NotificationController implements notification.NotificationServiceController {
 	constructor(private readonly notificationService: NotificationService) {}
 
-	async createNotification(
-		data: notification.CreateNotificationRequest,
-	): Promise<notification.NotificationResponse> {
+	async createNotification(@Payload() data: CreateNotificationReqDto): Promise<notification.NotificationResponse> {
 		return this.notificationService.createNotification(data);
 	}
 
-	async getNotification(
-		data: notification.GetNotificationRequest,
-	): Promise<notification.NotificationResponse> {
+	async getNotification(@Payload() data: GetNotificationReqDto): Promise<notification.NotificationResponse> {
 		return this.notificationService.getNotification(data.id as string);
 	}
 
-	async deleteNotification(data: notification.DeleteNotificationRequest): Promise<void> {
+	async deleteNotification(@Payload() data: DeleteNotificationReqDto): Promise<void> {
 		await this.notificationService.deleteNotification(data.id as string);
 	}
 
-	async listNotifications(
-		data: notification.ListNotificationsRequest,
-	): Promise<notification.ListNotificationsResponse> {
+	async listNotifications(@Payload() data: ListNotificationsReqDto): Promise<notification.ListNotificationsResponse> {
 		return this.notificationService.listNotifications(data);
 	}
 
-	async markAsRead(
-		data: notification.MarkAsReadRequest,
-	): Promise<notification.NotificationResponse> {
+	async markAsRead(@Payload() data: MarkAsReadReqDto): Promise<notification.NotificationResponse> {
 		return this.notificationService.markAsRead(data.id as string);
 	}
 
-	async markAllAsRead(data: notification.MarkAllAsReadRequest): Promise<void> {
+	async markAllAsRead(@Payload() data: MarkAllAsReadReqDto): Promise<void> {
 		await this.notificationService.markAllAsRead(data.recipientId as string);
 	}
 }

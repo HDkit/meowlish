@@ -3,13 +3,15 @@ import { Query } from '@server/utils';
 
 export type GetUsersBadgesQueryResult = {
 	badges: UserBadge[];
-	cursor: string;
+	nextCursor: string;
+	prevCursor: string;
 };
 
 export type GetUsersBadgesCursor = {
 	// high prec
 	userId: string;
 	lastId?: string;
+	direction?: number;
 	// low prec
 	limit?: number;
 };

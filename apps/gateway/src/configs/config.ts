@@ -39,6 +39,15 @@ const servicesSchema = z.object({
 		portWs: z.coerce.number(),
 		hostWs: z.string(),
 	}),
+	notification: z.object({
+		port: z.coerce.number(),
+		host: z.string(),
+		httpPort: z.coerce.number(),
+	}),
+	resource: z.object({
+		port: z.coerce.number(),
+		host: z.string(),
+	}),
 });
 
 const vpsEnvSchema = z.object({
@@ -94,6 +103,15 @@ const loadEnv = (): DeepStringify<IEnvVars> => ({
 			host: process.env.LIVE_SERVICE_HOST,
 			portWs: process.env.LIVE_SERVICE_WS_PORT,
 			hostWs: process.env.LIVE_SERVICE_WS_HOST,
+		},
+		notification: {
+			port: process.env.NOTIFICATION_SERVICE_PORT,
+			host: process.env.NOTIFICATION_SERVICE_HOST,
+			httpPort: process.env.NOTIFICATION_SERVICE_HTTP_PORT,
+		},
+		resource: {
+			port: process.env.RESOURCE_SERVICE_PORT,
+			host: process.env.RESOURCE_SERVICE_HOST,
 		},
 	},
 	vps: {

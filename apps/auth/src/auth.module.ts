@@ -31,7 +31,7 @@ import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-pr
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { CqrsModule } from '@nestjs/cqrs';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaClient } from '@prisma-client/auth';
@@ -40,7 +40,6 @@ import { file } from '@server/generated';
 import { LoggerModule } from '@server/logger';
 import {
 	ErrorHandlingGrpcProxy,
-	GlobalClassSerializerInterceptor,
 	GlobalRmqExceptionFilter,
 	GlobalRpcExceptionFilter,
 	GlobalValidationPipe,
@@ -134,8 +133,14 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 			provide: IFileRepositoryToken,
 			useClass: FilePrismaRepositoryImpl,
 		},
-		GlobalRpcExceptionFilter,
-		GlobalRmqExceptionFilter,
+		{
+			provide: APP_FILTER,
+			useClass: GlobalRpcExceptionFilter,
+		},
+		{
+			provide: APP_FILTER,
+			useClass: GlobalRmqExceptionFilter,
+		},
 		{
 			provide: IGoogleCalendarTokenRepositoryToken,
 			useClass: GoogleCalendarTokenPrismaRepositoryImpl,
@@ -148,10 +153,7 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 			provide: APP_PIPE,
 			useClass: GlobalValidationPipe,
 		},
-		{
-			provide: APP_INTERCEPTOR,
-			useClass: GlobalClassSerializerInterceptor,
-		},
+
 	],
 })
 export class AuthModule {}

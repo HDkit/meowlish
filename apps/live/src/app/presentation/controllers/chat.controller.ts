@@ -37,8 +37,9 @@ export class ChatController implements live.ChatServiceController {
 		});
 	}
 
-	async createRoom(@Payload() request: CreateRoomDto): Promise<void> {
-		return this.chatService.createRoom(request.name);
+	async createRoom(@Payload() request: CreateRoomDto): Promise<live.CreatedRoomResponse> {
+		const roomId = await this.chatService.createRoom(request.name!, request.createdBy);
+		return { id: roomId };
 	}
 
 	async removeRoom(@Payload() request: RemoveRoomDto): Promise<void> {

@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { SortDirection } from '@server/typing';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
 	IsArray,
 	IsEnum,
@@ -18,11 +18,12 @@ class FilterOptionsDto {
 	@ApiPropertyOptional()
 	name?: string;
 
+	@Transform(({ value }) => (Array.isArray(value) ? value : value ? [value] : []))
 	@IsArray()
 	@IsOptional()
 	@IsString({ each: true })
 	@ApiPropertyOptional({ type: [String] })
-	tags!: string[];
+	tags: string[] = [];
 }
 
 class SortOptionsDto {

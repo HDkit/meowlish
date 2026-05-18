@@ -4,7 +4,8 @@ import { Query } from '@server/utils';
 
 export type FindExamsQueryResult = {
 	exams: MinimalExamInfo[];
-	cursor: string;
+	nextCursor: string;
+	prevCursor: string;
 };
 
 export type FindExamsQueryPayload = {
@@ -20,6 +21,7 @@ export type FindExamsCursor = {
 		attemptsCount?: number;
 		updatedAt?: number;
 	};
+	direction?: number;
 	// low prec
 	limit?: number;
 };

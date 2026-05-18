@@ -5,6 +5,7 @@ export interface IIdentityReadRepository {
 		usernameOrCredentialIdentifier?: string;
 		lastId?: string;
 		limit?: number;
+		direction?: number;
 	}): Promise<string[]>;
 	findIdentities(options?: {
 		usernameOrCredentialIdentifierOrId?: string;
@@ -12,11 +13,13 @@ export interface IIdentityReadRepository {
 		hasPerms?: string[];
 		lastId?: string;
 		limit?: number;
+		direction?: number;
 	}): Promise<IdentityReadModel[]>;
 	findIdentitiesByPhone(options: {
 		phoneNumber: string;
 		lastId?: string;
 		limit?: number;
+		direction?: number;
 	}): Promise<IdentityReadModel[]>;
 	hydrate(id: string): Promise<HydratedIdentityReadModel | null>;
 	hydrateMany(ids: string[]): Promise<HydratedIdentityReadModel[]>;

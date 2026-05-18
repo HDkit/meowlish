@@ -30,5 +30,8 @@ export class ExamsInfoDto implements exam.Exams {
 	exams!: MinimalExamInfoDto[];
 
 	@Expose()
-	cursor!: string;
+	nextCursor!: string;
+
+	@Expose()
+	prevCursor!: string;
 }

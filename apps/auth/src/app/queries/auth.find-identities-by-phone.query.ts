@@ -3,14 +3,20 @@ import { Query } from '@server/utils';
 
 export type FindIdentitiesByPhoneQueryResult = {
 	identities: IdentityReadModel[];
-	cursor: string;
+	nextCursor: string;
+	prevCursor: string;
+};
+
+type FindIdentitiesByPhoneCursor = {
+	phoneNumber?: string;
+	lastId?: string;
+	direction?: number;
+	limit?: number;
 };
 
 export class FindIdentitiesByPhoneQuery extends Query<
 	FindIdentitiesByPhoneQueryResult,
 	{
-		phoneNumber: string;
-		lastId?: string;
-		limit?: number;
-	}
+		cursor?: string;
+	} & Omit<FindIdentitiesByPhoneCursor, 'lastId'>
 > {}

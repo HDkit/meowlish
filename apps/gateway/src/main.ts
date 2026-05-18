@@ -5,6 +5,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import { AppLoggerService } from '@server/logger';
+import * as qs from 'qs';
 import 'reflect-metadata';
 
 const useLogger = (module: INestApplicationContext) => {
@@ -16,6 +17,7 @@ async function bootstrap() {
 	const gatewayModule = await NestFactory.create<NestExpressApplication>(GatewayModule, {
 		bufferLogs: true,
 	});
+	gatewayModule.set('query parser', (str: string) => qs.parse(str));
 	gatewayModule.setGlobalPrefix('api');
 	gatewayModule.enableVersioning({
 		defaultVersion: '1',

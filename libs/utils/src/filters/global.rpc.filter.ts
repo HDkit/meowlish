@@ -68,7 +68,7 @@ export class GlobalRpcExceptionFilter implements ExceptionFilter {
 			};
 			return httpRes.message ?? exception.message;
 		}
-		return exception.message;
+		return 'An internal error occurred';
 	}
 
 	private getDetails(exception: Error): string {

@@ -1,13 +1,23 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { AmqpConnectionManager } from '@golevelup/nestjs-rabbitmq';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { FlashCard, Prisma, PrismaClient } from '@prisma-client/resource';
+import { TransactionHost } from '@nestjs-cls/transactional';
+import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { resource } from '@server/generated';
+import { AppLoggerService } from '@server/logger';
 
 @Injectable()
 export class FlashcardService {
-	private prisma: PrismaClient;
+	constructor(
+		private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>,
+		private readonly amqpConnectionManager: AmqpConnectionManager,
+		private readonly logger: AppLoggerService,
+	) {}
 
-	constructor() {
-		this.prisma = new PrismaClient();
+	private get amqpConnection() {
+		const connection = this.amqpConnectionManager.getConnection('pub');
+		if (!connection) throw new InternalServerErrorException('AMQP "pub" connection not available');
+		return connection;
 	}
 
 	private mapToResponse(entity: FlashCard): resource.FlashCardResponse {
@@ -30,7 +40,7 @@ export class FlashcardService {
 	async createFlashCard(
 		data: resource.CreateFlashCardRequest,
 	): Promise<resource.FlashCardResponse> {
-		const created = await this.prisma.flashCard.create({
+		const created = await this.txHost.tx.flashCard.create({
 			data: {
 				word: data.word as string,
 				definition: data.definition as string,
@@ -44,11 +54,23 @@ export class FlashcardService {
 				listId: data.listId as string,
 			},
 		});
+
+		try {
+			await this.amqpConnection.publish(
+				'eventbus',
+				'resource.resource.created',
+				{ resourceType: 'flashcard', resourceId: created.id, ownerId: data.authorId },
+				{ persistent: true },
+			);
+		} catch (e) {
+			this.logger.error(`Failed to publish resource.resource.created event: ${e}`);
+		}
+
 		return this.mapToResponse(created);
 	}
 
 	async getFlashCard(id: string): Promise<resource.FlashCardResponse> {
-		const entity = await this.prisma.flashCard.findUnique({ where: { id: id } });
+		const entity = await this.txHost.tx.flashCard.findUnique({ where: { id: id } });
 		if (!entity) throw new NotFoundException('FlashCard not found');
 		return this.mapToResponse(entity);
 	}
@@ -56,10 +78,10 @@ export class FlashcardService {
 	async updateFlashCard(
 		data: resource.UpdateFlashCardRequest,
 	): Promise<resource.FlashCardResponse> {
-		const entity = await this.prisma.flashCard.findUnique({ where: { id: data.id } });
+		const entity = await this.txHost.tx.flashCard.findUnique({ where: { id: data.id } });
 		if (!entity) throw new NotFoundException('FlashCard not found');
 
-		const updated = await this.prisma.flashCard.update({
+		const updated = await this.txHost.tx.flashCard.update({
 			where: { id: data.id },
 			data: {
 				word: data.word ?? undefined,
@@ -76,10 +98,10 @@ export class FlashcardService {
 	}
 
 	async deleteFlashCard(id: string): Promise<void> {
-		const entity = await this.prisma.flashCard.findUnique({ where: { id: id } });
+		const entity = await this.txHost.tx.flashCard.findUnique({ where: { id: id } });
 		if (!entity) throw new NotFoundException('FlashCard not found');
 
-		await this.prisma.flashCard.delete({ where: { id: id } });
+		await this.txHost.tx.flashCard.delete({ where: { id: id } });
 	}
 
 	async listFlashCards(
@@ -98,13 +120,13 @@ export class FlashcardService {
 		}
 
 		const [flashCards, totalCount] = await Promise.all([
-			this.prisma.flashCard.findMany({
+			this.txHost.tx.flashCard.findMany({
 				where: where,
 				skip: skip,
 				take: limit,
 				orderBy: { createdAt: 'desc' },
 			}),
-			this.prisma.flashCard.count({ where: where }),
+			this.txHost.tx.flashCard.count({ where: where }),
 		]);
 
 		return {

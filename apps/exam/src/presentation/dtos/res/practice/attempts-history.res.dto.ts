@@ -36,5 +36,8 @@ export class AttemptsHistoryDto implements exam.UsersAttemptHistory {
 	attempts!: MinimalAttemptInfoDto[];
 
 	@Expose()
-	cursor!: string;
+	nextCursor!: string;
+
+	@Expose()
+	prevCursor!: string;
 }

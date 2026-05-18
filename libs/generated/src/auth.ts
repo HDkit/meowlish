@@ -154,12 +154,14 @@ export interface PermList {
 
 export interface IdentityIds {
   ids: string[];
-  cursor: string;
+  nextCursor: string;
+  prevCursor: string;
 }
 
 export interface Identities {
   identities: Identities_Identity[];
-  cursor: string;
+  nextCursor: string;
+  prevCursor: string;
 }
 
 export interface Identities_Identity {
@@ -185,6 +187,7 @@ export interface HydratedIdentities_HydratedIdentity {
   bio?: string | undefined;
   avatarUrl?: string | undefined;
   phoneNumber?: string | undefined;
+  roles: string[];
 }
 
 export interface Credentials {
@@ -1585,7 +1588,7 @@ export const PermList: MessageFns<PermList> = {
 };
 
 function createBaseIdentityIds(): IdentityIds {
-  return { ids: [], cursor: "" };
+  return { ids: [], nextCursor: "", prevCursor: "" };
 }
 
 export const IdentityIds: MessageFns<IdentityIds> = {
@@ -1593,8 +1596,11 @@ export const IdentityIds: MessageFns<IdentityIds> = {
     for (const v of message.ids) {
       writer.uint32(10).string(v!);
     }
-    if (message.cursor !== "") {
-      writer.uint32(18).string(message.cursor);
+    if (message.nextCursor !== "") {
+      writer.uint32(18).string(message.nextCursor);
+    }
+    if (message.prevCursor !== "") {
+      writer.uint32(26).string(message.prevCursor);
     }
     return writer;
   },
@@ -1619,7 +1625,15 @@ export const IdentityIds: MessageFns<IdentityIds> = {
             break;
           }
 
-          message.cursor = reader.string();
+          message.nextCursor = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.prevCursor = reader.string();
           continue;
         }
       }
@@ -1633,7 +1647,7 @@ export const IdentityIds: MessageFns<IdentityIds> = {
 };
 
 function createBaseIdentities(): Identities {
-  return { identities: [], cursor: "" };
+  return { identities: [], nextCursor: "", prevCursor: "" };
 }
 
 export const Identities: MessageFns<Identities> = {
@@ -1641,8 +1655,11 @@ export const Identities: MessageFns<Identities> = {
     for (const v of message.identities) {
       Identities_Identity.encode(v!, writer.uint32(10).fork()).join();
     }
-    if (message.cursor !== "") {
-      writer.uint32(18).string(message.cursor);
+    if (message.nextCursor !== "") {
+      writer.uint32(18).string(message.nextCursor);
+    }
+    if (message.prevCursor !== "") {
+      writer.uint32(26).string(message.prevCursor);
     }
     return writer;
   },
@@ -1667,7 +1684,15 @@ export const Identities: MessageFns<Identities> = {
             break;
           }
 
-          message.cursor = reader.string();
+          message.nextCursor = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.prevCursor = reader.string();
           continue;
         }
       }
@@ -1843,7 +1868,7 @@ export const HydratedIdentities: MessageFns<HydratedIdentities> = {
 };
 
 function createBaseHydratedIdentities_HydratedIdentity(): HydratedIdentities_HydratedIdentity {
-  return { id: "", username: "" };
+  return { id: "", username: "", roles: [] };
 }
 
 export const HydratedIdentities_HydratedIdentity: MessageFns<HydratedIdentities_HydratedIdentity> = {
@@ -1865,6 +1890,9 @@ export const HydratedIdentities_HydratedIdentity: MessageFns<HydratedIdentities_
     }
     if (message.phoneNumber !== undefined) {
       writer.uint32(50).string(message.phoneNumber);
+    }
+    for (const v of message.roles) {
+      writer.uint32(58).string(v!);
     }
     return writer;
   },
@@ -1922,6 +1950,14 @@ export const HydratedIdentities_HydratedIdentity: MessageFns<HydratedIdentities_
           }
 
           message.phoneNumber = reader.string();
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.roles.push(reader.string());
           continue;
         }
       }

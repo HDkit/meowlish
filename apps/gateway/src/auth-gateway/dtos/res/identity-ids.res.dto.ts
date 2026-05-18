@@ -4,7 +4,11 @@ import { Expose } from 'class-transformer';
 export class IdentityIdsDto {
 	@Expose()
 	@ApiProperty()
-	cursor!: string;
+	nextCursor!: string;
+
+	@Expose()
+	@ApiProperty()
+	prevCursor!: string;
 
 	@Expose()
 	@ApiProperty()

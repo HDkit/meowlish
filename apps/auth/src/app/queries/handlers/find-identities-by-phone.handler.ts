@@ -1,3 +1,4 @@
+import { CursorPaginationHelper } from '@server/utils';
 import { FILE_CLIENT } from '../../../constants/file';
 import {
 	type IIdentityReadRepository,
@@ -13,17 +14,28 @@ import { ClientGrpc } from '@nestjs/microservices';
 import { file } from '@server/generated';
 import { firstValueFrom } from 'rxjs';
 
+type FindIdentitiesByPhoneCursor = {
+	lastId?: string;
+	direction?: number;
+	limit?: number;
+};
+
 @QueryHandler(FindIdentitiesByPhoneQuery)
 export class FindIdentitiesByPhoneQueryHandler
 	implements IQueryHandler<FindIdentitiesByPhoneQuery>, OnModuleInit
 {
+	private readonly cursorPaginationHelper: CursorPaginationHelper;
 	private fileService!: file.FileServiceClient;
 
 	constructor(
 		@Inject(IIdentityReadRepositoryToken)
 		private readonly identityReadRepository: IIdentityReadRepository,
 		@Inject(FILE_CLIENT) private readonly fileClient: ClientGrpc,
-	) {}
+	) {
+		this.cursorPaginationHelper = new CursorPaginationHelper(
+			`${process.env.HOST}${process.env.PORT}FindIdentitiesByPhone`,
+		);
+	}
 
 	onModuleInit() {
 		this.fileService = this.fileClient.getService<file.FileServiceClient>(file.FILE_SERVICE_NAME);
@@ -31,11 +43,20 @@ export class FindIdentitiesByPhoneQueryHandler
 
 	async execute(query: FindIdentitiesByPhoneQuery): Promise<FindIdentitiesByPhoneQueryResult> {
 		const payload = query.payload;
+		const decodedCursor =
+			payload.cursor ?
+				this.cursorPaginationHelper.decodeCursor<FindIdentitiesByPhoneCursor>(payload.cursor)
+			:	undefined;
+
+		const inUsePhone = payload.phoneNumber!;
+		const inUseLimit = payload.limit ?? decodedCursor?.limit ?? 10;
+		const direction = decodedCursor?.direction ?? 1;
 
 		const identities = await this.identityReadRepository.findIdentitiesByPhone({
-			phoneNumber: payload.phoneNumber,
-			lastId: payload.lastId,
-			limit: payload.limit,
+			phoneNumber: inUsePhone,
+			lastId: decodedCursor?.lastId,
+			limit: inUseLimit,
+			direction,
 		});
 
 		try {
@@ -48,9 +69,21 @@ export class FindIdentitiesByPhoneQueryHandler
 			throw new ServiceUnavailableException('Cannot access File sub-service');
 		}
 
+		const encodedNextCursor = this.cursorPaginationHelper.encodeCursor<FindIdentitiesByPhoneCursor>({
+			lastId: identities.at(-1)?.id,
+			direction: 1,
+			limit: inUseLimit,
+		});
+		const encodedPrevCursor = this.cursorPaginationHelper.encodeCursor<FindIdentitiesByPhoneCursor>({
+			lastId: identities.at(0)?.id,
+			direction: -1,
+			limit: inUseLimit,
+		});
+
 		return {
 			identities: identities,
-			cursor: '',
+			nextCursor: encodedNextCursor,
+			prevCursor: encodedPrevCursor,
 		};
 	}
 }

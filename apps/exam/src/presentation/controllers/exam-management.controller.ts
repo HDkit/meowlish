@@ -50,6 +50,7 @@ import { FindExamsForManagementQuery } from '../../app/queries/management/exam.f
 import { GetExamManagementDetailsQuery } from '../../app/queries/management/exam.get-exam-details.query';
 import { GetQuestionManagementDetailsQuery } from '../../app/queries/management/exam.get-question-details.query';
 import { GetSectionManagementDetailsQuery } from '../../app/queries/management/exam.get-section-details.query';
+import { GetExamCountsQuery } from '../../app/queries/management/exam.get-counts.query';
 import { CreateExamDto } from '../dtos/req/management/create-exam.req.dto';
 import { CreateQuestionDto } from '../dtos/req/management/create-question.req.dto';
 import { CreateSectionDto } from '../dtos/req/management/create-section.req.dto';
@@ -179,5 +180,9 @@ export class ExamManagementController implements exam.ExamManagementServiceContr
 		@Payload() request: GetQuestionManagementDetailsDto,
 	): Promise<QuestionManagementInfoDto> {
 		return await this.queryBus.execute(new GetQuestionManagementDetailsQuery(request));
+	}
+
+	async getExamCounts(): Promise<exam.ExamCountsResponse> {
+		return await this.queryBus.execute(new GetExamCountsQuery());
 	}
 }

@@ -1,11 +1,24 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { AmqpConnectionManager } from '@golevelup/nestjs-rabbitmq';
+import { TransactionHost } from '@nestjs-cls/transactional';
+import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { Blog, PrismaClient } from '@prisma-client/resource';
-import { DATABASE_SERVICE } from '@server/database';
 import { resource } from '@server/generated';
+import { AppLoggerService } from '@server/logger';
 
 @Injectable()
 export class BlogService {
-	constructor(@Inject(DATABASE_SERVICE) private readonly prisma: PrismaClient) {}
+	constructor(
+		private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>,
+		private readonly amqpConnectionManager: AmqpConnectionManager,
+		private readonly logger: AppLoggerService,
+	) {}
+
+	private get amqpConnection() {
+		const connection = this.amqpConnectionManager.getConnection('pub');
+		if (!connection) throw new InternalServerErrorException('AMQP "pub" connection not available');
+		return connection;
+	}
 
 	private mapToResponse(entity: Blog): resource.BlogResponse {
 		return {
@@ -20,7 +33,7 @@ export class BlogService {
 	}
 
 	async createBlog(data: resource.CreateBlogRequest): Promise<resource.BlogResponse> {
-		const created = await this.prisma.blog.create({
+		const created = await this.txHost.tx.blog.create({
 			data: {
 				title: data.title as string,
 				content: data.content as string,
@@ -28,11 +41,23 @@ export class BlogService {
 				tags: data.tags || [],
 			},
 		});
+
+		try {
+			await this.amqpConnection.publish(
+				'eventbus',
+				'resource.resource.created',
+				{ resourceType: 'blog', resourceId: created.id, ownerId: data.authorId },
+				{ persistent: true },
+			);
+		} catch (e) {
+			this.logger.error(`Failed to publish resource.resource.created event: ${e}`);
+		}
+
 		return this.mapToResponse(created);
 	}
 
 	async getBlog(id: string): Promise<resource.BlogResponse> {
-		const entity = await this.prisma.blog.findUnique({ where: { id: id } });
+		const entity = await this.txHost.tx.blog.findUnique({ where: { id: id } });
 		if (!entity) {
 			throw new NotFoundException('Blog not found');
 		}
@@ -40,11 +65,11 @@ export class BlogService {
 	}
 
 	async updateBlog(data: resource.UpdateBlogRequest): Promise<resource.BlogResponse> {
-		const entity = await this.prisma.blog.findUnique({ where: { id: data.id } });
+		const entity = await this.txHost.tx.blog.findUnique({ where: { id: data.id } });
 		if (!entity) {
 			throw new NotFoundException('Blog not found');
 		}
-		const updated = await this.prisma.blog.update({
+		const updated = await this.txHost.tx.blog.update({
 			where: { id: data.id },
 			data: {
 				title: data.title ?? entity.title,
@@ -56,17 +81,30 @@ export class BlogService {
 	}
 
 	async deleteBlog(id: string): Promise<void> {
-		const entity = await this.prisma.blog.findUnique({ where: { id: id } });
+		const entity = await this.txHost.tx.blog.findUnique({ where: { id: id } });
 		if (!entity) {
 			throw new NotFoundException('Blog not found');
 		}
-		await this.prisma.blog.delete({ where: { id: id } });
+		await this.txHost.tx.blog.delete({ where: { id: id } });
+
+		try {
+			await this.amqpConnection.publish(
+				'eventbus',
+				'resource.resource.deleted',
+				{ resourceType: 'blog', resourceId: id },
+				{ persistent: true },
+			);
+		} catch (e) {
+			this.logger.error(`Failed to publish resource.resource.deleted event: ${e}`);
+		}
 	}
 
 	async listBlogs(data: resource.ListBlogsRequest): Promise<resource.ListBlogsResponse> {
 		const page = data.page || 1;
 		const limit = data.limit || 10;
 		const skip = (page - 1) * limit;
+
+		console.log(data.tags);
 
 		const where: { authorId?: string; tags?: { hasSome: string[] } } = {};
 		if (data.authorId) {
@@ -77,13 +115,13 @@ export class BlogService {
 		}
 
 		const [blogs, totalCount] = await Promise.all([
-			this.prisma.blog.findMany({
+			this.txHost.tx.blog.findMany({
 				where: where,
 				skip: skip,
 				take: limit,
 				orderBy: { createdAt: 'desc' },
 			}),
-			this.prisma.blog.count({ where: where }),
+			this.txHost.tx.blog.count({ where: where }),
 		]);
 
 		return {

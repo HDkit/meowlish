@@ -1,11 +1,12 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { NotificationPreference, PrismaClient } from '@prisma-client/notification';
-import { DATABASE_SERVICE } from '@server/database';
+import { TransactionHost } from '@nestjs-cls/transactional';
+import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { notification } from '@server/generated';
 
 @Injectable()
 export class NotificationPreferencesService {
-	constructor(@Inject(DATABASE_SERVICE) private readonly prisma: PrismaClient) {}
+	constructor(private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>) {}
 
 	private mapToResponse(
 		entity: NotificationPreference,
@@ -23,7 +24,7 @@ export class NotificationPreferencesService {
 	}
 
 	async getPreferences(identityId: string): Promise<notification.NotificationPreferencesResponse> {
-		const entity = await this.prisma.notificationPreference.upsert({
+		const entity = await this.txHost.tx.notificationPreference.upsert({
 			where: { identityId: identityId },
 			update: {},
 			create: { identityId: identityId },
@@ -34,7 +35,7 @@ export class NotificationPreferencesService {
 	async updatePreferences(
 		data: notification.UpdatePreferencesRequest,
 	): Promise<notification.NotificationPreferencesResponse> {
-		const entity = await this.prisma.notificationPreference.upsert({
+		const entity = await this.txHost.tx.notificationPreference.upsert({
 			where: { identityId: data.identityId as string },
 			update: {
 				emailEnabled: data.emailEnabled ?? undefined,

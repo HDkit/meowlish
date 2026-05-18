@@ -47,5 +47,9 @@ export class AttemptsHistoryDto {
 
 	@Expose()
 	@ApiProperty()
-	cursor!: string;
+	nextCursor!: string;
+
+	@Expose()
+	@ApiProperty()
+	prevCursor!: string;
 }

@@ -37,8 +37,9 @@ message UserBadgesRequestDto {
 }
 
 message UserBadgesResponseDto {
-	repeated UserBadges badges = 1;
-	optional string     cursor = 2;
+	repeated UserBadges badges      = 1;
+	optional string     next_cursor = 2;
+	optional string     prev_cursor = 3;
 }
 
 message UserProgressRequestDto {

@@ -1,14 +1,15 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaClient, Report } from '@prisma-client/resource';
-import { DATABASE_SERVICE } from '@server/database';
+import { TransactionHost } from '@nestjs-cls/transactional';
+import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { resource } from '@server/generated';
 
 @Injectable()
 export class ReportService {
-	constructor(@Inject(DATABASE_SERVICE) private readonly prisma: PrismaClient) {}
+	constructor(private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>) {}
 
 	private async mapToResponse(report: Report): Promise<resource.ReportResponse> {
-		const files = await this.prisma.reportFile.findMany({
+		const files = await this.txHost.tx.reportFile.findMany({
 			where: { reportId: report.id },
 			select: { fileId: true },
 		});
@@ -31,7 +32,7 @@ export class ReportService {
 	}
 
 	async createReport(data: resource.CreateReportRequest): Promise<resource.ReportResponse> {
-		const report = await this.prisma.report.create({
+		const report = await this.txHost.tx.report.create({
 			data: {
 				reportedBy: data.reportedBy as string,
 				type: data.type as string,
@@ -49,7 +50,7 @@ export class ReportService {
 	}
 
 	async getReport(id: string): Promise<resource.ReportResponse> {
-		const report = await this.prisma.report.findUnique({ where: { id: id } });
+		const report = await this.txHost.tx.report.findUnique({ where: { id: id } });
 		if (!report) {
 			throw new NotFoundException('Report not found');
 		}
@@ -57,11 +58,11 @@ export class ReportService {
 	}
 
 	async updateReport(data: resource.UpdateReportRequest): Promise<resource.ReportResponse> {
-		const report = await this.prisma.report.findUnique({ where: { id: data.id } });
+		const report = await this.txHost.tx.report.findUnique({ where: { id: data.id } });
 		if (!report) {
 			throw new NotFoundException('Report not found');
 		}
-		const updated = await this.prisma.report.update({
+		const updated = await this.txHost.tx.report.update({
 			where: { id: data.id },
 			data: {
 				status: data.status ?? report.status,
@@ -73,11 +74,11 @@ export class ReportService {
 	}
 
 	async deleteReport(id: string): Promise<void> {
-		const report = await this.prisma.report.findUnique({ where: { id: id } });
+		const report = await this.txHost.tx.report.findUnique({ where: { id: id } });
 		if (!report) {
 			throw new NotFoundException('Report not found');
 		}
-		await this.prisma.report.delete({ where: { id: id } });
+		await this.txHost.tx.report.delete({ where: { id: id } });
 	}
 
 	async listReports(data: resource.ListReportsRequest): Promise<resource.ListReportsResponse> {
@@ -93,13 +94,13 @@ export class ReportService {
 		if (data.targetId) where.targetId = data.targetId;
 
 		const [reports, totalCount] = await Promise.all([
-			this.prisma.report.findMany({
+			this.txHost.tx.report.findMany({
 				where: where,
 				skip: skip,
 				take: limit,
 				orderBy: { createdAt: 'desc' },
 			}),
-			this.prisma.report.count({ where: where }),
+			this.txHost.tx.report.count({ where: where }),
 		]);
 
 		return {
@@ -109,17 +110,17 @@ export class ReportService {
 	}
 
 	async addFileToReport(data: resource.AddFileToReportRequest): Promise<void> {
-		const report = await this.prisma.report.findUnique({ where: { id: data.reportId } });
+		const report = await this.txHost.tx.report.findUnique({ where: { id: data.reportId } });
 		if (!report) {
 			throw new NotFoundException('Report not found');
 		}
-		await this.prisma.reportFile.create({
+		await this.txHost.tx.reportFile.create({
 			data: { reportId: data.reportId as string, fileId: data.fileId as string },
 		});
 	}
 
 	async removeFileFromReport(data: resource.RemoveFileFromReportRequest): Promise<void> {
-		await this.prisma.reportFile.delete({
+		await this.txHost.tx.reportFile.delete({
 			where: {
 				reportId_fileId: {
 					reportId: data.reportId as string,

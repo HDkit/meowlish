@@ -1,14 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { FlashCard, FlashCardList, Prisma, PrismaClient } from '@prisma-client/resource';
+import { TransactionHost } from '@nestjs-cls/transactional';
+import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { resource } from '@server/generated';
 
 @Injectable()
 export class FlashcardListService {
-	private prisma: PrismaClient;
-
-	constructor() {
-		this.prisma = new PrismaClient();
-	}
+	constructor(private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>) {}
 
 	private mapToResponse(entity: FlashCardList): resource.FlashCardListResponse {
 		return {
@@ -43,7 +41,7 @@ export class FlashcardListService {
 	async createFlashCardList(
 		data: resource.CreateFlashCardListRequest,
 	): Promise<resource.FlashCardListResponse> {
-		const created = await this.prisma.flashCardList.create({
+		const created = await this.txHost.tx.flashCardList.create({
 			data: {
 				name: data.name as string,
 				description: data.description,
@@ -56,7 +54,7 @@ export class FlashcardListService {
 	}
 
 	async getFlashCardList(id: string): Promise<resource.FlashCardListDetailResponse> {
-		const entity = await this.prisma.flashCardList.findUnique({
+		const entity = await this.txHost.tx.flashCardList.findUnique({
 			where: { id: id },
 			include: { cards: true },
 		});
@@ -72,10 +70,10 @@ export class FlashcardListService {
 	async updateFlashCardList(
 		data: resource.UpdateFlashCardListRequest,
 	): Promise<resource.FlashCardListResponse> {
-		const entity = await this.prisma.flashCardList.findUnique({ where: { id: data.id } });
+		const entity = await this.txHost.tx.flashCardList.findUnique({ where: { id: data.id } });
 		if (!entity) throw new NotFoundException('FlashCardList not found');
 
-		const updated = await this.prisma.flashCardList.update({
+		const updated = await this.txHost.tx.flashCardList.update({
 			where: { id: data.id },
 			data: {
 				name: data.name ?? undefined,
@@ -88,10 +86,10 @@ export class FlashcardListService {
 	}
 
 	async deleteFlashCardList(id: string): Promise<void> {
-		const entity = await this.prisma.flashCardList.findUnique({ where: { id: id } });
+		const entity = await this.txHost.tx.flashCardList.findUnique({ where: { id: id } });
 		if (!entity) throw new NotFoundException('FlashCardList not found');
 
-		await this.prisma.flashCardList.delete({ where: { id: id } });
+		await this.txHost.tx.flashCardList.delete({ where: { id: id } });
 	}
 
 	async listFlashCardLists(
@@ -107,13 +105,13 @@ export class FlashcardListService {
 		if (data.tags && data.tags.length > 0) where.tags = { hasSome: data.tags };
 
 		const [lists, totalCount] = await Promise.all([
-			this.prisma.flashCardList.findMany({
+			this.txHost.tx.flashCardList.findMany({
 				where: where,
 				skip: skip,
 				take: limit,
 				orderBy: { createdAt: 'desc' },
 			}),
-			this.prisma.flashCardList.count({ where: where }),
+			this.txHost.tx.flashCardList.count({ where: where }),
 		]);
 
 		return {
@@ -123,13 +121,13 @@ export class FlashcardListService {
 	}
 
 	async addCardToList(data: resource.AddCardToListRequest): Promise<void> {
-		const list = await this.prisma.flashCardList.findUnique({ where: { id: data.listId } });
+		const list = await this.txHost.tx.flashCardList.findUnique({ where: { id: data.listId } });
 		if (!list) throw new NotFoundException('FlashCardList not found');
 
-		const card = await this.prisma.flashCard.findUnique({ where: { id: data.flashCardId } });
+		const card = await this.txHost.tx.flashCard.findUnique({ where: { id: data.flashCardId } });
 		if (!card) throw new NotFoundException('FlashCard not found');
 
-		await this.prisma.flashCard.update({
+		await this.txHost.tx.flashCard.update({
 			where: { id: data.flashCardId },
 			data: { listId: data.listId },
 		});
@@ -140,12 +138,12 @@ export class FlashcardListService {
 		// Since listId is required, "removing a card from list" essentially means deleting the card.
 		// If we want to strictly just remove the reference, we need to make listId optional in schema.prisma.
 		// Let's assume for this implementation we just delete it from DB if it's removed from its list.
-		const card = await this.prisma.flashCard.findFirst({
+		const card = await this.txHost.tx.flashCard.findFirst({
 			where: { id: data.flashCardId, listId: data.listId },
 		});
 		if (!card) throw new NotFoundException('Card not found in the specified list');
 
-		await this.prisma.flashCard.delete({ where: { id: data.flashCardId } });
+		await this.txHost.tx.flashCard.delete({ where: { id: data.flashCardId } });
 	}
 
 	async listCardsInList(
@@ -156,13 +154,13 @@ export class FlashcardListService {
 		const skip = (page - 1) * limit;
 
 		const [cards, totalCount] = await Promise.all([
-			this.prisma.flashCard.findMany({
+			this.txHost.tx.flashCard.findMany({
 				where: { listId: data.listId },
 				skip: skip,
 				take: limit,
 				orderBy: { createdAt: 'desc' },
 			}),
-			this.prisma.flashCard.count({ where: { listId: data.listId } }),
+			this.txHost.tx.flashCard.count({ where: { listId: data.listId } }),
 		]);
 
 		return {

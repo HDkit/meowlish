@@ -1,11 +1,16 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { NotificationSseService } from './notification-sse.service';
+import { TransactionHost } from '@nestjs-cls/transactional';
+import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Notification, Prisma, PrismaClient } from '@prisma-client/notification';
-import { DATABASE_SERVICE } from '@server/database';
 import { notification } from '@server/generated';
 
 @Injectable()
 export class NotificationService {
-	constructor(@Inject(DATABASE_SERVICE) private readonly prisma: PrismaClient) {}
+	constructor(
+		private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>,
+		private readonly sseService: NotificationSseService,
+	) {}
 
 	private mapToResponse(entity: Notification): notification.NotificationResponse {
 		return {
@@ -24,7 +29,7 @@ export class NotificationService {
 	async createNotification(
 		data: notification.CreateNotificationRequest,
 	): Promise<notification.NotificationResponse> {
-		const entity = await this.prisma.notification.create({
+		const entity = await this.txHost.tx.notification.create({
 			data: {
 				recipientId: data.recipientId as string,
 				type: data.type as string,
@@ -33,11 +38,13 @@ export class NotificationService {
 				data: data.data ? (JSON.parse(data.data) as Prisma.InputJsonValue) : undefined,
 			},
 		});
-		return this.mapToResponse(entity);
+		const response = this.mapToResponse(entity);
+		this.sseService.emit(response.recipientId, response);
+		return response;
 	}
 
 	async getNotification(id: string): Promise<notification.NotificationResponse> {
-		const entity = await this.prisma.notification.findUnique({ where: { id: id } });
+		const entity = await this.txHost.tx.notification.findUnique({ where: { id: id } });
 		if (!entity) {
 			throw new NotFoundException('Notification not found');
 		}
@@ -45,11 +52,11 @@ export class NotificationService {
 	}
 
 	async deleteNotification(id: string): Promise<void> {
-		const entity = await this.prisma.notification.findUnique({ where: { id: id } });
+		const entity = await this.txHost.tx.notification.findUnique({ where: { id: id } });
 		if (!entity) {
 			throw new NotFoundException('Notification not found');
 		}
-		await this.prisma.notification.delete({ where: { id: id } });
+		await this.txHost.tx.notification.delete({ where: { id: id } });
 	}
 
 	async listNotifications(
@@ -66,14 +73,14 @@ export class NotificationService {
 		if (data.isRead !== undefined && data.isRead !== null) where.isRead = data.isRead;
 
 		const [notifications, totalCount, unreadCount] = await Promise.all([
-			this.prisma.notification.findMany({
+			this.txHost.tx.notification.findMany({
 				where: where,
 				skip: skip,
 				take: limit,
 				orderBy: { createdAt: 'desc' },
 			}),
-			this.prisma.notification.count({ where: where }),
-			this.prisma.notification.count({
+			this.txHost.tx.notification.count({ where: where }),
+			this.txHost.tx.notification.count({
 				where: { recipientId: data.recipientId as string, isRead: false },
 			}),
 		]);
@@ -86,11 +93,11 @@ export class NotificationService {
 	}
 
 	async markAsRead(id: string): Promise<notification.NotificationResponse> {
-		const entity = await this.prisma.notification.findUnique({ where: { id: id } });
+		const entity = await this.txHost.tx.notification.findUnique({ where: { id: id } });
 		if (!entity) {
 			throw new NotFoundException('Notification not found');
 		}
-		const updated = await this.prisma.notification.update({
+		const updated = await this.txHost.tx.notification.update({
 			where: { id: id },
 			data: { isRead: true, readAt: new Date() },
 		});
@@ -98,7 +105,7 @@ export class NotificationService {
 	}
 
 	async markAllAsRead(recipientId: string): Promise<void> {
-		await this.prisma.notification.updateMany({
+		await this.txHost.tx.notification.updateMany({
 			where: { recipientId: recipientId, isRead: false },
 			data: { isRead: true, readAt: new Date() },
 		});

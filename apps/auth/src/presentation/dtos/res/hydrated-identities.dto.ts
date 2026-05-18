@@ -19,6 +19,9 @@ export class HydratedIdentityDto implements auth.HydratedIdentities_HydratedIden
 
 	@Expose()
 	phoneNumber?: string;
+
+	@Expose()
+	roles!: string[];
 }
 
 export class HydratedIdentitiesDto implements auth.HydratedIdentities {

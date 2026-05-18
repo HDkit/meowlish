@@ -2,7 +2,8 @@ import { Query } from '@server/utils';
 
 export type FindIdentityIdsQueryResult = {
 	ids: string[];
-	cursor: string;
+	nextCursor: string;
+	prevCursor: string;
 };
 
 export type FindIdentityIdsQueryPayload = {
@@ -13,6 +14,7 @@ export type FindIdentityIdsCursor = {
 	// high prec
 	usernameOrCredential?: string;
 	lastId?: string;
+	direction?: number;
 	// low prec
 	limit?: number;
 };

@@ -36,5 +36,8 @@ export class IdentitiesDto implements auth.Identities {
 	identities!: IdentityDto[];
 
 	@Expose()
-	cursor!: string;
+	nextCursor!: string;
+
+	@Expose()
+	prevCursor!: string;
 }

@@ -1,34 +1,308 @@
 services:
-  # api:
-  #   container_name: english-app
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - "3000:3000"
-  #   depends_on:
-  #     - db
-  #   volumes:
-  #     - .:/app
-  #     - /app/node_modules
-  #   networks:
-  #     - api-network
+  # ── Application Services ──────────────────────────────────────────────
 
-  envoy:
+  gateway:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        APP: gateway
+    environment:
+      - HOST=0.0.0.0
+      - PORT=3000
+      - AUTH_SERVICE_HOST=auth
+      - AUTH_SERVICE_PORT=50050
+      - EXAM_SERVICE_HOST=exam
+      - EXAM_SERVICE_PORT=50050
+      - FILE_SERVICE_HOST=file-service
+      - FILE_SERVICE_PORT=50050
+      - ACHIEVEMENT_SERVICE_HOST=achievement
+      - ACHIEVEMENT_SERVICE_PORT=50050
+      - LIVE_SERVICE_HOST=live
+      - LIVE_SERVICE_PORT=50050
+      - LIVE_SERVICE_WS_HOST=live
+      - LIVE_SERVICE_WS_PORT=1511
+      - NOTIFICATION_SERVICE_HOST=notification
+      - NOTIFICATION_SERVICE_PORT=50060
+      - NOTIFICATION_SERVICE_HTTP_PORT=50061
+      - RESOURCE_SERVICE_HOST=resource
+      - RESOURCE_SERVICE_PORT=50050
+    env_file: .env.services
+    depends_on: [auth, exam, file-service, achievement, notification, resource]
+    networks:
+      - api-network
+
+  auth:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        APP: auth
+    environment:
+      - HOST=0.0.0.0
+      - PORT=50050
+      - FILE_SERVICE_HOST=file-service
+      - FILE_SERVICE_PORT=50050
+    env_file: .env.services
+    depends_on: [db, redis, rabbit-mq]
+    networks:
+      - api-network
+
+  exam:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        APP: exam
+    environment:
+      - HOST=0.0.0.0
+      - PORT=50050
+      - FILE_SERVICE_HOST=file-service
+      - FILE_SERVICE_PORT=50050
+    env_file: .env.services
+    depends_on: [db, redis, rabbit-mq]
+    networks:
+      - api-network
+
+  achievement:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        APP: achievement
+    environment:
+      - HOST=0.0.0.0
+      - PORT=50050
+    env_file: .env.services
+    depends_on: [db, redis, rabbit-mq]
+    networks:
+      - api-network
+
+  resource:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        APP: resource
+    environment:
+      - HOST=0.0.0.0
+      - PORT=50050
+    env_file: .env.services
+    depends_on: [db, redis]
+    networks:
+      - api-network
+
+  notification:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        APP: notification
+    environment:
+      - GRPC_HOST=0.0.0.0
+      - GRPC_PORT=50060
+      - HTTP_HOST=0.0.0.0
+      - HTTP_PORT=50061
+    env_file: .env.services
+    depends_on: [db, redis, rabbit-mq]
+    networks:
+      - api-network
+
+  file-service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        APP: file-service
+    environment:
+      - HOST=0.0.0.0
+      - PORT=50050
+    env_file: .env.services
+    depends_on: [db, redis, rabbit-mq, min-io]
+    networks:
+      - api-network
+
+  live:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        APP: live
+    environment:
+      - HTTP_HOST=0.0.0.0
+      - HTTP_PORT=1511
+      - GRPC_HOST=0.0.0.0
+      - GRPC_PORT=50050
+    env_file: .env.services
+    depends_on: [db, redis, rabbit-mq]
+    networks:
+      - api-network
+
+  # ── Envoy Sidecars ────────────────────────────────────────────────────
+
+  envoy-gateway:
     build:
       context: .
       dockerfile: Dockerfile.envoy
     ports:
-      - "8082:8082"
-      - "9902:9902"
+      - "${ENVOY_GATEWAY_PORT:-8080}:8080"
+      - "${ENVOY_GATEWAY_ADMIN_PORT:-9900}:9900"
     volumes:
-      - ./envoy.yaml:/tmpl/envoy.yaml
+      - ./envoy/gateway.yaml:/tmpl/envoy.yaml
     environment:
-      - BACKEND_PORT=1510
+      - LISTEN_PORT=8080
+      - ADMIN_PORT=9900
+      - BACKEND_HOST=gateway
+      - BACKEND_PORT=3000
     command: >
       sh -c 'envsubst < /tmpl/envoy.yaml > /tmp/envoy.yaml
       && envoy -c /tmp/envoy.yaml'
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    depends_on: [gateway]
+    networks:
+      - api-network
+
+  envoy-auth:
+    build:
+      context: .
+      dockerfile: Dockerfile.envoy
+    ports:
+      - "${ENVOY_AUTH_PORT:-8081}:8081"
+    volumes:
+      - ./envoy/auth.yaml:/tmpl/envoy.yaml
+    environment:
+      - LISTEN_PORT=8081
+      - ADMIN_PORT=9901
+      - BACKEND_HOST=auth
+      - BACKEND_PORT=50050
+    command: >
+      sh -c 'envsubst < /tmpl/envoy.yaml > /tmp/envoy.yaml
+      && envoy -c /tmp/envoy.yaml'
+    depends_on: [auth]
+    networks:
+      - api-network
+
+  envoy-exam:
+    build:
+      context: .
+      dockerfile: Dockerfile.envoy
+    ports:
+      - "${ENVOY_EXAM_PORT:-8082}:8082"
+    volumes:
+      - ./envoy/exam.yaml:/tmpl/envoy.yaml
+    environment:
+      - LISTEN_PORT=8082
+      - ADMIN_PORT=9902
+      - BACKEND_HOST=exam
+      - BACKEND_PORT=50050
+    command: >
+      sh -c 'envsubst < /tmpl/envoy.yaml > /tmp/envoy.yaml
+      && envoy -c /tmp/envoy.yaml'
+    depends_on: [exam]
+    networks:
+      - api-network
+
+  envoy-achievement:
+    build:
+      context: .
+      dockerfile: Dockerfile.envoy
+    ports:
+      - "${ENVOY_ACHIEVEMENT_PORT:-8083}:8083"
+    volumes:
+      - ./envoy/achievement.yaml:/tmpl/envoy.yaml
+    environment:
+      - LISTEN_PORT=8083
+      - ADMIN_PORT=9903
+      - BACKEND_HOST=achievement
+      - BACKEND_PORT=50050
+    command: >
+      sh -c 'envsubst < /tmpl/envoy.yaml > /tmp/envoy.yaml
+      && envoy -c /tmp/envoy.yaml'
+    depends_on: [achievement]
+    networks:
+      - api-network
+
+  envoy-resource:
+    build:
+      context: .
+      dockerfile: Dockerfile.envoy
+    ports:
+      - "${ENVOY_RESOURCE_PORT:-8084}:8084"
+    volumes:
+      - ./envoy/resource.yaml:/tmpl/envoy.yaml
+    environment:
+      - LISTEN_PORT=8084
+      - ADMIN_PORT=9904
+      - BACKEND_HOST=resource
+      - BACKEND_PORT=50050
+    command: >
+      sh -c 'envsubst < /tmpl/envoy.yaml > /tmp/envoy.yaml
+      && envoy -c /tmp/envoy.yaml'
+    depends_on: [resource]
+    networks:
+      - api-network
+
+  envoy-notification:
+    build:
+      context: .
+      dockerfile: Dockerfile.envoy
+    ports:
+      - "${ENVOY_NOTIFICATION_GRPC_PORT:-8085}:8085"
+      - "${ENVOY_NOTIFICATION_SSE_PORT:-8095}:8095"
+    volumes:
+      - ./envoy/notification.yaml:/tmpl/envoy.yaml
+    environment:
+      - LISTEN_PORT=8085
+      - SSE_LISTEN_PORT=8095
+      - ADMIN_PORT=9905
+      - BACKEND_HOST=notification
+      - BACKEND_PORT=50060
+      - SSE_BACKEND_PORT=50061
+    command: >
+      sh -c 'envsubst < /tmpl/envoy.yaml > /tmp/envoy.yaml
+      && envoy -c /tmp/envoy.yaml'
+    depends_on: [notification]
+    networks:
+      - api-network
+
+  envoy-file-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.envoy
+    ports:
+      - "${ENVOY_FILE_SERVICE_PORT:-8086}:8086"
+    volumes:
+      - ./envoy/file-service.yaml:/tmpl/envoy.yaml
+    environment:
+      - LISTEN_PORT=8086
+      - ADMIN_PORT=9906
+      - BACKEND_HOST=file-service
+      - BACKEND_PORT=50050
+    command: >
+      sh -c 'envsubst < /tmpl/envoy.yaml > /tmp/envoy.yaml
+      && envoy -c /tmp/envoy.yaml'
+    depends_on: [file-service]
+    networks:
+      - api-network
+
+  envoy-live:
+    build:
+      context: .
+      dockerfile: Dockerfile.envoy
+    ports:
+      - "${ENVOY_LIVE_GRPC_PORT:-8087}:8087"
+      - "${ENVOY_LIVE_WS_PORT:-8088}:8088"
+    volumes:
+      - ./envoy/live.yaml:/tmpl/envoy.yaml
+    environment:
+      - LISTEN_PORT=8087
+      - WS_LISTEN_PORT=8088
+      - ADMIN_PORT=9907
+      - BACKEND_HOST=live
+      - GRPC_BACKEND_PORT=50050
+      - WS_BACKEND_PORT=1511
+    command: >
+      sh -c 'envsubst < /tmpl/envoy.yaml > /tmp/envoy.yaml
+      && envoy -c /tmp/envoy.yaml'
+    depends_on: [live]
     networks:
       - api-network

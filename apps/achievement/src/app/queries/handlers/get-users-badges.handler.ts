@@ -42,16 +42,29 @@ export class GetUsersBadgesQueryHandler implements IQueryHandler<GetUsersBadgesQ
 		const inUseUserId = decodedCursor ? decodedCursor.userId : payload.userId;
 		// payload.limit has precedence over cursor
 		const inUseLimit = payload.limit ?? decodedCursor?.limit ?? 10;
+		const direction = decodedCursor?.direction ?? 1;
 
 		const badges = await this.badgeReadRepository.getUsersBadges(inUseUserId, {
 			lastId: decodedCursor?.lastId,
 			limit: inUseLimit,
+			direction,
 		});
-		const encodedCursor = this.cursorPaginationHelper.encodeCursor<GetUsersBadgesCursor>({
+		const encodedNextCursor = this.cursorPaginationHelper.encodeCursor<GetUsersBadgesCursor>({
 			userId: inUseUserId,
 			lastId: badges.at(-1)?.id,
 			limit: inUseLimit,
+			direction: 1,
 		});
-		return { badges: badges, cursor: encodedCursor };
+		const encodedPrevCursor = this.cursorPaginationHelper.encodeCursor<GetUsersBadgesCursor>({
+			userId: inUseUserId,
+			lastId: badges.at(0)?.id,
+			limit: inUseLimit,
+			direction: -1,
+		});
+		return {
+			badges: badges,
+			nextCursor: encodedNextCursor,
+			prevCursor: encodedPrevCursor,
+		};
 	}
 }

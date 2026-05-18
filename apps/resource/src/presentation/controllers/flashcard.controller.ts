@@ -1,35 +1,37 @@
 import { FlashcardService } from '../../app/services/flashcard.service';
-import { Controller } from '@nestjs/common';
+import { Controller, UseFilters } from '@nestjs/common';
+import { Payload } from '@nestjs/microservices';
 import { resource } from '@server/generated';
+import { GlobalRpcExceptionFilter } from '@server/utils';
+import { CreateFlashCardReqDto } from '../dtos/req/create-flash-card.req.dto';
+import { UpdateFlashCardReqDto } from '../dtos/req/update-flash-card.req.dto';
+import { GetFlashCardReqDto } from '../dtos/req/get-flash-card.req.dto';
+import { DeleteFlashCardReqDto } from '../dtos/req/delete-flash-card.req.dto';
+import { ListFlashCardsReqDto } from '../dtos/req/list-flash-cards.req.dto';
 
+@UseFilters(GlobalRpcExceptionFilter)
 @resource.FlashCardServiceControllerMethods()
 @Controller()
 export class FlashcardController implements resource.FlashCardServiceController {
 	constructor(private readonly flashcardService: FlashcardService) {}
 
-	async createFlashCard(
-		data: resource.CreateFlashCardRequest,
-	): Promise<resource.FlashCardResponse> {
+	async createFlashCard(@Payload() data: CreateFlashCardReqDto): Promise<resource.FlashCardResponse> {
 		return this.flashcardService.createFlashCard(data);
 	}
 
-	async getFlashCard(data: resource.GetFlashCardRequest): Promise<resource.FlashCardResponse> {
+	async getFlashCard(@Payload() data: GetFlashCardReqDto): Promise<resource.FlashCardResponse> {
 		return this.flashcardService.getFlashCard(data.id as string);
 	}
 
-	async updateFlashCard(
-		data: resource.UpdateFlashCardRequest,
-	): Promise<resource.FlashCardResponse> {
+	async updateFlashCard(@Payload() data: UpdateFlashCardReqDto): Promise<resource.FlashCardResponse> {
 		return this.flashcardService.updateFlashCard(data);
 	}
 
-	async deleteFlashCard(data: resource.DeleteFlashCardRequest): Promise<void> {
+	async deleteFlashCard(@Payload() data: DeleteFlashCardReqDto): Promise<void> {
 		await this.flashcardService.deleteFlashCard(data.id as string);
 	}
 
-	async listFlashCards(
-		data: resource.ListFlashCardsRequest,
-	): Promise<resource.ListFlashCardsResponse> {
+	async listFlashCards(@Payload() data: ListFlashCardsReqDto): Promise<resource.ListFlashCardsResponse> {
 		return this.flashcardService.listFlashCards(data);
 	}
 }

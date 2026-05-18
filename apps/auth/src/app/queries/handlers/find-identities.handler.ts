@@ -48,6 +48,7 @@ export class FindIdentitiesQueryHandler
 		const inUseHasRoles = decodedCursor?.hasRoles ?? payload.hasRoles;
 		const inUseHasPerms = decodedCursor?.hasPerms ?? payload.hasPerms;
 		const inUseLimit = payload.limit ?? decodedCursor?.limit ?? 10;
+		const direction = decodedCursor?.direction ?? 1;
 
 		const identities = await this.identityReadRepository.findIdentities({
 			usernameOrCredentialIdentifierOrId: inUseIdentifier,
@@ -55,6 +56,7 @@ export class FindIdentitiesQueryHandler
 			hasPerms: inUseHasPerms,
 			lastId: decodedCursor?.lastId,
 			limit: inUseLimit,
+			direction,
 		});
 
 		try {
@@ -67,17 +69,27 @@ export class FindIdentitiesQueryHandler
 			throw new ServiceUnavailableException('Cannot access File sub-service');
 		}
 
-		const encodedCursor = this.cursorPaginationHelper.encodeCursor<FindIdentitiesCursor>({
+		const encodedNextCursor = this.cursorPaginationHelper.encodeCursor<FindIdentitiesCursor>({
 			usernameOrCredentialOrId: inUseIdentifier,
 			hasRoles: inUseHasRoles,
 			hasPerms: inUseHasPerms,
 			lastId: identities.at(-1)?.id,
+			direction: 1,
+			limit: inUseLimit,
+		});
+		const encodedPrevCursor = this.cursorPaginationHelper.encodeCursor<FindIdentitiesCursor>({
+			usernameOrCredentialOrId: inUseIdentifier,
+			hasRoles: inUseHasRoles,
+			hasPerms: inUseHasPerms,
+			lastId: identities.at(0)?.id,
+			direction: -1,
 			limit: inUseLimit,
 		});
 
 		return {
 			identities: identities,
-			cursor: encodedCursor,
+			nextCursor: encodedNextCursor,
+			prevCursor: encodedPrevCursor,
 		};
 	}
 }

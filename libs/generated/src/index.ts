@@ -7,6 +7,7 @@
 
 export * as google from "./index.google";
 export * as achievement from "./index.achievement";
+export * as authorization from "./index.authorization";
 export * as auth from "./index.auth";
 export * as exam from "./index.exam";
 export * as file from "./index.file";

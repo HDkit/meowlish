@@ -53,21 +53,35 @@ export class FindExamsForManagementHandler implements IQueryHandler<FindExamsFor
 		const inUseSortBy = decodedCursor ? decodedCursor.sortBy : payload.sortBy;
 		// payload.limit has precedence
 		const inUseLimit = payload.limit ?? decodedCursor?.limit ?? 10;
+		const direction = decodedCursor?.direction ?? 1;
 
 		const exams = await this.managementReadRepository.findExams({
 			filter: inUseFilter,
 			sortBy: inUseSortBy,
 			lastId: decodedCursor?.lastId,
 			limit: inUseLimit,
+			direction,
 		});
 
-		const encodedCursor = this.cursorPaginationHelper.encodeCursor<FindExamsForManagementCursor>({
+		const encodedNextCursor = this.cursorPaginationHelper.encodeCursor<FindExamsForManagementCursor>({
 			filter: inUseFilter,
 			sortBy: inUseSortBy,
 			lastId: exams.at(-1)?.id,
 			limit: inUseLimit,
+			direction: 1,
+		});
+		const encodedPrevCursor = this.cursorPaginationHelper.encodeCursor<FindExamsForManagementCursor>({
+			filter: inUseFilter,
+			sortBy: inUseSortBy,
+			lastId: exams.at(0)?.id,
+			limit: inUseLimit,
+			direction: -1,
 		});
 
-		return { exams: exams, cursor: encodedCursor };
+		return {
+			exams: exams,
+			nextCursor: encodedNextCursor,
+			prevCursor: encodedPrevCursor,
+		};
 	}
 }

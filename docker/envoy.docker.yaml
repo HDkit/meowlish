@@ -7,7 +7,7 @@ services:
     volumes:
       - ./envoy.yaml:/tmpl/envoy.yaml
     environment:
-      - BACKEND_PORT=1510
+      - BACKEND_PORT=1511
     command: >
       sh -c 'envsubst < /tmpl/envoy.yaml > /tmp/envoy.yaml
       && envoy -c /tmp/envoy.yaml'

@@ -1,7 +1,12 @@
 import { NotificationPreferencesService } from '../../app/services/notification-preferences.service';
-import { Controller } from '@nestjs/common';
+import { Controller, UseFilters } from '@nestjs/common';
+import { Payload } from '@nestjs/microservices';
 import { notification } from '@server/generated';
+import { GlobalRpcExceptionFilter } from '@server/utils';
+import { GetPreferencesReqDto } from '../dtos/req/get-preferences.req.dto';
+import { UpdatePreferencesReqDto } from '../dtos/req/update-preferences.req.dto';
 
+@UseFilters(GlobalRpcExceptionFilter)
 @notification.NotificationPreferencesServiceControllerMethods()
 @Controller()
 export class NotificationPreferencesController
@@ -9,15 +14,11 @@ export class NotificationPreferencesController
 {
 	constructor(private readonly notificationPreferencesService: NotificationPreferencesService) {}
 
-	async getPreferences(
-		data: notification.GetPreferencesRequest,
-	): Promise<notification.NotificationPreferencesResponse> {
+	async getPreferences(@Payload() data: GetPreferencesReqDto): Promise<notification.NotificationPreferencesResponse> {
 		return this.notificationPreferencesService.getPreferences(data.identityId as string);
 	}
 
-	async updatePreferences(
-		data: notification.UpdatePreferencesRequest,
-	): Promise<notification.NotificationPreferencesResponse> {
+	async updatePreferences(@Payload() data: UpdatePreferencesReqDto): Promise<notification.NotificationPreferencesResponse> {
 		return this.notificationPreferencesService.updatePreferences(data);
 	}
 }

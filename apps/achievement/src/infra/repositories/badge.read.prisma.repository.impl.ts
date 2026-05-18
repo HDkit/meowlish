@@ -25,9 +25,11 @@ export class BadgeReadPrismaRepositoryImpl implements IBadgeReadRepository {
 	 */
 	async getUsersBadges(
 		userId: string,
-		opts?: { lastId?: string; limit?: number },
+		opts?: { lastId?: string; limit?: number; direction?: number },
 	): Promise<UserBadge[]> {
 		if (opts?.limit && opts.limit < 0) throw new BadRequestException('Limit must be positive');
+		const limit = opts?.limit ?? 10;
+		const dir = Math.sign(opts?.direction || 1);
 
 		const badges = await this.txHost.tx.userBadge.findMany({
 			where: { uid: userId },
@@ -37,7 +39,7 @@ export class BadgeReadPrismaRepositoryImpl implements IBadgeReadRepository {
 				badge: { select: { name: true, displayName: true, description: true } },
 				updatedAt: true,
 			},
-			take: opts?.limit ?? 10,
+			take: dir * limit,
 			...(opts?.lastId && {
 				cursor: { id: opts.lastId },
 				skip: 1,
