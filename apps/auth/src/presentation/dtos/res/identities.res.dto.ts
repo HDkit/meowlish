@@ -22,6 +22,12 @@ class IdentityDto implements auth.Identities_Identity {
 
 	@Expose()
 	username!: string;
+
+	@Expose()
+	phoneNumber?: string;
+
+	@Expose()
+	isLocked!: boolean;
 }
 
 export class IdentitiesDto implements auth.Identities {

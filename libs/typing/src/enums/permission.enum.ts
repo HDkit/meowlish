@@ -4,4 +4,12 @@ export enum Permission {
 	EXAM_APPROVE = 'exam:approve',
 	USER_LOCK = 'user:lock',
 	USER_BAN = 'user:ban',
+	USER_UNLOCK = 'user:unlock',
+	COURSE_ENROLL = 'course:enroll',
+	COURSE_MANAGE = 'course:manage',
+	BOOKING_CREATE = 'booking:create',
+	BOOKING_MANAGE_SLOTS = 'booking:manage-slots',
+	BOOKING_VIEW_ALL = 'booking:view-all',
+	CONNECTION_REQUEST = 'connection:request',
+	CONNECTION_VIEW_CHILD = 'connection:view-child',
 }

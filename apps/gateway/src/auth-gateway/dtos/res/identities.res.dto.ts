@@ -29,6 +29,14 @@ class IdentityDto {
 	@Expose()
 	@ApiProperty()
 	username!: string;
+
+	@Expose()
+	@ApiPropertyOptional()
+	phoneNumber?: string;
+
+	@Expose()
+	@ApiProperty()
+	isLocked!: boolean;
 }
 
 export class IdentitiesDto {

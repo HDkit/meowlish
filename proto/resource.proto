@@ -21,6 +21,16 @@ service FlashCardService {
 	rpc ListFlashCards(ListFlashCardsRequest) returns (ListFlashCardsResponse) {}
 }
 
+service ReportService {
+	rpc CreateReport(CreateReportRequest) returns (ReportResponse) {}
+	rpc GetReport(GetReportRequest) returns (ReportResponse) {}
+	rpc UpdateReport(UpdateReportRequest) returns (ReportResponse) {}
+	rpc DeleteReport(DeleteReportRequest) returns (google.protobuf.Empty) {}
+	rpc ListReports(ListReportsRequest) returns (ListReportsResponse) {}
+	rpc AddFileToReport(AddFileToReportRequest) returns (google.protobuf.Empty) {}
+	rpc RemoveFileFromReport(RemoveFileFromReportRequest) returns (google.protobuf.Empty) {}
+}
+
 service FlashCardListService {
 	rpc CreateFlashCardList(CreateFlashCardListRequest) returns (FlashCardListResponse) {}
 	rpc GetFlashCardList(GetFlashCardListRequest) returns (FlashCardListDetailResponse) {}
@@ -212,4 +222,72 @@ message ListCardsInListRequest {
 	google.protobuf.StringValue         list_id = 1;
 	optional google.protobuf.Int32Value page    = 2;
 	optional google.protobuf.Int32Value limit   = 3;
+}
+
+// Report messages
+
+message ReportResponse {
+	string          id             = 1;
+	string          reported_by    = 2;
+	string          type           = 3;
+	string          status         = 4;
+	string          title          = 5;
+	string          description    = 6;
+	optional string target_type    = 7;
+	optional string target_id      = 8;
+	optional string resolved_by    = 9;
+	optional string admin_response = 10;
+	repeated string file_ids       = 11;
+	string          created_at     = 12;
+	string          updated_at     = 13;
+}
+
+message CreateReportRequest {
+	google.protobuf.StringValue          reported_by    = 1;
+	google.protobuf.StringValue          type           = 2;
+	google.protobuf.StringValue          title          = 3;
+	google.protobuf.StringValue          description    = 4;
+	optional google.protobuf.StringValue target_type    = 5;
+	optional google.protobuf.StringValue target_id      = 6;
+	repeated google.protobuf.StringValue file_ids       = 7;
+}
+
+message GetReportRequest {
+	google.protobuf.StringValue id = 1;
+}
+
+message UpdateReportRequest {
+	google.protobuf.StringValue          id             = 1;
+	optional google.protobuf.StringValue status         = 2;
+	optional google.protobuf.StringValue resolved_by    = 3;
+	optional google.protobuf.StringValue admin_response = 4;
+}
+
+message DeleteReportRequest {
+	google.protobuf.StringValue id = 1;
+}
+
+message ListReportsRequest {
+	optional google.protobuf.StringValue reported_by = 1;
+	optional google.protobuf.StringValue type        = 2;
+	optional google.protobuf.StringValue status      = 3;
+	optional google.protobuf.StringValue target_type = 4;
+	optional google.protobuf.StringValue target_id   = 5;
+	optional google.protobuf.Int32Value  page        = 6;
+	optional google.protobuf.Int32Value  limit       = 7;
+}
+
+message ListReportsResponse {
+	repeated ReportResponse reports     = 1;
+	int32                   total_count = 2;
+}
+
+message AddFileToReportRequest {
+	google.protobuf.StringValue report_id = 1;
+	google.protobuf.StringValue file_id   = 2;
+}
+
+message RemoveFileFromReportRequest {
+	google.protobuf.StringValue report_id = 1;
+	google.protobuf.StringValue file_id   = 2;
 }

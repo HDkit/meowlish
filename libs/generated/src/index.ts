@@ -10,4 +10,5 @@ export * as achievement from "./index.achievement";
 export * as auth from "./index.auth";
 export * as exam from "./index.exam";
 export * as file from "./index.file";
+export * as notification from "./index.notification";
 export * as resource from "./index.resource";

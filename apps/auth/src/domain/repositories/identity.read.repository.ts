@@ -13,6 +13,11 @@ export interface IIdentityReadRepository {
 		lastId?: string;
 		limit?: number;
 	}): Promise<IdentityReadModel[]>;
+	findIdentitiesByPhone(options: {
+		phoneNumber: string;
+		lastId?: string;
+		limit?: number;
+	}): Promise<IdentityReadModel[]>;
 	hydrate(id: string): Promise<HydratedIdentityReadModel | null>;
 	hydrateMany(ids: string[]): Promise<HydratedIdentityReadModel[]>;
 }

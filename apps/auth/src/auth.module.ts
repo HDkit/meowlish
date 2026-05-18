@@ -12,11 +12,13 @@ import { rmqSubConfig } from './configs/rmq.sub.config';
 import { FILE_CLIENT } from './constants/file';
 import { ICredentialReadRepositoryToken } from './domain/repositories/credential.read.repository';
 import { IFileRepositoryToken } from './domain/repositories/file.repository';
+import { IGoogleCalendarTokenRepositoryToken } from './domain/repositories/google-calendar-token.repository';
 import { IIdentityReadRepositoryToken } from './domain/repositories/identity.read.repository';
 import { IIdentityRepositoryToken } from './domain/repositories/identity.repository';
 import { IRoleReadRepositoryToken } from './domain/repositories/role.read.repository';
 import { CredentialReadPrismaRepositoryImpl } from './infra/repositories/credential.read.prisma.repository.impl';
 import { FilePrismaRepositoryImpl } from './infra/repositories/file.prisma.repository.impl';
+import { GoogleCalendarTokenPrismaRepositoryImpl } from './infra/repositories/google-calendar-token.prisma.repository.impl';
 import { IdentityPrismaRepositoryImpl } from './infra/repositories/identity.prisma.repository.impl';
 import { IdentityReadPrismaRepositoryImpl } from './infra/repositories/identity.read.prisma.repository.impl';
 import { RoleReadPrismaRepositoryImpl } from './infra/repositories/role.read.prisma.repository.impl';
@@ -131,6 +133,10 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 		{
 			provide: IFileRepositoryToken,
 			useClass: FilePrismaRepositoryImpl,
+		},
+		{
+			provide: IGoogleCalendarTokenRepositoryToken,
+			useClass: GoogleCalendarTokenPrismaRepositoryImpl,
 		},
 		{
 			provide: APP_GUARD,

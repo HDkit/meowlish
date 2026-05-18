@@ -22,6 +22,11 @@ export class UpdateIdentityDto {
 	@ApiPropertyOptional()
 	avatarId?: string;
 
+	@IsOptional()
+	@IsString()
+	@ApiPropertyOptional()
+	phoneNumber?: string;
+
 	@IsBoolean()
 	@IsOptional()
 	@ApiPropertyOptional()
@@ -36,4 +41,9 @@ export class UpdateIdentityDto {
 	@IsOptional()
 	@ApiPropertyOptional()
 	setAvatarIdNull?: boolean;
+
+	@IsBoolean()
+	@IsOptional()
+	@ApiPropertyOptional()
+	setPhoneNumberNull?: boolean;
 }

@@ -34,6 +34,18 @@ async function seedRolePermissions() {
 		[Role.Admin]: Object.values(Permission),
 		[Role.Mod]: [Permission.EXAM_WRITE, Permission.EXAM_REVIEW, Permission.USER_LOCK],
 		[Role.User]: [],
+		[Role.Student]: [Permission.COURSE_ENROLL, Permission.BOOKING_CREATE, Permission.CONNECTION_REQUEST],
+		[Role.Parent]: [Permission.CONNECTION_REQUEST, Permission.CONNECTION_VIEW_CHILD],
+		[Role.Teacher]: [
+			Permission.BOOKING_MANAGE_SLOTS,
+			Permission.EXAM_WRITE,
+			Permission.CONNECTION_REQUEST,
+		],
+		[Role.Mentor]: [
+			Permission.BOOKING_MANAGE_SLOTS,
+			Permission.EXAM_WRITE,
+			Permission.CONNECTION_REQUEST,
+		],
 	};
 
 	for (const [roleName, perms] of Object.entries(rolePermissions) as [Role, Permission[]][]) {

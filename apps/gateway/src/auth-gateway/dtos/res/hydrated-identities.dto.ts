@@ -21,6 +21,10 @@ export class HydratedIdentityDto {
 	@Expose()
 	@ApiProperty()
 	username!: string;
+
+	@Expose()
+	@ApiPropertyOptional()
+	phoneNumber?: string;
 }
 
 export class HydratedIdentitiesDto {

@@ -194,6 +194,72 @@ export interface ListCardsInListRequest {
   limit?: number | undefined;
 }
 
+export interface ReportResponse {
+  id: string;
+  reportedBy: string;
+  type: string;
+  status: string;
+  title: string;
+  description: string;
+  targetType?: string | undefined;
+  targetId?: string | undefined;
+  resolvedBy?: string | undefined;
+  adminResponse?: string | undefined;
+  fileIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateReportRequest {
+  reportedBy: string | undefined;
+  type: string | undefined;
+  title: string | undefined;
+  description: string | undefined;
+  targetType?: string | undefined;
+  targetId?: string | undefined;
+  fileIds: string[];
+}
+
+export interface GetReportRequest {
+  id: string | undefined;
+}
+
+export interface UpdateReportRequest {
+  id: string | undefined;
+  status?: string | undefined;
+  resolvedBy?: string | undefined;
+  adminResponse?: string | undefined;
+}
+
+export interface DeleteReportRequest {
+  id: string | undefined;
+}
+
+export interface ListReportsRequest {
+  reportedBy?: string | undefined;
+  type?: string | undefined;
+  status?: string | undefined;
+  targetType?: string | undefined;
+  targetId?: string | undefined;
+  page?: number | undefined;
+  limit?: number | undefined;
+}
+
+export interface ListReportsResponse {
+  reports: ReportResponse[];
+  totalCount: number;
+}
+
+export interface AddFileToReportRequest {
+  reportId: string | undefined;
+  fileId: string | undefined;
+}
+
+export interface RemoveFileFromReportRequest {
+  reportId: string | undefined;
+  fileId: string | undefined;
+}
+
 function createBaseBlogResponse(): BlogResponse {
   return { id: "", title: "", content: "", authorId: "", tags: [], createdAt: "", updatedAt: "" };
 }
@@ -2032,6 +2098,679 @@ export const ListCardsInListRequest: MessageFns<ListCardsInListRequest> = {
   },
 };
 
+function createBaseReportResponse(): ReportResponse {
+  return {
+    id: "",
+    reportedBy: "",
+    type: "",
+    status: "",
+    title: "",
+    description: "",
+    fileIds: [],
+    createdAt: "",
+    updatedAt: "",
+  };
+}
+
+export const ReportResponse: MessageFns<ReportResponse> = {
+  encode(message: ReportResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.reportedBy !== "") {
+      writer.uint32(18).string(message.reportedBy);
+    }
+    if (message.type !== "") {
+      writer.uint32(26).string(message.type);
+    }
+    if (message.status !== "") {
+      writer.uint32(34).string(message.status);
+    }
+    if (message.title !== "") {
+      writer.uint32(42).string(message.title);
+    }
+    if (message.description !== "") {
+      writer.uint32(50).string(message.description);
+    }
+    if (message.targetType !== undefined) {
+      writer.uint32(58).string(message.targetType);
+    }
+    if (message.targetId !== undefined) {
+      writer.uint32(66).string(message.targetId);
+    }
+    if (message.resolvedBy !== undefined) {
+      writer.uint32(74).string(message.resolvedBy);
+    }
+    if (message.adminResponse !== undefined) {
+      writer.uint32(82).string(message.adminResponse);
+    }
+    for (const v of message.fileIds) {
+      writer.uint32(90).string(v!);
+    }
+    if (message.createdAt !== "") {
+      writer.uint32(98).string(message.createdAt);
+    }
+    if (message.updatedAt !== "") {
+      writer.uint32(106).string(message.updatedAt);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ReportResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseReportResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.id = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.reportedBy = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.type = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.status = reader.string();
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.title = reader.string();
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.description = reader.string();
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.targetType = reader.string();
+          continue;
+        }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
+
+          message.targetId = reader.string();
+          continue;
+        }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
+
+          message.resolvedBy = reader.string();
+          continue;
+        }
+        case 10: {
+          if (tag !== 82) {
+            break;
+          }
+
+          message.adminResponse = reader.string();
+          continue;
+        }
+        case 11: {
+          if (tag !== 90) {
+            break;
+          }
+
+          message.fileIds.push(reader.string());
+          continue;
+        }
+        case 12: {
+          if (tag !== 98) {
+            break;
+          }
+
+          message.createdAt = reader.string();
+          continue;
+        }
+        case 13: {
+          if (tag !== 106) {
+            break;
+          }
+
+          message.updatedAt = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseCreateReportRequest(): CreateReportRequest {
+  return { reportedBy: undefined, type: undefined, title: undefined, description: undefined, fileIds: [] };
+}
+
+export const CreateReportRequest: MessageFns<CreateReportRequest> = {
+  encode(message: CreateReportRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.reportedBy !== undefined) {
+      StringValue.encode({ value: message.reportedBy! }, writer.uint32(10).fork()).join();
+    }
+    if (message.type !== undefined) {
+      StringValue.encode({ value: message.type! }, writer.uint32(18).fork()).join();
+    }
+    if (message.title !== undefined) {
+      StringValue.encode({ value: message.title! }, writer.uint32(26).fork()).join();
+    }
+    if (message.description !== undefined) {
+      StringValue.encode({ value: message.description! }, writer.uint32(34).fork()).join();
+    }
+    if (message.targetType !== undefined) {
+      StringValue.encode({ value: message.targetType! }, writer.uint32(42).fork()).join();
+    }
+    if (message.targetId !== undefined) {
+      StringValue.encode({ value: message.targetId! }, writer.uint32(50).fork()).join();
+    }
+    for (const v of message.fileIds) {
+      StringValue.encode({ value: v!! }, writer.uint32(58).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CreateReportRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCreateReportRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.reportedBy = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.type = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.title = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.description = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.targetType = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.targetId = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.fileIds.push(StringValue.decode(reader, reader.uint32()).value);
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseGetReportRequest(): GetReportRequest {
+  return { id: undefined };
+}
+
+export const GetReportRequest: MessageFns<GetReportRequest> = {
+  encode(message: GetReportRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetReportRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGetReportRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.id = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseUpdateReportRequest(): UpdateReportRequest {
+  return { id: undefined };
+}
+
+export const UpdateReportRequest: MessageFns<UpdateReportRequest> = {
+  encode(message: UpdateReportRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.status !== undefined) {
+      StringValue.encode({ value: message.status! }, writer.uint32(18).fork()).join();
+    }
+    if (message.resolvedBy !== undefined) {
+      StringValue.encode({ value: message.resolvedBy! }, writer.uint32(26).fork()).join();
+    }
+    if (message.adminResponse !== undefined) {
+      StringValue.encode({ value: message.adminResponse! }, writer.uint32(34).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UpdateReportRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseUpdateReportRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.id = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.status = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.resolvedBy = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.adminResponse = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseDeleteReportRequest(): DeleteReportRequest {
+  return { id: undefined };
+}
+
+export const DeleteReportRequest: MessageFns<DeleteReportRequest> = {
+  encode(message: DeleteReportRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): DeleteReportRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDeleteReportRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.id = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseListReportsRequest(): ListReportsRequest {
+  return {};
+}
+
+export const ListReportsRequest: MessageFns<ListReportsRequest> = {
+  encode(message: ListReportsRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.reportedBy !== undefined) {
+      StringValue.encode({ value: message.reportedBy! }, writer.uint32(10).fork()).join();
+    }
+    if (message.type !== undefined) {
+      StringValue.encode({ value: message.type! }, writer.uint32(18).fork()).join();
+    }
+    if (message.status !== undefined) {
+      StringValue.encode({ value: message.status! }, writer.uint32(26).fork()).join();
+    }
+    if (message.targetType !== undefined) {
+      StringValue.encode({ value: message.targetType! }, writer.uint32(34).fork()).join();
+    }
+    if (message.targetId !== undefined) {
+      StringValue.encode({ value: message.targetId! }, writer.uint32(42).fork()).join();
+    }
+    if (message.page !== undefined) {
+      Int32Value.encode({ value: message.page! }, writer.uint32(50).fork()).join();
+    }
+    if (message.limit !== undefined) {
+      Int32Value.encode({ value: message.limit! }, writer.uint32(58).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListReportsRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseListReportsRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.reportedBy = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.type = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.status = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.targetType = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.targetId = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.page = Int32Value.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.limit = Int32Value.decode(reader, reader.uint32()).value;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseListReportsResponse(): ListReportsResponse {
+  return { reports: [], totalCount: 0 };
+}
+
+export const ListReportsResponse: MessageFns<ListReportsResponse> = {
+  encode(message: ListReportsResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.reports) {
+      ReportResponse.encode(v!, writer.uint32(10).fork()).join();
+    }
+    if (message.totalCount !== 0) {
+      writer.uint32(16).int32(message.totalCount);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListReportsResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseListReportsResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.reports.push(ReportResponse.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.totalCount = reader.int32();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseAddFileToReportRequest(): AddFileToReportRequest {
+  return { reportId: undefined, fileId: undefined };
+}
+
+export const AddFileToReportRequest: MessageFns<AddFileToReportRequest> = {
+  encode(message: AddFileToReportRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.reportId !== undefined) {
+      StringValue.encode({ value: message.reportId! }, writer.uint32(10).fork()).join();
+    }
+    if (message.fileId !== undefined) {
+      StringValue.encode({ value: message.fileId! }, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): AddFileToReportRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseAddFileToReportRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.reportId = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.fileId = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseRemoveFileFromReportRequest(): RemoveFileFromReportRequest {
+  return { reportId: undefined, fileId: undefined };
+}
+
+export const RemoveFileFromReportRequest: MessageFns<RemoveFileFromReportRequest> = {
+  encode(message: RemoveFileFromReportRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.reportId !== undefined) {
+      StringValue.encode({ value: message.reportId! }, writer.uint32(10).fork()).join();
+    }
+    if (message.fileId !== undefined) {
+      StringValue.encode({ value: message.fileId! }, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RemoveFileFromReportRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRemoveFileFromReportRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.reportId = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.fileId = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
 export interface BlogServiceClient {
   createBlog(request: CreateBlogRequest, metadata?: Metadata): Observable<BlogResponse>;
 
@@ -2261,6 +3000,154 @@ export interface FlashCardServiceServer extends UntypedServiceImplementation {
   updateFlashCard: handleUnaryCall<UpdateFlashCardRequest, FlashCardResponse>;
   deleteFlashCard: handleUnaryCall<DeleteFlashCardRequest, Empty>;
   listFlashCards: handleUnaryCall<ListFlashCardsRequest, ListFlashCardsResponse>;
+}
+
+export interface ReportServiceClient {
+  createReport(request: CreateReportRequest, metadata?: Metadata): Observable<ReportResponse>;
+
+  getReport(request: GetReportRequest, metadata?: Metadata): Observable<ReportResponse>;
+
+  updateReport(request: UpdateReportRequest, metadata?: Metadata): Observable<ReportResponse>;
+
+  deleteReport(request: DeleteReportRequest, metadata?: Metadata): Observable<Empty>;
+
+  listReports(request: ListReportsRequest, metadata?: Metadata): Observable<ListReportsResponse>;
+
+  addFileToReport(request: AddFileToReportRequest, metadata?: Metadata): Observable<Empty>;
+
+  removeFileFromReport(request: RemoveFileFromReportRequest, metadata?: Metadata): Observable<Empty>;
+}
+
+export interface ReportServiceController {
+  createReport(
+    request: CreateReportRequest,
+    metadata?: Metadata,
+  ): Promise<ReportResponse> | Observable<ReportResponse> | ReportResponse;
+
+  getReport(
+    request: GetReportRequest,
+    metadata?: Metadata,
+  ): Promise<ReportResponse> | Observable<ReportResponse> | ReportResponse;
+
+  updateReport(
+    request: UpdateReportRequest,
+    metadata?: Metadata,
+  ): Promise<ReportResponse> | Observable<ReportResponse> | ReportResponse;
+
+  deleteReport(request: DeleteReportRequest, metadata?: Metadata): void | Promise<void>;
+
+  listReports(
+    request: ListReportsRequest,
+    metadata?: Metadata,
+  ): Promise<ListReportsResponse> | Observable<ListReportsResponse> | ListReportsResponse;
+
+  addFileToReport(request: AddFileToReportRequest, metadata?: Metadata): void | Promise<void>;
+
+  removeFileFromReport(request: RemoveFileFromReportRequest, metadata?: Metadata): void | Promise<void>;
+}
+
+export function ReportServiceControllerMethods() {
+  return function (constructor: Function) {
+    const grpcMethods: string[] = [
+      "createReport",
+      "getReport",
+      "updateReport",
+      "deleteReport",
+      "listReports",
+      "addFileToReport",
+      "removeFileFromReport",
+    ];
+    for (const method of grpcMethods) {
+      const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
+      GrpcMethod("ReportService", method)(constructor.prototype[method], method, descriptor);
+    }
+    const grpcStreamMethods: string[] = [];
+    for (const method of grpcStreamMethods) {
+      const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
+      GrpcStreamMethod("ReportService", method)(constructor.prototype[method], method, descriptor);
+    }
+  };
+}
+
+export const REPORT_SERVICE_NAME = "ReportService";
+
+export type ReportServiceService = typeof ReportServiceService;
+export const ReportServiceService = {
+  createReport: {
+    path: "/resource.ReportService/CreateReport" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: CreateReportRequest): Buffer => Buffer.from(CreateReportRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): CreateReportRequest => CreateReportRequest.decode(value),
+    responseSerialize: (value: ReportResponse): Buffer => Buffer.from(ReportResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ReportResponse => ReportResponse.decode(value),
+  },
+  getReport: {
+    path: "/resource.ReportService/GetReport" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: GetReportRequest): Buffer => Buffer.from(GetReportRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetReportRequest => GetReportRequest.decode(value),
+    responseSerialize: (value: ReportResponse): Buffer => Buffer.from(ReportResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ReportResponse => ReportResponse.decode(value),
+  },
+  updateReport: {
+    path: "/resource.ReportService/UpdateReport" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: UpdateReportRequest): Buffer => Buffer.from(UpdateReportRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): UpdateReportRequest => UpdateReportRequest.decode(value),
+    responseSerialize: (value: ReportResponse): Buffer => Buffer.from(ReportResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ReportResponse => ReportResponse.decode(value),
+  },
+  deleteReport: {
+    path: "/resource.ReportService/DeleteReport" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: DeleteReportRequest): Buffer => Buffer.from(DeleteReportRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): DeleteReportRequest => DeleteReportRequest.decode(value),
+    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+  },
+  listReports: {
+    path: "/resource.ReportService/ListReports" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: ListReportsRequest): Buffer => Buffer.from(ListReportsRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ListReportsRequest => ListReportsRequest.decode(value),
+    responseSerialize: (value: ListReportsResponse): Buffer => Buffer.from(ListReportsResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ListReportsResponse => ListReportsResponse.decode(value),
+  },
+  addFileToReport: {
+    path: "/resource.ReportService/AddFileToReport" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: AddFileToReportRequest): Buffer =>
+      Buffer.from(AddFileToReportRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): AddFileToReportRequest => AddFileToReportRequest.decode(value),
+    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+  },
+  removeFileFromReport: {
+    path: "/resource.ReportService/RemoveFileFromReport" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: RemoveFileFromReportRequest): Buffer =>
+      Buffer.from(RemoveFileFromReportRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): RemoveFileFromReportRequest => RemoveFileFromReportRequest.decode(value),
+    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+  },
+} as const;
+
+export interface ReportServiceServer extends UntypedServiceImplementation {
+  createReport: handleUnaryCall<CreateReportRequest, ReportResponse>;
+  getReport: handleUnaryCall<GetReportRequest, ReportResponse>;
+  updateReport: handleUnaryCall<UpdateReportRequest, ReportResponse>;
+  deleteReport: handleUnaryCall<DeleteReportRequest, Empty>;
+  listReports: handleUnaryCall<ListReportsRequest, ListReportsResponse>;
+  addFileToReport: handleUnaryCall<AddFileToReportRequest, Empty>;
+  removeFileFromReport: handleUnaryCall<RemoveFileFromReportRequest, Empty>;
 }
 
 export interface FlashCardListServiceClient {

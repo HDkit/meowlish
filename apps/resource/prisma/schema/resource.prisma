@@ -45,3 +45,39 @@ model FlashCardList {
 
   @@map("flash_card_lists")
 }
+
+model Report {
+  id            String    @id @default(uuid())
+  reportedBy    String    @map("reported_by")
+  type          String
+  status        String    @default("pending")
+  title         String
+  description   String
+  targetType    String?   @map("target_type")
+  targetId      String?   @map("target_id")
+  resolvedBy    String?   @map("resolved_by")
+  adminResponse String?   @map("admin_response")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  files ReportFile[]
+
+  @@map("reports")
+}
+
+model ReportFile {
+  reportId String @map("report_id")
+  fileId   String @map("file_id")
+
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@id([reportId, fileId])
+  @@map("report_files")
+}
+
+model DeletedFile {
+  fileId String @id @map("file_id")
+  count  Int    @default(1)
+
+  @@map("deleted_files")
+}

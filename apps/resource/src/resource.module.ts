@@ -1,9 +1,11 @@
 import { BlogService } from './app/services/blog.service';
 import { FlashcardListService } from './app/services/flashcard-list.service';
 import { FlashcardService } from './app/services/flashcard.service';
+import { ReportService } from './app/services/report.service';
 import { BlogController } from './presentation/controllers/blog.controller';
 import { FlashcardListController } from './presentation/controllers/flashcard-list.controller';
 import { FlashcardController } from './presentation/controllers/flashcard.controller';
+import { ReportController } from './presentation/controllers/report.controller';
 import { ClsPluginTransactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { Module } from '@nestjs/common';
@@ -19,7 +21,7 @@ import { GlobalValidationPipe } from '@server/utils';
 import { ClsGuard, ClsModule } from 'nestjs-cls';
 
 @Module({
-	controllers: [BlogController, FlashcardController, FlashcardListController],
+	controllers: [BlogController, FlashcardController, FlashcardListController, ReportController],
 	imports: [
 		ConfigModule.forRoot({
 			expandVariables: true,
@@ -47,6 +49,7 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 		BlogService,
 		FlashcardService,
 		FlashcardListService,
+		ReportService,
 		{
 			provide: APP_GUARD,
 			useClass: ClsGuard,

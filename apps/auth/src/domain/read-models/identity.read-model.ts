@@ -4,8 +4,15 @@ export type IdentityReadModel = {
 	fullName?: string;
 	bio?: string;
 	avatarUrl?: string;
+	phoneNumber?: string;
+	isLocked: boolean;
 	permissions: string[];
 	roles: string[];
 };
 
-export type HydratedIdentityReadModel = Omit<IdentityReadModel, 'permissions' | 'roles'>;
+export type HydratedIdentityReadModel = Omit<
+	IdentityReadModel,
+	'permissions' | 'roles' | 'isLocked'
+> & {
+	phoneNumber?: string;
+};

@@ -1,3 +1,4 @@
+import { HasPermissions } from '../auth/decorators/permissions.decorator';
 import { IsPublic } from '../auth/decorators/public.decorator';
 import { HasRoles } from '../auth/decorators/roles.decorator';
 import { GoogleOAuth2Guard } from '../auth/guards/google-oauth2.guard';
@@ -39,7 +40,7 @@ import {
 import { type ClientGrpc } from '@nestjs/microservices';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { auth } from '@server/generated';
-import { Role } from '@server/typing';
+import { Permission, Role } from '@server/typing';
 import { ApiEmptyResponseEntity, ApiResponseEntity } from '@server/utils';
 
 @ApiBearerAuth()
@@ -246,5 +247,65 @@ export class AuthGatewayController implements OnModuleInit {
 	@SerializeOptions({ type: HydratedIdentityDto })
 	hydrateIdentity(@Query('id') id: string) {
 		return this.authService.hydrateIdentity({ identityId: id });
+	}
+
+	@Post(':id/lock')
+	@HasPermissions(Permission.USER_LOCK)
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Lock an identity account' })
+	lockIdentity(@Param('id') identityId: string, @Req() request: AuthenticatedRequest) {
+		return this.authService.lockIdentity({ identityId: identityId, lockedBy: request.user.sub });
+	}
+
+	@Delete(':id/lock')
+	@HasPermissions(Permission.USER_UNLOCK)
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Unlock an identity account' })
+	unlockIdentity(@Param('id') identityId: string) {
+		return this.authService.unlockIdentity({ identityId: identityId });
+	}
+
+	@Get('identity/search/phone')
+	@ApiOperation({ summary: 'Search identities by phone number' })
+	@ApiResponseEntity(IdentitiesDto)
+	@SerializeOptions({ type: IdentitiesDto })
+	findIdentitiesByPhone(
+		@Query('phoneNumber') phoneNumber: string,
+		@Query('cursor') cursor?: string,
+		@Query('limit') limit?: number,
+	) {
+		return this.authService.findIdentitiesByPhone({
+			phoneNumber: phoneNumber,
+			cursor: cursor,
+			limit: limit,
+		});
+	}
+
+	@Post('google/calendar/connect')
+	@ApiOperation({ summary: 'Connect Google Calendar account' })
+	connectGoogleCalendar(
+		@Body() body: { accessToken: string; refreshToken: string; expiresAt: number; scopes: string },
+		@Req() request: AuthenticatedRequest,
+	) {
+		return this.authService.connectGoogleCalendar({
+			identityId: request.user.sub,
+			accessToken: body.accessToken,
+			refreshToken: body.refreshToken,
+			expiresAt: body.expiresAt,
+			scopes: body.scopes,
+		});
+	}
+
+	@Delete('google/calendar/connect')
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Disconnect Google Calendar account' })
+	disconnectGoogleCalendar(@Req() request: AuthenticatedRequest) {
+		return this.authService.disconnectGoogleCalendar({ identityId: request.user.sub });
+	}
+
+	@Get('google/calendar/token')
+	@ApiOperation({ summary: 'Get Google Calendar token' })
+	getGoogleCalendarToken(@Req() request: AuthenticatedRequest) {
+		return this.authService.getGoogleCalendarToken({ identityId: request.user.sub });
 	}
 }
