@@ -16,6 +16,7 @@ async function bootstrap() {
 	const gatewayModule = await NestFactory.create<NestExpressApplication>(GatewayModule, {
 		bufferLogs: true,
 	});
+	gatewayModule.set('query parser', 'extended');
 	gatewayModule.setGlobalPrefix('api');
 	gatewayModule.enableVersioning({
 		defaultVersion: '1',
