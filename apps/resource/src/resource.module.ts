@@ -13,8 +13,7 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { PrismaClient } from '@prisma-client/resource';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { LoggerModule } from '@server/logger';
-import { Any2RpcExceptionFilter, GlobalClassSerializerInterceptor } from '@server/utils';
-import { Http2gRPCExceptionFilter } from '@server/utils';
+import { GlobalClassSerializerInterceptor, GlobalRpcExceptionFilter } from '@server/utils';
 import { GlobalValidationPipe } from '@server/utils';
 import { ClsGuard, ClsModule } from 'nestjs-cls';
 
@@ -53,11 +52,7 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 		},
 		{
 			provide: APP_FILTER,
-			useClass: Any2RpcExceptionFilter,
-		},
-		{
-			provide: APP_FILTER,
-			useClass: Http2gRPCExceptionFilter,
+			useClass: GlobalRpcExceptionFilter,
 		},
 		{
 			provide: APP_PIPE,
