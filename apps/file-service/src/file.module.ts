@@ -6,7 +6,7 @@ import { minioConfig } from './configs/minio.config';
 import { rmqSubConfig } from './configs/rmq.sub.config';
 import { IFileRepositoryToken } from './domain/repositories/file.repository';
 import { OrphanCleanupScheduler, OrphanCleanupWorker } from './infra/jobs/orphan-cleanup.job';
-import { FilePrismaRepository } from './infra/repositories/file.prisma.repository.impl';
+import { FilePrismaRepositoryImpl } from './infra/repositories/file.prisma.repository.impl';
 import { FileController } from './presentation/controllers/file.controller';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { ClsPluginTransactional } from '@nestjs-cls/transactional';
@@ -62,7 +62,7 @@ import { NestMinioModule } from 'nestjs-minio';
 		OrphanCleanupWorker,
 		{
 			provide: IFileRepositoryToken,
-			useClass: FilePrismaRepository,
+			useClass: FilePrismaRepositoryImpl,
 		},
 		{
 			provide: APP_GUARD,

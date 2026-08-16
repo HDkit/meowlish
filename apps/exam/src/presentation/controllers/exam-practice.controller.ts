@@ -22,15 +22,15 @@ import {
 	ToggleFlagCommand,
 	ToggleFlagCommandPayload,
 } from '../../app/commands/practice/exam.toggle-flag.command';
-import { FindExamsQuery } from '../../app/queries/practice/find-exams.query';
-import { GetAttemptDataQuery } from '../../app/queries/practice/get-attempt-data.query';
-import { GetAttemptReviewQuery } from '../../app/queries/practice/get-attempt-review.query';
-import { GetExamDetailsQuery } from '../../app/queries/practice/get-exam-details.query';
-import { GetExamStatsQuery } from '../../app/queries/practice/get-exam-stats.query';
-import { GetQuestionDetailsQuery } from '../../app/queries/practice/get-question-details.query';
-import { GetUserCalendarQuery } from '../../app/queries/practice/get-user-calendar.query';
-import { GetUserStatsQuery } from '../../app/queries/practice/get-user-stats.query';
-import { GetUsersAttemptHistoryQuery } from '../../app/queries/practice/get-users-attempt-history.query';
+import { FindExamsQuery } from '../../app/queries/practice/exam.find-exams.query';
+import { GetAttemptDataQuery } from '../../app/queries/practice/exam.get-attempt-data.query';
+import { GetAttemptReviewQuery } from '../../app/queries/practice/exam.get-attempt-review.query';
+import { GetExamDetailsQuery } from '../../app/queries/practice/exam.get-exam-details.query';
+import { GetExamStatsQuery } from '../../app/queries/practice/exam.get-exam-stats.query';
+import { GetQuestionDetailsQuery } from '../../app/queries/practice/exam.get-question-details.query';
+import { GetUserCalendarQuery } from '../../app/queries/practice/exam.get-user-calendar.query';
+import { GetUserStatsQuery } from '../../app/queries/practice/exam.get-user-stats.query';
+import { GetUsersAttemptHistoryQuery } from '../../app/queries/practice/exam.get-users-attempt-history.query';
 import {
 	type IPracticeReadRepository,
 	IPracticeReadRepositoryToken,

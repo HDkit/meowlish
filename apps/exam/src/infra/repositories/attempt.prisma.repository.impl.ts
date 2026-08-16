@@ -122,7 +122,7 @@ class AttemptPrismaMapper {
 }
 
 @Injectable()
-export class AttemptPrismaRepository implements IAttemptRepository {
+export class AttemptPrismaRepositoryImpl implements IAttemptRepository {
 	constructor(private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>) {}
 
 	async findOne(id: string): Promise<Attempt | null> {

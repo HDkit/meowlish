@@ -6,7 +6,7 @@ import {
 	GetUsersAttemptHistoryCursor,
 	GetUsersAttemptHistoryQuery,
 	GetUsersAttemptHistoryQueryResult,
-} from '../../practice/get-users-attempt-history.query';
+} from '../../practice/exam.get-users-attempt-history.query';
 import { Inject } from '@nestjs/common';
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { CursorPaginationHelper } from '@server/utils';
@@ -26,11 +26,14 @@ export class GetUsersAttemptHistoryHandler implements IQueryHandler<GetUsersAtte
 
 	async execute(query: GetUsersAttemptHistoryQuery): Promise<GetUsersAttemptHistoryQueryResult> {
 		const payload = query.payload;
-		const decodedCursor =
+		let decodedCursor =
 			payload.cursor ?
 				this.cursorPaginationHelper.decodeCursor<GetUsersAttemptHistoryCursor>(payload.cursor)
 			:	undefined;
 
+		// Invalidate cursor if payload and cursor uid is different
+		if (decodedCursor && decodedCursor?.uid && payload.uid && payload.uid !== decodedCursor.uid)
+			decodedCursor = undefined;
 		// cursor.uid has precedence
 		const inUseUserId = decodedCursor ? decodedCursor.uid : payload.uid;
 		// cursor.examId has precedence

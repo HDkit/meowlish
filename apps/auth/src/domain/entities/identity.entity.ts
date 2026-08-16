@@ -2,6 +2,7 @@ import {
 	CredAddedEvent,
 	CredDeletedEvent,
 	CredUpdatedEvent,
+	IdentityAvatarUpdatedEvent,
 	IdentityUpdatedEvent,
 	RoleAddedEvent,
 	RoleDeletedEvent,
@@ -59,8 +60,15 @@ export class Identity extends AggregateRoot<Event<any>> implements IAggregate<Id
 		if (options.username) this.username = options.username;
 		if (options.fullName || options.fullName === null) this.fullName = options.fullName;
 		if (options.bio || options.bio === null) this.bio = options.bio;
-		if (options.avatarFileId || options.avatarFileId === null)
+		if (
+			(options.avatarFileId || options.avatarFileId === null) &&
+			options.avatarFileId !== this.avatarFileId
+		) {
 			this.avatarFileId = options.avatarFileId;
+			this.apply(
+				new IdentityAvatarUpdatedEvent({ identityId: this.id, avatarFileId: this.avatarFileId }),
+			);
+		}
 		this.apply(new IdentityUpdatedEvent({ identityId: this.id, data: structuredClone(this) }));
 	}
 

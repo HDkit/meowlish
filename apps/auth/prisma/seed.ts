@@ -75,6 +75,7 @@ async function seedAdminUser() {
 		update: {},
 		create: {
 			id: 'admin-id',
+			version: 1,
 			username: 'admin',
 		},
 	});

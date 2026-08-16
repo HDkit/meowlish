@@ -1,4 +1,4 @@
-import { RoleReadModel } from '../../domain/entities/role.read-model';
+import { RoleReadModel } from '../../domain/read-models/role.read-model';
 import { type IRoleReadRepository } from '../../domain/repositories/role.read.repository';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';

@@ -2,6 +2,7 @@ import { Badge } from '../../enums/badge.enum';
 import { BadgeAddedEvent } from '../events/badge.event';
 import { AggregateRoot } from '@nestjs/cqrs';
 import { Event, IAggregate } from '@server/utils';
+import { differenceInCalendarDays } from 'date-fns';
 
 export class LoginBadgeManager
 	extends AggregateRoot<Event<any>>
@@ -36,21 +37,20 @@ export class LoginBadgeManager
 
 	updateProgress(loginTime: Date) {
 		// update recorded time
-		const diffMs =
-			this.toDateOnlyUTC(loginTime).getTime() - this.toDateOnlyUTC(this.lastLogin).getTime();
-		const diffDays = diffMs / (1000 * 60 * 60 * 24);
+		const diffDays = differenceInCalendarDays(loginTime, this.lastLogin);
+		// consecutive login
 		if (diffDays >= 1) this.total++;
+		// forgot to login
 		if (diffDays >= 2) this.startedAt = loginTime;
+		// update last login
 		this.lastLogin = loginTime;
 		if (this.total >= 7) this.addBadge(Badge.LoginSevenDays);
 		if (this.total >= 30) this.addBadge(Badge.LoginOneMonth);
 		if (this.total >= 365) this.addBadge(Badge.LoginOneYear);
 		// update streak
-		const diffStreakMs =
-			this.toDateOnlyUTC(this.lastLogin).getTime() - this.toDateOnlyUTC(this.startedAt).getTime();
-		const newStreak = diffStreakMs / (1000 * 60 * 60 * 24);
-		if (newStreak >= this.longestStreak) {
-			this.longestStreak = newStreak;
+		const currentStreak = differenceInCalendarDays(this.lastLogin, this.startedAt);
+		if (currentStreak >= this.longestStreak) {
+			this.longestStreak = currentStreak;
 			if (this.longestStreak >= 7) this.addBadge(Badge.LoginSevenDaysStreak);
 			if (this.longestStreak >= 30) this.addBadge(Badge.LoginOneMonthStreak);
 			if (this.longestStreak >= 365) this.addBadge(Badge.LoginOneYearStreak);
@@ -62,10 +62,5 @@ export class LoginBadgeManager
 			this.badges.add(badge);
 			this.apply(new BadgeAddedEvent({ uid: this.id, badge: badge }));
 		}
-	}
-
-	// convert time to 00:00:00 of the same date
-	private toDateOnlyUTC(d: Date): Date {
-		return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
 	}
 }

@@ -1,9 +1,9 @@
-import { RoleReadModel } from '../../../domain/entities/role.read-model';
+import { RoleReadModel } from '../../../domain/read-models/role.read-model';
 import {
 	type IRoleReadRepository,
 	IRoleReadRepositoryToken,
 } from '../../../domain/repositories/role.read.repository';
-import { GetRolesQuery } from '../get-roles.query';
+import { GetRolesQuery } from '../auth.get-roles.query';
 import { Inject } from '@nestjs/common';
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 

@@ -5,17 +5,26 @@ import {
 import { RabbitPayload, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import { Inject, Injectable } from '@nestjs/common';
 import { AppLoggerService } from '@server/logger';
-import { IsArray, IsString, ValidateIf } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsArray, IsNumber, IsString, ValidateIf } from 'class-validator';
+
+class FileInfoDto {
+	@IsString()
+	id!: string;
+
+	@IsNumber()
+	count!: number;
+}
 
 class FileRemovedEvent {
-	@IsString()
-	@ValidateIf((o: FileRemovedEvent) => !o.fileIds)
-	fileId?: string;
+	@Type(() => FileInfoDto)
+	@ValidateIf((o: FileRemovedEvent) => !o.files)
+	file?: FileInfoDto;
 
+	@Type(() => FileInfoDto)
 	@IsArray()
-	@IsString({ each: true })
-	@ValidateIf((o: FileRemovedEvent) => !o.fileId)
-	fileIds: string[] = [];
+	@ValidateIf((o: FileRemovedEvent) => !o.file)
+	files: FileInfoDto[] = [];
 }
 
 @Injectable()
@@ -35,9 +44,9 @@ export class FileRemovedHandler {
 		},
 	})
 	async handle(@RabbitPayload() payload: FileRemovedEvent) {
-		const fileIds = [payload.fileId, ...payload.fileIds].filter((f): f is string => !!f);
+		const files = [payload.file, ...payload.files].filter((f): f is FileInfoDto => !!f);
 		try {
-			await this.fileRepository.decrementRef(fileIds);
+			await this.fileRepository.decrementRef(files);
 		} catch (e) {
 			this.logger.error(e as string);
 		}

@@ -32,15 +32,19 @@ import {
 } from '../../app/commands/auth.validate-refresh.command';
 import { FindIdentitiesQuery } from '../../app/queries/auth.find-identities.query';
 import { FindIdentityIdsQuery } from '../../app/queries/auth.find-identity-ids.query';
-import { GetCredentialsQuery } from '../../app/queries/get-credentials.query';
-import { GetPermissionsQuery } from '../../app/queries/get-permissions.query';
-import { GetRolesQuery } from '../../app/queries/get-roles.query';
+import { GetCredentialsQuery } from '../../app/queries/auth.get-credentials.query';
+import { GetPermissionsQuery } from '../../app/queries/auth.get-permissions.query';
+import { GetRolesQuery } from '../../app/queries/auth.get-roles.query';
+import { HydrateManyQuery } from '../../app/queries/auth.hydrate-many.query';
+import { HydrateQuery } from '../../app/queries/auth.hydrate.query';
 import { AddGoogleCredDto } from '../dtos/req/add-google-cred.req.dto';
 import { AddMailCredDto } from '../dtos/req/add-mail-cred.req.dto';
 import { AssignRoleToDto } from '../dtos/req/assign-role-to.req.dto';
 import { FindIdentitiesDto } from '../dtos/req/find-identities.req.dto';
 import { FindIdentityIdsDto } from '../dtos/req/find-identity-ids.req.dto';
 import { GetCredsDto } from '../dtos/req/get-creds.req.dto';
+import { HydrateManyDto } from '../dtos/req/hydrate-many.req.dto';
+import { HydrateDto } from '../dtos/req/hydrate.req.dto';
 import { LoginMailDto } from '../dtos/req/login-mail.req.dto';
 import { LogOutAllDto } from '../dtos/req/logout-all.req.dto';
 import { RefreshDto } from '../dtos/req/refresh-dto.req.dto';
@@ -54,6 +58,7 @@ import { ValidateAccessDto } from '../dtos/req/validate-access.req.dto';
 import { ValidateRefreshDto } from '../dtos/req/validate-refresh.req.dto';
 import { ClaimsDto } from '../dtos/res/claims.res.dto';
 import { CredentialsDto } from '../dtos/res/credentials.res.dto';
+import { HydratedIdentitiesDto, HydratedIdentityDto } from '../dtos/res/hydrated-identities.dto';
 import { IdentitiesDto } from '../dtos/res/identities.res.dto';
 import { IdentityIdsDto } from '../dtos/res/identity-ids.res.dto';
 import { PermissionsDto } from '../dtos/res/permissions.res.dto';
@@ -180,5 +185,17 @@ export class AuthController implements auth.AuthServiceController {
 
 	async updateMailPassword(@Payload() request: UpdateMailPasswordDto): Promise<void> {
 		await this.commandBus.execute(new UpdatePasswordCommand(request));
+	}
+
+	@SerializeOptions({ type: HydratedIdentitiesDto })
+	async hydrateIdentities(@Payload() request: HydrateManyDto): Promise<HydratedIdentitiesDto> {
+		return {
+			identities: await this.queryBus.execute(new HydrateManyQuery({ ids: request.identityIds })),
+		};
+	}
+
+	@SerializeOptions({ type: HydratedIdentityDto })
+	async hydrateIdentity(@Payload() request: HydrateDto): Promise<HydratedIdentityDto> {
+		return await this.queryBus.execute(new HydrateQuery({ id: request.identityId }));
 	}
 }

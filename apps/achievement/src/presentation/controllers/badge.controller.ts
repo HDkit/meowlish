@@ -1,8 +1,11 @@
-import { GetBadgesQuery } from '../../app/queries/get-badges.query';
-import { GetUsersBadgesQuery } from '../../app/queries/get-users-badges.query';
+import { GetBadgesQuery } from '../../app/queries/achievement.get-badges.query';
+import { GetUsersBadgesQuery } from '../../app/queries/achievement.get-users-badges.query';
+import { GetUsersProgressQuery } from '../../app/queries/achievement.get-users-progress.query';
 import { GetUsersBadgesDto } from '../dtos/req/get-users-badges.req.dto';
+import { GetUsersProgressDto } from '../dtos/req/get-users-progress.req.dto';
 import { FoundBadgesDto } from '../dtos/res/found-badges.res.dto';
 import { FoundUsersBadgesDto } from '../dtos/res/found-users-badges.res.dto';
+import { ProgressDto } from '../dtos/res/progress.res.dto';
 import { Controller, SerializeOptions } from '@nestjs/common';
 import { QueryBus } from '@nestjs/cqrs';
 import { Payload } from '@nestjs/microservices';
@@ -21,5 +24,10 @@ export class BadgeController implements achievement.AchievementServiceController
 	@SerializeOptions({ type: FoundUsersBadgesDto })
 	async getUsersBadges(@Payload() request: GetUsersBadgesDto): Promise<FoundUsersBadgesDto> {
 		return await this.queryBus.execute(new GetUsersBadgesQuery(request));
+	}
+
+	@SerializeOptions({ type: ProgressDto })
+	async getUsersProgess(@Payload() request: GetUsersProgressDto): Promise<ProgressDto> {
+		return await this.queryBus.execute(new GetUsersProgressQuery(request));
 	}
 }

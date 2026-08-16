@@ -32,6 +32,8 @@ service AuthService {
     // qol
 	rpc FindIdentityIds(FindIdentityIdsDto) returns (IdentityIds){}
 	rpc FindIdentities(FindIdentitiesDto) returns (Identities) {}
+	rpc HydrateIdentities(HydrateIdentitiesDto) returns (HydratedIdentities) {}
+	rpc HydrateIdentity(HydrateIdentityDto) returns (HydratedIdentities.HydratedIdentity) {}
 }
 
 // Request
@@ -123,11 +125,19 @@ message FindIdentityIdsDto {
 }
 
 message FindIdentitiesDto {
-	optional google.protobuf.StringValue username_or_cred_identifier = 1;
-	repeated google.protobuf.StringValue has_roles                   = 2;
-	repeated google.protobuf.StringValue has_perms                   = 3;
-	optional google.protobuf.StringValue cursor                      = 4;
-	optional google.protobuf.Int32Value  limit                       = 5;
+	optional google.protobuf.StringValue username_or_cred_identifier_or_id = 1;
+	repeated google.protobuf.StringValue has_roles                         = 2;
+	repeated google.protobuf.StringValue has_perms                         = 3;
+	optional google.protobuf.StringValue cursor                            = 4;
+	optional google.protobuf.Int32Value  limit                             = 5;
+}
+
+message HydrateIdentitiesDto {
+	repeated google.protobuf.StringValue identity_ids = 1;
+}
+
+message HydrateIdentityDto {
+	google.protobuf.StringValue identity_id = 1;
 }
 
 // Response
@@ -176,9 +186,21 @@ message Identities {
 		string          username    = 2;
 		optional string full_name   = 3;
 		optional string bio         = 4;
-		optional string avatar_id   = 5;
+		optional string avatar_url  = 5;
 		repeated string roles       = 6;
 		repeated string permissions = 7;
+	}
+}
+
+message HydratedIdentities {
+	repeated HydratedIdentity identities = 1;
+
+	message HydratedIdentity {
+		string          id         = 1;
+		string          username   = 2;
+		optional string full_name  = 3;
+		optional string bio        = 4;
+		optional string avatar_url = 5;
 	}
 }
 

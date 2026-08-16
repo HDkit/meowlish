@@ -3,6 +3,8 @@ import { FindIdentityIdsQueryHandler } from './find-identity-ids.handler';
 import { GetCredentialsQueryHandler } from './get-credentials.handler';
 import { GetPermissionsQueryHandler } from './get-permissions.handler';
 import { GetRolesQueryHandler } from './get-roles.handler';
+import { HydrateManyQueryHandler } from './hydrate-many.handler';
+import { HydrateQueryHandler } from './hydrate.handler';
 
 export const AuthQueryHandlers = [
 	FindIdentitiesQueryHandler,
@@ -10,4 +12,6 @@ export const AuthQueryHandlers = [
 	GetRolesQueryHandler,
 	GetPermissionsQueryHandler,
 	GetCredentialsQueryHandler,
+	HydrateManyQueryHandler,
+	HydrateQueryHandler,
 ];

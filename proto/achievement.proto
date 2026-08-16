@@ -9,6 +9,7 @@ package achievement;
 service AchievementService {
 	rpc GetAll(google.protobuf.Empty) returns(BadgesResponseDto) {}
 	rpc GetUsersBadges(UserBadgesRequestDto) returns(UserBadgesResponseDto) {}
+	rpc GetUsersProgess( UserProgressRequestDto) returns (UserProgressDto) {}
 }
 
 message Badges {
@@ -38,4 +39,26 @@ message UserBadgesRequestDto {
 message UserBadgesResponseDto {
 	repeated UserBadges badges = 1;
 	optional string     cursor = 2;
+}
+
+message UserProgressRequestDto {
+	google.protobuf.StringValue user_id = 1;
+}
+
+message UserProgressDto {
+
+	optional LoginProgress      login_progress      = 1;
+	optional SubmissionProgress submission_progress = 2;
+
+	message LoginProgress {
+		int32 streak         = 1;
+		int32 longest_streak = 2;
+		int32 total          = 3;
+	}
+
+	message SubmissionProgress {
+		int32 good_score    = 1;
+		int32 perfect_score = 2;
+		int32 total         = 3;
+	}
 }

@@ -14,6 +14,7 @@ import { MinimalAttemptInfo } from '../../domain/read-models/practice/minimal-at
 import { MinimalExamInfo } from '../../domain/read-models/practice/minimal-exam.read-model';
 import { UserStats } from '../../domain/read-models/practice/user-stats.read-model';
 import { type IPracticeReadRepository } from '../../domain/repositories/practice.read.repository';
+import { ExamStatus } from '../../enums/exam-status.enum';
 import { QuestionType, questionTypesThatShowChoices } from '../../enums/question-type.enum';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
@@ -365,7 +366,8 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
         ON t.id = et.tag_id
 
       WHERE
-        ${nameFilterSql}
+        e.status = ${ExamStatus.Approved}
+        AND ${nameFilterSql}
         AND ${tagFilterSql}
         AND ${cursorWhereSql}
 
@@ -420,7 +422,8 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
       LEFT JOIN tags t
         ON t.id = et.tag_id
 
-      WHERE e.id = ${examId}
+      WHERE e.status = ${ExamStatus.Approved}
+      AND e.id = ${examId}
 
       GROUP BY e.id
     `,
@@ -494,7 +497,9 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 	}
 
 	async getExamStats(examId: string): Promise<ExamStatistics | null> {
-		const exam = await this.txHost.tx.exam.findUnique({ where: { id: examId } });
+		const exam = await this.txHost.tx.exam.findUnique({
+			where: { id: examId, status: ExamStatus.Approved },
+		});
 		if (!exam) return null;
 
 		const [stats] = await this.txHost.tx.$queryRaw<
@@ -877,7 +882,7 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 
 	async getDetailedQuestionInfo(questionId: string): Promise<DetailedQuestionInfo | null> {
 		const foundQuestion = await this.txHost.tx.question.findUnique({
-			where: { id: questionId },
+			where: { id: questionId, section: { exam: { status: ExamStatus.Approved } } },
 			select: {
 				id: true,
 				content: true,

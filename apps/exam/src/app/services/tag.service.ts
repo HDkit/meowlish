@@ -1,11 +1,18 @@
 import { TagNode } from '../../domain/read-models/tag/tag-node.read-model';
 import { TagTree } from '../../domain/read-models/tag/tag-trees.read-model';
+import {
+	type ITagReadRepository,
+	ITagReadRepositoryToken,
+} from '../../domain/repositories/tag.read.repository';
 import { type ITagRepository, ITagRepositoryToken } from '../../domain/repositories/tag.repository';
 import { Inject, Injectable } from '@nestjs/common';
 
 @Injectable()
 export class TagService {
-	constructor(@Inject(ITagRepositoryToken) private readonly tagRepository: ITagRepository) {}
+	constructor(
+		@Inject(ITagRepositoryToken) private readonly tagRepository: ITagRepository,
+		@Inject(ITagReadRepositoryToken) private readonly tagReadRepository: ITagReadRepository,
+	) {}
 
 	async addTag(name: string, parentId?: string): Promise<string> {
 		return await this.tagRepository.addTag(name, parentId);
@@ -24,10 +31,10 @@ export class TagService {
 	}
 
 	async getTagTree(): Promise<TagTree[]> {
-		return await this.tagRepository.getTagTree();
+		return await this.tagReadRepository.getTagTree();
 	}
 
 	async getTagList(): Promise<TagNode[]> {
-		return await this.tagRepository.getTagList();
+		return await this.tagReadRepository.getTagList();
 	}
 }

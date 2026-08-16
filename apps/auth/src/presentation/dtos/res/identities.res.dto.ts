@@ -3,7 +3,7 @@ import { Expose, Type } from 'class-transformer';
 
 class IdentityDto implements auth.Identities_Identity {
 	@Expose()
-	avatarId?: string;
+	avatarUrl?: string;
 
 	@Expose()
 	bio?: string;

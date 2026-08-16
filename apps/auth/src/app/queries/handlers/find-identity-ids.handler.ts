@@ -1,7 +1,7 @@
 import {
-	type IIdentityRepository,
-	IIdentityRepositoryToken,
-} from '../../../domain/repositories/identity.repository';
+	type IIdentityReadRepository,
+	IIdentityReadRepositoryToken,
+} from '../../../domain/repositories/identity.read.repository';
 import {
 	FindIdentityIdsCursor,
 	FindIdentityIdsQuery,
@@ -16,7 +16,8 @@ export class FindIdentityIdsQueryHandler implements IQueryHandler<FindIdentityId
 	private readonly cursorPaginationHelper: CursorPaginationHelper;
 
 	constructor(
-		@Inject(IIdentityRepositoryToken) private readonly identityRepository: IIdentityRepository,
+		@Inject(IIdentityReadRepositoryToken)
+		private readonly identityReadRepository: IIdentityReadRepository,
 	) {
 		this.cursorPaginationHelper = new CursorPaginationHelper(
 			`${process.env.HOST}${process.env.PORT}FindIdentityIds`,
@@ -33,7 +34,7 @@ export class FindIdentityIdsQueryHandler implements IQueryHandler<FindIdentityId
 		const inUseIdentifier = decodedCursor?.usernameOrCredential ?? payload.usernameOrCredential;
 		const inUseLimit = payload.limit ?? decodedCursor?.limit ?? 10;
 
-		const identities = await this.identityRepository.findIdentityIds({
+		const identities = await this.identityReadRepository.findIdentityIds({
 			usernameOrCredentialIdentifier: inUseIdentifier,
 			lastId: decodedCursor?.lastId,
 			limit: inUseLimit,

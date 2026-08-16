@@ -6,7 +6,7 @@ import {
 	FindExamsForManagementCursor,
 	FindExamsForManagementQuery,
 	FindExamsForManagementQueryResult,
-} from '../../management/find-exams.query';
+} from '../../management/exam.find-exams.query';
 import { Inject } from '@nestjs/common';
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { CursorPaginationHelper } from '@server/utils';

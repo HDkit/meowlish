@@ -4,7 +4,7 @@ import {
 	type IPracticeReadRepository,
 	IPracticeReadRepositoryToken,
 } from '../../../../domain/repositories/practice.read.repository';
-import { GetAttemptDataQuery } from '../../practice/get-attempt-data.query';
+import { GetAttemptDataQuery } from '../../practice/exam.get-attempt-data.query';
 import { Inject, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { ClientGrpc } from '@nestjs/microservices';

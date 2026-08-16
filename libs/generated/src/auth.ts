@@ -101,11 +101,19 @@ export interface FindIdentityIdsDto {
 }
 
 export interface FindIdentitiesDto {
-  usernameOrCredIdentifier?: string | undefined;
+  usernameOrCredIdentifierOrId?: string | undefined;
   hasRoles: string[];
   hasPerms: string[];
   cursor?: string | undefined;
   limit?: number | undefined;
+}
+
+export interface HydrateIdentitiesDto {
+  identityIds: string[];
+}
+
+export interface HydrateIdentityDto {
+  identityId: string | undefined;
 }
 
 /** Response */
@@ -155,9 +163,21 @@ export interface Identities_Identity {
   username: string;
   fullName?: string | undefined;
   bio?: string | undefined;
-  avatarId?: string | undefined;
+  avatarUrl?: string | undefined;
   roles: string[];
   permissions: string[];
+}
+
+export interface HydratedIdentities {
+  identities: HydratedIdentities_HydratedIdentity[];
+}
+
+export interface HydratedIdentities_HydratedIdentity {
+  id: string;
+  username: string;
+  fullName?: string | undefined;
+  bio?: string | undefined;
+  avatarUrl?: string | undefined;
 }
 
 export interface Credentials {
@@ -1020,8 +1040,8 @@ function createBaseFindIdentitiesDto(): FindIdentitiesDto {
 
 export const FindIdentitiesDto: MessageFns<FindIdentitiesDto> = {
   encode(message: FindIdentitiesDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.usernameOrCredIdentifier !== undefined) {
-      StringValue.encode({ value: message.usernameOrCredIdentifier! }, writer.uint32(10).fork()).join();
+    if (message.usernameOrCredIdentifierOrId !== undefined) {
+      StringValue.encode({ value: message.usernameOrCredIdentifierOrId! }, writer.uint32(10).fork()).join();
     }
     for (const v of message.hasRoles) {
       StringValue.encode({ value: v!! }, writer.uint32(18).fork()).join();
@@ -1050,7 +1070,7 @@ export const FindIdentitiesDto: MessageFns<FindIdentitiesDto> = {
             break;
           }
 
-          message.usernameOrCredIdentifier = StringValue.decode(reader, reader.uint32()).value;
+          message.usernameOrCredIdentifierOrId = StringValue.decode(reader, reader.uint32()).value;
           continue;
         }
         case 2: {
@@ -1083,6 +1103,80 @@ export const FindIdentitiesDto: MessageFns<FindIdentitiesDto> = {
           }
 
           message.limit = Int32Value.decode(reader, reader.uint32()).value;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseHydrateIdentitiesDto(): HydrateIdentitiesDto {
+  return { identityIds: [] };
+}
+
+export const HydrateIdentitiesDto: MessageFns<HydrateIdentitiesDto> = {
+  encode(message: HydrateIdentitiesDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.identityIds) {
+      StringValue.encode({ value: v!! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): HydrateIdentitiesDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseHydrateIdentitiesDto();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.identityIds.push(StringValue.decode(reader, reader.uint32()).value);
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseHydrateIdentityDto(): HydrateIdentityDto {
+  return { identityId: undefined };
+}
+
+export const HydrateIdentityDto: MessageFns<HydrateIdentityDto> = {
+  encode(message: HydrateIdentityDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.identityId !== undefined) {
+      StringValue.encode({ value: message.identityId! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): HydrateIdentityDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseHydrateIdentityDto();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.identityId = StringValue.decode(reader, reader.uint32()).value;
           continue;
         }
       }
@@ -1508,8 +1602,8 @@ export const Identities_Identity: MessageFns<Identities_Identity> = {
     if (message.bio !== undefined) {
       writer.uint32(34).string(message.bio);
     }
-    if (message.avatarId !== undefined) {
-      writer.uint32(42).string(message.avatarId);
+    if (message.avatarUrl !== undefined) {
+      writer.uint32(42).string(message.avatarUrl);
     }
     for (const v of message.roles) {
       writer.uint32(50).string(v!);
@@ -1564,7 +1658,7 @@ export const Identities_Identity: MessageFns<Identities_Identity> = {
             break;
           }
 
-          message.avatarId = reader.string();
+          message.avatarUrl = reader.string();
           continue;
         }
         case 6: {
@@ -1581,6 +1675,124 @@ export const Identities_Identity: MessageFns<Identities_Identity> = {
           }
 
           message.permissions.push(reader.string());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseHydratedIdentities(): HydratedIdentities {
+  return { identities: [] };
+}
+
+export const HydratedIdentities: MessageFns<HydratedIdentities> = {
+  encode(message: HydratedIdentities, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.identities) {
+      HydratedIdentities_HydratedIdentity.encode(v!, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): HydratedIdentities {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseHydratedIdentities();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.identities.push(HydratedIdentities_HydratedIdentity.decode(reader, reader.uint32()));
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseHydratedIdentities_HydratedIdentity(): HydratedIdentities_HydratedIdentity {
+  return { id: "", username: "" };
+}
+
+export const HydratedIdentities_HydratedIdentity: MessageFns<HydratedIdentities_HydratedIdentity> = {
+  encode(message: HydratedIdentities_HydratedIdentity, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.username !== "") {
+      writer.uint32(18).string(message.username);
+    }
+    if (message.fullName !== undefined) {
+      writer.uint32(26).string(message.fullName);
+    }
+    if (message.bio !== undefined) {
+      writer.uint32(34).string(message.bio);
+    }
+    if (message.avatarUrl !== undefined) {
+      writer.uint32(42).string(message.avatarUrl);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): HydratedIdentities_HydratedIdentity {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseHydratedIdentities_HydratedIdentity();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.id = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.username = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.fullName = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.bio = reader.string();
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.avatarUrl = reader.string();
           continue;
         }
       }
@@ -1730,6 +1942,10 @@ export interface AuthServiceClient {
   findIdentityIds(request: FindIdentityIdsDto, metadata?: Metadata): Observable<IdentityIds>;
 
   findIdentities(request: FindIdentitiesDto, metadata?: Metadata): Observable<Identities>;
+
+  hydrateIdentities(request: HydrateIdentitiesDto, metadata?: Metadata): Observable<HydratedIdentities>;
+
+  hydrateIdentity(request: HydrateIdentityDto, metadata?: Metadata): Observable<HydratedIdentities_HydratedIdentity>;
 }
 
 export interface AuthServiceController {
@@ -1796,6 +2012,19 @@ export interface AuthServiceController {
     request: FindIdentitiesDto,
     metadata?: Metadata,
   ): Promise<Identities> | Observable<Identities> | Identities;
+
+  hydrateIdentities(
+    request: HydrateIdentitiesDto,
+    metadata?: Metadata,
+  ): Promise<HydratedIdentities> | Observable<HydratedIdentities> | HydratedIdentities;
+
+  hydrateIdentity(
+    request: HydrateIdentityDto,
+    metadata?: Metadata,
+  ):
+    | Promise<HydratedIdentities_HydratedIdentity>
+    | Observable<HydratedIdentities_HydratedIdentity>
+    | HydratedIdentities_HydratedIdentity;
 }
 
 export function AuthServiceControllerMethods() {
@@ -1820,6 +2049,8 @@ export function AuthServiceControllerMethods() {
       "updateIdentity",
       "findIdentityIds",
       "findIdentities",
+      "hydrateIdentities",
+      "hydrateIdentity",
     ];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
@@ -2017,6 +2248,26 @@ export const AuthServiceService = {
     responseSerialize: (value: Identities): Buffer => Buffer.from(Identities.encode(value).finish()),
     responseDeserialize: (value: Buffer): Identities => Identities.decode(value),
   },
+  hydrateIdentities: {
+    path: "/auth.AuthService/HydrateIdentities" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: HydrateIdentitiesDto): Buffer => Buffer.from(HydrateIdentitiesDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): HydrateIdentitiesDto => HydrateIdentitiesDto.decode(value),
+    responseSerialize: (value: HydratedIdentities): Buffer => Buffer.from(HydratedIdentities.encode(value).finish()),
+    responseDeserialize: (value: Buffer): HydratedIdentities => HydratedIdentities.decode(value),
+  },
+  hydrateIdentity: {
+    path: "/auth.AuthService/HydrateIdentity" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: HydrateIdentityDto): Buffer => Buffer.from(HydrateIdentityDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): HydrateIdentityDto => HydrateIdentityDto.decode(value),
+    responseSerialize: (value: HydratedIdentities_HydratedIdentity): Buffer =>
+      Buffer.from(HydratedIdentities_HydratedIdentity.encode(value).finish()),
+    responseDeserialize: (value: Buffer): HydratedIdentities_HydratedIdentity =>
+      HydratedIdentities_HydratedIdentity.decode(value),
+  },
 } as const;
 
 export interface AuthServiceServer extends UntypedServiceImplementation {
@@ -2046,6 +2297,8 @@ export interface AuthServiceServer extends UntypedServiceImplementation {
   /** qol */
   findIdentityIds: handleUnaryCall<FindIdentityIdsDto, IdentityIds>;
   findIdentities: handleUnaryCall<FindIdentitiesDto, Identities>;
+  hydrateIdentities: handleUnaryCall<HydrateIdentitiesDto, HydratedIdentities>;
+  hydrateIdentity: handleUnaryCall<HydrateIdentityDto, HydratedIdentities_HydratedIdentity>;
 }
 
 interface MessageFns<T> {

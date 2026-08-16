@@ -3,7 +3,9 @@ export type IdentityReadModel = {
 	username: string;
 	fullName?: string;
 	bio?: string;
-	avatarFileId?: string;
+	avatarUrl?: string;
 	permissions: string[];
 	roles: string[];
 };
+
+export type HydratedIdentityReadModel = Omit<IdentityReadModel, 'permissions' | 'roles'>;

@@ -91,7 +91,7 @@ class SectionPrismaMapper {
 }
 
 @Injectable()
-export class SectionPrismaRepository implements ISectionRepository {
+export class SectionPrismaRepositoryImpl implements ISectionRepository {
 	constructor(private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>) {}
 
 	async findOne(id: string): Promise<Section | null> {

@@ -1,0 +1,138 @@
+{
+	"name": "forum",
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "apps/forum/src",
+	"projectType": "application",
+	"tags": [],
+	"targets": {
+		"prisma:generate": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"options": {
+				"command": "pnpm exec prisma generate",
+				"cwd": "apps/forum"
+			},
+			"inputs": ["{projectRoot}/prisma/**/*.prisma"],
+			"outputs": ["{workspaceRoot}/node_modules/.prisma/client/forum"]
+		},
+
+		"prisma:push": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/forum"
+			},
+			"configurations": {
+				"development": {
+					"command": "pnpm exec prisma db push {args}"
+				}
+			},
+			"inputs": ["{projectRoot}/prisma/**/*.prisma"],
+			"defaultConfiguration": "development"
+		},
+		"prisma:seed": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/forum"
+			},
+			"configurations": {
+				"development": {
+					"command": "pnpm exec prisma db seed {args}"
+				}
+			},
+			"inputs": ["{projectRoot}/prisma/**/*.prisma", "{projectRoot}/prisma/seed.ts"],
+			"defaultConfiguration": "development"
+		},
+		"prisma:migrate": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/forum"
+			},
+			"configurations": {
+				"development": {
+					"command": "pnpm exec prisma migrate dev {args}"
+				},
+				"production": {
+					"command": "pnpm exec prisma migrate deploy {args}"
+				}
+			},
+			"defaultConfiguration": "development"
+		},
+		"prisma:migrate:reset": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/forum"
+			},
+			"configurations": {
+				"development": {
+					"command": "pnpm exec prisma migrate reset {args}"
+				},
+				"production": {
+					"command": "echo '❌ prisma migrate reset is disabled in production' && exit 1"
+				}
+			},
+			"defaultConfiguration": "development"
+		},
+		"build": {
+			"executor": "nx:run-commands",
+			"options": {
+				"command": "webpack-cli build",
+				"args": ["--node-env=production"],
+				"cwd": "apps/forum"
+			},
+			"configurations": {
+				"development": {
+					"args": ["--node-env=development"]
+				}
+			},
+			"dependsOn": ["prisma:generate"]
+		},
+		"prune-lockfile": {
+			"dependsOn": ["build"],
+			"cache": true,
+			"executor": "@nx/js:prune-lockfile",
+			"outputs": [
+				"{workspaceRoot}/dist/apps/forum/package.json",
+				"{workspaceRoot}/dist/apps/forum/pnpm-lock.yaml"
+			],
+			"options": {
+				"buildTarget": "build"
+			}
+		},
+		"copy-workspace-modules": {
+			"dependsOn": ["build"],
+			"cache": true,
+			"outputs": ["{workspaceRoot}/dist/apps/forum/workspace_modules"],
+			"executor": "@nx/js:copy-workspace-modules",
+			"options": {
+				"buildTarget": "build"
+			}
+		},
+		"prune": {
+			"dependsOn": ["prune-lockfile", "copy-workspace-modules"],
+			"executor": "nx:noop"
+		},
+		"serve": {
+			"continuous": true,
+			"executor": "@nx/js:node",
+			"defaultConfiguration": "development",
+			"dependsOn": ["build"],
+			"options": {
+				"buildTarget": "forum:build",
+				"runBuildTargetDependencies": false
+			},
+			"configurations": {
+				"development": {
+					"buildTarget": "forum:build:development"
+				},
+				"production": {
+					"buildTarget": "forum:build:production"
+				}
+			}
+		},
+		"test": {
+			"options": {
+				"passWithNoTests": true
+			}
+		}
+	}
+}

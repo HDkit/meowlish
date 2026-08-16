@@ -6,7 +6,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaClient } from '@prisma-client/file';
 
 @Injectable()
-export class FilePrismaRepository implements IFileRepository {
+export class FilePrismaRepositoryImpl implements IFileRepository {
 	constructor(private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>) {}
 
 	async create(fileMetadata: FileMetadata, isPublic: boolean): Promise<string> {
@@ -28,11 +28,17 @@ export class FilePrismaRepository implements IFileRepository {
 		});
 	}
 
-	async decrementRef(ids: string[], count = 1): Promise<void> {
-		await this.txHost.tx.file.updateMany({
-			where: { id: { in: ids } },
-			data: { refCount: { decrement: count } },
-		});
+	async decrementRef(files: { id: string; count?: number }[]): Promise<void> {
+		await Promise.all(
+			files.map(({ id, count = 1 }) =>
+				this.txHost.tx.file.update({
+					where: { id: id },
+					data: {
+						refCount: { decrement: count },
+					},
+				}),
+			),
+		);
 	}
 
 	async remove(ids: string[]): Promise<void> {

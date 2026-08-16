@@ -4,7 +4,7 @@ import { IsArray, IsNumber, IsOptional, IsPositive, IsString } from 'class-valid
 export class FindIdentitiesDto implements auth.FindIdentitiesDto {
 	@IsOptional()
 	@IsString()
-	usernameOrCredIdentifier?: string;
+	usernameOrCredIdentifierOrId?: string;
 
 	@IsArray()
 	@IsOptional()
