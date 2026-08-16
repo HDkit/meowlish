@@ -14,15 +14,15 @@ import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-pr
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { PrismaClient } from '@prisma-client/file';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { LoggerModule } from '@server/logger';
 import {
-	Any2RpcExceptionFilter,
 	GlobalClassSerializerInterceptor,
+	GlobalRmqExceptionFilter,
+	GlobalRpcExceptionFilter,
 	GlobalValidationPipe,
-	Http2gRPCExceptionFilter,
 } from '@server/utils';
 import { ClsGuard, ClsModule } from 'nestjs-cls';
 import { NestMinioModule } from 'nestjs-minio';
@@ -68,14 +68,8 @@ import { NestMinioModule } from 'nestjs-minio';
 			provide: APP_GUARD,
 			useClass: ClsGuard,
 		},
-		{
-			provide: APP_FILTER,
-			useClass: Any2RpcExceptionFilter,
-		},
-		{
-			provide: APP_FILTER,
-			useClass: Http2gRPCExceptionFilter,
-		},
+		GlobalRpcExceptionFilter,
+		GlobalRmqExceptionFilter,
 		{
 			provide: APP_PIPE,
 			useClass: GlobalValidationPipe,

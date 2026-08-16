@@ -1,5 +1,12 @@
 import { status } from '@grpc/grpc-js';
-import { Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
+import {
+	ArgumentsHost,
+	Catch,
+	ContextType,
+	ExceptionFilter,
+	HttpException,
+	HttpStatus,
+} from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { AppLoggerService } from '@server/logger';
 import { Observable } from 'rxjs';
@@ -26,7 +33,10 @@ export class gRPC2HttpExceptionFilter implements ExceptionFilter {
 		[status.FAILED_PRECONDITION]: HttpStatus.PRECONDITION_FAILED,
 	};
 
-	catch(exception: RpcException): Observable<never> | void {
+	catch(exception: RpcException, host: ArgumentsHost): Observable<never> | void {
+		const contextType = host.getType<ContextType>();
+		if (contextType !== 'http') throw exception;
+
 		const err = exception.getError();
 
 		this.logger.error(

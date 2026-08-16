@@ -2,6 +2,7 @@ import { AchievementGatewayModule } from './achievement-gateway/achievement.rout
 import { AuthGatewayModule } from './auth-gateway/auth.router.module';
 import { ExamGatewayModule } from './exam-gateway/exam.router.module';
 import { FileGatewayModule } from './file-gateway/file.router.module';
+import { LiveWsGatewayModule } from './live-ws-gateway/live-ws.router.module';
 import { Module } from '@nestjs/common';
 import { RouterModule } from '@nestjs/core';
 
@@ -23,6 +24,10 @@ import { RouterModule } from '@nestjs/core';
 			{
 				path: '/achievements',
 				module: AchievementGatewayModule,
+			},
+			{
+				path: '/chat/ws',
+				module: LiveWsGatewayModule,
 			},
 		]),
 	],

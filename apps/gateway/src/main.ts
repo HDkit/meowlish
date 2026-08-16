@@ -25,6 +25,7 @@ async function bootstrap() {
 	gatewayModule.enableCors();
 	useLogger(gatewayModule);
 
+	// HTTP API docs
 	const docConfig = new DocumentBuilder().setVersion('1').addBearerAuth().build();
 	const document = SwaggerModule.createDocument(gatewayModule, docConfig);
 	gatewayModule.use(

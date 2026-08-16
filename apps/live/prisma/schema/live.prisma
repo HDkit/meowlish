@@ -1,0 +1,35 @@
+model Room {
+  id               String    @id @default(uuid())
+  name             String    @unique
+  scheduledLiveUrl String?   @map("scheduled_live_url")
+  scheduledTime    DateTime? @map("scheduled_time")
+  isDeleted        Boolean   @default(false) @map("is_deleted")
+
+  logs    Log[]
+  banneds Banned[]
+
+  @@map("rooms")
+}
+
+model Banned {
+  uid    String
+  roomId String @map("room_id")
+  reason String
+
+  room Room @relation(fields: [roomId], references: [id])
+
+  @@id([roomId, uid])
+  @@map("banneds")
+}
+
+model Log {
+  id        String   @id @default(uuid())
+  roomId    String
+  createdAt DateTime @default(now()) @map("created_at")
+  fromId    String   @map("from_id")
+  message   String
+
+  room Room @relation(fields: [roomId], references: [id])
+
+  @@map("logs")
+}

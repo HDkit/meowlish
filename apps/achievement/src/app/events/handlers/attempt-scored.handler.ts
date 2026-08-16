@@ -7,8 +7,9 @@ import {
 	RabbitSubscribe,
 	defaultNackErrorHandler,
 } from '@golevelup/nestjs-rabbitmq';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, UseFilters } from '@nestjs/common';
 import { AppLoggerService } from '@server/logger';
+import { GlobalRmqExceptionFilter } from '@server/utils';
 import { IsNumber, IsString } from 'class-validator';
 
 class AttemptScoredEvent {
@@ -30,6 +31,7 @@ export class AttemptScoredHandler {
 		private readonly logger: AppLoggerService,
 	) {}
 
+	@UseFilters(GlobalRmqExceptionFilter)
 	@RabbitSubscribe({
 		connection: 'sub',
 		exchange: 'eventbus',

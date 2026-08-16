@@ -3,10 +3,12 @@ import { GetPresignedUrlDto } from '../dtos/req/get-presigned-url.req.dto';
 import { GetUrlsDto } from '../dtos/req/get-urls.req.dto';
 import { PresignedUrlResponseDto } from '../dtos/res/presigned-url.res.dto';
 import { UrlsDto } from '../dtos/res/urls.res.dto';
-import { Controller, SerializeOptions } from '@nestjs/common';
+import { Controller, SerializeOptions, UseFilters } from '@nestjs/common';
 import { Payload } from '@nestjs/microservices';
 import { file } from '@server/generated';
+import { GlobalRpcExceptionFilter } from '@server/utils';
 
+@UseFilters(GlobalRpcExceptionFilter)
 @file.FileServiceControllerMethods()
 @Controller()
 export class FileController implements file.FileServiceController {

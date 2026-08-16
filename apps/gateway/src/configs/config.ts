@@ -33,6 +33,12 @@ const servicesSchema = z.object({
 		port: z.coerce.number(),
 		host: z.string(),
 	}),
+	live: z.object({
+		port: z.coerce.number(),
+		host: z.string(),
+		portWs: z.coerce.number(),
+		hostWs: z.string(),
+	}),
 });
 
 const vpsEnvSchema = z.object({
@@ -81,6 +87,12 @@ const loadEnv = (): DeepStringify<IEnvVars> => ({
 		achievement: {
 			port: process.env.ACHIEVEMENT_SERVICE_PORT,
 			host: process.env.ACHIEVEMENT_SERVICE_HOST,
+		},
+		live: {
+			port: process.env.LIVE_SERVICE_PORT,
+			host: process.env.LIVE_SERVICE_HOST,
+			portWs: process.env.LIVE_SERVICE_WS_PORT,
+			hostWs: process.env.LIVE_SERVICE_WS_HOST,
 		},
 	},
 	vps: { baseUrl: process.env.BASE_URL?.trim().replace(/\/+$/, '') },
