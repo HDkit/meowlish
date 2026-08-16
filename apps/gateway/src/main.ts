@@ -16,6 +16,7 @@ async function bootstrap() {
 	const gatewayModule = await NestFactory.create<NestExpressApplication>(GatewayModule, {
 		bufferLogs: true,
 	});
+	gatewayModule.set('query parser', 'extended');
 	gatewayModule.setGlobalPrefix('api');
 	gatewayModule.enableVersioning({
 		defaultVersion: '1',
@@ -24,6 +25,7 @@ async function bootstrap() {
 	gatewayModule.enableCors();
 	useLogger(gatewayModule);
 
+	// HTTP API docs
 	const docConfig = new DocumentBuilder().setVersion('1').addBearerAuth().build();
 	const document = SwaggerModule.createDocument(gatewayModule, docConfig);
 	gatewayModule.use(

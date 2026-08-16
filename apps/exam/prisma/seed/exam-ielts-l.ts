@@ -12,7 +12,7 @@ export class IeltsLExamSeeder {
 		return {
 			id: '2',
 			createdBy: 'admin-id',
-			title: 'IELTS R 1',
+			title: 'IELTS L 1',
 			duration: 60 * 60,
 			status: ExamStatus.Approved,
 			examTags: {

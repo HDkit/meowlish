@@ -64,11 +64,13 @@ import { IdentityIdsDto } from '../dtos/res/identity-ids.res.dto';
 import { PermissionsDto } from '../dtos/res/permissions.res.dto';
 import { RolesDto } from '../dtos/res/roles.res.dto';
 import { TokensDto } from '../dtos/res/tokens.res.dto';
-import { Controller, SerializeOptions } from '@nestjs/common';
+import { Controller, SerializeOptions, UseFilters } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { Payload } from '@nestjs/microservices';
 import { auth } from '@server/generated';
+import { GlobalRpcExceptionFilter } from '@server/utils';
 
+@UseFilters(GlobalRpcExceptionFilter)
 @auth.AuthServiceControllerMethods()
 @Controller()
 export class AuthController implements auth.AuthServiceController {

@@ -1,6 +1,6 @@
 import { ResponseEntity } from '../data/response-entity.type';
 import { BadRequestException, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
-import type { ArgumentsHost } from '@nestjs/common';
+import type { ArgumentsHost, ContextType } from '@nestjs/common';
 import { Catch } from '@nestjs/common';
 import { AppLoggerService } from '@server/logger';
 import { Request, Response } from 'express';
@@ -13,6 +13,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
 	) {}
 
 	catch(exception: HttpException, host: ArgumentsHost) {
+		const contextType = host.getType<ContextType>();
+		if (contextType !== 'http') throw exception;
+
 		const ctx = host.switchToHttp();
 		const res = ctx.getResponse<Response>();
 		const req = ctx.getRequest<Request>();

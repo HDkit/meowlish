@@ -6,11 +6,13 @@ import { GetUsersProgressDto } from '../dtos/req/get-users-progress.req.dto';
 import { FoundBadgesDto } from '../dtos/res/found-badges.res.dto';
 import { FoundUsersBadgesDto } from '../dtos/res/found-users-badges.res.dto';
 import { ProgressDto } from '../dtos/res/progress.res.dto';
-import { Controller, SerializeOptions } from '@nestjs/common';
+import { Controller, SerializeOptions, UseFilters } from '@nestjs/common';
 import { QueryBus } from '@nestjs/cqrs';
 import { Payload } from '@nestjs/microservices';
 import { achievement } from '@server/generated';
+import { GlobalRpcExceptionFilter } from '@server/utils';
 
+@UseFilters(GlobalRpcExceptionFilter)
 @achievement.AchievementServiceControllerMethods()
 @Controller()
 export class BadgeController implements achievement.AchievementServiceController {

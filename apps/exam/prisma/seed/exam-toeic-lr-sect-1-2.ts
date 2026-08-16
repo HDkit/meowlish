@@ -119,6 +119,7 @@ export class ToeicLrExamSect12Seeder {
 								],
 							},
 							questionFiles: { create: [{ fileId: 'SYSTEM_q7.mp3' }] },
+							questionTags: { create: this.tagNamesToIdInputs(['Short Q and A']) },
 						},
 						{
 							order: 8,
@@ -131,6 +132,7 @@ export class ToeicLrExamSect12Seeder {
 								],
 							},
 							questionFiles: { create: [{ fileId: 'SYSTEM_q8.mp3' }] },
+							questionTags: { create: this.tagNamesToIdInputs(['Short Q and A']) },
 						},
 						{
 							order: 9,
@@ -143,6 +145,7 @@ export class ToeicLrExamSect12Seeder {
 								],
 							},
 							questionFiles: { create: [{ fileId: 'SYSTEM_q9.mp3' }] },
+							questionTags: { create: this.tagNamesToIdInputs(['Short Q and A']) },
 						},
 						{
 							order: 10,
@@ -155,6 +158,7 @@ export class ToeicLrExamSect12Seeder {
 								],
 							},
 							questionFiles: { create: [{ fileId: 'SYSTEM_q10.mp3' }] },
+							questionTags: { create: this.tagNamesToIdInputs(['Short Q and A']) },
 						},
 						{
 							order: 11,
@@ -167,6 +171,7 @@ export class ToeicLrExamSect12Seeder {
 								],
 							},
 							questionFiles: { create: [{ fileId: 'SYSTEM_q11.mp3' }] },
+							questionTags: { create: this.tagNamesToIdInputs(['Short Q and A']) },
 						},
 						{
 							order: 12,
@@ -179,6 +184,7 @@ export class ToeicLrExamSect12Seeder {
 								],
 							},
 							questionFiles: { create: [{ fileId: 'SYSTEM_q12.mp3' }] },
+							questionTags: { create: this.tagNamesToIdInputs(['Short Q and A']) },
 						},
 						{
 							order: 13,
@@ -191,6 +197,7 @@ export class ToeicLrExamSect12Seeder {
 								],
 							},
 							questionFiles: { create: [{ fileId: 'SYSTEM_q13.mp3' }] },
+							questionTags: { create: this.tagNamesToIdInputs(['Short Q and A']) },
 						},
 						{
 							order: 14,
@@ -203,6 +210,7 @@ export class ToeicLrExamSect12Seeder {
 								],
 							},
 							questionFiles: { create: [{ fileId: 'SYSTEM_q14.mp3' }] },
+							questionTags: { create: this.tagNamesToIdInputs(['Short Q and A']) },
 						},
 						{
 							order: 15,
@@ -215,6 +223,7 @@ export class ToeicLrExamSect12Seeder {
 								],
 							},
 							questionFiles: { create: [{ fileId: 'SYSTEM_q15.mp3' }] },
+							questionTags: { create: this.tagNamesToIdInputs(['Short Q and A']) },
 						},
 						{
 							order: 16,
@@ -227,6 +236,7 @@ export class ToeicLrExamSect12Seeder {
 								],
 							},
 							questionFiles: { create: [{ fileId: 'SYSTEM_q16.mp3' }] },
+							questionTags: { create: this.tagNamesToIdInputs(['Short Q and A']) },
 						},
 						{
 							order: 17,
@@ -239,6 +249,7 @@ export class ToeicLrExamSect12Seeder {
 								],
 							},
 							questionFiles: { create: [{ fileId: 'SYSTEM_q17.mp3' }] },
+							questionTags: { create: this.tagNamesToIdInputs(['Short Q and A']) },
 						},
 						{
 							order: 18,
@@ -251,6 +262,7 @@ export class ToeicLrExamSect12Seeder {
 								],
 							},
 							questionFiles: { create: [{ fileId: 'SYSTEM_q18.mp3' }] },
+							questionTags: { create: this.tagNamesToIdInputs(['Short Q and A']) },
 						},
 						{
 							order: 19,
@@ -258,11 +270,12 @@ export class ToeicLrExamSect12Seeder {
 							choices: {
 								create: [
 									{ key: 'A', isCorrect: false },
-									{ key: 'B', isCorrect: false },
+									{ key: 'B', isCorrect: true },
 									{ key: 'C', isCorrect: false },
 								],
 							},
 							questionFiles: { create: [{ fileId: 'SYSTEM_q19.mp3' }] },
+							questionTags: { create: this.tagNamesToIdInputs(['Short Q and A']) },
 						},
 						{
 							order: 20,
@@ -271,22 +284,24 @@ export class ToeicLrExamSect12Seeder {
 								create: [
 									{ key: 'A', isCorrect: false },
 									{ key: 'B', isCorrect: false },
-									{ key: 'C', isCorrect: false },
+									{ key: 'C', isCorrect: true },
 								],
 							},
 							questionFiles: { create: [{ fileId: 'SYSTEM_q20.mp3' }] },
+							questionTags: { create: this.tagNamesToIdInputs(['Short Q and A']) },
 						},
 						{
 							order: 21,
 							type: QuestionType.MultipleChoiceSingle,
 							choices: {
 								create: [
-									{ key: 'A', isCorrect: false },
+									{ key: 'A', isCorrect: true },
 									{ key: 'B', isCorrect: false },
 									{ key: 'C', isCorrect: false },
 								],
 							},
 							questionFiles: { create: [{ fileId: 'SYSTEM_q21.mp3' }] },
+							questionTags: { create: this.tagNamesToIdInputs(['Short Q and A']) },
 						},
 						{
 							order: 22,
@@ -294,11 +309,12 @@ export class ToeicLrExamSect12Seeder {
 							choices: {
 								create: [
 									{ key: 'A', isCorrect: false },
-									{ key: 'B', isCorrect: false },
+									{ key: 'B', isCorrect: true },
 									{ key: 'C', isCorrect: false },
 								],
 							},
 							questionFiles: { create: [{ fileId: 'SYSTEM_q22.mp3' }] },
+							questionTags: { create: this.tagNamesToIdInputs(['Short Q and A']) },
 						},
 						{
 							order: 23,
@@ -307,10 +323,11 @@ export class ToeicLrExamSect12Seeder {
 								create: [
 									{ key: 'A', isCorrect: false },
 									{ key: 'B', isCorrect: false },
-									{ key: 'C', isCorrect: false },
+									{ key: 'C', isCorrect: true },
 								],
 							},
-							questionFiles: { create: [{ fileId: 'SYSTEM_23.mp3' }] },
+							questionFiles: { create: [{ fileId: 'SYSTEM_q23.mp3' }] },
+							questionTags: { create: this.tagNamesToIdInputs(['Short Q and A']) },
 						},
 						{
 							order: 24,
@@ -318,11 +335,12 @@ export class ToeicLrExamSect12Seeder {
 							choices: {
 								create: [
 									{ key: 'A', isCorrect: false },
-									{ key: 'B', isCorrect: false },
+									{ key: 'B', isCorrect: true },
 									{ key: 'C', isCorrect: false },
 								],
 							},
-							questionFiles: { create: [{ fileId: 'SYSTEM_24.mp3' }] },
+							questionFiles: { create: [{ fileId: 'SYSTEM_q24.mp3' }] },
+							questionTags: { create: this.tagNamesToIdInputs(['Short Q and A']) },
 						},
 						{
 							order: 25,
@@ -331,10 +349,11 @@ export class ToeicLrExamSect12Seeder {
 								create: [
 									{ key: 'A', isCorrect: false },
 									{ key: 'B', isCorrect: false },
-									{ key: 'C', isCorrect: false },
+									{ key: 'C', isCorrect: true },
 								],
 							},
-							questionFiles: { create: [{ fileId: 'SYSTEM_25.mp3' }] },
+							questionFiles: { create: [{ fileId: 'SYSTEM_q25.mp3' }] },
+							questionTags: { create: this.tagNamesToIdInputs(['Short Q and A']) },
 						},
 						{
 							order: 26,
@@ -342,11 +361,12 @@ export class ToeicLrExamSect12Seeder {
 							choices: {
 								create: [
 									{ key: 'A', isCorrect: false },
-									{ key: 'B', isCorrect: false },
+									{ key: 'B', isCorrect: true },
 									{ key: 'C', isCorrect: false },
 								],
 							},
-							questionFiles: { create: [{ fileId: 'SYSTEM_26.mp3' }] },
+							questionFiles: { create: [{ fileId: 'SYSTEM_q26.mp3' }] },
+							questionTags: { create: this.tagNamesToIdInputs(['Short Q and A']) },
 						},
 						{
 							order: 27,
@@ -354,47 +374,51 @@ export class ToeicLrExamSect12Seeder {
 							choices: {
 								create: [
 									{ key: 'A', isCorrect: false },
-									{ key: 'B', isCorrect: false },
+									{ key: 'B', isCorrect: true },
 									{ key: 'C', isCorrect: false },
 								],
 							},
-							questionFiles: { create: [{ fileId: 'SYSTEM_27.mp3' }] },
+							questionFiles: { create: [{ fileId: 'SYSTEM_q27.mp3' }] },
+							questionTags: { create: this.tagNamesToIdInputs(['Short Q and A']) },
 						},
 						{
 							order: 28,
 							type: QuestionType.MultipleChoiceSingle,
 							choices: {
 								create: [
-									{ key: 'A', isCorrect: false },
+									{ key: 'A', isCorrect: true },
 									{ key: 'B', isCorrect: false },
 									{ key: 'C', isCorrect: false },
 								],
 							},
-							questionFiles: { create: [{ fileId: 'SYSTEM_28.mp3' }] },
+							questionFiles: { create: [{ fileId: 'SYSTEM_q28.mp3' }] },
+							questionTags: { create: this.tagNamesToIdInputs(['Short Q and A']) },
 						},
 						{
 							order: 29,
 							type: QuestionType.MultipleChoiceSingle,
 							choices: {
 								create: [
-									{ key: 'A', isCorrect: false },
+									{ key: 'A', isCorrect: true },
 									{ key: 'B', isCorrect: false },
 									{ key: 'C', isCorrect: false },
 								],
 							},
-							questionFiles: { create: [{ fileId: 'SYSTEM_29.mp3' }] },
+							questionFiles: { create: [{ fileId: 'SYSTEM_q29.mp3' }] },
+							questionTags: { create: this.tagNamesToIdInputs(['Short Q and A']) },
 						},
 						{
 							order: 30,
 							type: QuestionType.MultipleChoiceSingle,
 							choices: {
 								create: [
-									{ key: 'A', isCorrect: false },
+									{ key: 'A', isCorrect: true },
 									{ key: 'B', isCorrect: false },
 									{ key: 'C', isCorrect: false },
 								],
 							},
-							questionFiles: { create: [{ fileId: 'SYSTEM_30.mp3' }] },
+							questionFiles: { create: [{ fileId: 'SYSTEM_q30.mp3' }] },
+							questionTags: { create: this.tagNamesToIdInputs(['Short Q and A']) },
 						},
 						{
 							order: 31,
@@ -402,11 +426,12 @@ export class ToeicLrExamSect12Seeder {
 							choices: {
 								create: [
 									{ key: 'A', isCorrect: false },
-									{ key: 'B', isCorrect: false },
+									{ key: 'B', isCorrect: true },
 									{ key: 'C', isCorrect: false },
 								],
 							},
-							questionFiles: { create: [{ fileId: 'SYSTEM_31.mp3' }] },
+							questionFiles: { create: [{ fileId: 'SYSTEM_q31.mp3' }] },
+							questionTags: { create: this.tagNamesToIdInputs(['Short Q and A']) },
 						},
 					],
 				},

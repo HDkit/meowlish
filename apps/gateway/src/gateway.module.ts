@@ -6,6 +6,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
 import { config } from './configs/config';
 import { ExamGatewayModule } from './exam-gateway/exam.router.module';
 import { FileGatewayModule } from './file-gateway/file.router.module';
+import { LiveWsGatewayModule } from './live-ws-gateway/live-ws.router.module';
 import { RouteModule } from './router.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
@@ -46,6 +47,8 @@ import { GlobalValidationPipe } from '@server/utils';
 		ExamGatewayModule,
 		FileGatewayModule,
 		AchievementGatewayModule,
+		// ws proxy modules
+		LiveWsGatewayModule,
 	],
 	providers: [
 		{
@@ -89,5 +92,6 @@ import { GlobalValidationPipe } from '@server/utils';
 			useClass: GlobalClassSerializerInterceptor,
 		},
 	],
+	exports: [],
 })
 export class GatewayModule {}

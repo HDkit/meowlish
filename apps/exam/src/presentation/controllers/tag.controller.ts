@@ -6,10 +6,12 @@ import { UpdateTagDto } from '../dtos/req/tag/update-tag.dto';
 import { AddedTagDto } from '../dtos/res/tag/added-tag.res.dto';
 import { TagListDto } from '../dtos/res/tag/tag-list.res.dto';
 import { TagTreesDto } from '../dtos/res/tag/tag-trees.res.dto';
-import { Controller, SerializeOptions } from '@nestjs/common';
+import { Controller, SerializeOptions, UseFilters } from '@nestjs/common';
 import { Payload } from '@nestjs/microservices';
 import { exam } from '@server/generated';
+import { GlobalRpcExceptionFilter } from '@server/utils';
 
+@UseFilters(GlobalRpcExceptionFilter)
 @exam.TagServiceControllerMethods()
 @Controller()
 export class TagController implements exam.TagServiceController {
