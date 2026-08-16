@@ -7,7 +7,7 @@ export type SectionManagementInfo = {
 	name?: string;
 	directive: string;
 	contentType: string;
-	questionIds: string[];
+	childrenIds: string[];
 	files: FilePreviewInfo[];
 	tags: string[];
 };

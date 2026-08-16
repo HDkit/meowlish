@@ -34,7 +34,7 @@ export class SectionManagementInfoDto {
 
 	@Expose()
 	@ApiProperty({ type: [String] })
-	questionIds!: string[];
+	childrenIds!: string[];
 
 	@Expose()
 	@ApiProperty({ type: [String] })

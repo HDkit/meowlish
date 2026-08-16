@@ -58,7 +58,7 @@ export async function seedExams(prisma: PrismaClient) {
 								content: `The graph below shows the number of inquiries received by the Tourist Information Office in one city over a six-month period in 2011.
                   Summarize the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.
 
-                  #BEGIN_GRAPH_DESCRIPTION
+                  #BEGIN_DESCRIPTION
 
                   Chart type: Line graph
                   Topic: Number of enquiries received by a Tourist Information Office
@@ -146,7 +146,7 @@ export async function seedExams(prisma: PrismaClient) {
                   Misidentify which category increases or decreases.
                   Fail to compare categories.
 
-                  #END_GRAPH_DESCRIPTION`,
+                  #END_DESCRIPTION`,
 								type: QuestionType.Writing,
 								questionTags: { create: tagNamesToIdInputs(['IELTS Writing T1-T2']) },
 							},

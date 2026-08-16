@@ -1,5 +1,5 @@
 model TagTableLock {
-  version Int @id @default(0)
+  version Int @id @default(1)
 
   @@map("tags_table_lock")
 }

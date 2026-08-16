@@ -63,15 +63,6 @@ export class ExamManagementGatewayController implements OnModuleInit {
 		return res;
 	}
 
-	@Post(':id/sections')
-	@ApiOperation({ summary: 'Create a section inside an exam' })
-	@ApiResponseEntity(CreatedSectionDto)
-	@SerializeOptions({ type: CreatedSectionDto })
-	createSectionInExam(@Param('id') id: string, @Body() body: CreateSectionDto) {
-		const res = this.examManagementService.createSection({ ...body, examId: id });
-		return res;
-	}
-
 	@Post('sections/:id/sections')
 	@ApiOperation({ summary: 'Create a nested section inside a section' })
 	@ApiResponseEntity(CreatedSectionDto)
@@ -90,14 +81,6 @@ export class ExamManagementGatewayController implements OnModuleInit {
 		return res;
 	}
 
-	@Patch(':id')
-	@ApiEmptyResponseEntity()
-	@ApiOperation({ summary: 'Update an exam' })
-	updateExam(@Param('id') id: string, @Body() body: UpdateExamDto) {
-		const res = this.examManagementService.updateExam({ ...body, id: id });
-		return res;
-	}
-
 	@Patch('sections/:id')
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Update a section' })
@@ -111,14 +94,6 @@ export class ExamManagementGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Update a question' })
 	updateQuestion(@Param('id') id: string, @Body() body: UpdateQuestionDto) {
 		const res = this.examManagementService.updateQuestion({ ...body, id: id });
-		return res;
-	}
-
-	@Delete(':id')
-	@ApiEmptyResponseEntity()
-	@ApiOperation({ summary: 'Delete an exam' })
-	deleteExam(@Param('id') id: string) {
-		const res = this.examManagementService.deleteExam({ id: id });
 		return res;
 	}
 
@@ -151,15 +126,6 @@ export class ExamManagementGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Move a question' })
 	moveQuestion(@Param('id') id: string, @Body() body: MoveQuestionDto) {
 		const res = this.examManagementService.moveQuestion({ ...body, id: id });
-		return res;
-	}
-
-	@Patch(':id/review')
-	@HasPermissions(Permission.EXAM_APPROVE)
-	@ApiEmptyResponseEntity()
-	@ApiOperation({ summary: 'Review and approve or reject an exam' })
-	reviewExam(@Param('id') id: string, @Body() body: ReviewExamDto) {
-		const res = this.examManagementService.reviewExam({ ...body, id: id });
 		return res;
 	}
 
@@ -196,6 +162,40 @@ export class ExamManagementGatewayController implements OnModuleInit {
 	@SerializeOptions({ type: QuestionManagementInfoDto, strategy: 'exposeAll' })
 	getQuestionDetails(@Param('id') questionId: string) {
 		const res = this.examManagementService.getQuestionDetails({ questionId: questionId });
+		return res;
+	}
+
+	@Patch(':id')
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Update an exam' })
+	updateExam(@Param('id') id: string, @Body() body: UpdateExamDto) {
+		const res = this.examManagementService.updateExam({ ...body, id: id });
+		return res;
+	}
+
+	@Delete(':id')
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Delete an exam' })
+	deleteExam(@Param('id') id: string) {
+		const res = this.examManagementService.deleteExam({ id: id });
+		return res;
+	}
+
+	@Patch(':id/review')
+	@HasPermissions(Permission.EXAM_APPROVE)
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Review and approve or reject an exam' })
+	reviewExam(@Param('id') id: string, @Body() body: ReviewExamDto) {
+		const res = this.examManagementService.reviewExam({ ...body, id: id });
+		return res;
+	}
+
+	@Post(':id/sections')
+	@ApiOperation({ summary: 'Create a section inside an exam' })
+	@ApiResponseEntity(CreatedSectionDto)
+	@SerializeOptions({ type: CreatedSectionDto })
+	createSectionInExam(@Param('id') id: string, @Body() body: CreateSectionDto) {
+		const res = this.examManagementService.createSection({ ...body, examId: id });
 		return res;
 	}
 }

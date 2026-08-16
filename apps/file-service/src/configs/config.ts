@@ -16,7 +16,7 @@ const redisVarsSchema = z.object({
 
 const objStorageVarsSchema = z.object({
 	host: z.string(),
-	port: z.coerce.number().default(9000),
+	port: z.coerce.number().optional(),
 	user: z.string(),
 	password: z.string(),
 });

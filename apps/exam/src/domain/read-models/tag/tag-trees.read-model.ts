@@ -1,1 +1,5 @@
-export type TagTree = { name: string; children: TagTree[] };
+export type TagTree = {
+	id: string;
+	name: string;
+	children: TagTree[];
+};

@@ -3,6 +3,9 @@ import { Expose, Type } from 'class-transformer';
 
 class TagTreeDto implements exam.TagTrees_TagTree {
 	@Expose()
+	id!: string;
+
+	@Expose()
 	name!: string;
 
 	@Expose()

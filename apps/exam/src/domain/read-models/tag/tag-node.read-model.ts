@@ -1,1 +1,5 @@
-export type TagNode = { name: string; parent?: string };
+export type TagNode = {
+	id: string;
+	name: string;
+	parentId?: string;
+};

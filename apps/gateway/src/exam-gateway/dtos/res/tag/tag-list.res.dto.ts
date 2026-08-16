@@ -4,11 +4,15 @@ import { Expose, Type } from 'class-transformer';
 class TagNodeDto {
 	@Expose()
 	@ApiProperty()
+	id!: string;
+
+	@Expose()
+	@ApiProperty()
 	name!: string;
 
 	@Expose()
 	@ApiPropertyOptional()
-	parent?: string;
+	parentId?: string;
 }
 
 export class TagListDto {

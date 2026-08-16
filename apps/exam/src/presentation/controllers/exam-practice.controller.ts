@@ -171,7 +171,7 @@ export class ExamPracticeController implements exam.ExamPracticeServiceControlle
 	}
 
 	@SerializeOptions({ type: UserStatsDto, strategy: 'exposeAll' })
-	async getUsesStats(@Payload() request: GetUsersStatsDto): Promise<UserStatsDto> {
+	async getUserStats(@Payload() request: GetUsersStatsDto): Promise<UserStatsDto> {
 		return await this.queryBus.execute(new GetUserStatsQuery({ userId: request.uid, ...request }));
 	}
 }
