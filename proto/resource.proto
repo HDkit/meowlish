@@ -1,0 +1,215 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
+
+package resource;
+
+service BlogService {
+	rpc CreateBlog(CreateBlogRequest) returns (BlogResponse) {}
+	rpc GetBlog(GetBlogRequest) returns (BlogResponse) {}
+	rpc UpdateBlog(UpdateBlogRequest) returns (BlogResponse) {}
+	rpc DeleteBlog(DeleteBlogRequest) returns (google.protobuf.Empty) {}
+	rpc ListBlogs(ListBlogsRequest) returns (ListBlogsResponse) {}
+}
+
+service FlashCardService {
+	rpc CreateFlashCard(CreateFlashCardRequest) returns (FlashCardResponse) {}
+	rpc GetFlashCard(GetFlashCardRequest) returns (FlashCardResponse) {}
+	rpc UpdateFlashCard(UpdateFlashCardRequest) returns (FlashCardResponse) {}
+	rpc DeleteFlashCard(DeleteFlashCardRequest) returns (google.protobuf.Empty) {}
+	rpc ListFlashCards(ListFlashCardsRequest) returns (ListFlashCardsResponse) {}
+}
+
+service FlashCardListService {
+	rpc CreateFlashCardList(CreateFlashCardListRequest) returns (FlashCardListResponse) {}
+	rpc GetFlashCardList(GetFlashCardListRequest) returns (FlashCardListDetailResponse) {}
+	rpc UpdateFlashCardList(UpdateFlashCardListRequest) returns (FlashCardListResponse) {}
+	rpc DeleteFlashCardList(DeleteFlashCardListRequest) returns (google.protobuf.Empty) {}
+	rpc ListFlashCardLists(ListFlashCardListsRequest) returns (ListFlashCardListsResponse) {}
+	rpc AddCardToList(AddCardToListRequest) returns (google.protobuf.Empty) {}
+	rpc RemoveCardFromList(RemoveCardFromListRequest) returns (google.protobuf.Empty) {}
+	rpc ListCardsInList(ListCardsInListRequest) returns (ListFlashCardsResponse) {}
+}
+
+message BlogResponse {
+	string          id         = 1;
+	string          title      = 2;
+	string          content    = 3;
+	string          author_id  = 4;
+	repeated string tags       = 5;
+	string          created_at = 6;
+	string          updated_at = 7;
+}
+
+message CreateBlogRequest {
+	google.protobuf.StringValue          title     = 1;
+	google.protobuf.StringValue          content   = 2;
+	google.protobuf.StringValue          author_id = 3;
+	repeated google.protobuf.StringValue tags      = 4;
+}
+
+message GetBlogRequest {
+	google.protobuf.StringValue id = 1;
+}
+
+message UpdateBlogRequest {
+	google.protobuf.StringValue          id      = 1;
+	optional google.protobuf.StringValue title   = 2;
+	optional google.protobuf.StringValue content = 3;
+	repeated google.protobuf.StringValue tags    = 4;
+}
+
+message DeleteBlogRequest {
+	google.protobuf.StringValue id = 1;
+}
+
+message ListBlogsRequest {
+	optional google.protobuf.StringValue author_id = 1;
+	repeated google.protobuf.StringValue tags      = 2;
+	optional google.protobuf.Int32Value  page      = 3;
+	optional google.protobuf.Int32Value  limit     = 4;
+}
+
+message ListBlogsResponse {
+	repeated BlogResponse blogs       = 1;
+	int32                 total_count = 2;
+}
+
+message FlashCardResponse {
+	string          id             = 1;
+	string          word           = 2;
+	string          definition     = 3;
+	optional string image          = 4;
+	optional string part_of_speech = 5;
+	optional string pronunciation  = 6;
+	repeated string examples       = 7;
+	optional string notes          = 8;
+	string          author_id      = 9;
+	repeated string tags           = 10;
+	string          created_at     = 11;
+	string          updated_at     = 12;
+}
+
+message CreateFlashCardRequest {
+	google.protobuf.StringValue          word           = 1;
+	google.protobuf.StringValue          definition     = 2;
+	optional google.protobuf.StringValue image          = 3;
+	optional google.protobuf.StringValue part_of_speech = 4;
+	optional google.protobuf.StringValue pronunciation  = 5;
+	repeated google.protobuf.StringValue examples       = 6;
+	optional google.protobuf.StringValue notes          = 7;
+	google.protobuf.StringValue          author_id      = 8;
+	repeated google.protobuf.StringValue tags           = 9;
+	google.protobuf.StringValue          list_id        = 10;
+}
+
+message GetFlashCardRequest {
+	google.protobuf.StringValue id = 1;
+}
+
+message UpdateFlashCardRequest {
+	google.protobuf.StringValue          id             = 1;
+	optional google.protobuf.StringValue word           = 2;
+	optional google.protobuf.StringValue definition     = 3;
+	optional google.protobuf.StringValue image          = 4;
+	optional google.protobuf.StringValue part_of_speech = 5;
+	optional google.protobuf.StringValue pronunciation  = 6;
+	repeated google.protobuf.StringValue examples       = 7;
+	optional google.protobuf.StringValue notes          = 8;
+	repeated google.protobuf.StringValue tags           = 9;
+}
+
+message DeleteFlashCardRequest {
+	google.protobuf.StringValue id = 1;
+}
+
+message ListFlashCardsRequest {
+	optional google.protobuf.StringValue author_id = 1;
+	repeated google.protobuf.StringValue tags      = 2;
+	optional google.protobuf.Int32Value  page      = 3;
+	optional google.protobuf.Int32Value  limit     = 4;
+}
+
+message ListFlashCardsResponse {
+	repeated FlashCardResponse flash_cards = 1;
+	int32                      total_count = 2;
+}
+
+message FlashCardListResponse {
+	string          id          = 1;
+	string          name        = 2;
+	string          description = 3;
+	string          author_id   = 4;
+	bool            is_public   = 5;
+	repeated string tags        = 6;
+	string          created_at  = 7;
+	string          updated_at  = 8;
+}
+
+message FlashCardListDetailResponse {
+	string                     id          = 1;
+	string                     name        = 2;
+	string                     description = 3;
+	string                     author_id   = 4;
+	bool                       is_public   = 5;
+	repeated string            tags        = 6;
+	string                     created_at  = 7;
+	string                     updated_at  = 8;
+	repeated FlashCardResponse flash_cards = 9;
+	int32                      total_cards = 10;
+}
+
+message CreateFlashCardListRequest {
+	google.protobuf.StringValue          name        = 1;
+	optional google.protobuf.StringValue description = 2;
+	google.protobuf.StringValue          author_id   = 3;
+	optional google.protobuf.BoolValue   is_public   = 4;
+	repeated google.protobuf.StringValue tags        = 5;
+}
+
+message GetFlashCardListRequest {
+	google.protobuf.StringValue id = 1;
+}
+
+message UpdateFlashCardListRequest {
+	google.protobuf.StringValue          id          = 1;
+	optional google.protobuf.StringValue name        = 2;
+	optional google.protobuf.StringValue description = 3;
+	optional google.protobuf.BoolValue   is_public   = 4;
+	repeated google.protobuf.StringValue tags        = 5;
+}
+
+message DeleteFlashCardListRequest {
+	google.protobuf.StringValue id = 1;
+}
+
+message ListFlashCardListsRequest {
+	optional google.protobuf.StringValue author_id = 1;
+	optional google.protobuf.BoolValue   is_public = 2;
+	repeated google.protobuf.StringValue tags      = 3;
+	optional google.protobuf.Int32Value  page      = 4;
+	optional google.protobuf.Int32Value  limit     = 5;
+}
+
+message ListFlashCardListsResponse {
+	repeated FlashCardListResponse lists       = 1;
+	int32                          total_count = 2;
+}
+
+message AddCardToListRequest {
+	google.protobuf.StringValue         list_id       = 1;
+	google.protobuf.StringValue         flash_card_id = 2;
+	optional google.protobuf.Int32Value position      = 3;
+}
+
+message RemoveCardFromListRequest {
+	google.protobuf.StringValue list_id       = 1;
+	google.protobuf.StringValue flash_card_id = 2;
+}
+
+message ListCardsInListRequest {
+	google.protobuf.StringValue         list_id = 1;
+	optional google.protobuf.Int32Value page    = 2;
+	optional google.protobuf.Int32Value limit   = 3;
+}

@@ -24,6 +24,6 @@ export const rmqSubConfig = (configService: ConfigService<IEnvVars>): RabbitMQCo
 		],
 		uri: `amqp://${rmqConfig.user}:${rmqConfig.password}@${rmqConfig.host}:${rmqConfig.port}`,
 		connectionInitOptions: { wait: true },
-		defaultSubscribeErrorBehavior: MessageHandlerErrorBehavior.REQUEUE,
+		defaultSubscribeErrorBehavior: MessageHandlerErrorBehavior.NACK,
 	};
 };

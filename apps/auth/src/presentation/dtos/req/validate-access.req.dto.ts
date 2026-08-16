@@ -1,7 +1,8 @@
 import { auth } from '@server/generated';
-import { IsNumber, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
 
 export class ValidateAccessDto implements auth.ValidateAccessDto {
+	@IsNotEmpty()
 	@IsString()
 	identityId!: string;
 
