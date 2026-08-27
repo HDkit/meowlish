@@ -1,10 +1,10 @@
 import { AchievementGatewayModule } from './achievement-gateway/achievement.router.module';
 import { AuthGatewayModule } from './auth-gateway/auth.router.module';
-import { AuthorizationGatewayModule } from './authorization-gateway/authorization.router.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from './auth/guards/permissions.guard';
 import { ResourceAccessGuard } from './auth/guards/resource-access.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
+import { AuthorizationGatewayModule } from './authorization-gateway/authorization.router.module';
 import { config } from './configs/config';
 import { ExamGatewayModule } from './exam-gateway/exam.router.module';
 import { FileGatewayModule } from './file-gateway/file.router.module';

@@ -30,7 +30,7 @@ export class RoleReadPrismaRepositoryImpl implements IRoleReadRepository {
 
 	async findByName(name: string): Promise<RoleReadModel | null> {
 		const role = await this.txHost.tx.role.findUnique({
-			where: { name },
+			where: { name: name },
 			select: {
 				id: true,
 				name: true,

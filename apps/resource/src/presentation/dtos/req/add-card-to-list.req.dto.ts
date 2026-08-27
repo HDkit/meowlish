@@ -1,6 +1,6 @@
 import { resource } from '@server/generated';
-import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 import { Type } from 'class-transformer';
+import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class AddCardToListReqDto implements resource.AddCardToListRequest {
 	@IsString()
@@ -9,9 +9,9 @@ export class AddCardToListReqDto implements resource.AddCardToListRequest {
 	@IsString()
 	flashCardId!: string | undefined;
 
-	@IsOptional()
 	@Type(() => Number)
 	@IsInt()
+	@IsOptional()
 	@Min(0)
 	position?: number | undefined;
 }

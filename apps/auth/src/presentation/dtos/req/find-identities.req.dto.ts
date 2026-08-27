@@ -2,7 +2,10 @@ import { auth } from '@server/generated';
 import { Transform } from 'class-transformer';
 import { IsArray, IsNumber, IsOptional, IsPositive, IsString } from 'class-validator';
 
-const toArray = (value: unknown) => (Array.isArray(value) ? value : value ? [value] : []);
+const toArray = (value: unknown) =>
+	Array.isArray(value) ? value
+	: value ? [value]
+	: [];
 
 export class FindIdentitiesDto implements auth.FindIdentitiesDto {
 	@IsOptional()

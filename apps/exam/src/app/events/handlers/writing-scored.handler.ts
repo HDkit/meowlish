@@ -8,9 +8,9 @@ import {
 } from '../../../domain/repositories/attempt.repository';
 import { AmqpConnectionManager, RabbitPayload, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import { Inject, Injectable, InternalServerErrorException, UseFilters } from '@nestjs/common';
-import type { ConsumeMessage } from 'amqplib';
 import { AppLoggerService } from '@server/logger';
-import { getRetryRoutingKey, GlobalRmqExceptionFilter, RETRY_COUNT_HEADER } from '@server/utils';
+import { GlobalRmqExceptionFilter, RETRY_COUNT_HEADER, getRetryRoutingKey } from '@server/utils';
+import type { ConsumeMessage } from 'amqplib';
 import { Type } from 'class-transformer';
 import { IsArray, IsNumber, IsObject, IsOptional, IsString, ValidateNested } from 'class-validator';
 

@@ -12,13 +12,13 @@ export class UpdateFlashCardListDto {
 	@ApiPropertyOptional()
 	description?: string;
 
-	@IsOptional()
 	@IsBoolean()
+	@IsOptional()
 	@ApiPropertyOptional({ type: Boolean })
 	isPublic?: boolean;
 
-	@IsOptional()
 	@IsArray()
+	@IsOptional()
 	@IsString({ each: true })
 	@ApiPropertyOptional({ type: [String] })
 	tags?: string[];

@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
-import { NotificationPreference, PrismaClient } from '@prisma-client/notification';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
+import { Injectable } from '@nestjs/common';
+import { NotificationPreference, PrismaClient } from '@prisma-client/notification';
 import { notification } from '@server/generated';
 
 @Injectable()

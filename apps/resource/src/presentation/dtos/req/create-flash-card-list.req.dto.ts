@@ -12,8 +12,8 @@ export class CreateFlashCardListReqDto implements resource.CreateFlashCardListRe
 	@IsString()
 	authorId!: string | undefined;
 
-	@IsOptional()
 	@IsBoolean()
+	@IsOptional()
 	isPublic?: boolean | undefined;
 
 	@IsArray()

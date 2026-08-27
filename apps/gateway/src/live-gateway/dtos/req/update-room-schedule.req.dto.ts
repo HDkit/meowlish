@@ -12,13 +12,13 @@ export class UpdateRoomScheduleDto {
 	@ApiPropertyOptional()
 	time?: string;
 
-	@IsOptional()
 	@IsBoolean()
+	@IsOptional()
 	@ApiPropertyOptional({ type: Boolean })
 	setUrlNull?: boolean;
 
-	@IsOptional()
 	@IsBoolean()
+	@IsOptional()
 	@ApiPropertyOptional({ type: Boolean })
 	setTimeNull?: boolean;
 }

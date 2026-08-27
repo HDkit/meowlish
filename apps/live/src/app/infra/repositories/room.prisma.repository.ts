@@ -85,7 +85,7 @@ export class RoomPrismaRepositoryImpl implements IRoomRepository {
 		message: string,
 	): Promise<{ id: string; createdAt: Date }> {
 		const log = await this.txHost.tx.log.create({
-			data: { roomId, fromId, message },
+			data: { roomId: roomId, fromId: fromId, message: message },
 			select: { id: true, createdAt: true },
 		});
 		return log;

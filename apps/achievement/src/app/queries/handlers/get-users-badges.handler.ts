@@ -47,7 +47,7 @@ export class GetUsersBadgesQueryHandler implements IQueryHandler<GetUsersBadgesQ
 		const badges = await this.badgeReadRepository.getUsersBadges(inUseUserId, {
 			lastId: decodedCursor?.lastId,
 			limit: inUseLimit,
-			direction,
+			direction: direction,
 		});
 		const encodedNextCursor = this.cursorPaginationHelper.encodeCursor<GetUsersBadgesCursor>({
 			userId: inUseUserId,

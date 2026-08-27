@@ -1,4 +1,3 @@
-import { CursorPaginationHelper } from '@server/utils';
 import { FILE_CLIENT } from '../../../constants/file';
 import {
 	type IIdentityReadRepository,
@@ -12,6 +11,7 @@ import { Inject, OnModuleInit, ServiceUnavailableException } from '@nestjs/commo
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { ClientGrpc } from '@nestjs/microservices';
 import { file } from '@server/generated';
+import { CursorPaginationHelper } from '@server/utils';
 import { firstValueFrom } from 'rxjs';
 
 type FindIdentitiesByPhoneCursor = {
@@ -56,7 +56,7 @@ export class FindIdentitiesByPhoneQueryHandler
 			phoneNumber: inUsePhone,
 			lastId: decodedCursor?.lastId,
 			limit: inUseLimit,
-			direction,
+			direction: direction,
 		});
 
 		try {
@@ -69,16 +69,20 @@ export class FindIdentitiesByPhoneQueryHandler
 			throw new ServiceUnavailableException('Cannot access File sub-service');
 		}
 
-		const encodedNextCursor = this.cursorPaginationHelper.encodeCursor<FindIdentitiesByPhoneCursor>({
-			lastId: identities.at(-1)?.id,
-			direction: 1,
-			limit: inUseLimit,
-		});
-		const encodedPrevCursor = this.cursorPaginationHelper.encodeCursor<FindIdentitiesByPhoneCursor>({
-			lastId: identities.at(0)?.id,
-			direction: -1,
-			limit: inUseLimit,
-		});
+		const encodedNextCursor = this.cursorPaginationHelper.encodeCursor<FindIdentitiesByPhoneCursor>(
+			{
+				lastId: identities.at(-1)?.id,
+				direction: 1,
+				limit: inUseLimit,
+			},
+		);
+		const encodedPrevCursor = this.cursorPaginationHelper.encodeCursor<FindIdentitiesByPhoneCursor>(
+			{
+				lastId: identities.at(0)?.id,
+				direction: -1,
+				limit: inUseLimit,
+			},
+		);
 
 		return {
 			identities: identities,

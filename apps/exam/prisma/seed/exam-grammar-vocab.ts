@@ -45,8 +45,7 @@ export class GrammarVocabExamSeeder {
 								},
 								{
 									order: 2,
-									content:
-										'Not until the manager arrived _______________ the meeting begin.',
+									content: 'Not until the manager arrived _______________ the meeting begin.',
 									type: QuestionType.MultipleChoiceSingle,
 									choices: {
 										create: [
@@ -75,8 +74,7 @@ export class GrammarVocabExamSeeder {
 								},
 								{
 									order: 4,
-									content:
-										'If I _______________ about the traffic, I would have left earlier.',
+									content: 'If I _______________ about the traffic, I would have left earlier.',
 									type: QuestionType.MultipleChoiceSingle,
 									choices: {
 										create: [
@@ -105,8 +103,7 @@ export class GrammarVocabExamSeeder {
 								},
 								{
 									order: 6,
-									content:
-										'She studied hard _______________ pass the entrance examination.',
+									content: 'She studied hard _______________ pass the entrance examination.',
 									type: QuestionType.MultipleChoiceSingle,
 									choices: {
 										create: [
@@ -120,8 +117,7 @@ export class GrammarVocabExamSeeder {
 								},
 								{
 									order: 7,
-									content:
-										'The new policy is _______________ favourable than the previous one.',
+									content: 'The new policy is _______________ favourable than the previous one.',
 									type: QuestionType.MultipleChoiceSingle,
 									choices: {
 										create: [
@@ -165,8 +161,7 @@ export class GrammarVocabExamSeeder {
 								},
 								{
 									order: 10,
-									content:
-										'The report needs to be _______________ submitted by Friday.',
+									content: 'The report needs to be _______________ submitted by Friday.',
 									type: QuestionType.MultipleChoiceSingle,
 									choices: {
 										create: [
@@ -205,8 +200,7 @@ export class GrammarVocabExamSeeder {
 								},
 								{
 									order: 12,
-									content:
-										'The new employee quickly _______________ to the company culture.',
+									content: 'The new employee quickly _______________ to the company culture.',
 									type: QuestionType.MultipleChoiceSingle,
 									choices: {
 										create: [
@@ -310,8 +304,7 @@ export class GrammarVocabExamSeeder {
 								},
 								{
 									order: 19,
-									content:
-										'The word "ubiquitous" is closest in meaning to',
+									content: 'The word "ubiquitous" is closest in meaning to',
 									type: QuestionType.MultipleChoiceSingle,
 									choices: {
 										create: [
@@ -326,7 +319,7 @@ export class GrammarVocabExamSeeder {
 								{
 									order: 20,
 									content:
-										'The company\'s _______________ to customer satisfaction is evident in its award-winning support team.',
+										"The company's _______________ to customer satisfaction is evident in its award-winning support team.",
 									type: QuestionType.MultipleChoiceSingle,
 									choices: {
 										create: [

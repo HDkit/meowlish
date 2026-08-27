@@ -25,8 +25,8 @@ export class CreateFlashCardDto {
 	@ApiPropertyOptional()
 	pronunciation?: string;
 
-	@IsOptional()
 	@IsArray()
+	@IsOptional()
 	@IsString({ each: true })
 	@ApiPropertyOptional({ type: [String] })
 	examples?: string[];
@@ -36,8 +36,8 @@ export class CreateFlashCardDto {
 	@ApiPropertyOptional()
 	notes?: string;
 
-	@IsOptional()
 	@IsArray()
+	@IsOptional()
 	@IsString({ each: true })
 	@ApiPropertyOptional({ type: [String] })
 	tags?: string[];

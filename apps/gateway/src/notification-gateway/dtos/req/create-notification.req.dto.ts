@@ -1,5 +1,5 @@
-import { notification } from '@server/generated';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { notification } from '@server/generated';
 import { IsOptional, IsString } from 'class-validator';
 
 export class CreateNotificationDto implements notification.CreateNotificationRequest {

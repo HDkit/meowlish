@@ -177,6 +177,6 @@ export class ManagementPrismaRepositoryImpl implements IManagementReadRepository
 			else if (g.status === 'PENDING') pending = g._count._all;
 			else if (g.status === 'REJECTED') rejected = g._count._all;
 		}
-		return { total, approved, pending, rejected };
+		return { total: total, approved: approved, pending: pending, rejected: rejected };
 	}
 }

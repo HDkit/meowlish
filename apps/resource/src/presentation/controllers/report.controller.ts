@@ -1,15 +1,15 @@
 import { ReportService } from '../../app/services/report.service';
+import { AddFileToReportReqDto } from '../dtos/req/add-file-to-report.req.dto';
+import { CreateReportReqDto } from '../dtos/req/create-report.req.dto';
+import { DeleteReportReqDto } from '../dtos/req/delete-report.req.dto';
+import { GetReportReqDto } from '../dtos/req/get-report.req.dto';
+import { ListReportsReqDto } from '../dtos/req/list-reports.req.dto';
+import { RemoveFileFromReportReqDto } from '../dtos/req/remove-file-from-report.req.dto';
+import { UpdateReportReqDto } from '../dtos/req/update-report.req.dto';
 import { Controller, UseFilters } from '@nestjs/common';
 import { Payload } from '@nestjs/microservices';
 import { resource } from '@server/generated';
 import { GlobalRpcExceptionFilter } from '@server/utils';
-import { CreateReportReqDto } from '../dtos/req/create-report.req.dto';
-import { UpdateReportReqDto } from '../dtos/req/update-report.req.dto';
-import { GetReportReqDto } from '../dtos/req/get-report.req.dto';
-import { DeleteReportReqDto } from '../dtos/req/delete-report.req.dto';
-import { ListReportsReqDto } from '../dtos/req/list-reports.req.dto';
-import { AddFileToReportReqDto } from '../dtos/req/add-file-to-report.req.dto';
-import { RemoveFileFromReportReqDto } from '../dtos/req/remove-file-from-report.req.dto';
 
 @UseFilters(GlobalRpcExceptionFilter)
 @resource.ReportServiceControllerMethods()

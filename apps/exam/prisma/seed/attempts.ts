@@ -3,7 +3,9 @@ import { PrismaClient } from '@prisma-client/exam';
 import { randomInt } from 'crypto';
 
 export async function seedAttempts(prisma: PrismaClient) {
-	const existingAttempts = await prisma.attempt.findMany({ where: { id: { in: ['1', '2', '3', '4', '5', '6'] } } });
+	const existingAttempts = await prisma.attempt.findMany({
+		where: { id: { in: ['1', '2', '3', '4', '5', '6'] } },
+	});
 	if (existingAttempts.length >= 6) {
 		console.warn('Attempts already seeded, skipping.');
 		return;

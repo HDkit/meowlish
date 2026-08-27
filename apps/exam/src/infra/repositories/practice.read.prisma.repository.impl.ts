@@ -281,12 +281,11 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 					isForward ?
 						Prisma.sql`(e.updated_at, e.id) > (${options.lastCursor.updatedAt}, ${options.lastCursor.id})`
 					:	Prisma.sql`(e.updated_at, e.id) < (${options.lastCursor.updatedAt}, ${options.lastCursor.id})`
-				:	isForward ?
+				: isForward ?
 					Prisma.sql`e.updated_at < ${options.lastCursor.updatedAt} OR (e.updated_at = ${options.lastCursor.updatedAt} AND e.id > ${options.lastCursor.id})`
 				:	Prisma.sql`e.updated_at > ${options.lastCursor.updatedAt} OR (e.updated_at = ${options.lastCursor.updatedAt} AND e.id < ${options.lastCursor.id})`
 			: options?.lastCursor?.id ?
-				isForward ?
-					Prisma.sql`e.id > ${options.lastCursor.id}`
+				isForward ? Prisma.sql`e.id > ${options.lastCursor.id}`
 				:	Prisma.sql`e.id < ${options.lastCursor.id}`
 			:	Prisma.sql`TRUE`;
 
@@ -296,7 +295,7 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 					isForward ?
 						Prisma.sql`(COUNT(DISTINCT a.id), e.id) > (${options.lastCursor.attemptsCount}, ${options.lastCursor.id})`
 					:	Prisma.sql`(COUNT(DISTINCT a.id), e.id) < (${options.lastCursor.attemptsCount}, ${options.lastCursor.id})`
-				:	isForward ?
+				: isForward ?
 					Prisma.sql`COUNT(DISTINCT a.id) < ${options.lastCursor.attemptsCount} OR (COUNT(DISTINCT a.id) = ${options.lastCursor.attemptsCount} AND e.id > ${options.lastCursor.id})`
 				:	Prisma.sql`COUNT(DISTINCT a.id) > ${options.lastCursor.attemptsCount} OR (COUNT(DISTINCT a.id) = ${options.lastCursor.attemptsCount} AND e.id < ${options.lastCursor.id})`
 			:	Prisma.sql`TRUE`;

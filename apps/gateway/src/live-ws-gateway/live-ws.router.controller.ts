@@ -5,8 +5,8 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { NextFunction, Response } from 'express';
 import { ClientRequest } from 'http';
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import { ExtractJwt } from 'passport-jwt';
 import jwt from 'jsonwebtoken';
+import { ExtractJwt } from 'passport-jwt';
 
 @IsPublic()
 @ApiBearerAuth()

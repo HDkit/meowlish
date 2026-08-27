@@ -1,8 +1,8 @@
 import { AmqpConnectionManager } from '@golevelup/nestjs-rabbitmq';
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
-import { FlashCard, Prisma, PrismaClient } from '@prisma-client/resource';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { FlashCard, Prisma, PrismaClient } from '@prisma-client/resource';
 import { resource } from '@server/generated';
 import { AppLoggerService } from '@server/logger';
 

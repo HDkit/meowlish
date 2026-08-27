@@ -1,7 +1,7 @@
 import {
+	type ExamCounts,
 	type IManagementReadRepository,
 	IManagementReadRepositoryToken,
-	type ExamCounts,
 } from '../../../../domain/repositories/management.read.repository';
 import { GetExamCountsQuery } from '../../management/exam.get-counts.query';
 import { Inject } from '@nestjs/common';

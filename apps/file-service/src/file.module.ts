@@ -79,7 +79,6 @@ import { NestMinioModule } from 'nestjs-minio';
 			provide: APP_PIPE,
 			useClass: GlobalValidationPipe,
 		},
-
 	],
 })
 export class FileModule {}

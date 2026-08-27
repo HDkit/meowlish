@@ -24,8 +24,8 @@ export class CreateReportDto {
 	@ApiPropertyOptional()
 	targetId?: string;
 
-	@IsOptional()
 	@IsArray()
+	@IsOptional()
 	@IsString({ each: true })
 	@ApiPropertyOptional({ type: [String] })
 	fileIds?: string[];

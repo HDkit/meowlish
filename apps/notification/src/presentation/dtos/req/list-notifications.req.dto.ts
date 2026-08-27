@@ -1,6 +1,6 @@
 import { notification } from '@server/generated';
-import { IsBoolean, IsInt, IsOptional, IsString, Min } from 'class-validator';
 import { Type } from 'class-transformer';
+import { IsBoolean, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class ListNotificationsReqDto implements notification.ListNotificationsRequest {
 	@IsString()
@@ -10,19 +10,19 @@ export class ListNotificationsReqDto implements notification.ListNotificationsRe
 	@IsString()
 	type?: string | undefined;
 
-	@IsOptional()
 	@IsBoolean()
+	@IsOptional()
 	isRead?: boolean | undefined;
 
-	@IsOptional()
 	@Type(() => Number)
 	@IsInt()
+	@IsOptional()
 	@Min(1)
 	page?: number | undefined;
 
-	@IsOptional()
 	@Type(() => Number)
 	@IsInt()
+	@IsOptional()
 	@Min(1)
 	limit?: number | undefined;
 }

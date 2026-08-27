@@ -178,14 +178,22 @@ async function seedAdminUser() {
 }
 
 const SEED_USERS = [
-	{ id: '8ac3508e-d8bc-425f-9b4d-04461d9bd0ec', username: 'minh.nguyen', fullName: 'Nguyễn Văn Minh' },
+	{
+		id: '8ac3508e-d8bc-425f-9b4d-04461d9bd0ec',
+		username: 'minh.nguyen',
+		fullName: 'Nguyễn Văn Minh',
+	},
 	{ id: '4292d890-805f-4fca-b007-8ce887d87f3d', username: 'linh.tran', fullName: 'Trần Thị Linh' },
 	{ id: 'f5553ed6-6eac-4be8-af62-fbb4226f2e9f', username: 'duc.le', fullName: 'Lê Hoàng Đức' },
 	{ id: '2261ce28-2f42-4420-b5af-580f8d4b8abe', username: 'hoa.pham', fullName: 'Phạm Thu Hoa' },
 	{ id: '3a2fbb54-984f-4318-bff0-218dc2a9f12c', username: 'tuan.vo', fullName: 'Võ Anh Tuấn' },
 	{ id: 'c14da81d-0fee-4520-b2ff-fe80141d786e', username: 'mai.do', fullName: 'Đỗ Ngọc Mai' },
 	{ id: '0833eda1-18e0-4f74-b774-158cea662100', username: 'khoa.bui', fullName: 'Bùi Đăng Khoa' },
-	{ id: 'ff8aafa4-7715-4806-9d29-a46807de020d', username: 'thao.hoang', fullName: 'Hoàng Phương Thảo' },
+	{
+		id: 'ff8aafa4-7715-4806-9d29-a46807de020d',
+		username: 'thao.hoang',
+		fullName: 'Hoàng Phương Thảo',
+	},
 	{ id: '70b51742-b20a-43bf-9a5c-6d7c9aef7bba', username: 'nam.dang', fullName: 'Đặng Thành Nam' },
 ];
 

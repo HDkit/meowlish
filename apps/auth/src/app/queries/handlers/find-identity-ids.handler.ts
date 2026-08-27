@@ -39,7 +39,7 @@ export class FindIdentityIdsQueryHandler implements IQueryHandler<FindIdentityId
 			usernameOrCredentialIdentifier: inUseIdentifier,
 			lastId: decodedCursor?.lastId,
 			limit: inUseLimit,
-			direction,
+			direction: direction,
 		});
 
 		const encodedNextCursor = this.cursorPaginationHelper.encodeCursor<FindIdentityIdsCursor>({

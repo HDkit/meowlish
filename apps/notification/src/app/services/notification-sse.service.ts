@@ -26,13 +26,16 @@ export class NotificationSseService implements OnModuleDestroy {
 	}
 
 	emit(recipientId: string, notif: notification.NotificationResponse) {
-		this.eventEmitter.emit('notification.created', { recipientId, notification: notif });
+		this.eventEmitter.emit('notification.created', {
+			recipientId: recipientId,
+			notification: notif,
+		});
 	}
 
 	subscribe(recipientId: string): Observable<MessageEvent> {
 		return this.events$.pipe(
-			filter((event) => event.recipientId === recipientId),
-			map((event) => ({
+			filter(event => event.recipientId === recipientId),
+			map(event => ({
 				data: event.notification,
 				type: 'notification',
 			})),

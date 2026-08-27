@@ -10,10 +10,14 @@ import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-pr
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
+import { PrismaClient } from '@prisma-client/authorization';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { LoggerModule } from '@server/logger';
-import { GlobalRmqExceptionFilter, GlobalRpcExceptionFilter, GlobalValidationPipe } from '@server/utils';
-import { PrismaClient } from '@prisma-client/authorization';
+import {
+	GlobalRmqExceptionFilter,
+	GlobalRpcExceptionFilter,
+	GlobalValidationPipe,
+} from '@server/utils';
 import { ClsGuard, ClsModule } from 'nestjs-cls';
 
 @Module({

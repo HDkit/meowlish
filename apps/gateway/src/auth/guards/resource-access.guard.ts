@@ -1,5 +1,5 @@
-import { AuthenticatedRequest } from '../../types/authenticated-request';
 import { AUTHORIZATION_CLIENT } from '../../authorization-gateway/constants/authorization';
+import { AuthenticatedRequest } from '../../types/authenticated-request';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import {
 	RESOURCE_ACCESS_KEY,
@@ -17,8 +17,8 @@ import {
 import { Reflector } from '@nestjs/core';
 import { type ClientGrpc } from '@nestjs/microservices';
 import { authorization } from '@server/generated';
-import { parseEnum } from '@server/utils';
 import { Role } from '@server/typing';
+import { parseEnum } from '@server/utils';
 import { lastValueFrom } from 'rxjs';
 
 @Injectable()
@@ -60,7 +60,7 @@ export class ResourceAccessGuard implements CanActivate, OnModuleInit {
 		const resourceId = request.params[accessOptions.resourceIdParam] as string;
 
 		for (const rule of accessOptions.rules) {
-			const hasRole = rule.roles.some((role) => userRoles.includes(parseEnum(Role, role)));
+			const hasRole = rule.roles.some(role => userRoles.includes(parseEnum(Role, role)));
 			if (!hasRole) continue;
 
 			if (!rule.requireOwnership) return true;
@@ -75,7 +75,7 @@ export class ResourceAccessGuard implements CanActivate, OnModuleInit {
 				this.authorizationService.checkOwnership({
 					userId: user.sub,
 					resourceType: accessOptions.resourceType,
-					resourceId,
+					resourceId: resourceId,
 				}),
 			);
 

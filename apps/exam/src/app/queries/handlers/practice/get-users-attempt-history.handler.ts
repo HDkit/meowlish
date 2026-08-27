@@ -49,25 +49,27 @@ export class GetUsersAttemptHistoryHandler implements IQueryHandler<GetUsersAtte
 			lastId: decodedCursor?.lastId,
 			limit: inUseLimit,
 			sortBy: inUseSortBy,
-			direction,
+			direction: direction,
 		});
 
-		const encodedNextCursor = this.cursorPaginationHelper.encodeCursor<GetUsersAttemptHistoryCursor>({
-			lastId: attempts.at(-1)?.id,
-			uid: inUseUserId,
-			examId: inUseExamId,
-			limit: inUseLimit,
-			sortBy: inUseSortBy,
-			direction: 1,
-		});
-		const encodedPrevCursor = this.cursorPaginationHelper.encodeCursor<GetUsersAttemptHistoryCursor>({
-			lastId: attempts.at(0)?.id,
-			uid: inUseUserId,
-			examId: inUseExamId,
-			limit: inUseLimit,
-			sortBy: inUseSortBy,
-			direction: -1,
-		});
+		const encodedNextCursor =
+			this.cursorPaginationHelper.encodeCursor<GetUsersAttemptHistoryCursor>({
+				lastId: attempts.at(-1)?.id,
+				uid: inUseUserId,
+				examId: inUseExamId,
+				limit: inUseLimit,
+				sortBy: inUseSortBy,
+				direction: 1,
+			});
+		const encodedPrevCursor =
+			this.cursorPaginationHelper.encodeCursor<GetUsersAttemptHistoryCursor>({
+				lastId: attempts.at(0)?.id,
+				uid: inUseUserId,
+				examId: inUseExamId,
+				limit: inUseLimit,
+				sortBy: inUseSortBy,
+				direction: -1,
+			});
 
 		return {
 			attempts: attempts,

@@ -1,6 +1,6 @@
+import { FlashCardDto } from './flash-card.dto';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
-import { FlashCardDto } from './flash-card.dto';
 
 export class FlashCardListDto {
 	@Expose()

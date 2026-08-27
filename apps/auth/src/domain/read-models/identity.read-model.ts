@@ -10,9 +10,6 @@ export type IdentityReadModel = {
 	roles: string[];
 };
 
-export type HydratedIdentityReadModel = Omit<
-	IdentityReadModel,
-	'permissions' | 'isLocked'
-> & {
+export type HydratedIdentityReadModel = Omit<IdentityReadModel, 'permissions' | 'isLocked'> & {
 	phoneNumber?: string;
 };

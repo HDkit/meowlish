@@ -2,13 +2,13 @@ import {
 	type IOwnershipRepository,
 	IOwnershipRepositoryToken,
 } from '../../domain/repositories/ownership.repository';
+import { CheckOwnershipReqDto } from '../../presentation/dtos/req/check-ownership.req.dto';
+import { RegisterOwnershipReqDto } from '../../presentation/dtos/req/register-ownership.req.dto';
+import { RemoveOwnershipReqDto } from '../../presentation/dtos/req/remove-ownership.req.dto';
 import { Controller, Inject, UseFilters } from '@nestjs/common';
 import { Payload } from '@nestjs/microservices';
 import { authorization } from '@server/generated';
 import { GlobalRpcExceptionFilter } from '@server/utils';
-import { CheckOwnershipReqDto } from '../../presentation/dtos/req/check-ownership.req.dto';
-import { RegisterOwnershipReqDto } from '../../presentation/dtos/req/register-ownership.req.dto';
-import { RemoveOwnershipReqDto } from '../../presentation/dtos/req/remove-ownership.req.dto';
 
 @UseFilters(GlobalRpcExceptionFilter)
 @authorization.AuthorizationServiceControllerMethods()
@@ -26,7 +26,7 @@ export class AuthorizationGrpcController implements authorization.AuthorizationS
 			request.resourceId,
 			request.userId,
 		);
-		return { isOwner };
+		return { isOwner: isOwner };
 	}
 
 	async registerOwnership(@Payload() request: RegisterOwnershipReqDto): Promise<void> {

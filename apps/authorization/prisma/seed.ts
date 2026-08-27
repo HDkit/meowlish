@@ -1,20 +1,23 @@
 import { PrismaClient as AuthorizationPrismaClient } from '../../../node_modules/.prisma/client/authorization/index.js';
 import { PrismaClient as ExamPrismaClient } from '../../../node_modules/.prisma/client/exam/index.js';
-import { PrismaClient as ResourcePrismaClient } from '../../../node_modules/.prisma/client/resource/index.js';
 import { PrismaClient as LivePrismaClient } from '../../../node_modules/.prisma/client/live/index.js';
+import { PrismaClient as ResourcePrismaClient } from '../../../node_modules/.prisma/client/resource/index.js';
 
 async function seed() {
 	const authorizationDb = new AuthorizationPrismaClient();
 	const examDb = new ExamPrismaClient({
-		datasourceUrl: process.env.EXAM_DB_URL ??
+		datasourceUrl:
+			process.env.EXAM_DB_URL ??
 			`postgresql://${process.env.POSTGRES_USER}:${process.env.POSTGRES_PASSWORD}@${process.env.POSTGRES_HOST}:${process.env.POSTGRES_PORT}/exam_db?schema=public`,
 	});
 	const resourceDb = new ResourcePrismaClient({
-		datasourceUrl: process.env.RESOURCE_DB_URL ??
+		datasourceUrl:
+			process.env.RESOURCE_DB_URL ??
 			`postgresql://${process.env.POSTGRES_USER}:${process.env.POSTGRES_PASSWORD}@${process.env.POSTGRES_HOST}:${process.env.POSTGRES_PORT}/resource_db?schema=public`,
 	});
 	const liveDb = new LivePrismaClient({
-		datasourceUrl: process.env.LIVE_DB_URL ??
+		datasourceUrl:
+			process.env.LIVE_DB_URL ??
 			`postgresql://${process.env.POSTGRES_USER}:${process.env.POSTGRES_PASSWORD}@${process.env.POSTGRES_HOST}:${process.env.POSTGRES_PORT}/live_db?schema=public`,
 	});
 
@@ -46,7 +49,9 @@ async function seed() {
 		console.log(`Seeded ${blogs.length} blog ownership records`);
 
 		// Seed flashcard ownership
-		const flashCards = await resourceDb.flashCard.findMany({ select: { id: true, authorId: true } });
+		const flashCards = await resourceDb.flashCard.findMany({
+			select: { id: true, authorId: true },
+		});
 		console.log(`Found ${flashCards.length} flash cards`);
 		for (const card of flashCards) {
 			await authorizationDb.resourceOwnership.upsert({
@@ -58,7 +63,9 @@ async function seed() {
 		console.log(`Seeded ${flashCards.length} flashcard ownership records`);
 
 		// Seed flashcard list ownership
-		const flashCardLists = await resourceDb.flashCardList.findMany({ select: { id: true, authorId: true } });
+		const flashCardLists = await resourceDb.flashCardList.findMany({
+			select: { id: true, authorId: true },
+		});
 		console.log(`Found ${flashCardLists.length} flash card lists`);
 		for (const list of flashCardLists) {
 			await authorizationDb.resourceOwnership.upsert({
@@ -83,7 +90,7 @@ async function seed() {
 	}
 }
 
-seed().catch((e) => {
+seed().catch(e => {
 	console.error(e);
 	process.exit(1);
 });

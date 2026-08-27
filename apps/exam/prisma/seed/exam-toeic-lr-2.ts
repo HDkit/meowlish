@@ -63,8 +63,7 @@ export class ToeicLr2ExamSeeder {
 						},
 						{
 							order: 103,
-							content:
-								'The new software is designed to help employees work more -------.',
+							content: 'The new software is designed to help employees work more -------.',
 							type: QuestionType.MultipleChoiceSingle,
 							choices: {
 								create: [
@@ -213,8 +212,7 @@ export class ToeicLr2ExamSeeder {
 						},
 						{
 							order: 113,
-							content:
-								'The marketing team is ------- a new campaign to target younger consumers.',
+							content: 'The marketing team is ------- a new campaign to target younger consumers.',
 							type: QuestionType.MultipleChoiceSingle,
 							choices: {
 								create: [
@@ -321,10 +319,22 @@ export class ToeicLr2ExamSeeder {
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'Customers can return items within 30 days.', isCorrect: false },
-												{ key: 'B', content: 'We appreciate your continued support.', isCorrect: true },
+												{
+													key: 'A',
+													content: 'Customers can return items within 30 days.',
+													isCorrect: false,
+												},
+												{
+													key: 'B',
+													content: 'We appreciate your continued support.',
+													isCorrect: true,
+												},
 												{ key: 'C', content: 'The store opens at 9 a.m. daily.', isCorrect: false },
-												{ key: 'D', content: 'Please visit our website for more details.', isCorrect: false },
+												{
+													key: 'D',
+													content: 'Please visit our website for more details.',
+													isCorrect: false,
+												},
 											],
 										},
 										questionTags: { create: this.tagNamesToIdInputs(['Text Completion']) },
@@ -384,9 +394,17 @@ export class ToeicLr2ExamSeeder {
 										choices: {
 											create: [
 												{ key: 'A', content: 'The workshop is free of charge.', isCorrect: false },
-												{ key: 'B', content: 'Spaces are limited, so register early.', isCorrect: true },
+												{
+													key: 'B',
+													content: 'Spaces are limited, so register early.',
+													isCorrect: true,
+												},
 												{ key: 'C', content: 'Refreshments will be provided.', isCorrect: false },
-												{ key: 'D', content: 'The venue is accessible by public transit.', isCorrect: false },
+												{
+													key: 'D',
+													content: 'The venue is accessible by public transit.',
+													isCorrect: false,
+												},
 											],
 										},
 										questionTags: { create: this.tagNamesToIdInputs(['Text Completion']) },
@@ -433,14 +451,25 @@ export class ToeicLr2ExamSeeder {
 									},
 									{
 										order: 125,
-										content:
-											'What is suggested about the new schedule?',
+										content: 'What is suggested about the new schedule?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'It will increase operational costs.', isCorrect: false },
-												{ key: 'B', content: 'It has been tested in other branches.', isCorrect: true },
-												{ key: 'C', content: 'It requires approval from headquarters.', isCorrect: false },
+												{
+													key: 'A',
+													content: 'It will increase operational costs.',
+													isCorrect: false,
+												},
+												{
+													key: 'B',
+													content: 'It has been tested in other branches.',
+													isCorrect: true,
+												},
+												{
+													key: 'C',
+													content: 'It requires approval from headquarters.',
+													isCorrect: false,
+												},
 												{ key: 'D', content: 'It will take effect immediately.', isCorrect: false },
 											],
 										},
@@ -474,13 +503,16 @@ export class ToeicLr2ExamSeeder {
 								create: [
 									{
 										order: 127,
-										content:
-											'What is the notice mainly about?',
+										content: 'What is the notice mainly about?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
 												{ key: 'A', content: 'A discount on select merchandise', isCorrect: false },
-												{ key: 'B', content: 'A change in store operating hours', isCorrect: false },
+												{
+													key: 'B',
+													content: 'A change in store operating hours',
+													isCorrect: false,
+												},
 												{ key: 'C', content: 'A new recycling program', isCorrect: true },
 												{ key: 'D', content: 'A staff training requirement', isCorrect: false },
 											],
@@ -491,8 +523,7 @@ export class ToeicLr2ExamSeeder {
 									},
 									{
 										order: 128,
-										content:
-											'What are customers encouraged to do?',
+										content: 'What are customers encouraged to do?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
@@ -503,13 +534,15 @@ export class ToeicLr2ExamSeeder {
 											],
 										},
 										questionTags: {
-											create: this.tagNamesToIdInputs(['Detail Information', 'Announcement Notice']),
+											create: this.tagNamesToIdInputs([
+												'Detail Information',
+												'Announcement Notice',
+											]),
 										},
 									},
 									{
 										order: 129,
-										content:
-											'What is offered as an incentive?',
+										content: 'What is offered as an incentive?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
@@ -520,7 +553,10 @@ export class ToeicLr2ExamSeeder {
 											],
 										},
 										questionTags: {
-											create: this.tagNamesToIdInputs(['Detail Information', 'Announcement Notice']),
+											create: this.tagNamesToIdInputs([
+												'Detail Information',
+												'Announcement Notice',
+											]),
 										},
 									},
 								],
@@ -535,8 +571,7 @@ export class ToeicLr2ExamSeeder {
 								create: [
 									{
 										order: 130,
-										content:
-											'What type of position is being advertised?',
+										content: 'What type of position is being advertised?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
@@ -552,25 +587,26 @@ export class ToeicLr2ExamSeeder {
 									},
 									{
 										order: 131,
-										content:
-											'What qualification is required for the job?',
+										content: 'What qualification is required for the job?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'A master\'s degree', isCorrect: false },
+												{ key: 'A', content: "A master's degree", isCorrect: false },
 												{ key: 'B', content: 'Five years of experience', isCorrect: true },
 												{ key: 'C', content: 'Knowledge of multiple languages', isCorrect: false },
 												{ key: 'D', content: 'Project management certification', isCorrect: false },
 											],
 										},
 										questionTags: {
-											create: this.tagNamesToIdInputs(['Detail Information', 'Advertisement Article']),
+											create: this.tagNamesToIdInputs([
+												'Detail Information',
+												'Advertisement Article',
+											]),
 										},
 									},
 									{
 										order: 132,
-										content:
-											'What benefit does the company offer?',
+										content: 'What benefit does the company offer?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
@@ -581,7 +617,10 @@ export class ToeicLr2ExamSeeder {
 											],
 										},
 										questionTags: {
-											create: this.tagNamesToIdInputs(['Detail Information', 'Advertisement Article']),
+											create: this.tagNamesToIdInputs([
+												'Detail Information',
+												'Advertisement Article',
+											]),
 										},
 									},
 								],

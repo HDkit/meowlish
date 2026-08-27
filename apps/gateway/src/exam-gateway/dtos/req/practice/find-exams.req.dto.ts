@@ -18,7 +18,11 @@ class FilterOptionsDto {
 	@ApiPropertyOptional()
 	name?: string;
 
-	@Transform(({ value }) => (Array.isArray(value) ? value : value ? [value] : []))
+	@Transform(({ value }) =>
+		Array.isArray(value) ? value
+		: value ? [value]
+		: [],
+	)
 	@IsArray()
 	@IsOptional()
 	@IsString({ each: true })

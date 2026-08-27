@@ -1,22 +1,22 @@
 import { type AuthenticatedRequest } from '../types/authenticated-request';
 import { NOTIFICATION_CLIENT } from './constants/notification';
-import { NotificationDto, NotificationListDto } from './dtos/res/notification.dto';
 import { CreateNotificationDto } from './dtos/req/create-notification.req.dto';
+import { NotificationDto, NotificationListDto } from './dtos/res/notification.dto';
 import {
+	All,
 	Body,
 	Controller,
 	Delete,
 	Get,
 	Inject,
+	Next,
 	OnModuleInit,
 	Param,
 	Patch,
 	Post,
 	Query,
-	All,
 	Req,
 	Res,
-	Next,
 	SerializeOptions,
 } from '@nestjs/common';
 import { type ClientGrpc } from '@nestjs/microservices';
@@ -78,14 +78,14 @@ export class NotificationGatewayController implements OnModuleInit {
 	@ApiResponseEntity(NotificationDto)
 	@SerializeOptions({ type: NotificationDto, strategy: 'exposeAll' })
 	getNotification(@Param('id') id: string) {
-		return this.notificationService.getNotification({ id });
+		return this.notificationService.getNotification({ id: id });
 	}
 
 	@Delete(':id')
-	@ApiOperation({ summary: 'Delete a notification' })
 	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Delete a notification' })
 	deleteNotification(@Param('id') id: string) {
-		return this.notificationService.deleteNotification({ id });
+		return this.notificationService.deleteNotification({ id: id });
 	}
 
 	@Get()
@@ -99,18 +99,24 @@ export class NotificationGatewayController implements OnModuleInit {
 		@Query('page') page?: number,
 		@Query('limit') limit?: number,
 	) {
-		return this.notificationService.listNotifications({ recipientId: req.user.sub, type, isRead, page, limit });
+		return this.notificationService.listNotifications({
+			recipientId: req.user.sub,
+			type: type,
+			isRead: isRead,
+			page: page,
+			limit: limit,
+		});
 	}
 
 	@Patch(':id/read')
 	@ApiOperation({ summary: 'Mark a notification as read' })
 	markAsRead(@Param('id') id: string) {
-		return this.notificationService.markAsRead({ id });
+		return this.notificationService.markAsRead({ id: id });
 	}
 
 	@Post('read-all')
-	@ApiOperation({ summary: 'Mark all notifications as read' })
 	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Mark all notifications as read' })
 	markAllAsRead(@Req() req: AuthenticatedRequest) {
 		return this.notificationService.markAllAsRead({ recipientId: req.user.sub });
 	}

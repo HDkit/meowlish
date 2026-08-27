@@ -47,10 +47,10 @@ import {
 	UpdateSectionCommandPayload,
 } from '../../app/commands/staff/exam.update-section.command';
 import { FindExamsForManagementQuery } from '../../app/queries/management/exam.find-exams.query';
+import { GetExamCountsQuery } from '../../app/queries/management/exam.get-counts.query';
 import { GetExamManagementDetailsQuery } from '../../app/queries/management/exam.get-exam-details.query';
 import { GetQuestionManagementDetailsQuery } from '../../app/queries/management/exam.get-question-details.query';
 import { GetSectionManagementDetailsQuery } from '../../app/queries/management/exam.get-section-details.query';
-import { GetExamCountsQuery } from '../../app/queries/management/exam.get-counts.query';
 import { CreateExamDto } from '../dtos/req/management/create-exam.req.dto';
 import { CreateQuestionDto } from '../dtos/req/management/create-question.req.dto';
 import { CreateSectionDto } from '../dtos/req/management/create-section.req.dto';

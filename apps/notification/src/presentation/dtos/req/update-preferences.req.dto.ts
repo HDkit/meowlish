@@ -5,23 +5,23 @@ export class UpdatePreferencesReqDto implements notification.UpdatePreferencesRe
 	@IsString()
 	identityId!: string | undefined;
 
-	@IsOptional()
 	@IsBoolean()
+	@IsOptional()
 	emailEnabled?: boolean | undefined;
 
-	@IsOptional()
 	@IsBoolean()
+	@IsOptional()
 	pushEnabled?: boolean | undefined;
 
-	@IsOptional()
 	@IsBoolean()
+	@IsOptional()
 	achievementEnabled?: boolean | undefined;
 
-	@IsOptional()
 	@IsBoolean()
+	@IsOptional()
 	reportEnabled?: boolean | undefined;
 
-	@IsOptional()
 	@IsBoolean()
+	@IsOptional()
 	systemEnabled?: boolean | undefined;
 }

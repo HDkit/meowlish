@@ -79,7 +79,6 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 			provide: APP_PIPE,
 			useClass: GlobalValidationPipe,
 		},
-
 	],
 })
 export class AchievementModule {}

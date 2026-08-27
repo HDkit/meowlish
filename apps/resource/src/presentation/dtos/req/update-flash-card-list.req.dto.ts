@@ -13,8 +13,8 @@ export class UpdateFlashCardListReqDto implements resource.UpdateFlashCardListRe
 	@IsString()
 	description?: string | undefined;
 
-	@IsOptional()
 	@IsBoolean()
+	@IsOptional()
 	isPublic?: boolean | undefined;
 
 	@IsArray()

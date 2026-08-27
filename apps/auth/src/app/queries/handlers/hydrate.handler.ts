@@ -32,7 +32,9 @@ export class HydrateQueryHandler implements IQueryHandler<HydrateQuery>, OnModul
 
 		if (identity.avatarUrl) {
 			try {
-				const urlMap = await firstValueFrom(this.fileService.getUrls({ ids: [identity.avatarUrl] }));
+				const urlMap = await firstValueFrom(
+					this.fileService.getUrls({ ids: [identity.avatarUrl] }),
+				);
 				identity.avatarUrl = urlMap.urls[identity.avatarUrl] ?? identity.avatarUrl;
 			} catch {
 				// Keep raw file ID if file service is unavailable

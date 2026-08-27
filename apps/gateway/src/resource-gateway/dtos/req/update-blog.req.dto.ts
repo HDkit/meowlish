@@ -12,8 +12,8 @@ export class UpdateBlogDto {
 	@ApiPropertyOptional()
 	content?: string;
 
-	@IsOptional()
 	@IsArray()
+	@IsOptional()
 	@IsString({ each: true })
 	@ApiPropertyOptional({ type: [String] })
 	tags?: string[];

@@ -1,12 +1,12 @@
 import { ExamStatus } from '../../src/enums/exam-status.enum';
 import { QuestionType } from '../../src/enums/question-type.enum';
 import { SectionType } from '../../src/enums/section-type.enum';
+import { GrammarVocabExamSeeder } from './exam-grammar-vocab';
 import { IeltsLExamSeeder } from './exam-ielts-l';
 import { IeltsRExamSeeder } from './exam-ielts-r';
 import { IeltsR2ExamSeeder } from './exam-ielts-r-2';
 import { ToeicLrExamSeeder } from './exam-toeic-lr';
 import { ToeicLr2ExamSeeder } from './exam-toeic-lr-2';
-import { GrammarVocabExamSeeder } from './exam-grammar-vocab';
 import { Prisma, PrismaClient } from '@prisma-client/exam';
 
 // i'm seeding it
@@ -40,9 +40,7 @@ export async function seedExams(prisma: PrismaClient) {
 	const ieltsDefaultRExam: Prisma.ExamCreateInput = new IeltsRExamSeeder(tagNamesToIdInputs).seed();
 
 	// 5
-	const toeicLr2Exam: Prisma.ExamCreateInput = new ToeicLr2ExamSeeder(
-		tagNamesToIdInputs,
-	).seed();
+	const toeicLr2Exam: Prisma.ExamCreateInput = new ToeicLr2ExamSeeder(tagNamesToIdInputs).seed();
 
 	// 6
 	const ieltsR2Exam: Prisma.ExamCreateInput = new IeltsR2ExamSeeder(tagNamesToIdInputs).seed();

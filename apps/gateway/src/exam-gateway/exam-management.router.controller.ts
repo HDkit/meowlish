@@ -16,11 +16,11 @@ import { UpdateSectionDto } from './dtos/req/management/update-section.req.dto';
 import { CreatedExamDto } from './dtos/res/management/created-exam.res.dto';
 import { CreatedQuestionDto } from './dtos/res/management/created-question.res.dto';
 import { CreatedSectionDto } from './dtos/res/management/created-section.res.dto';
+import { ExamCountsDto } from './dtos/res/management/exam-counts.res.dto';
 import { ExamDetailedManagementInfoDto } from './dtos/res/management/exam.res.dto';
 import { ExamsManagementInfoDto } from './dtos/res/management/exams.res.dto';
 import { QuestionManagementInfoDto } from './dtos/res/management/question.res.dto';
 import { SectionManagementInfoDto } from './dtos/res/management/sections.res.dto';
-import { ExamCountsDto } from './dtos/res/management/exam-counts.res.dto';
 import {
 	Body,
 	Controller,
@@ -176,32 +176,26 @@ export class ExamManagementGatewayController implements OnModuleInit {
 	}
 
 	@Patch(':id')
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Update an exam' })
 	@ResourceAccess({
 		resourceType: 'exam',
 		resourceIdParam: 'id',
-		rules: [
-			{ roles: [Role.Admin] },
-			{ roles: [Role.Mod], requireOwnership: true },
-		],
+		rules: [{ roles: [Role.Admin] }, { roles: [Role.Mod], requireOwnership: true }],
 	})
-	@ApiEmptyResponseEntity()
-	@ApiOperation({ summary: 'Update an exam' })
 	updateExam(@Param('id') id: string, @Body() body: UpdateExamDto) {
 		const res = this.examManagementService.updateExam({ ...body, id: id });
 		return res;
 	}
 
 	@Delete(':id')
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Delete an exam' })
 	@ResourceAccess({
 		resourceType: 'exam',
 		resourceIdParam: 'id',
-		rules: [
-			{ roles: [Role.Admin] },
-			{ roles: [Role.Mod], requireOwnership: true },
-		],
+		rules: [{ roles: [Role.Admin] }, { roles: [Role.Mod], requireOwnership: true }],
 	})
-	@ApiEmptyResponseEntity()
-	@ApiOperation({ summary: 'Delete an exam' })
 	deleteExam(@Param('id') id: string) {
 		const res = this.examManagementService.deleteExam({ id: id });
 		return res;

@@ -1,7 +1,7 @@
-import { ChatController } from './app/presentation/controllers/chat.controller';
 import { ChatLogReadPrismaRepositoryImpl } from './app/infra/repositories/chat-log.read.prisma.repository';
 import { RoomPrismaRepositoryImpl } from './app/infra/repositories/room.prisma.repository';
 import { RoomReadPrismaRepositoryImpl } from './app/infra/repositories/room.read.prisma.repository';
+import { ChatController } from './app/presentation/controllers/chat.controller';
 import { ChatGateway } from './app/services/chat.gateway';
 import { ChatService } from './app/services/chat.service';
 import { bullConfig } from './configs/bullmq.config';

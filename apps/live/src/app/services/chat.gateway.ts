@@ -22,8 +22,8 @@ import {
 } from '@nestjs/websockets';
 import { AppLoggerService } from '@server/logger';
 import { GlobalValidationPipe, GlobalWsExceptionFilter } from '@server/utils';
-import { Server, Socket } from 'socket.io';
 import { ClsGuard } from 'nestjs-cls';
+import { Server, Socket } from 'socket.io';
 
 type ModifiedSocket = Omit<Socket, 'data'> & { data: { uid: string } };
 
@@ -70,7 +70,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 				throw new UnauthorizedException('User is not allowed to join this room');
 		} catch (e) {
 			if (e instanceof UnauthorizedException) throw e;
-			this.logger.error(`[ChatGateway] canJoinRoom failed for room=${roomId} uid=${socket.data.uid}`, '', (e as Error).stack);
+			this.logger.error(
+				`[ChatGateway] canJoinRoom failed for room=${roomId} uid=${socket.data.uid}`,
+				'',
+				(e as Error).stack,
+			);
 		}
 		await socket.join(roomId);
 	}
@@ -81,7 +85,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 	}
 
 	@SubscribeMessage('chat')
-	async handlePing(@MessageBody() data: ChatDto, @ConnectedSocket() socket: ModifiedSocket): Promise<void> {
+	async handlePing(
+		@MessageBody() data: ChatDto,
+		@ConnectedSocket() socket: ModifiedSocket,
+	): Promise<void> {
 		if (!socket.rooms.has(data.roomId))
 			throw new ForbiddenException('You need to join the room before sending a message');
 		const log = await this.roomRepository.saveLog(data.roomId, socket.data.uid, data.message);

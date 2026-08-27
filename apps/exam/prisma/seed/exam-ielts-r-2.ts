@@ -99,7 +99,11 @@ export class IeltsR2ExamSeeder {
 									{ key: 'ii', content: 'Physical and psychological benefits', isCorrect: false },
 									{ key: 'iii', content: 'Laughter as a social tool', isCorrect: false },
 									{ key: 'iv', content: 'The global spread of laughter yoga', isCorrect: false },
-									{ key: 'v', content: 'Early development of laughter in infants', isCorrect: true },
+									{
+										key: 'v',
+										content: 'Early development of laughter in infants',
+										isCorrect: true,
+									},
 									{ key: 'vi', content: 'Remaining mysteries', isCorrect: false },
 									{ key: 'vii', content: 'Brain mechanisms underlying laughter', isCorrect: false },
 									{ key: 'viii', content: 'Laughter across species', isCorrect: false },
@@ -118,7 +122,11 @@ export class IeltsR2ExamSeeder {
 									{ key: 'ii', content: 'Physical and psychological benefits', isCorrect: false },
 									{ key: 'iii', content: 'Laughter as a social tool', isCorrect: false },
 									{ key: 'iv', content: 'The global spread of laughter yoga', isCorrect: false },
-									{ key: 'v', content: 'Early development of laughter in infants', isCorrect: false },
+									{
+										key: 'v',
+										content: 'Early development of laughter in infants',
+										isCorrect: false,
+									},
 									{ key: 'vi', content: 'Remaining mysteries', isCorrect: false },
 									{ key: 'vii', content: 'Brain mechanisms underlying laughter', isCorrect: true },
 									{ key: 'viii', content: 'Laughter across species', isCorrect: false },
@@ -137,7 +145,11 @@ export class IeltsR2ExamSeeder {
 									{ key: 'ii', content: 'Physical and psychological benefits', isCorrect: false },
 									{ key: 'iii', content: 'Laughter as a social tool', isCorrect: true },
 									{ key: 'iv', content: 'The global spread of laughter yoga', isCorrect: false },
-									{ key: 'v', content: 'Early development of laughter in infants', isCorrect: false },
+									{
+										key: 'v',
+										content: 'Early development of laughter in infants',
+										isCorrect: false,
+									},
 									{ key: 'vi', content: 'Remaining mysteries', isCorrect: false },
 									{ key: 'vii', content: 'Brain mechanisms underlying laughter', isCorrect: false },
 									{ key: 'viii', content: 'Laughter across species', isCorrect: false },
@@ -156,7 +168,11 @@ export class IeltsR2ExamSeeder {
 									{ key: 'ii', content: 'Physical and psychological benefits', isCorrect: true },
 									{ key: 'iii', content: 'Laughter as a social tool', isCorrect: false },
 									{ key: 'iv', content: 'The global spread of laughter yoga', isCorrect: false },
-									{ key: 'v', content: 'Early development of laughter in infants', isCorrect: false },
+									{
+										key: 'v',
+										content: 'Early development of laughter in infants',
+										isCorrect: false,
+									},
 									{ key: 'vi', content: 'Remaining mysteries', isCorrect: false },
 									{ key: 'vii', content: 'Brain mechanisms underlying laughter', isCorrect: false },
 									{ key: 'viii', content: 'Laughter across species', isCorrect: false },
@@ -175,7 +191,11 @@ export class IeltsR2ExamSeeder {
 									{ key: 'ii', content: 'Physical and psychological benefits', isCorrect: false },
 									{ key: 'iii', content: 'Laughter as a social tool', isCorrect: false },
 									{ key: 'iv', content: 'The global spread of laughter yoga', isCorrect: false },
-									{ key: 'v', content: 'Early development of laughter in infants', isCorrect: false },
+									{
+										key: 'v',
+										content: 'Early development of laughter in infants',
+										isCorrect: false,
+									},
 									{ key: 'vi', content: 'Remaining mysteries', isCorrect: false },
 									{ key: 'vii', content: 'Brain mechanisms underlying laughter', isCorrect: false },
 									{ key: 'viii', content: 'Laughter across species', isCorrect: false },
@@ -194,7 +214,11 @@ export class IeltsR2ExamSeeder {
 									{ key: 'ii', content: 'Physical and psychological benefits', isCorrect: false },
 									{ key: 'iii', content: 'Laughter as a social tool', isCorrect: false },
 									{ key: 'iv', content: 'The global spread of laughter yoga', isCorrect: false },
-									{ key: 'v', content: 'Early development of laughter in infants', isCorrect: false },
+									{
+										key: 'v',
+										content: 'Early development of laughter in infants',
+										isCorrect: false,
+									},
 									{ key: 'vi', content: 'Remaining mysteries', isCorrect: true },
 									{ key: 'vii', content: 'Brain mechanisms underlying laughter', isCorrect: false },
 									{ key: 'viii', content: 'Laughter across species', isCorrect: false },
@@ -217,7 +241,8 @@ export class IeltsR2ExamSeeder {
 					create: [
 						{
 							order: 7,
-							content: 'During World War II, urban agriculture supplied nearly half of all vegetables eaten in some countries.',
+							content:
+								'During World War II, urban agriculture supplied nearly half of all vegetables eaten in some countries.',
 							type: QuestionType.MultipleChoiceSingle,
 							choices: {
 								create: [
@@ -256,7 +281,8 @@ export class IeltsR2ExamSeeder {
 						},
 						{
 							order: 10,
-							content: 'Vertical farming uses significantly less water than traditional farming methods.',
+							content:
+								'Vertical farming uses significantly less water than traditional farming methods.',
 							type: QuestionType.MultipleChoiceSingle,
 							choices: {
 								create: [
@@ -282,7 +308,8 @@ export class IeltsR2ExamSeeder {
 						},
 						{
 							order: 12,
-							content: 'Vertical farming is currently most suited to growing certain types of crops.',
+							content:
+								'Vertical farming is currently most suited to growing certain types of crops.',
 							type: QuestionType.MultipleChoiceSingle,
 							choices: {
 								create: [
@@ -295,7 +322,8 @@ export class IeltsR2ExamSeeder {
 						},
 						{
 							order: 13,
-							content: 'Children who participate in school gardens are more likely to eat healthily.',
+							content:
+								'Children who participate in school gardens are more likely to eat healthily.',
 							type: QuestionType.MultipleChoiceSingle,
 							choices: {
 								create: [
@@ -337,21 +365,17 @@ export class IeltsR2ExamSeeder {
 								'AI systems can analyse _______________ with accuracy comparable to human specialists.',
 							type: QuestionType.FillExactInTheBlank,
 							choices: {
-								create: [
-									{ key: 'medical images', isCorrect: true },
-								],
+								create: [{ key: 'medical images', isCorrect: true }],
 							},
 							questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
 						},
 						{
 							order: 16,
 							content:
-								'A study published in _______________ showed that Google Health\'s AI could detect breast cancer effectively.',
+								"A study published in _______________ showed that Google Health's AI could detect breast cancer effectively.",
 							type: QuestionType.FillExactInTheBlank,
 							choices: {
-								create: [
-									{ key: 'Nature', isCorrect: true },
-								],
+								create: [{ key: 'Nature', isCorrect: true }],
 							},
 							questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
 						},
@@ -361,16 +385,13 @@ export class IeltsR2ExamSeeder {
 								'AI can screen millions of chemical compounds _______________, predicting their efficacy and safety.',
 							type: QuestionType.FillExactInTheBlank,
 							choices: {
-								create: [
-									{ key: 'in silico', isCorrect: true },
-								],
+								create: [{ key: 'in silico', isCorrect: true }],
 							},
 							questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
 						},
 						{
 							order: 18,
-							content:
-								'Traditional drug development typically takes ten to _______________ years.',
+							content: 'Traditional drug development typically takes ten to _______________ years.',
 							type: QuestionType.FillExactInTheBlank,
 							choices: {
 								create: [
@@ -382,13 +403,10 @@ export class IeltsR2ExamSeeder {
 						},
 						{
 							order: 19,
-							content:
-								'Healthcare data is often fragmented, incomplete, or _______________.',
+							content: 'Healthcare data is often fragmented, incomplete, or _______________.',
 							type: QuestionType.FillExactInTheBlank,
 							choices: {
-								create: [
-									{ key: 'biased', isCorrect: true },
-								],
+								create: [{ key: 'biased', isCorrect: true }],
 							},
 							questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
 						},
@@ -398,16 +416,13 @@ export class IeltsR2ExamSeeder {
 								'The "_______________" nature of some AI models creates barriers to adoption in healthcare.',
 							type: QuestionType.FillExactInTheBlank,
 							choices: {
-								create: [
-									{ key: 'black box', isCorrect: true },
-								],
+								create: [{ key: 'black box', isCorrect: true }],
 							},
 							questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
 						},
 						{
 							order: 21,
-							content:
-								'The EU\'s proposed AI regulation categorizes medical AI as _______________.',
+							content: "The EU's proposed AI regulation categorizes medical AI as _______________.",
 							type: QuestionType.FillExactInTheBlank,
 							choices: {
 								create: [
@@ -424,9 +439,7 @@ export class IeltsR2ExamSeeder {
 								'The most promising future for AI in healthcare is as a _______________ with human clinicians.',
 							type: QuestionType.FillExactInTheBlank,
 							choices: {
-								create: [
-									{ key: 'partnership', isCorrect: true },
-								],
+								create: [{ key: 'partnership', isCorrect: true }],
 							},
 							questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
 						},

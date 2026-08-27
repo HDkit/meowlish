@@ -56,7 +56,7 @@ export class FindIdentitiesQueryHandler
 			hasPerms: inUseHasPerms,
 			lastId: decodedCursor?.lastId,
 			limit: inUseLimit,
-			direction,
+			direction: direction,
 		});
 
 		try {

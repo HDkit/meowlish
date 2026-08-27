@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaClient, Report } from '@prisma-client/resource';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaClient, Report } from '@prisma-client/resource';
 import { resource } from '@server/generated';
 
 @Injectable()
