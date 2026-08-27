@@ -82,7 +82,7 @@ async function main() {
 	for (const room of ROOMS) {
 		const existing = await prisma.room.findUnique({ where: { name: room.name } });
 		if (existing) {
-			console.log(`Room "${room.name}" already exists, skipping`);
+			console.warn(`Room "${room.name}" already exists, skipping`);
 			continue;
 		}
 
@@ -100,9 +100,9 @@ async function main() {
 				},
 			},
 		});
-		console.log(`Created room "${created.name}" with ${room.logs.length} messages`);
+		console.warn(`Created room "${created.name}" with ${room.logs.length} messages`);
 	}
-	console.log(`Seeded ${ROOMS.length} rooms`);
+	console.warn(`Seeded ${ROOMS.length} rooms`);
 }
 
 main()

@@ -8,7 +8,7 @@ async function main() {
 	);
 
 	if (identities.length === 0) {
-		console.log('No identities found, connecting to auth_db...');
+		console.warn('No identities found, connecting to auth_db...');
 	}
 
 	const userIds =
@@ -90,7 +90,7 @@ async function main() {
 		});
 	}
 
-	console.log(`Seeded ${notifications.length} notifications and ${userIds.length} preferences`);
+	console.warn(`Seeded ${notifications.length} notifications and ${userIds.length} preferences`);
 }
 
 main()

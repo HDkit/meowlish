@@ -22,11 +22,11 @@ async function seed() {
 	});
 
 	try {
-		console.log('Seeding ownership data from existing databases...');
+		console.warn('Seeding ownership data from existing databases...');
 
 		// Seed exam ownership
 		const exams = await examDb.exam.findMany({ select: { id: true, createdBy: true } });
-		console.log(`Found ${exams.length} exams`);
+		console.warn(`Found ${exams.length} exams`);
 		for (const exam of exams) {
 			await authorizationDb.resourceOwnership.upsert({
 				where: { resourceType_resourceId: { resourceType: 'exam', resourceId: exam.id } },
@@ -34,11 +34,11 @@ async function seed() {
 				create: { resourceType: 'exam', resourceId: exam.id, ownerId: exam.createdBy },
 			});
 		}
-		console.log(`Seeded ${exams.length} exam ownership records`);
+		console.warn(`Seeded ${exams.length} exam ownership records`);
 
 		// Seed blog ownership
 		const blogs = await resourceDb.blog.findMany({ select: { id: true, authorId: true } });
-		console.log(`Found ${blogs.length} blogs`);
+		console.warn(`Found ${blogs.length} blogs`);
 		for (const blog of blogs) {
 			await authorizationDb.resourceOwnership.upsert({
 				where: { resourceType_resourceId: { resourceType: 'blog', resourceId: blog.id } },
@@ -46,13 +46,13 @@ async function seed() {
 				create: { resourceType: 'blog', resourceId: blog.id, ownerId: blog.authorId },
 			});
 		}
-		console.log(`Seeded ${blogs.length} blog ownership records`);
+		console.warn(`Seeded ${blogs.length} blog ownership records`);
 
 		// Seed flashcard ownership
 		const flashCards = await resourceDb.flashCard.findMany({
 			select: { id: true, authorId: true },
 		});
-		console.log(`Found ${flashCards.length} flash cards`);
+		console.warn(`Found ${flashCards.length} flash cards`);
 		for (const card of flashCards) {
 			await authorizationDb.resourceOwnership.upsert({
 				where: { resourceType_resourceId: { resourceType: 'flashcard', resourceId: card.id } },
@@ -60,13 +60,13 @@ async function seed() {
 				create: { resourceType: 'flashcard', resourceId: card.id, ownerId: card.authorId },
 			});
 		}
-		console.log(`Seeded ${flashCards.length} flashcard ownership records`);
+		console.warn(`Seeded ${flashCards.length} flashcard ownership records`);
 
 		// Seed flashcard list ownership
 		const flashCardLists = await resourceDb.flashCardList.findMany({
 			select: { id: true, authorId: true },
 		});
-		console.log(`Found ${flashCardLists.length} flash card lists`);
+		console.warn(`Found ${flashCardLists.length} flash card lists`);
 		for (const list of flashCardLists) {
 			await authorizationDb.resourceOwnership.upsert({
 				where: { resourceType_resourceId: { resourceType: 'flashcard-list', resourceId: list.id } },
@@ -74,14 +74,14 @@ async function seed() {
 				create: { resourceType: 'flashcard-list', resourceId: list.id, ownerId: list.authorId },
 			});
 		}
-		console.log(`Seeded ${flashCardLists.length} flashcard list ownership records`);
+		console.warn(`Seeded ${flashCardLists.length} flashcard list ownership records`);
 
 		// Note: rooms don't currently track who created them in the DB,
 		// so we can't seed room ownership from existing data.
 		// New rooms will be tracked going forward.
 
 		const totalCount = await authorizationDb.resourceOwnership.count();
-		console.log(`\nSeeding complete. Total ownership records: ${totalCount}`);
+		console.warn(`\nSeeding complete. Total ownership records: ${totalCount}`);
 	} finally {
 		await authorizationDb.$disconnect();
 		await examDb.$disconnect();

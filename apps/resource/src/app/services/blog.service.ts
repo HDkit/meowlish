@@ -104,8 +104,6 @@ export class BlogService {
 		const limit = data.limit || 10;
 		const skip = (page - 1) * limit;
 
-		console.log(data.tags);
-
 		const where: { authorId?: string; tags?: { hasSome: string[] } } = {};
 		if (data.authorId) {
 			where.authorId = data.authorId;

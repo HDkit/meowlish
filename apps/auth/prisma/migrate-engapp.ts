@@ -22,7 +22,6 @@
  *
  * Or export each table individually and combine into the JSON shape below.
  */
-
 import { PrismaClient } from '@prisma-client/auth';
 import { Permission, Role } from '@server/typing';
 import bcrypt from 'bcrypt';
@@ -82,14 +81,15 @@ const ROLE_MAP: Record<string, Role> = {
 const prisma = new PrismaClient();
 
 async function main() {
-	const inputPath = process.argv.find((_, i, arr) => arr[i - 1] === '--input') ?? 'engapp-v2-export.json';
-	console.log(`Reading export from: ${inputPath}`);
+	const inputPath =
+		process.argv.find((_, i, arr) => arr[i - 1] === '--input') ?? 'engapp-v2-export.json';
+	console.warn(`Reading export from: ${inputPath}`);
 
 	const raw = readFileSync(inputPath, 'utf-8');
 	const data: EngappExport = JSON.parse(raw);
 
 	if (!data.users?.length) {
-		console.log('No users to migrate.');
+		console.warn('No users to migrate.');
 		return;
 	}
 
@@ -120,7 +120,7 @@ async function main() {
 			where: { identifier: user.email, loginType: 'mail' },
 		});
 		if (existingCred) {
-			console.log(`  SKIP: ${user.email} (credential already exists)`);
+			console.warn(`  SKIP: ${user.email} (credential already exists)`);
 			skipped++;
 			idMapping.push({ oldId: user.id, newId: existingCred.identityId, email: user.email });
 			continue;
@@ -134,7 +134,7 @@ async function main() {
 		const serverRole = ROLE_MAP[user.role];
 		const roleId = serverRole ? roleNameToId.get(serverRole) : undefined;
 
-		await prisma.$transaction(async (tx) => {
+		await prisma.$transaction(async tx => {
 			await tx.identity.create({
 				data: {
 					id: newId,
@@ -180,15 +180,15 @@ async function main() {
 
 		idMapping.push({ oldId: user.id, newId: newId, email: user.email });
 		migrated++;
-		console.log(`  OK: ${user.email} (${user.role}) → ${newId}`);
+		console.warn(`  OK: ${user.email} (${user.role}) → ${newId}`);
 	}
 
 	// Write ID mapping file
 	const mappingPath = 'engapp-v2-id-mapping.json';
 	writeFileSync(mappingPath, JSON.stringify(idMapping, null, 2));
 
-	console.log(`\nMigration complete: ${migrated} migrated, ${skipped} skipped`);
-	console.log(`ID mapping written to: ${mappingPath}`);
+	console.warn(`\nMigration complete: ${migrated} migrated, ${skipped} skipped`);
+	console.warn(`ID mapping written to: ${mappingPath}`);
 }
 
 main()

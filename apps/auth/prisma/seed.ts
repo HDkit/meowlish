@@ -253,7 +253,7 @@ async function seedTestUsers() {
 			},
 		});
 	}
-	console.log(`Seeded ${SEED_USERS.length} test users`);
+	console.warn(`Seeded ${SEED_USERS.length} test users`);
 }
 
 async function main() {

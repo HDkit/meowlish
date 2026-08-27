@@ -117,10 +117,10 @@ async function main() {
 				},
 			},
 		});
-		console.log(`Created list "${created.name}" with ${list.cards.length} cards`);
+		console.warn(`Created list "${created.name}" with ${list.cards.length} cards`);
 	}
 
-	console.log(`Seeded ${BLOGS.length} blogs and ${FLASHCARD_LISTS.length} flashcard lists`);
+	console.warn(`Seeded ${BLOGS.length} blogs and ${FLASHCARD_LISTS.length} flashcard lists`);
 }
 
 main()
