@@ -1,6 +1,6 @@
 import { exam } from '@server/generated';
 import { SortDirection } from '@server/typing';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
 	IsArray,
 	IsEnum,
@@ -17,10 +17,15 @@ class FilterOptionsDto implements exam.FindExamsDto_FilterOption {
 	@IsString()
 	name?: string;
 
+	@Transform(({ value }) =>
+		Array.isArray(value) ? value
+		: value ? [value]
+		: [],
+	)
 	@IsArray()
 	@IsOptional()
 	@IsString({ each: true })
-	tags!: string[];
+	tags: string[] = [];
 }
 
 class SortOptionsDto implements exam.FindExamsDto_SortOption {

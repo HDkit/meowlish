@@ -1,4 +1,5 @@
 import { HasPermissions } from '../auth/decorators/permissions.decorator';
+import { ResourceAccess } from '../auth/decorators/resource-access.decorator';
 import { HasRoles } from '../auth/decorators/roles.decorator';
 import { type AuthenticatedRequest } from '../types/authenticated-request';
 import { EXAM_CLIENT } from './constants/exam';
@@ -15,6 +16,7 @@ import { UpdateSectionDto } from './dtos/req/management/update-section.req.dto';
 import { CreatedExamDto } from './dtos/res/management/created-exam.res.dto';
 import { CreatedQuestionDto } from './dtos/res/management/created-question.res.dto';
 import { CreatedSectionDto } from './dtos/res/management/created-section.res.dto';
+import { ExamCountsDto } from './dtos/res/management/exam-counts.res.dto';
 import { ExamDetailedManagementInfoDto } from './dtos/res/management/exam.res.dto';
 import { ExamsManagementInfoDto } from './dtos/res/management/exams.res.dto';
 import { QuestionManagementInfoDto } from './dtos/res/management/question.res.dto';
@@ -138,6 +140,14 @@ export class ExamManagementGatewayController implements OnModuleInit {
 		return res;
 	}
 
+	@Get('exams/counts')
+	@ApiOperation({ summary: 'Get exam counts by status' })
+	@ApiResponseEntity(ExamCountsDto)
+	@SerializeOptions({ type: ExamCountsDto, strategy: 'exposeAll' })
+	getExamCounts() {
+		return this.examManagementService.getExamCounts({});
+	}
+
 	@Get('exams/:id')
 	@ApiOperation({ summary: 'Get detailed exam management data' })
 	@ApiResponseEntity(ExamDetailedManagementInfoDto)
@@ -168,6 +178,11 @@ export class ExamManagementGatewayController implements OnModuleInit {
 	@Patch(':id')
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Update an exam' })
+	@ResourceAccess({
+		resourceType: 'exam',
+		resourceIdParam: 'id',
+		rules: [{ roles: [Role.Admin] }, { roles: [Role.Mod], requireOwnership: true }],
+	})
 	updateExam(@Param('id') id: string, @Body() body: UpdateExamDto) {
 		const res = this.examManagementService.updateExam({ ...body, id: id });
 		return res;
@@ -176,6 +191,11 @@ export class ExamManagementGatewayController implements OnModuleInit {
 	@Delete(':id')
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Delete an exam' })
+	@ResourceAccess({
+		resourceType: 'exam',
+		resourceIdParam: 'id',
+		rules: [{ roles: [Role.Admin] }, { roles: [Role.Mod], requireOwnership: true }],
+	})
 	deleteExam(@Param('id') id: string) {
 		const res = this.examManagementService.deleteExam({ id: id });
 		return res;

@@ -24,6 +24,7 @@ service ExamManagementService {
 	rpc GetExamDetails(GetExamManagementDetailsDto) returns (ExamManagementDetailedInfo) {}
 	rpc GetSectionDetails(GetSectionManagementDetailsDto) returns (SectionManagementInfo) {}
 	rpc GetQuestionDetails(GetQuestionManagementDetailsDto) returns (QuestionManagementInfo) {}
+	rpc GetExamCounts(google.protobuf.Empty) returns (ExamCountsResponse) {}
 }
 
 service ExamPracticeService {
@@ -393,8 +394,9 @@ message FindExamsDto {
 }
 
 message Exams {
-	repeated MinimalExamInfo exams  = 1;
-	string                   cursor = 2;
+	repeated MinimalExamInfo exams       = 1;
+	string                   next_cursor = 2;
+	string                   prev_cursor = 3;
 
 	message MinimalExamInfo {
 		string                    id             = 1;
@@ -456,8 +458,9 @@ message GetUsersAttemptHistoryDto {
 }
 
 message UsersAttemptHistory {
-	repeated MinimalAttemptInfo attempts = 1;
-	string                      cursor   = 2;
+	repeated MinimalAttemptInfo attempts      = 1;
+	string                      next_cursor   = 2;
+	string                      prev_cursor   = 3;
 
 	message MinimalAttemptInfo {
 		string                             id             = 1;
@@ -564,8 +567,9 @@ message SectionManagementInfo {
 }
 
 message FoundExamsForManagement {
-	repeated ExamManagementMinimalInfo exams  = 1;
-	string                             cursor = 2;
+	repeated ExamManagementMinimalInfo exams       = 1;
+	string                             next_cursor = 2;
+	string                             prev_cursor = 3;
 
 	message ExamManagementMinimalInfo {
 		string                    id         = 1;
@@ -638,4 +642,11 @@ message GoalResponse {
 	google.protobuf.Timestamp date   = 2;
 	int32                     target = 3;
 	string                    type   = 4;
+}
+
+message ExamCountsResponse {
+	int32 total    = 1;
+	int32 approved = 2;
+	int32 pending  = 3;
+	int32 rejected = 4;
 }

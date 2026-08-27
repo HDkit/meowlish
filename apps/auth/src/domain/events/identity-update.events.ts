@@ -11,6 +11,8 @@ export class IdentityAvatarUpdatedEvent extends Event<{
 	identityId: string;
 	avatarFileId: string | null;
 }> {}
+export class IdentityLockedEvent extends Event<{ identityId: string; lockedBy: string }> {}
+export class IdentityUnlockedEvent extends Event<{ identityId: string }> {}
 export class RoleAddedEvent extends Event<{ identityId: string; roleId: string }> {}
 export class RoleDeletedEvent extends Event<{ identityId: string; roleId: string }> {}
 export class CredAddedEvent extends Event<{ identityId: string; data: Credential }> {}

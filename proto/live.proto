@@ -9,7 +9,7 @@ package live;
 service ChatService {
 	rpc GetRoomList(GetRoomListDto) returns(Rooms) {}
 	rpc GetChatLog(GetChatLogRequest) returns(GetChatLogResponse) {}
-	rpc CreateRoom(CreateRoomRequest) returns(google.protobuf.Empty) {}
+	rpc CreateRoom(CreateRoomRequest) returns(CreatedRoomResponse) {}
 	rpc RemoveRoom(RemoveRoomRequest) returns(google.protobuf.Empty) {}
 	rpc UpdateRoomSchedule(UpdateRoomScheduleRequest) returns(google.protobuf.Empty) {}
 	rpc BanUserFromRoom(BanUserFromRoomRequest) returns(google.protobuf.Empty) {}
@@ -62,6 +62,11 @@ message GetChatLogResponse {
 
 message CreateRoomRequest {
 	google.protobuf.StringValue name = 1;
+	google.protobuf.StringValue created_by = 2;
+}
+
+message CreatedRoomResponse {
+	string id = 1;
 }
 
 message RemoveRoomRequest {

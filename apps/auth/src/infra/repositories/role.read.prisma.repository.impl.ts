@@ -27,4 +27,21 @@ export class RoleReadPrismaRepositoryImpl implements IRoleReadRepository {
 			permissions: r.rolePermissions.map(p => p.permission.name),
 		}));
 	}
+
+	async findByName(name: string): Promise<RoleReadModel | null> {
+		const role = await this.txHost.tx.role.findUnique({
+			where: { name: name },
+			select: {
+				id: true,
+				name: true,
+				rolePermissions: { select: { permission: { select: { name: true } } } },
+			},
+		});
+		if (!role) return null;
+		return {
+			id: role.id,
+			name: role.name,
+			permissions: role.rolePermissions.map(p => p.permission.name),
+		};
+	}
 }

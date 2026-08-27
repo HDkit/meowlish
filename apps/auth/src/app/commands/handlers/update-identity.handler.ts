@@ -22,6 +22,7 @@ export class UpdateIdentityCommandHandler implements ICommandHandler<UpdateIdent
 			fullName: payload.fullName,
 			bio: payload.bio,
 			avatarFileId: payload.avatarId,
+			phoneNumber: payload.phoneNumber,
 		});
 		await this.identityRepository.save(identity);
 		this.eventBus.publishAll(identity.getUncommittedEvents());

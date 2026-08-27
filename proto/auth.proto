@@ -29,9 +29,18 @@ service AuthService {
 	rpc RemoveRoleFrom(RemoveRoleFromDto) returns (google.protobuf.Empty) {}
     // identity
 	rpc UpdateIdentity(UpdateIdentityDto) returns (google.protobuf.Empty) {}
+    // lock
+	rpc LockIdentity(LockIdentityDto) returns (google.protobuf.Empty) {}
+	rpc UnlockIdentity(UnlockIdentityDto) returns (google.protobuf.Empty) {}
+    // google calendar
+	rpc ConnectGoogleCalendar(ConnectGoogleCalendarDto) returns (GoogleCalendarTokenResponse) {}
+	rpc DisconnectGoogleCalendar(DisconnectGoogleCalendarDto) returns (google.protobuf.Empty) {}
+	rpc GetGoogleCalendarToken(GetGoogleCalendarTokenDto) returns (GoogleCalendarTokenResponse) {}
+	rpc RefreshGoogleCalendarToken(RefreshGoogleCalendarTokenDto) returns (GoogleCalendarTokenResponse) {}
     // qol
 	rpc FindIdentityIds(FindIdentityIdsDto) returns (IdentityIds){}
 	rpc FindIdentities(FindIdentitiesDto) returns (Identities) {}
+	rpc FindIdentitiesByPhone(FindIdentitiesByPhoneDto) returns (Identities) {}
 	rpc HydrateIdentities(HydrateIdentitiesDto) returns (HydratedIdentities) {}
 	rpc HydrateIdentity(HydrateIdentityDto) returns (HydratedIdentities.HydratedIdentity) {}
 }
@@ -98,14 +107,16 @@ message LogOutAllDto {
 }
 
 message UpdateIdentityDto {
-	google.protobuf.StringValue          identity_id        = 1;
-	optional google.protobuf.StringValue username           = 2;
-	optional google.protobuf.StringValue full_name          = 3;
-	optional google.protobuf.BoolValue   set_full_name_null = 4;
-	optional google.protobuf.StringValue bio                = 5;
-	optional google.protobuf.BoolValue   set_bio_null       = 6;
-	optional google.protobuf.StringValue avatar_id          = 7;
-	optional google.protobuf.BoolValue   set_avatar_id_null = 8;
+	google.protobuf.StringValue          identity_id            = 1;
+	optional google.protobuf.StringValue username               = 2;
+	optional google.protobuf.StringValue full_name              = 3;
+	optional google.protobuf.BoolValue   set_full_name_null     = 4;
+	optional google.protobuf.StringValue bio                    = 5;
+	optional google.protobuf.BoolValue   set_bio_null           = 6;
+	optional google.protobuf.StringValue avatar_id              = 7;
+	optional google.protobuf.BoolValue   set_avatar_id_null     = 8;
+	optional google.protobuf.StringValue phone_number           = 9;
+	optional google.protobuf.BoolValue   set_phone_number_null  = 10;
 }
 
 message AssignRoleToDto {
@@ -150,6 +161,8 @@ message Identity {
 	string          id       = 1;
 	string          username = 2;
 	repeated string roles    = 3;
+	optional string phone_number = 4;
+	bool            is_locked    = 5;
 }
 
 message Role {
@@ -173,13 +186,15 @@ message PermList {
 }
 
 message IdentityIds {
-	repeated string ids    = 1;
-	string          cursor = 2;
+	repeated string ids          = 1;
+	string          next_cursor  = 2;
+	string          prev_cursor  = 3;
 }
 
 message Identities {
-	repeated Identity identities = 1;
-	string            cursor     = 2;
+	repeated Identity identities  = 1;
+	string            next_cursor = 2;
+	string            prev_cursor = 3;
 
 	message Identity {
 		string          id          = 1;
@@ -189,6 +204,8 @@ message Identities {
 		optional string avatar_url  = 5;
 		repeated string roles       = 6;
 		repeated string permissions = 7;
+		optional string phone_number = 8;
+		bool            is_locked    = 9;
 	}
 }
 
@@ -201,6 +218,8 @@ message HydratedIdentities {
 		optional string full_name  = 3;
 		optional string bio        = 4;
 		optional string avatar_url = 5;
+		optional string phone_number = 6;
+		repeated string roles      = 7;
 	}
 }
 
@@ -211,4 +230,49 @@ message Credentials {
 		string id   = 1;
 		string type = 2;
 	}
+}
+
+// Lock/Unlock
+message LockIdentityDto {
+	google.protobuf.StringValue identity_id = 1;
+	google.protobuf.StringValue locked_by   = 2;
+}
+
+message UnlockIdentityDto {
+	google.protobuf.StringValue identity_id = 1;
+}
+
+// Phone search
+message FindIdentitiesByPhoneDto {
+	google.protobuf.StringValue phone_number = 1;
+	optional google.protobuf.StringValue cursor = 2;
+	optional google.protobuf.Int32Value  limit  = 3;
+}
+
+// Google Calendar
+message ConnectGoogleCalendarDto {
+	google.protobuf.StringValue identity_id   = 1;
+	google.protobuf.StringValue access_token  = 2;
+	google.protobuf.StringValue refresh_token = 3;
+	google.protobuf.Int64Value  expires_at    = 4;
+	google.protobuf.StringValue scopes        = 5;
+}
+
+message DisconnectGoogleCalendarDto {
+	google.protobuf.StringValue identity_id = 1;
+}
+
+message GetGoogleCalendarTokenDto {
+	google.protobuf.StringValue identity_id = 1;
+}
+
+message RefreshGoogleCalendarTokenDto {
+	google.protobuf.StringValue identity_id = 1;
+}
+
+message GoogleCalendarTokenResponse {
+	string access_token  = 1;
+	string refresh_token = 2;
+	int64  expires_at    = 3;
+	string scopes        = 4;
 }

@@ -1,10 +1,12 @@
 import { ChatLogReadPrismaRepositoryImpl } from './app/infra/repositories/chat-log.read.prisma.repository';
 import { RoomPrismaRepositoryImpl } from './app/infra/repositories/room.prisma.repository';
 import { RoomReadPrismaRepositoryImpl } from './app/infra/repositories/room.read.prisma.repository';
+import { ChatController } from './app/presentation/controllers/chat.controller';
 import { ChatGateway } from './app/services/chat.gateway';
 import { ChatService } from './app/services/chat.service';
 import { bullConfig } from './configs/bullmq.config';
 import { config } from './configs/config';
+import { rmqPubConfig } from './configs/rmq.pub.config';
 import { rmqSubConfig } from './configs/rmq.sub.config';
 import { IChatLogReadRepositoryToken } from './domain/repositories/chat-log.read.repository';
 import { IRoomReadRepositoryToken } from './domain/repositories/room.read.repository';
@@ -15,7 +17,7 @@ import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-pr
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { PrismaClient } from '@prisma-client/live';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { LoggerModule } from '@server/logger';
@@ -31,7 +33,7 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 
 @Module({
 	exports: [],
-	controllers: [],
+	controllers: [ChatController],
 	imports: [
 		ConfigModule.forRoot({
 			expandVariables: true,
@@ -54,6 +56,7 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 		}),
 		BullModule.forRootAsync({ inject: [ConfigService], useFactory: bullConfig }),
 		BullModule.registerQueue({ name: 'live' }),
+		RabbitMQModule.forRootAsync({ inject: [ConfigService], useFactory: rmqPubConfig }),
 		RabbitMQModule.forRootAsync({ inject: [ConfigService], useFactory: rmqSubConfig }),
 		LoggerModule.forRoot({ appName: 'LiveModule' }),
 	],
@@ -72,10 +75,22 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 			provide: IRoomRepositoryToken,
 			useClass: RoomPrismaRepositoryImpl,
 		},
-		GlobalWsExceptionFilter,
-		GlobalRpcExceptionFilter,
-		GlobalHttpExceptionFilter,
-		HttpExceptionFilter,
+		{
+			provide: APP_FILTER,
+			useClass: GlobalWsExceptionFilter,
+		},
+		{
+			provide: APP_FILTER,
+			useClass: GlobalRpcExceptionFilter,
+		},
+		{
+			provide: APP_FILTER,
+			useClass: GlobalHttpExceptionFilter,
+		},
+		{
+			provide: APP_FILTER,
+			useClass: HttpExceptionFilter,
+		},
 		{
 			provide: APP_GUARD,
 			useClass: ClsGuard,

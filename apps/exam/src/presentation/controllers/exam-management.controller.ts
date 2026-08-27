@@ -47,6 +47,7 @@ import {
 	UpdateSectionCommandPayload,
 } from '../../app/commands/staff/exam.update-section.command';
 import { FindExamsForManagementQuery } from '../../app/queries/management/exam.find-exams.query';
+import { GetExamCountsQuery } from '../../app/queries/management/exam.get-counts.query';
 import { GetExamManagementDetailsQuery } from '../../app/queries/management/exam.get-exam-details.query';
 import { GetQuestionManagementDetailsQuery } from '../../app/queries/management/exam.get-question-details.query';
 import { GetSectionManagementDetailsQuery } from '../../app/queries/management/exam.get-section-details.query';
@@ -179,5 +180,9 @@ export class ExamManagementController implements exam.ExamManagementServiceContr
 		@Payload() request: GetQuestionManagementDetailsDto,
 	): Promise<QuestionManagementInfoDto> {
 		return await this.queryBus.execute(new GetQuestionManagementDetailsQuery(request));
+	}
+
+	async getExamCounts(): Promise<exam.ExamCountsResponse> {
+		return await this.queryBus.execute(new GetExamCountsQuery());
 	}
 }

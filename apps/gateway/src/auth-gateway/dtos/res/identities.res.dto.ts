@@ -29,6 +29,14 @@ class IdentityDto {
 	@Expose()
 	@ApiProperty()
 	username!: string;
+
+	@Expose()
+	@ApiPropertyOptional()
+	phoneNumber?: string;
+
+	@Expose()
+	@ApiProperty()
+	isLocked!: boolean;
 }
 
 export class IdentitiesDto {
@@ -39,5 +47,9 @@ export class IdentitiesDto {
 
 	@Expose()
 	@ApiProperty()
-	cursor!: string;
+	nextCursor!: string;
+
+	@Expose()
+	@ApiProperty()
+	prevCursor!: string;
 }

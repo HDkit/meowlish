@@ -38,7 +38,7 @@ async function bootstrap() {
 	await liveModule.startAllMicroservices();
 	useLogger(liveModule);
 	await useRedisWsAdapter(liveModule);
-	await liveModule.listen(process.env.HTTP_PORT ?? 3000, process.env.HTTP_HOST ?? '127.0.0.1');
+	await liveModule.listen(process.env.HTTP_PORT ?? 1511, process.env.HTTP_HOST ?? '127.0.0.1');
 }
 
 bootstrap().catch(console.error);

@@ -31,12 +31,14 @@ export class RoomPrismaRepositoryImpl implements IRoomRepository {
 		return false;
 	}
 
-	async createRoom(name: string): Promise<void> {
-		await this.txHost.tx.room.upsert({
-			where: { id: name },
+	async createRoom(name: string): Promise<string> {
+		const room = await this.txHost.tx.room.upsert({
+			where: { name: name },
 			update: { isDeleted: false },
 			create: { name: name },
+			select: { id: true },
 		});
+		return room.id;
 	}
 
 	async removeRoom(roomId: string): Promise<void> {
@@ -75,5 +77,17 @@ export class RoomPrismaRepositoryImpl implements IRoomRepository {
 			if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025') return;
 			throw e;
 		}
+	}
+
+	async saveLog(
+		roomId: string,
+		fromId: string,
+		message: string,
+	): Promise<{ id: string; createdAt: Date }> {
+		const log = await this.txHost.tx.log.create({
+			data: { roomId: roomId, fromId: fromId, message: message },
+			select: { id: true, createdAt: true },
+		});
+		return log;
 	}
 }

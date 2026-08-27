@@ -12,11 +12,13 @@ import { rmqSubConfig } from './configs/rmq.sub.config';
 import { FILE_CLIENT } from './constants/file';
 import { ICredentialReadRepositoryToken } from './domain/repositories/credential.read.repository';
 import { IFileRepositoryToken } from './domain/repositories/file.repository';
+import { IGoogleCalendarTokenRepositoryToken } from './domain/repositories/google-calendar-token.repository';
 import { IIdentityReadRepositoryToken } from './domain/repositories/identity.read.repository';
 import { IIdentityRepositoryToken } from './domain/repositories/identity.repository';
 import { IRoleReadRepositoryToken } from './domain/repositories/role.read.repository';
 import { CredentialReadPrismaRepositoryImpl } from './infra/repositories/credential.read.prisma.repository.impl';
 import { FilePrismaRepositoryImpl } from './infra/repositories/file.prisma.repository.impl';
+import { GoogleCalendarTokenPrismaRepositoryImpl } from './infra/repositories/google-calendar-token.prisma.repository.impl';
 import { IdentityPrismaRepositoryImpl } from './infra/repositories/identity.prisma.repository.impl';
 import { IdentityReadPrismaRepositoryImpl } from './infra/repositories/identity.read.prisma.repository.impl';
 import { RoleReadPrismaRepositoryImpl } from './infra/repositories/role.read.prisma.repository.impl';
@@ -29,7 +31,7 @@ import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-pr
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { CqrsModule } from '@nestjs/cqrs';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaClient } from '@prisma-client/auth';
@@ -38,7 +40,6 @@ import { file } from '@server/generated';
 import { LoggerModule } from '@server/logger';
 import {
 	ErrorHandlingGrpcProxy,
-	GlobalClassSerializerInterceptor,
 	GlobalRmqExceptionFilter,
 	GlobalRpcExceptionFilter,
 	GlobalValidationPipe,
@@ -132,8 +133,18 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 			provide: IFileRepositoryToken,
 			useClass: FilePrismaRepositoryImpl,
 		},
-		GlobalRpcExceptionFilter,
-		GlobalRmqExceptionFilter,
+		{
+			provide: APP_FILTER,
+			useClass: GlobalRpcExceptionFilter,
+		},
+		{
+			provide: APP_FILTER,
+			useClass: GlobalRmqExceptionFilter,
+		},
+		{
+			provide: IGoogleCalendarTokenRepositoryToken,
+			useClass: GoogleCalendarTokenPrismaRepositoryImpl,
+		},
 		{
 			provide: APP_GUARD,
 			useClass: ClsGuard,
@@ -141,10 +152,6 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 		{
 			provide: APP_PIPE,
 			useClass: GlobalValidationPipe,
-		},
-		{
-			provide: APP_INTERCEPTOR,
-			useClass: GlobalClassSerializerInterceptor,
 		},
 	],
 })

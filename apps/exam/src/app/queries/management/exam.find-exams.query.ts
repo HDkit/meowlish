@@ -5,7 +5,8 @@ import { Query } from '@server/utils';
 
 export type FindExamsForManagementQueryResult = {
 	exams: ExamManagementMinimalInfo[];
-	cursor: string;
+	nextCursor: string;
+	prevCursor: string;
 };
 
 export type FindExamsForManagementQueryPayload = {
@@ -23,6 +24,7 @@ export type FindExamsForManagementCursor = {
 	};
 	sortBy?: { key: 'updatedAt' | 'createdAt'; direction: SortDirection };
 	lastId?: string;
+	direction?: number;
 	// low prec
 	limit?: number;
 };

@@ -23,6 +23,7 @@ export interface IPracticeReadRepository {
 			sortBy?: { key: 'endedAt' | 'startedAt' | 'examId' | 'score'; direction: SortDirection };
 			lastId?: string;
 			limit?: number;
+			direction?: number;
 		},
 	): Promise<MinimalAttemptInfo[]>;
 	findExams(options?: {
@@ -34,6 +35,7 @@ export interface IPracticeReadRepository {
 			updatedAt?: Date;
 		};
 		limit?: number;
+		direction?: number;
 	}): Promise<MinimalExamInfo[]>;
 	getExamDetail(examId: string): Promise<DetailedExamInfo | null>;
 	getExamStats(examId: string): Promise<ExamStatistics | null>;

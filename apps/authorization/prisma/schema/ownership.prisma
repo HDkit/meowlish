@@ -1,0 +1,12 @@
+model ResourceOwnership {
+  id           String   @id @default(cuid())
+  resourceType String   @map("resource_type")
+  resourceId   String   @map("resource_id")
+  ownerId      String   @map("owner_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@unique([resourceType, resourceId])
+  @@index([ownerId])
+  @@index([resourceType, ownerId])
+  @@map("resource_ownership")
+}

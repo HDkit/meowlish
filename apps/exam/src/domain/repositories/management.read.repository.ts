@@ -7,6 +7,13 @@ import { QuestionManagementInfo } from '../read-models/management/question-info.
 import { SectionManagementInfo } from '../read-models/management/section-info.read-model';
 import { SortDirection } from '@server/typing';
 
+export interface ExamCounts {
+	total: number;
+	approved: number;
+	pending: number;
+	rejected: number;
+}
+
 export interface IManagementReadRepository {
 	findExams(options?: {
 		filter?: {
@@ -19,10 +26,12 @@ export interface IManagementReadRepository {
 		sortBy?: { key: 'updatedAt' | 'createdAt'; direction: SortDirection };
 		lastId?: string;
 		limit?: number;
+		direction?: number;
 	}): Promise<ExamManagementMinimalInfo[]>;
 	getExamDetail(examId: string): Promise<ExamManagementDetailedInfo | null>;
 	getSectionDetail(sectionId: string): Promise<SectionManagementInfo | null>;
 	getQuestionDetail(questionId: string): Promise<QuestionManagementInfo | null>;
+	getExamCounts(): Promise<ExamCounts>;
 }
 
 export const IManagementReadRepositoryToken = Symbol('IManagementReadRepository');

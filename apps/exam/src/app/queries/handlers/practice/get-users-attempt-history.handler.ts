@@ -42,22 +42,39 @@ export class GetUsersAttemptHistoryHandler implements IQueryHandler<GetUsersAtte
 		const inUseLimit = payload.limit ?? decodedCursor?.limit ?? 10;
 		// cursor.sortBy has precedence
 		const inUseSortBy = decodedCursor ? decodedCursor.sortBy : payload.sortBy;
+		const direction = decodedCursor?.direction ?? 1;
 
 		const attempts = await this.practiceReadRepository.getUsersAttemptHistory(inUseUserId, {
 			examId: inUseExamId,
 			lastId: decodedCursor?.lastId,
 			limit: inUseLimit,
 			sortBy: inUseSortBy,
+			direction: direction,
 		});
 
-		const encodedCursor = this.cursorPaginationHelper.encodeCursor<GetUsersAttemptHistoryCursor>({
-			lastId: attempts.at(-1)?.id,
-			uid: inUseUserId,
-			examId: inUseExamId,
-			limit: inUseLimit,
-			sortBy: inUseSortBy,
-		});
+		const encodedNextCursor =
+			this.cursorPaginationHelper.encodeCursor<GetUsersAttemptHistoryCursor>({
+				lastId: attempts.at(-1)?.id,
+				uid: inUseUserId,
+				examId: inUseExamId,
+				limit: inUseLimit,
+				sortBy: inUseSortBy,
+				direction: 1,
+			});
+		const encodedPrevCursor =
+			this.cursorPaginationHelper.encodeCursor<GetUsersAttemptHistoryCursor>({
+				lastId: attempts.at(0)?.id,
+				uid: inUseUserId,
+				examId: inUseExamId,
+				limit: inUseLimit,
+				sortBy: inUseSortBy,
+				direction: -1,
+			});
 
-		return { attempts: attempts, cursor: encodedCursor };
+		return {
+			attempts: attempts,
+			nextCursor: encodedNextCursor,
+			prevCursor: encodedPrevCursor,
+		};
 	}
 }

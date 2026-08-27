@@ -13,13 +13,12 @@ import { ClsPluginTransactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { CqrsModule } from '@nestjs/cqrs';
 import { PrismaClient } from '@prisma-client/achievement';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { LoggerModule } from '@server/logger';
 import {
-	GlobalClassSerializerInterceptor,
 	GlobalRmqExceptionFilter,
 	GlobalRpcExceptionFilter,
 	GlobalValidationPipe,
@@ -68,15 +67,17 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 			provide: APP_GUARD,
 			useClass: ClsGuard,
 		},
-		GlobalRpcExceptionFilter,
-		GlobalRmqExceptionFilter,
+		{
+			provide: APP_FILTER,
+			useClass: GlobalRpcExceptionFilter,
+		},
+		{
+			provide: APP_FILTER,
+			useClass: GlobalRmqExceptionFilter,
+		},
 		{
 			provide: APP_PIPE,
 			useClass: GlobalValidationPipe,
-		},
-		{
-			provide: APP_INTERCEPTOR,
-			useClass: GlobalClassSerializerInterceptor,
 		},
 	],
 })

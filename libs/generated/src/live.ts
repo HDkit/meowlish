@@ -60,6 +60,11 @@ export interface GetChatLogResponse {
 
 export interface CreateRoomRequest {
   name: string | undefined;
+  createdBy: string | undefined;
+}
+
+export interface CreatedRoomResponse {
+  id: string;
 }
 
 export interface RemoveRoomRequest {
@@ -530,13 +535,16 @@ export const GetChatLogResponse: MessageFns<GetChatLogResponse> = {
 };
 
 function createBaseCreateRoomRequest(): CreateRoomRequest {
-  return { name: undefined };
+  return { name: undefined, createdBy: undefined };
 }
 
 export const CreateRoomRequest: MessageFns<CreateRoomRequest> = {
   encode(message: CreateRoomRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.name !== undefined) {
       StringValue.encode({ value: message.name! }, writer.uint32(10).fork()).join();
+    }
+    if (message.createdBy !== undefined) {
+      StringValue.encode({ value: message.createdBy! }, writer.uint32(18).fork()).join();
     }
     return writer;
   },
@@ -554,6 +562,51 @@ export const CreateRoomRequest: MessageFns<CreateRoomRequest> = {
           }
 
           message.name = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.createdBy = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseCreatedRoomResponse(): CreatedRoomResponse {
+  return { id: "" };
+}
+
+export const CreatedRoomResponse: MessageFns<CreatedRoomResponse> = {
+  encode(message: CreatedRoomResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CreatedRoomResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCreatedRoomResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.id = reader.string();
           continue;
         }
       }
@@ -796,7 +849,7 @@ export interface ChatServiceClient {
 
   getChatLog(request: GetChatLogRequest, metadata?: Metadata): Observable<GetChatLogResponse>;
 
-  createRoom(request: CreateRoomRequest, metadata?: Metadata): Observable<Empty>;
+  createRoom(request: CreateRoomRequest, metadata?: Metadata): Observable<CreatedRoomResponse>;
 
   removeRoom(request: RemoveRoomRequest, metadata?: Metadata): Observable<Empty>;
 
@@ -815,7 +868,10 @@ export interface ChatServiceController {
     metadata?: Metadata,
   ): Promise<GetChatLogResponse> | Observable<GetChatLogResponse> | GetChatLogResponse;
 
-  createRoom(request: CreateRoomRequest, metadata?: Metadata): void | Promise<void>;
+  createRoom(
+    request: CreateRoomRequest,
+    metadata?: Metadata,
+  ): Promise<CreatedRoomResponse> | Observable<CreatedRoomResponse> | CreatedRoomResponse;
 
   removeRoom(request: RemoveRoomRequest, metadata?: Metadata): void | Promise<void>;
 
@@ -877,8 +933,8 @@ export const ChatServiceService = {
     responseStream: false as const,
     requestSerialize: (value: CreateRoomRequest): Buffer => Buffer.from(CreateRoomRequest.encode(value).finish()),
     requestDeserialize: (value: Buffer): CreateRoomRequest => CreateRoomRequest.decode(value),
-    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+    responseSerialize: (value: CreatedRoomResponse): Buffer => Buffer.from(CreatedRoomResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): CreatedRoomResponse => CreatedRoomResponse.decode(value),
   },
   removeRoom: {
     path: "/live.ChatService/RemoveRoom" as const,
@@ -924,7 +980,7 @@ export const ChatServiceService = {
 export interface ChatServiceServer extends UntypedServiceImplementation {
   getRoomList: handleUnaryCall<GetRoomListDto, Rooms>;
   getChatLog: handleUnaryCall<GetChatLogRequest, GetChatLogResponse>;
-  createRoom: handleUnaryCall<CreateRoomRequest, Empty>;
+  createRoom: handleUnaryCall<CreateRoomRequest, CreatedRoomResponse>;
   removeRoom: handleUnaryCall<RemoveRoomRequest, Empty>;
   updateRoomSchedule: handleUnaryCall<UpdateRoomScheduleRequest, Empty>;
   banUserFromRoom: handleUnaryCall<BanUserFromRoomRequest, Empty>;

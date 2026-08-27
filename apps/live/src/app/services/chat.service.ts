@@ -13,7 +13,9 @@ import {
 	IRoomRepositoryToken,
 } from '../../domain/repositories/room.repository';
 import { ChatGateway } from './chat.gateway';
-import { Inject, Injectable } from '@nestjs/common';
+import { AmqpConnectionManager } from '@golevelup/nestjs-rabbitmq';
+import { Inject, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { AppLoggerService } from '@server/logger';
 import { CursorPaginationHelper } from '@server/utils';
 
 @Injectable()
@@ -31,6 +33,8 @@ export class ChatService {
 		private readonly roomReadRepository: IRoomReadRepository,
 		@Inject(IRoomRepositoryToken)
 		private readonly roomRepository: IRoomRepository,
+		private readonly amqpConnectionManager: AmqpConnectionManager,
+		private readonly logger: AppLoggerService,
 	) {
 		this.cursorPaginationHelpers = {
 			getRoomList: new CursorPaginationHelper(`${process.env.HOST}${process.env.PORT}GetRoomList`),
@@ -38,6 +42,12 @@ export class ChatService {
 				`${process.env.HOST}${process.env.PORT}GetChatLogsOf`,
 			),
 		};
+	}
+
+	private get amqpConnection() {
+		const connection = this.amqpConnectionManager.getConnection('pub');
+		if (!connection) throw new InternalServerErrorException('AMQP "pub" connection not available');
+		return connection;
 	}
 
 	async getRoomList(options?: {
@@ -63,14 +73,14 @@ export class ChatService {
 			'getRoomList'
 		].encodeCursor<DecodedCursor>({
 			id: rooms.at(-1)?.id,
-			direction: direction,
+			direction: 1,
 			limit: inUseLimit,
 		});
 		const encodedPrevCursor = this.cursorPaginationHelpers[
 			'getRoomList'
 		].encodeCursor<DecodedCursor>({
 			id: rooms.at(0)?.id,
-			direction: direction,
+			direction: -1,
 			limit: inUseLimit,
 		});
 
@@ -116,7 +126,7 @@ export class ChatService {
 			'getChatLogsOf'
 		].encodeCursor<DecodedCursor>({
 			id: chats.at(-1)?.id,
-			direction: direction,
+			direction: 1,
 			limit: inUseLimit,
 			dateRange: inUseDateRange,
 		});
@@ -124,7 +134,7 @@ export class ChatService {
 			'getChatLogsOf'
 		].encodeCursor<DecodedCursor>({
 			id: chats.at(0)?.id,
-			direction: direction,
+			direction: -1,
 			limit: inUseLimit,
 			dateRange: inUseDateRange,
 		});
@@ -146,12 +156,38 @@ export class ChatService {
 		});
 	}
 
-	async createRoom(name: string): Promise<void> {
-		await this.roomRepository.createRoom(name);
+	async createRoom(name: string, createdBy?: string): Promise<string> {
+		const roomId = await this.roomRepository.createRoom(name);
+
+		if (createdBy) {
+			try {
+				await this.amqpConnection.publish(
+					'eventbus',
+					'live.room.created',
+					{ resourceType: 'room', resourceId: roomId, ownerId: createdBy },
+					{ persistent: true },
+				);
+			} catch (e) {
+				this.logger.error(`Failed to publish live.room.created event: ${e}`);
+			}
+		}
+
+		return roomId;
 	}
 
 	async removeRoom(roomId: string): Promise<void> {
 		await this.roomRepository.removeRoom(roomId);
+
+		try {
+			await this.amqpConnection.publish(
+				'eventbus',
+				'live.room.deleted',
+				{ resourceId: roomId },
+				{ persistent: true },
+			);
+		} catch (e) {
+			this.logger.error(`Failed to publish live.room.deleted event: ${e}`);
+		}
 	}
 
 	async banUserFrom(roomId: string, uid: string, reason: string): Promise<void> {

@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
+
+package notification;
+
+service NotificationService {
+	rpc CreateNotification(CreateNotificationRequest) returns (NotificationResponse) {}
+	rpc GetNotification(GetNotificationRequest) returns (NotificationResponse) {}
+	rpc DeleteNotification(DeleteNotificationRequest) returns (google.protobuf.Empty) {}
+	rpc ListNotifications(ListNotificationsRequest) returns (ListNotificationsResponse) {}
+	rpc MarkAsRead(MarkAsReadRequest) returns (NotificationResponse) {}
+	rpc MarkAllAsRead(MarkAllAsReadRequest) returns (google.protobuf.Empty) {}
+}
+
+service NotificationPreferencesService {
+	rpc GetPreferences(GetPreferencesRequest) returns (NotificationPreferencesResponse) {}
+	rpc UpdatePreferences(UpdatePreferencesRequest) returns (NotificationPreferencesResponse) {}
+}
+
+// Notification messages
+
+message NotificationResponse {
+	string          id           = 1;
+	string          recipient_id = 2;
+	string          type         = 3;
+	string          title        = 4;
+	string          message      = 5;
+	optional string data         = 6;
+	bool            is_read      = 7;
+	optional string read_at      = 8;
+	string          created_at   = 9;
+}
+
+message CreateNotificationRequest {
+	google.protobuf.StringValue recipient_id = 1;
+	google.protobuf.StringValue type         = 2;
+	google.protobuf.StringValue title        = 3;
+	google.protobuf.StringValue message      = 4;
+	optional google.protobuf.StringValue data = 5;
+}
+
+message GetNotificationRequest {
+	google.protobuf.StringValue id = 1;
+}
+
+message DeleteNotificationRequest {
+	google.protobuf.StringValue id = 1;
+}
+
+message ListNotificationsRequest {
+	google.protobuf.StringValue          recipient_id = 1;
+	optional google.protobuf.StringValue type         = 2;
+	optional google.protobuf.BoolValue   is_read      = 3;
+	optional google.protobuf.Int32Value  page         = 4;
+	optional google.protobuf.Int32Value  limit        = 5;
+}
+
+message ListNotificationsResponse {
+	repeated NotificationResponse notifications = 1;
+	int32                         total_count    = 2;
+	int32                         unread_count   = 3;
+}
+
+message MarkAsReadRequest {
+	google.protobuf.StringValue id = 1;
+}
+
+message MarkAllAsReadRequest {
+	google.protobuf.StringValue recipient_id = 1;
+}
+
+// Notification Preferences messages
+
+message NotificationPreferencesResponse {
+	string id                  = 1;
+	string identity_id         = 2;
+	bool   email_enabled       = 3;
+	bool   push_enabled        = 4;
+	bool   achievement_enabled = 5;
+	bool   report_enabled      = 6;
+	bool   system_enabled      = 7;
+	string updated_at          = 8;
+}
+
+message GetPreferencesRequest {
+	google.protobuf.StringValue identity_id = 1;
+}
+
+message UpdatePreferencesRequest {
+	google.protobuf.StringValue          identity_id         = 1;
+	optional google.protobuf.BoolValue   email_enabled       = 2;
+	optional google.protobuf.BoolValue   push_enabled        = 3;
+	optional google.protobuf.BoolValue   achievement_enabled = 4;
+	optional google.protobuf.BoolValue   report_enabled      = 5;
+	optional google.protobuf.BoolValue   system_enabled      = 6;
+}

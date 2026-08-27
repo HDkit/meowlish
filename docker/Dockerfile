@@ -1,71 +1,24 @@
-# syntax=docker/dockerfile:1
+FROM node:24-alpine AS base
+RUN corepack enable && corepack prepare pnpm@latest --activate
+WORKDIR /app
 
-# Comments are provided throughout this file to help you get started.
-# If you need more help, visit the Dockerfile reference guide at
-# https://docs.docker.com/go/dockerfile-reference/
-
-# Want to help us make this template better? Share your feedback here: https://forms.gle/ybq9Krt8jtBL3iCk7
-
-ARG NODE_VERSION=24.13.0
-
-################################################################################
-# Use node image for base image for all stages.
-FROM node:24.13.0-alpine AS base
-
-# Set working directory for all build stages.
-WORKDIR /usr/src/app
-
-
-################################################################################
-# Create a stage for installing production dependecies.
 FROM base AS deps
+COPY package.json pnpm-lock.yaml .npmrc ./
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
 
-# Download dependencies as a separate step to take advantage of Docker's caching.
-# Leverage a cache mount to /root/.npm to speed up subsequent builds.
-# Leverage bind mounts to package.json and package-lock.json to avoid having to copy them
-# into this layer.
-COPY package.json package.json
-COPY package-lock.json package-lock.json
-
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --omit=dev
-
-COPY prisma prisma
-
-# Generate prisma client
-RUN npx prisma generate
-
-################################################################################
-# Create a stage for building the application.
 FROM deps AS build
-
-# Download additional development dependencies before building, as some projects require
-# "devDependencies" to be installed to build. If you don't need this, remove this step.
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --include=dev
-
-# Copy the rest of the source files into the image.
+ARG APP
 COPY . .
+RUN pnpm exec nx run ${APP}:prisma:generate
+RUN pnpm exec nx run ${APP}:build
+RUN pnpm exec nx run ${APP}:prune-lockfile
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    cd dist/apps/${APP} && pnpm install --frozen-lockfile --prod
 
-# Build
-RUN npm run build
-
-################################################################################
-# Create a new stage to run the application with minimal runtime dependencies
-# where the necessary files are copied from the build stage.
 FROM base AS final
-
-# Run the application as a non-root user.
+ARG APP
+ENV NODE_ENV=production
 USER node
-
-# Copy package.json so that package manager commands can be used.
-COPY package.json .
-
-# Copy the production dependencies from the deps stage and also
-# the built application from the build stage into the image.
-COPY --from=deps /usr/src/app/node_modules ./node_modules
-COPY --from=build /usr/src/app/dist ./dist
-
-# Run the application.
-CMD npm start
-# If you want to run the application in development mode, uncomment the line below.
+COPY --from=build --chown=node:node /app/dist/apps/${APP} ./
+CMD ["node", "main.js"]

@@ -22,6 +22,7 @@ async function bootstrap() {
 				[`resource.${resource.BLOG_SERVICE_NAME}`]: resource.BlogServiceService,
 				[`resource.${resource.FLASH_CARD_SERVICE_NAME}`]: resource.FlashCardServiceService,
 				[`resource.${resource.FLASH_CARD_LIST_SERVICE_NAME}`]: resource.FlashCardListServiceService,
+				[`resource.${resource.REPORT_SERVICE_NAME}`]: resource.ReportServiceService,
 			} satisfies PackageDefinition,
 		},
 	});

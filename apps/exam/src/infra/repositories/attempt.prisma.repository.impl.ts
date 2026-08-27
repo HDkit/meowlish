@@ -209,9 +209,13 @@ export class AttemptPrismaRepositoryImpl implements IAttemptRepository {
 		}
 		if (attempt instanceof AttemptConfig) {
 			const data = AttemptPrismaMapper.toConfigAttemptOrm(attempt);
-			const finishedAttemptsCount = await this.txHost.tx.attempt.count({
+			const lastFinishedAttempt = await this.txHost.tx.attempt.findFirst({
 				where: { examId: data.examId, attemptedBy: data.attemptedBy, endedAt: { not: null } },
+				orderBy: {
+					order: 'desc',
+				},
 			});
+			const finishedAttemptsCount = (lastFinishedAttempt?.order || 0) + 1;
 			await this.txHost.withTransaction(async () => {
 				try {
 					await this.txHost.tx.attempt.create({

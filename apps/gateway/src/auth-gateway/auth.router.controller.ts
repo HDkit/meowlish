@@ -1,3 +1,4 @@
+import { HasPermissions } from '../auth/decorators/permissions.decorator';
 import { IsPublic } from '../auth/decorators/public.decorator';
 import { HasRoles } from '../auth/decorators/roles.decorator';
 import { GoogleOAuth2Guard } from '../auth/guards/google-oauth2.guard';
@@ -7,6 +8,8 @@ import { type AuthenticatedRequest } from '../types/authenticated-request';
 import { AUTH_CLIENT } from './constants/auth';
 import { AddMailCredDto } from './dtos/req/add-mail-cred.req.dto';
 import { AssignRoleToDto } from './dtos/req/assign-role-to.req.dto';
+import { ConnectGoogleCalendarDto } from './dtos/req/connect-google-calendar.req.dto';
+import { ExchangeGoogleCalendarCodeDto } from './dtos/req/exchange-google-calendar-code.req.dto';
 import { FindIdentitiesLimitedDto } from './dtos/req/find-identities-limited.req.dto';
 import { FindIdentitiesDto } from './dtos/req/find-identities.req.dto';
 import { FindIdentityIdsDto } from './dtos/req/find-identity-ids.req.dto';
@@ -37,16 +40,18 @@ import {
 	Req,
 	Res,
 	SerializeOptions,
+	UnauthorizedException,
 	UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { type ClientGrpc } from '@nestjs/microservices';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { auth } from '@server/generated';
-import { Role } from '@server/typing';
+import { Permission, Role } from '@server/typing';
 import { ApiEmptyResponseEntity, ApiResponseEntity } from '@server/utils';
 import { Response } from 'express';
 import Redis from 'ioredis';
+import { lastValueFrom } from 'rxjs';
 
 @ApiBearerAuth()
 @ApiTags('Auth')
@@ -259,7 +264,7 @@ export class AuthGatewayController implements OnModuleInit {
 	@ApiResponseEntity(HydratedIdentitiesDto)
 	@SerializeOptions({ type: HydratedIdentitiesDto })
 	hydrateIdentities(@Query('ids') ids: string[]) {
-		return this.authService.hydrateIdentities({ identityIds: ids });
+		return this.authService.hydrateIdentities({ identityIds: ids ?? [] });
 	}
 
 	@Get('hydrate')
@@ -269,6 +274,108 @@ export class AuthGatewayController implements OnModuleInit {
 	@SerializeOptions({ type: HydratedIdentityDto })
 	hydrateIdentity(@Query('id') id: string) {
 		return this.authService.hydrateIdentity({ identityId: id });
+	}
+
+	@Post(':id/lock')
+	@HasPermissions(Permission.USER_LOCK)
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Lock an identity account' })
+	lockIdentity(@Param('id') identityId: string, @Req() request: AuthenticatedRequest) {
+		return this.authService.lockIdentity({ identityId: identityId, lockedBy: request.user.sub });
+	}
+
+	@Delete(':id/lock')
+	@HasPermissions(Permission.USER_UNLOCK)
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Unlock an identity account' })
+	unlockIdentity(@Param('id') identityId: string) {
+		return this.authService.unlockIdentity({ identityId: identityId });
+	}
+
+	@Get('identity/search/phone')
+	@ApiOperation({ summary: 'Search identities by phone number' })
+	@ApiResponseEntity(IdentitiesDto)
+	@SerializeOptions({ type: IdentitiesDto })
+	findIdentitiesByPhone(
+		@Query('phoneNumber') phoneNumber: string,
+		@Query('cursor') cursor?: string,
+		@Query('limit') limit?: number,
+	) {
+		return this.authService.findIdentitiesByPhone({
+			phoneNumber: phoneNumber,
+			cursor: cursor,
+			limit: limit,
+		});
+	}
+
+	@Post('google/calendar/exchange-code')
+	@ApiOperation({ summary: 'Exchange Google auth code for Calendar tokens and connect' })
+	async exchangeGoogleCalendarCode(
+		@Body() body: ExchangeGoogleCalendarCodeDto,
+		@Req() request: AuthenticatedRequest,
+	) {
+		const config = this.configService.getOrThrow('googleOAuth2', { infer: true });
+
+		const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+			body: new URLSearchParams({
+				code: body.code,
+				client_id: config.clientId,
+				client_secret: config.secret,
+				redirect_uri: 'postmessage',
+				grant_type: 'authorization_code',
+			}),
+		});
+
+		if (!tokenRes.ok) {
+			throw new UnauthorizedException('Failed to exchange Google authorization code');
+		}
+
+		const tokens = (await tokenRes.json()) as {
+			access_token: string;
+			refresh_token?: string;
+			expires_in?: number;
+			scope?: string;
+		};
+
+		return lastValueFrom(
+			this.authService.connectGoogleCalendar({
+				identityId: request.user.sub,
+				accessToken: tokens.access_token,
+				refreshToken: tokens.refresh_token ?? '',
+				expiresAt: Date.now() + (tokens.expires_in ?? 3600) * 1000,
+				scopes: tokens.scope ?? '',
+			}),
+		);
+	}
+
+	@Post('google/calendar/connect')
+	@ApiOperation({ summary: 'Connect Google Calendar account' })
+	connectGoogleCalendar(
+		@Body() body: ConnectGoogleCalendarDto,
+		@Req() request: AuthenticatedRequest,
+	) {
+		return this.authService.connectGoogleCalendar({
+			identityId: request.user.sub,
+			accessToken: body.accessToken,
+			refreshToken: body.refreshToken,
+			expiresAt: body.expiresAt,
+			scopes: body.scopes,
+		});
+	}
+
+	@Delete('google/calendar/connect')
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Disconnect Google Calendar account' })
+	disconnectGoogleCalendar(@Req() request: AuthenticatedRequest) {
+		return this.authService.disconnectGoogleCalendar({ identityId: request.user.sub });
+	}
+
+	@Get('google/calendar/token')
+	@ApiOperation({ summary: 'Get Google Calendar token' })
+	getGoogleCalendarToken(@Req() request: AuthenticatedRequest) {
+		return this.authService.getGoogleCalendarToken({ identityId: request.user.sub });
 	}
 
 	@Post(':id/roles')

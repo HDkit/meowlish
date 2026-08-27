@@ -37,8 +37,10 @@ export class GlobalWsExceptionFilter extends BaseWsExceptionFilter {
 			};
 			return httpRes.message ?? exception.message;
 		}
-		return exception instanceof WsException ?
-				JSON.stringify(exception.getError())
-			:	(exception.message ?? JSON.stringify(exception));
+		if (exception instanceof WsException) {
+			const err = exception.getError();
+			return typeof err === 'string' ? err : 'A WebSocket error occurred';
+		}
+		return 'An internal error occurred';
 	}
 }

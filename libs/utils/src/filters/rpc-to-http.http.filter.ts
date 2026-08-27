@@ -45,9 +45,13 @@ export class gRPC2HttpExceptionFilter implements ExceptionFilter {
 			exception.stack,
 		);
 
-		throw new HttpException(
-			(err as { details?: string })?.details || '',
-			gRPC2HttpExceptionFilter.gRPCStatusCode[(err as { code?: number })?.code || status.UNKNOWN],
-		);
+		const grpcCode = (err as { code?: number })?.code || status.UNKNOWN;
+		const httpStatus = gRPC2HttpExceptionFilter.gRPCStatusCode[grpcCode];
+		const rawDetails = (err as { details?: string })?.details || '';
+
+		const isServerError = httpStatus >= 500;
+		const safeMessage = isServerError ? 'An internal error occurred' : rawDetails;
+
+		throw new HttpException(safeMessage, httpStatus);
 	}
 }

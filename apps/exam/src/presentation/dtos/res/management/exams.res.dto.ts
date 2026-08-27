@@ -27,5 +27,8 @@ export class ExamsManagementInfoDto implements exam.FoundExamsForManagement {
 	exams!: ExamDto[];
 
 	@Expose()
-	cursor!: string;
+	nextCursor!: string;
+
+	@Expose()
+	prevCursor!: string;
 }

@@ -8,6 +8,7 @@ import {
 	Inject,
 	UnauthorizedException,
 	UseFilters,
+	UseGuards,
 	UsePipes,
 } from '@nestjs/common';
 import {
@@ -21,11 +22,13 @@ import {
 } from '@nestjs/websockets';
 import { AppLoggerService } from '@server/logger';
 import { GlobalValidationPipe, GlobalWsExceptionFilter } from '@server/utils';
+import { ClsGuard } from 'nestjs-cls';
 import { Server, Socket } from 'socket.io';
 
 type ModifiedSocket = Omit<Socket, 'data'> & { data: { uid: string } };
 
 // cannot register using APP_FILTER, APP_PIPE
+@UseGuards(ClsGuard)
 @UsePipes(GlobalValidationPipe)
 @UseFilters(GlobalWsExceptionFilter)
 @WebSocketGateway({
@@ -62,8 +65,17 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
 	@SubscribeMessage('join-room')
 	async handleJoin(@MessageBody() roomId: string, @ConnectedSocket() socket: ModifiedSocket) {
-		if (!(await this.roomRepository.canJoinRoom(roomId, socket.data.uid)))
-			throw new UnauthorizedException('User is not allowed to join this room');
+		try {
+			if (!(await this.roomRepository.canJoinRoom(roomId, socket.data.uid)))
+				throw new UnauthorizedException('User is not allowed to join this room');
+		} catch (e) {
+			if (e instanceof UnauthorizedException) throw e;
+			this.logger.error(
+				`[ChatGateway] canJoinRoom failed for room=${roomId} uid=${socket.data.uid}`,
+				'',
+				(e as Error).stack,
+			);
+		}
 		await socket.join(roomId);
 	}
 
@@ -73,10 +85,19 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 	}
 
 	@SubscribeMessage('chat')
-	handlePing(@MessageBody() data: ChatDto, @ConnectedSocket() socket: ModifiedSocket): void {
+	async handlePing(
+		@MessageBody() data: ChatDto,
+		@ConnectedSocket() socket: ModifiedSocket,
+	): Promise<void> {
 		if (!socket.rooms.has(data.roomId))
 			throw new ForbiddenException('You need to join the room before sending a message');
-		socket.to(data.roomId).emit('message', { message: data.message, uid: socket.data.uid });
+		const log = await this.roomRepository.saveLog(data.roomId, socket.data.uid, data.message);
+		socket.to(data.roomId).emit('message', {
+			id: log.id,
+			fromId: socket.data.uid,
+			message: data.message,
+			createdAt: log.createdAt.toISOString(),
+		});
 	}
 
 	disconnectUser(uid: string, roomId: string) {

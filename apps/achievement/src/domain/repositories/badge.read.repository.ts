@@ -3,7 +3,10 @@ import { Progress } from '../read-models/progress.read-model';
 
 export interface IBadgeReadRepository {
 	getAll(): Promise<Badge[]>;
-	getUsersBadges(userId: string, opts?: { lastId?: string; limit?: number }): Promise<UserBadge[]>;
+	getUsersBadges(
+		userId: string,
+		opts?: { lastId?: string; limit?: number; direction?: number },
+	): Promise<UserBadge[]>;
 	getUsersProgress(userId: string): Promise<Progress>;
 }
 

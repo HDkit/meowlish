@@ -28,10 +28,13 @@ export class ManagementPrismaRepositoryImpl implements IManagementReadRepository
 		sortBy?: { key: 'updatedAt' | 'createdAt'; direction: SortDirection };
 		lastId?: string;
 		limit?: number;
+		direction?: number;
 	}): Promise<ExamManagementMinimalInfo[]> {
 		if (options?.limit && options.limit < 0)
 			throw new BadRequestException('Limit must be positive');
 		const filter = options?.filter;
+		const limit = options?.limit ?? 10;
+		const dir = Math.sign(options?.direction || 1);
 
 		const foundExams = await this.txHost.tx.exam.findMany({
 			where: {
@@ -57,13 +60,13 @@ export class ManagementPrismaRepositoryImpl implements IManagementReadRepository
 				...(options?.sortBy ?
 					[{ [options.sortBy.key]: options.sortBy.direction.toLowerCase() }]
 				:	[]),
-				{ id: 'asc' },
+				{ id: dir === -1 ? 'desc' : 'asc' },
 			],
 			...(options?.lastId && {
 				cursor: { id: options.lastId },
 				skip: 1,
 			}),
-			take: options?.limit ?? 10,
+			take: dir * limit,
 		});
 		return foundExams;
 	}
@@ -157,5 +160,23 @@ export class ManagementPrismaRepositoryImpl implements IManagementReadRepository
 			files: foundQuestion.questionFiles.map(f => ({ id: f.fileId })),
 			tags: foundQuestion.questionTags.map(t => t.tag.name),
 		};
+	}
+
+	async getExamCounts() {
+		const groups = await this.txHost.tx.exam.groupBy({
+			by: ['status'],
+			_count: { _all: true },
+		});
+		let total = 0;
+		let approved = 0;
+		let pending = 0;
+		let rejected = 0;
+		for (const g of groups) {
+			total += g._count._all;
+			if (g.status === 'APPROVED') approved = g._count._all;
+			else if (g.status === 'PENDING') pending = g._count._all;
+			else if (g.status === 'REJECTED') rejected = g._count._all;
+		}
+		return { total: total, approved: approved, pending: pending, rejected: rejected };
 	}
 }

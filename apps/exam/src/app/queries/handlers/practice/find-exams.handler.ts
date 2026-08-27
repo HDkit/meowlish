@@ -37,6 +37,7 @@ export class FindExamsHandler implements IQueryHandler<FindExamsQuery> {
 		const inUseSortBy = decodedCursor ? decodedCursor.sortBy : payload.sortBy;
 		// payload.limit has precedence
 		const inUseLimit = payload.limit ?? decodedCursor?.limit ?? 10;
+		const direction = decodedCursor?.direction ?? 1;
 
 		const exams = await this.practiceReadRepository.findExams({
 			filter: inUseFilter,
@@ -52,26 +53,32 @@ export class FindExamsHandler implements IQueryHandler<FindExamsQuery> {
 					}
 				:	undefined,
 			limit: inUseLimit,
+			direction: direction,
 		});
 
 		const lastExamItem = exams.at(-1);
+		const firstExamItem = exams.at(0);
 
-		const encodedCursor = this.cursorPaginationHelper.encodeCursor<FindExamsCursor>({
-			filter: inUseFilter,
-			sortBy: inUseSortBy,
-			lastCursor:
-				lastExamItem ?
-					{
-						id: lastExamItem.id,
-						attemptsCount:
-							inUseSortBy?.key === 'attemptsCount' ? lastExamItem.attemptsCount : undefined,
-						updatedAt:
-							inUseSortBy?.key === 'updatedAt' ? lastExamItem.updatedAt.getTime() : undefined,
-					}
-				:	undefined,
-			limit: inUseLimit,
-		});
+		const encodeCursor = (item: typeof lastExamItem, dir: number) =>
+			this.cursorPaginationHelper.encodeCursor<FindExamsCursor>({
+				filter: inUseFilter,
+				sortBy: inUseSortBy,
+				lastCursor:
+					item ?
+						{
+							id: item.id,
+							attemptsCount: inUseSortBy?.key === 'attemptsCount' ? item.attemptsCount : undefined,
+							updatedAt: inUseSortBy?.key === 'updatedAt' ? item.updatedAt.getTime() : undefined,
+						}
+					:	undefined,
+				direction: dir,
+				limit: inUseLimit,
+			});
 
-		return { exams: exams, cursor: encodedCursor };
+		return {
+			exams: exams,
+			nextCursor: encodeCursor(lastExamItem, 1),
+			prevCursor: encodeCursor(firstExamItem, -1),
+		};
 	}
 }

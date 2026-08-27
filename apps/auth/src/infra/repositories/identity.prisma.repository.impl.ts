@@ -43,6 +43,10 @@ class IdentityPrismaMapper {
 			fullName: from.fullName,
 			bio: from.bio,
 			avatarFileId: from.avatarFileId,
+			phoneNumber: from.phoneNumber,
+			isLocked: from.isLocked,
+			lockedAt: from.lockedAt,
+			lockedBy: from.lockedBy,
 			deletedAt: from.deletedAt,
 		};
 	}
@@ -65,6 +69,10 @@ class IdentityPrismaMapper {
 			fullName: from.fullName,
 			bio: from.bio,
 			avatarFileId: from.avatarFileId,
+			phoneNumber: from.phoneNumber,
+			isLocked: from.isLocked,
+			lockedAt: from.lockedAt,
+			lockedBy: from.lockedBy,
 			createdAt: from.createdAt,
 			deletedAt: from.deletedAt,
 			updatedAt: from.updatedAt,
@@ -157,8 +165,7 @@ export class IdentityPrismaRepositoryImpl implements IIdentityRepository {
 			} catch (e) {
 				if (e instanceof Prisma.PrismaClientKnownRequestError) {
 					if (e.code === 'P2002') {
-						const targetFields = ((e.meta?.target as string[]) || []).join(', ');
-						throw new ConflictException(`Duplicate field(s): ${targetFields}`);
+						throw new ConflictException('A record with this value already exists');
 					}
 				}
 				throw e;
@@ -208,8 +215,7 @@ export class IdentityPrismaRepositoryImpl implements IIdentityRepository {
 		} catch (e) {
 			if (e instanceof Prisma.PrismaClientKnownRequestError) {
 				if (e.code === 'P2002') {
-					const targetFields = ((e.meta?.target as string[]) || []).join(', ');
-					throw new ConflictException(`Duplicate field(s): ${targetFields}`);
+					throw new ConflictException('A record with this value already exists');
 				}
 			}
 			throw e;
@@ -231,8 +237,7 @@ export class IdentityPrismaRepositoryImpl implements IIdentityRepository {
 		} catch (e) {
 			if (e instanceof Prisma.PrismaClientKnownRequestError) {
 				if (e.code === 'P2002') {
-					const targetFields = ((e.meta?.target as string[]) || []).join(', ');
-					throw new ConflictException(`Duplicate field(s): ${targetFields}`);
+					throw new ConflictException('A record with this value already exists');
 				}
 			}
 			throw e;

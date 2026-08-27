@@ -40,7 +40,8 @@ export interface UserBadgesRequestDto {
 
 export interface UserBadgesResponseDto {
   badges: UserBadges[];
-  cursor?: string | undefined;
+  nextCursor?: string | undefined;
+  prevCursor?: string | undefined;
 }
 
 export interface UserProgressRequestDto {
@@ -318,8 +319,11 @@ export const UserBadgesResponseDto: MessageFns<UserBadgesResponseDto> = {
     for (const v of message.badges) {
       UserBadges.encode(v!, writer.uint32(10).fork()).join();
     }
-    if (message.cursor !== undefined) {
-      writer.uint32(18).string(message.cursor);
+    if (message.nextCursor !== undefined) {
+      writer.uint32(18).string(message.nextCursor);
+    }
+    if (message.prevCursor !== undefined) {
+      writer.uint32(26).string(message.prevCursor);
     }
     return writer;
   },
@@ -344,7 +348,15 @@ export const UserBadgesResponseDto: MessageFns<UserBadgesResponseDto> = {
             break;
           }
 
-          message.cursor = reader.string();
+          message.nextCursor = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.prevCursor = reader.string();
           continue;
         }
       }

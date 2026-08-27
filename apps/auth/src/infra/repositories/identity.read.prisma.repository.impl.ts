@@ -16,9 +16,12 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 		usernameOrCredentialIdentifier?: string;
 		lastId?: string;
 		limit?: number;
+		direction?: number;
 	}): Promise<string[]> {
 		if (options?.limit && options.limit < 0)
 			throw new BadRequestException('Limit must be positive');
+		const limit = options?.limit ?? 10;
+		const direction = Math.sign(options?.direction || 1);
 		const foundIdentities = await this.txHost.tx.identity.findMany({
 			where: {
 				...(options?.usernameOrCredentialIdentifier && {
@@ -35,7 +38,7 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 			orderBy: { id: 'asc' },
 			select: { id: true },
 			...(options?.lastId && { cursor: { id: options.lastId }, skip: 1 }),
-			take: options?.limit ?? 10,
+			take: direction * limit,
 		});
 		return foundIdentities.map(i => i.id);
 	}
@@ -47,9 +50,12 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 		hasPerms?: string[];
 		lastId?: string;
 		limit?: number;
+		direction?: number;
 	}): Promise<IdentityReadModel[]> {
 		if (options?.limit && options.limit < 0)
 			throw new BadRequestException('Limit must be positive');
+		const limit = options?.limit ?? 10;
+		const direction = Math.sign(options?.direction || 1);
 
 		const roleOr: Prisma.IdentityWhereInput[] = [];
 		if (options?.hasRoles?.length) {
@@ -110,9 +116,11 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 				fullName: true,
 				avatarFileId: true,
 				bio: true,
+				phoneNumber: true,
+				isLocked: true,
 			},
 			...(options?.lastId && { cursor: { id: options.lastId }, skip: 1 }),
-			take: options?.limit ?? 10,
+			take: direction * limit,
 		});
 		return foundIdentities.map(i => ({
 			id: i.id,
@@ -120,6 +128,59 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 			fullName: i.fullName ?? undefined,
 			avatarUrl: i.avatarFileId ?? undefined,
 			bio: i.bio ?? undefined,
+			phoneNumber: i.phoneNumber ?? undefined,
+			isLocked: i.isLocked,
+			roles: i.identityRoles.map(rIdentityRole => rIdentityRole.role.name),
+			permissions: [
+				...new Set<string>(
+					i.identityRoles.flatMap(rIdentityRole =>
+						rIdentityRole.role.rolePermissions.map(rPermission => rPermission.permission.name),
+					),
+				),
+			],
+		}));
+	}
+
+	async findIdentitiesByPhone(options: {
+		phoneNumber: string;
+		lastId?: string;
+		limit?: number;
+		direction?: number;
+	}): Promise<IdentityReadModel[]> {
+		if (options.limit && options.limit < 0) throw new BadRequestException('Limit must be positive');
+		const limit = options.limit ?? 10;
+		const direction = Math.sign(options.direction || 1);
+
+		const foundIdentities = await this.txHost.tx.identity.findMany({
+			where: {
+				phoneNumber: { contains: options.phoneNumber },
+			},
+			orderBy: { id: 'asc' },
+			select: {
+				id: true,
+				identityRoles: {
+					select: {
+						role: { select: { name: true, rolePermissions: { select: { permission: true } } } },
+					},
+				},
+				username: true,
+				fullName: true,
+				avatarFileId: true,
+				bio: true,
+				phoneNumber: true,
+				isLocked: true,
+			},
+			...(options.lastId && { cursor: { id: options.lastId }, skip: 1 }),
+			take: direction * limit,
+		});
+		return foundIdentities.map(i => ({
+			id: i.id,
+			username: i.username,
+			fullName: i.fullName ?? undefined,
+			avatarUrl: i.avatarFileId ?? undefined,
+			bio: i.bio ?? undefined,
+			phoneNumber: i.phoneNumber ?? undefined,
+			isLocked: i.isLocked,
 			roles: i.identityRoles.map(rIdentityRole => rIdentityRole.role.name),
 			permissions: [
 				...new Set<string>(
@@ -140,6 +201,12 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 				fullName: true,
 				avatarFileId: true,
 				bio: true,
+				phoneNumber: true,
+				identityRoles: {
+					select: {
+						role: { select: { name: true } },
+					},
+				},
 			},
 		});
 		return foundIdentity ?
@@ -149,6 +216,8 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 					fullName: foundIdentity.fullName ?? undefined,
 					avatarUrl: foundIdentity.avatarFileId ?? undefined,
 					bio: foundIdentity.bio ?? undefined,
+					phoneNumber: foundIdentity.phoneNumber ?? undefined,
+					roles: foundIdentity.identityRoles.map(r => r.role.name),
 				}
 			:	null;
 	}
@@ -162,6 +231,12 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 				fullName: true,
 				avatarFileId: true,
 				bio: true,
+				phoneNumber: true,
+				identityRoles: {
+					select: {
+						role: { select: { name: true } },
+					},
+				},
 			},
 		});
 
@@ -171,6 +246,8 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 			fullName: i.fullName ?? undefined,
 			avatarUrl: i.avatarFileId ?? undefined,
 			bio: i.bio ?? undefined,
+			phoneNumber: i.phoneNumber ?? undefined,
+			roles: i.identityRoles.map(r => r.role.name),
 		}));
 	}
 }

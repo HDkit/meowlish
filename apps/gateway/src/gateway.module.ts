@@ -2,17 +2,22 @@ import { AchievementGatewayModule } from './achievement-gateway/achievement.rout
 import { AuthGatewayModule } from './auth-gateway/auth.router.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from './auth/guards/permissions.guard';
+import { ResourceAccessGuard } from './auth/guards/resource-access.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
+import { AuthorizationGatewayModule } from './authorization-gateway/authorization.router.module';
 import { config } from './configs/config';
 import { ExamGatewayModule } from './exam-gateway/exam.router.module';
 import { FileGatewayModule } from './file-gateway/file.router.module';
+import { LiveGatewayModule } from './live-gateway/live.router.module';
 import { LiveWsGatewayModule } from './live-ws-gateway/live-ws.router.module';
+import { NotificationGatewayModule } from './notification-gateway/notification.router.module';
+import { ResourceGatewayModule } from './resource-gateway/resource.router.module';
 import { RouteModule } from './router.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { CqrsModule } from '@nestjs/cqrs';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+// import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from '@server/logger';
 import {
 	GlobalClassSerializerInterceptor,
@@ -33,20 +38,26 @@ import { GlobalValidationPipe } from '@server/utils';
 		}),
 		CqrsModule.forRoot(),
 		LoggerModule.forRoot({ appName: 'GatewayModule' }),
-		ThrottlerModule.forRoot({
-			throttlers: [
-				{
-					ttl: 60000,
-					limit: 60,
-				},
-			],
-			errorMessage: 'Rate limit reached',
-		}),
+		// ThrottlerModule.forRoot({
+		// 	throttlers: [
+		// 		{
+		// 			ttl: 60000,
+		// 			limit: 60,
+		// 		},
+		// 	],
+		// 	errorMessage: 'Rate limit reached',
+		// }),
 		RouteModule,
 		AuthGatewayModule,
 		ExamGatewayModule,
 		FileGatewayModule,
 		AchievementGatewayModule,
+		// grpc proxy modules
+		LiveGatewayModule,
+		NotificationGatewayModule,
+		ResourceGatewayModule,
+		// authorization module
+		AuthorizationGatewayModule,
 		// ws proxy modules
 		LiveWsGatewayModule,
 	],
@@ -55,10 +66,10 @@ import { GlobalValidationPipe } from '@server/utils';
 			provide: APP_PIPE,
 			useClass: GlobalValidationPipe,
 		},
-		{
-			provide: APP_GUARD,
-			useClass: ThrottlerGuard,
-		},
+		// {
+		// 	provide: APP_GUARD,
+		// 	useClass: ThrottlerGuard,
+		// },
 		{
 			provide: APP_GUARD,
 			useClass: JwtAuthGuard,
@@ -70,6 +81,10 @@ import { GlobalValidationPipe } from '@server/utils';
 		{
 			provide: APP_GUARD,
 			useClass: PermissionsGuard,
+		},
+		{
+			provide: APP_GUARD,
+			useClass: ResourceAccessGuard,
 		},
 		{
 			provide: APP_FILTER,

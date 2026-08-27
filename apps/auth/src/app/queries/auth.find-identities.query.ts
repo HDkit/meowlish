@@ -3,7 +3,8 @@ import { Query } from '@server/utils';
 
 export type FindIdentitiesQueryResult = {
 	identities: IdentityReadModel[];
-	cursor: string;
+	nextCursor: string;
+	prevCursor: string;
 };
 
 export type FindIdentitiesQueryPayload = {
@@ -16,6 +17,7 @@ export type FindIdentitiesCursor = {
 	hasRoles?: string[];
 	hasPerms?: string[];
 	lastId?: string;
+	direction?: number;
 	// low prec
 	limit?: number;
 };

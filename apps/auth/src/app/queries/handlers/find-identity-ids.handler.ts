@@ -33,19 +33,28 @@ export class FindIdentityIdsQueryHandler implements IQueryHandler<FindIdentityId
 
 		const inUseIdentifier = decodedCursor?.usernameOrCredential ?? payload.usernameOrCredential;
 		const inUseLimit = payload.limit ?? decodedCursor?.limit ?? 10;
+		const direction = decodedCursor?.direction ?? 1;
 
 		const identities = await this.identityReadRepository.findIdentityIds({
 			usernameOrCredentialIdentifier: inUseIdentifier,
 			lastId: decodedCursor?.lastId,
 			limit: inUseLimit,
+			direction: direction,
 		});
 
-		const encodedCursor = this.cursorPaginationHelper.encodeCursor<FindIdentityIdsCursor>({
+		const encodedNextCursor = this.cursorPaginationHelper.encodeCursor<FindIdentityIdsCursor>({
 			usernameOrCredential: inUseIdentifier,
 			lastId: identities.at(-1),
+			direction: 1,
+			limit: inUseLimit,
+		});
+		const encodedPrevCursor = this.cursorPaginationHelper.encodeCursor<FindIdentityIdsCursor>({
+			usernameOrCredential: inUseIdentifier,
+			lastId: identities.at(0),
+			direction: -1,
 			limit: inUseLimit,
 		});
 
-		return { ids: identities, cursor: encodedCursor };
+		return { ids: identities, nextCursor: encodedNextCursor, prevCursor: encodedPrevCursor };
 	}
 }
