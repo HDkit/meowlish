@@ -5,11 +5,11 @@ import { IsArray, IsBoolean, IsInt, IsOptional, IsString, Min } from 'class-vali
 export class ListFlashCardListsReqDto implements resource.ListFlashCardListsRequest {
 	@IsOptional()
 	@IsString()
-	authorId?: string | undefined;
+	authorId?: string;
 
 	@IsBoolean()
 	@IsOptional()
-	isPublic?: boolean | undefined;
+	isPublic?: boolean;
 
 	@IsArray()
 	@IsString({ each: true })
@@ -19,11 +19,11 @@ export class ListFlashCardListsReqDto implements resource.ListFlashCardListsRequ
 	@IsInt()
 	@IsOptional()
 	@Min(1)
-	page?: number | undefined;
+	page?: number;
 
 	@Type(() => Number)
 	@IsInt()
 	@IsOptional()
 	@Min(1)
-	limit?: number | undefined;
+	limit?: number;
 }

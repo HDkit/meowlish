@@ -3,8 +3,8 @@ import { IsString } from 'class-validator';
 
 export class AddFileToReportReqDto implements resource.AddFileToReportRequest {
 	@IsString()
-	reportId!: string | undefined;
+	reportId!: string;
 
 	@IsString()
-	fileId!: string | undefined;
+	fileId!: string;
 }

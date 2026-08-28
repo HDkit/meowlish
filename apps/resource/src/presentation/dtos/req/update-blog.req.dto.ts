@@ -3,15 +3,15 @@ import { IsArray, IsOptional, IsString } from 'class-validator';
 
 export class UpdateBlogReqDto implements resource.UpdateBlogRequest {
 	@IsString()
-	id!: string | undefined;
+	id!: string;
 
 	@IsOptional()
 	@IsString()
-	title?: string | undefined;
+	title?: string;
 
 	@IsOptional()
 	@IsString()
-	content?: string | undefined;
+	content?: string;
 
 	@IsArray()
 	@IsString({ each: true })

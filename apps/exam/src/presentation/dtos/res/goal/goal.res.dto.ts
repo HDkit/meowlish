@@ -3,7 +3,7 @@ import { Expose } from 'class-transformer';
 
 export class GoalResDto implements exam.GoalResponse {
 	@Expose()
-	date!: Date | undefined;
+	date!: Date;
 
 	@Expose()
 	target!: number;

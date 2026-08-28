@@ -36,7 +36,7 @@ export class DeleteExamHandler implements ICommandHandler<DeleteExamCommand> {
 				{ persistent: true },
 			);
 		} catch (e) {
-			this.logger.error(`Failed to publish exam.exam.deleted event: ${e}`);
+			this.logger.error(`Failed to publish exam.exam.deleted event: ${e as string}`);
 		}
 	}
 }

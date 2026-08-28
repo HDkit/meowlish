@@ -48,7 +48,7 @@ export class FindIdentitiesByPhoneQueryHandler
 				this.cursorPaginationHelper.decodeCursor<FindIdentitiesByPhoneCursor>(payload.cursor)
 			:	undefined;
 
-		const inUsePhone = payload.phoneNumber!;
+		const inUsePhone = payload.phoneNumber;
 		const inUseLimit = payload.limit ?? decodedCursor?.limit ?? 10;
 		const direction = decodedCursor?.direction ?? 1;
 

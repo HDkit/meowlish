@@ -5,7 +5,7 @@ import { IsArray, IsInt, IsOptional, IsString, Min } from 'class-validator';
 export class ListFlashCardsReqDto implements resource.ListFlashCardsRequest {
 	@IsOptional()
 	@IsString()
-	authorId?: string | undefined;
+	authorId?: string;
 
 	@IsArray()
 	@IsString({ each: true })
@@ -15,11 +15,11 @@ export class ListFlashCardsReqDto implements resource.ListFlashCardsRequest {
 	@IsInt()
 	@IsOptional()
 	@Min(1)
-	page?: number | undefined;
+	page?: number;
 
 	@Type(() => Number)
 	@IsInt()
 	@IsOptional()
 	@Min(1)
-	limit?: number | undefined;
+	limit?: number;
 }

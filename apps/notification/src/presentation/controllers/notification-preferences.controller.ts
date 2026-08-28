@@ -17,7 +17,7 @@ export class NotificationPreferencesController
 	async getPreferences(
 		@Payload() data: GetPreferencesReqDto,
 	): Promise<notification.NotificationPreferencesResponse> {
-		return this.notificationPreferencesService.getPreferences(data.identityId as string);
+		return this.notificationPreferencesService.getPreferences(data.identityId);
 	}
 
 	async updatePreferences(

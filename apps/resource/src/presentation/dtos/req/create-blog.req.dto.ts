@@ -3,13 +3,13 @@ import { IsArray, IsString } from 'class-validator';
 
 export class CreateBlogReqDto implements resource.CreateBlogRequest {
 	@IsString()
-	title!: string | undefined;
+	title!: string;
 
 	@IsString()
-	content!: string | undefined;
+	content!: string;
 
 	@IsString()
-	authorId!: string | undefined;
+	authorId!: string;
 
 	@IsArray()
 	@IsString({ each: true })

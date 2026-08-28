@@ -22,7 +22,7 @@ export class ReportController implements resource.ReportServiceController {
 	}
 
 	async getReport(@Payload() data: GetReportReqDto): Promise<resource.ReportResponse> {
-		return this.reportService.getReport(data.id as string);
+		return this.reportService.getReport(data.id);
 	}
 
 	async updateReport(@Payload() data: UpdateReportReqDto): Promise<resource.ReportResponse> {
@@ -30,7 +30,7 @@ export class ReportController implements resource.ReportServiceController {
 	}
 
 	async deleteReport(@Payload() data: DeleteReportReqDto): Promise<void> {
-		await this.reportService.deleteReport(data.id as string);
+		await this.reportService.deleteReport(data.id);
 	}
 
 	async listReports(@Payload() data: ListReportsReqDto): Promise<resource.ListReportsResponse> {

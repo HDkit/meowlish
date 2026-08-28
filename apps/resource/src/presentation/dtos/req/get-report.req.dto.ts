@@ -3,5 +3,5 @@ import { IsString } from 'class-validator';
 
 export class GetReportReqDto implements resource.GetReportRequest {
 	@IsString()
-	id!: string | undefined;
+	id!: string;
 }

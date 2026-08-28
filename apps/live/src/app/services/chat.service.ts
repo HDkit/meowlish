@@ -168,7 +168,7 @@ export class ChatService {
 					{ persistent: true },
 				);
 			} catch (e) {
-				this.logger.error(`Failed to publish live.room.created event: ${e}`);
+				this.logger.error(`Failed to publish live.room.created event: ${e as string}`);
 			}
 		}
 
@@ -186,7 +186,7 @@ export class ChatService {
 				{ persistent: true },
 			);
 		} catch (e) {
-			this.logger.error(`Failed to publish live.room.deleted event: ${e}`);
+			this.logger.error(`Failed to publish live.room.deleted event: ${e as string}`);
 		}
 	}
 

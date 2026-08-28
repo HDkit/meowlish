@@ -39,7 +39,9 @@ export class NotificationSseService implements OnModuleDestroy {
 				data: event.notification,
 				type: 'notification',
 			})),
-			finalize(() => {}),
+			finalize(() => {
+				return;
+			}),
 		);
 	}
 

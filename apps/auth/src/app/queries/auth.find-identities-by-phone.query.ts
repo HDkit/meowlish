@@ -8,7 +8,7 @@ export type FindIdentitiesByPhoneQueryResult = {
 };
 
 type FindIdentitiesByPhoneCursor = {
-	phoneNumber?: string;
+	phoneNumber: string;
 	lastId?: string;
 	direction?: number;
 	limit?: number;

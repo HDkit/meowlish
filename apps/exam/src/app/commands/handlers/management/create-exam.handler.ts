@@ -42,7 +42,7 @@ export class CreateExamHandler implements ICommandHandler<CreateExamCommand> {
 				{ persistent: true },
 			);
 		} catch (e) {
-			this.logger.error(`Failed to publish exam.exam.created event: ${e}`);
+			this.logger.error(`Failed to publish exam.exam.created event: ${e as string}`);
 		}
 
 		return { id: exam.id.id };

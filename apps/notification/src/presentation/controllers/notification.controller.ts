@@ -25,11 +25,11 @@ export class NotificationController implements notification.NotificationServiceC
 	async getNotification(
 		@Payload() data: GetNotificationReqDto,
 	): Promise<notification.NotificationResponse> {
-		return this.notificationService.getNotification(data.id as string);
+		return this.notificationService.getNotification(data.id);
 	}
 
 	async deleteNotification(@Payload() data: DeleteNotificationReqDto): Promise<void> {
-		await this.notificationService.deleteNotification(data.id as string);
+		await this.notificationService.deleteNotification(data.id);
 	}
 
 	async listNotifications(
@@ -39,10 +39,10 @@ export class NotificationController implements notification.NotificationServiceC
 	}
 
 	async markAsRead(@Payload() data: MarkAsReadReqDto): Promise<notification.NotificationResponse> {
-		return this.notificationService.markAsRead(data.id as string);
+		return this.notificationService.markAsRead(data.id);
 	}
 
 	async markAllAsRead(@Payload() data: MarkAllAsReadReqDto): Promise<void> {
-		await this.notificationService.markAllAsRead(data.recipientId as string);
+		await this.notificationService.markAllAsRead(data.recipientId);
 	}
 }

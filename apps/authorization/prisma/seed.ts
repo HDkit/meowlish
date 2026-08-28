@@ -1,7 +1,7 @@
-import { PrismaClient as AuthorizationPrismaClient } from '../../../node_modules/.prisma/client/authorization/index.js';
-import { PrismaClient as ExamPrismaClient } from '../../../node_modules/.prisma/client/exam/index.js';
-import { PrismaClient as LivePrismaClient } from '../../../node_modules/.prisma/client/live/index.js';
-import { PrismaClient as ResourcePrismaClient } from '../../../node_modules/.prisma/client/resource/index.js';
+import { PrismaClient as AuthorizationPrismaClient } from '@prisma-client/authorization';
+import { PrismaClient as ExamPrismaClient } from '@prisma-client/exam';
+import { PrismaClient as LivePrismaClient } from '@prisma-client/live';
+import { PrismaClient as ResourcePrismaClient } from '@prisma-client/resource';
 
 async function seed() {
 	const authorizationDb = new AuthorizationPrismaClient();

@@ -3,25 +3,25 @@ import { IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class UpdatePreferencesReqDto implements notification.UpdatePreferencesRequest {
 	@IsString()
-	identityId!: string | undefined;
+	identityId!: string;
 
 	@IsBoolean()
 	@IsOptional()
-	emailEnabled?: boolean | undefined;
+	emailEnabled?: boolean;
 
 	@IsBoolean()
 	@IsOptional()
-	pushEnabled?: boolean | undefined;
+	pushEnabled?: boolean;
 
 	@IsBoolean()
 	@IsOptional()
-	achievementEnabled?: boolean | undefined;
+	achievementEnabled?: boolean;
 
 	@IsBoolean()
 	@IsOptional()
-	reportEnabled?: boolean | undefined;
+	reportEnabled?: boolean;
 
 	@IsBoolean()
 	@IsOptional()
-	systemEnabled?: boolean | undefined;
+	systemEnabled?: boolean;
 }

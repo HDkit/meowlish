@@ -3,19 +3,19 @@ import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class UpdateFlashCardListReqDto implements resource.UpdateFlashCardListRequest {
 	@IsString()
-	id!: string | undefined;
+	id!: string;
 
 	@IsOptional()
 	@IsString()
-	name?: string | undefined;
+	name?: string;
 
 	@IsOptional()
 	@IsString()
-	description?: string | undefined;
+	description?: string;
 
 	@IsBoolean()
 	@IsOptional()
-	isPublic?: boolean | undefined;
+	isPublic?: boolean;
 
 	@IsArray()
 	@IsString({ each: true })

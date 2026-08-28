@@ -3,17 +3,17 @@ import { IsOptional, IsString } from 'class-validator';
 
 export class UpdateReportReqDto implements resource.UpdateReportRequest {
 	@IsString()
-	id!: string | undefined;
+	id!: string;
 
 	@IsOptional()
 	@IsString()
-	status?: string | undefined;
+	status?: string;
 
 	@IsOptional()
 	@IsString()
-	resolvedBy?: string | undefined;
+	resolvedBy?: string;
 
 	@IsOptional()
 	@IsString()
-	adminResponse?: string | undefined;
+	adminResponse?: string;
 }

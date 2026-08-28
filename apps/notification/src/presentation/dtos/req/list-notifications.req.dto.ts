@@ -4,25 +4,25 @@ import { IsBoolean, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class ListNotificationsReqDto implements notification.ListNotificationsRequest {
 	@IsString()
-	recipientId!: string | undefined;
+	recipientId!: string;
 
 	@IsOptional()
 	@IsString()
-	type?: string | undefined;
+	type?: string;
 
 	@IsBoolean()
 	@IsOptional()
-	isRead?: boolean | undefined;
+	isRead?: boolean;
 
 	@Type(() => Number)
 	@IsInt()
 	@IsOptional()
 	@Min(1)
-	page?: number | undefined;
+	page?: number;
 
 	@Type(() => Number)
 	@IsInt()
 	@IsOptional()
 	@Min(1)
-	limit?: number | undefined;
+	limit?: number;
 }

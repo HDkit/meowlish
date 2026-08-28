@@ -104,7 +104,7 @@ export class WritingScoredHandler {
 		},
 	})
 	async handle(@RabbitPayload() payload: WritingScoredEvent, amqpMsg?: ConsumeMessage) {
-		const retryCount: number = amqpMsg?.properties?.headers?.[RETRY_COUNT_HEADER] ?? 0;
+		const retryCount: number = (amqpMsg?.properties?.headers?.[RETRY_COUNT_HEADER] as number) ?? 0;
 
 		try {
 			if (payload.status === 'error' || payload.error_code || payload.error_message)
@@ -124,7 +124,7 @@ export class WritingScoredHandler {
 			}
 
 			this.logger.error(
-				`Writing scored max retries (${WRITING_SCORED_MAX_RETRIES}) exceeded for response ${payload.response_id}: ${e}`,
+				`Writing scored max retries (${WRITING_SCORED_MAX_RETRIES}) exceeded for response ${payload.response_id}: ${e as string}`,
 			);
 			throw e;
 		}

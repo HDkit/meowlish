@@ -3,24 +3,24 @@ import { IsArray, IsOptional, IsString } from 'class-validator';
 
 export class CreateReportReqDto implements resource.CreateReportRequest {
 	@IsString()
-	reportedBy!: string | undefined;
+	reportedBy!: string;
 
 	@IsString()
-	type!: string | undefined;
+	type!: string;
 
 	@IsString()
-	title!: string | undefined;
+	title!: string;
 
 	@IsString()
-	description!: string | undefined;
-
-	@IsOptional()
-	@IsString()
-	targetType?: string | undefined;
+	description!: string;
 
 	@IsOptional()
 	@IsString()
-	targetId?: string | undefined;
+	targetType?: string;
+
+	@IsOptional()
+	@IsString()
+	targetId?: string;
 
 	@IsArray()
 	@IsString({ each: true })

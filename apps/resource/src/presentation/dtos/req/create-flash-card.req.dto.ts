@@ -3,22 +3,22 @@ import { IsArray, IsOptional, IsString } from 'class-validator';
 
 export class CreateFlashCardReqDto implements resource.CreateFlashCardRequest {
 	@IsString()
-	word!: string | undefined;
+	word!: string;
 
 	@IsString()
-	definition!: string | undefined;
-
-	@IsOptional()
-	@IsString()
-	image?: string | undefined;
+	definition!: string;
 
 	@IsOptional()
 	@IsString()
-	partOfSpeech?: string | undefined;
+	image?: string;
 
 	@IsOptional()
 	@IsString()
-	pronunciation?: string | undefined;
+	partOfSpeech?: string;
+
+	@IsOptional()
+	@IsString()
+	pronunciation?: string;
 
 	@IsArray()
 	@IsString({ each: true })
@@ -26,10 +26,10 @@ export class CreateFlashCardReqDto implements resource.CreateFlashCardRequest {
 
 	@IsOptional()
 	@IsString()
-	notes?: string | undefined;
+	notes?: string;
 
 	@IsString()
-	authorId!: string | undefined;
+	authorId!: string;
 
 	@IsArray()
 	@IsString({ each: true })
@@ -37,5 +37,5 @@ export class CreateFlashCardReqDto implements resource.CreateFlashCardRequest {
 
 	@IsOptional()
 	@IsString()
-	listId!: string | undefined;
+	listId!: string;
 }

@@ -3,18 +3,18 @@ import { IsOptional, IsString } from 'class-validator';
 
 export class CreateNotificationReqDto implements notification.CreateNotificationRequest {
 	@IsString()
-	recipientId!: string | undefined;
+	recipientId!: string;
 
 	@IsString()
-	type!: string | undefined;
+	type!: string;
 
 	@IsString()
-	title!: string | undefined;
+	title!: string;
 
 	@IsString()
-	message!: string | undefined;
+	message!: string;
 
 	@IsOptional()
 	@IsString()
-	data?: string | undefined;
+	data?: string;
 }

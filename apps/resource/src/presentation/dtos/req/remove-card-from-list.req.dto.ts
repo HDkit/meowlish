@@ -3,8 +3,8 @@ import { IsString } from 'class-validator';
 
 export class RemoveCardFromListReqDto implements resource.RemoveCardFromListRequest {
 	@IsString()
-	listId!: string | undefined;
+	listId!: string;
 
 	@IsString()
-	flashCardId!: string | undefined;
+	flashCardId!: string;
 }

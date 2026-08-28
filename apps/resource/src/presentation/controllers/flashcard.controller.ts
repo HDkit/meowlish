@@ -22,7 +22,7 @@ export class FlashcardController implements resource.FlashCardServiceController 
 	}
 
 	async getFlashCard(@Payload() data: GetFlashCardReqDto): Promise<resource.FlashCardResponse> {
-		return this.flashcardService.getFlashCard(data.id as string);
+		return this.flashcardService.getFlashCard(data.id);
 	}
 
 	async updateFlashCard(
@@ -32,7 +32,7 @@ export class FlashcardController implements resource.FlashCardServiceController 
 	}
 
 	async deleteFlashCard(@Payload() data: DeleteFlashCardReqDto): Promise<void> {
-		await this.flashcardService.deleteFlashCard(data.id as string);
+		await this.flashcardService.deleteFlashCard(data.id);
 	}
 
 	async listFlashCards(

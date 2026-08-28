@@ -5,22 +5,22 @@ import { IsOptional, IsString } from 'class-validator';
 export class CreateNotificationDto implements notification.CreateNotificationRequest {
 	@IsString()
 	@ApiProperty()
-	recipientId!: string | undefined;
+	recipientId!: string;
 
 	@IsString()
 	@ApiProperty()
-	type!: string | undefined;
+	type!: string;
 
 	@IsString()
 	@ApiProperty()
-	title!: string | undefined;
+	title!: string;
 
 	@IsString()
 	@ApiProperty()
-	message!: string | undefined;
+	message!: string;
 
 	@IsOptional()
 	@IsString()
 	@ApiPropertyOptional()
-	data?: string | undefined;
+	data?: string;
 }

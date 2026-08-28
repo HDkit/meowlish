@@ -3,8 +3,8 @@ import { IsString } from 'class-validator';
 
 export class RemoveFileFromReportReqDto implements resource.RemoveFileFromReportRequest {
 	@IsString()
-	reportId!: string | undefined;
+	reportId!: string;
 
 	@IsString()
-	fileId!: string | undefined;
+	fileId!: string;
 }

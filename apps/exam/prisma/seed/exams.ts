@@ -746,7 +746,7 @@ Discuss both these views and give your own opinion. Give reasons for your answer
 		try {
 			await prisma.exam.create({ data: exam });
 		} catch (e: any) {
-			if (e.code === 'P2002') {
+			if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
 				console.warn(`Exam "${exam.title}" (id: ${exam.id}) already exists, skipping.`);
 			} else {
 				throw e;

@@ -20,7 +20,7 @@ export class BlogController implements resource.BlogServiceController {
 	}
 
 	async getBlog(@Payload() data: GetBlogReqDto): Promise<resource.BlogResponse> {
-		return this.blogService.getBlog(data.id as string);
+		return this.blogService.getBlog(data.id);
 	}
 
 	async updateBlog(@Payload() data: UpdateBlogReqDto): Promise<resource.BlogResponse> {
@@ -28,7 +28,7 @@ export class BlogController implements resource.BlogServiceController {
 	}
 
 	async deleteBlog(@Payload() data: DeleteBlogReqDto): Promise<void> {
-		await this.blogService.deleteBlog(data.id as string);
+		await this.blogService.deleteBlog(data.id);
 	}
 
 	async listBlogs(@Payload() data: ListBlogsReqDto): Promise<resource.ListBlogsResponse> {

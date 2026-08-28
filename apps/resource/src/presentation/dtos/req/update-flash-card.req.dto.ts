@@ -3,27 +3,27 @@ import { IsArray, IsOptional, IsString } from 'class-validator';
 
 export class UpdateFlashCardReqDto implements resource.UpdateFlashCardRequest {
 	@IsString()
-	id!: string | undefined;
+	id!: string;
 
 	@IsOptional()
 	@IsString()
-	word?: string | undefined;
+	word?: string;
 
 	@IsOptional()
 	@IsString()
-	definition?: string | undefined;
+	definition?: string;
 
 	@IsOptional()
 	@IsString()
-	image?: string | undefined;
+	image?: string;
 
 	@IsOptional()
 	@IsString()
-	partOfSpeech?: string | undefined;
+	partOfSpeech?: string;
 
 	@IsOptional()
 	@IsString()
-	pronunciation?: string | undefined;
+	pronunciation?: string;
 
 	@IsArray()
 	@IsString({ each: true })
@@ -31,7 +31,7 @@ export class UpdateFlashCardReqDto implements resource.UpdateFlashCardRequest {
 
 	@IsOptional()
 	@IsString()
-	notes?: string | undefined;
+	notes?: string;
 
 	@IsArray()
 	@IsString({ each: true })

@@ -23,7 +23,7 @@ async function main() {
 				'3a2fbb54-984f-4318-bff0-218dc2a9f12c',
 			];
 
-	const notifications = userIds.flatMap((recipientId, i) => [
+	const notifications = userIds.flatMap(recipientId => [
 		{
 			recipientId: recipientId,
 			type: 'system',

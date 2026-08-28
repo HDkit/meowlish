@@ -50,7 +50,7 @@ export class BlogService {
 				{ persistent: true },
 			);
 		} catch (e) {
-			this.logger.error(`Failed to publish resource.resource.created event: ${e}`);
+			this.logger.error(`Failed to publish resource.resource.created event: ${e as string}`);
 		}
 
 		return this.mapToResponse(created);
@@ -95,7 +95,7 @@ export class BlogService {
 				{ persistent: true },
 			);
 		} catch (e) {
-			this.logger.error(`Failed to publish resource.resource.deleted event: ${e}`);
+			this.logger.error(`Failed to publish resource.resource.deleted event: ${e as string}`);
 		}
 	}
 

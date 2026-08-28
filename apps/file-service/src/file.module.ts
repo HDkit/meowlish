@@ -19,6 +19,7 @@ import { PrismaClient } from '@prisma-client/file';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { LoggerModule } from '@server/logger';
 import {
+	GlobalClassSerializerInterceptor,
 	GlobalRmqExceptionFilter,
 	GlobalRpcExceptionFilter,
 	GlobalValidationPipe,
@@ -78,6 +79,10 @@ import { NestMinioModule } from 'nestjs-minio';
 		{
 			provide: APP_PIPE,
 			useClass: GlobalValidationPipe,
+		},
+		{
+			provide: APP_INTERCEPTOR,
+			useClass: GlobalClassSerializerInterceptor,
 		},
 	],
 })

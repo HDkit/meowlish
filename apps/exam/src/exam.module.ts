@@ -53,6 +53,7 @@ import { file } from '@server/generated';
 import { LoggerModule } from '@server/logger';
 import {
 	ErrorHandlingGrpcProxy,
+	GlobalClassSerializerInterceptor,
 	GlobalRmqExceptionFilter,
 	GlobalRpcExceptionFilter,
 } from '@server/utils';
@@ -167,6 +168,10 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 		{
 			provide: APP_PIPE,
 			useClass: GlobalValidationPipe,
+		},
+		{
+			provide: APP_INTERCEPTOR,
+			useClass: GlobalClassSerializerInterceptor,
 		},
 	],
 })

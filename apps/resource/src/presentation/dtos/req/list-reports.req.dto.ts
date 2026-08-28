@@ -5,33 +5,33 @@ import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 export class ListReportsReqDto implements resource.ListReportsRequest {
 	@IsOptional()
 	@IsString()
-	reportedBy?: string | undefined;
+	reportedBy?: string;
 
 	@IsOptional()
 	@IsString()
-	type?: string | undefined;
+	type?: string;
 
 	@IsOptional()
 	@IsString()
-	status?: string | undefined;
+	status?: string;
 
 	@IsOptional()
 	@IsString()
-	targetType?: string | undefined;
+	targetType?: string;
 
 	@IsOptional()
 	@IsString()
-	targetId?: string | undefined;
+	targetId?: string;
 
 	@Type(() => Number)
 	@IsInt()
 	@IsOptional()
 	@Min(1)
-	page?: number | undefined;
+	page?: number;
 
 	@Type(() => Number)
 	@IsInt()
 	@IsOptional()
 	@Min(1)
-	limit?: number | undefined;
+	limit?: number;
 }
