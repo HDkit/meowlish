@@ -22,16 +22,18 @@ import { IManagementReadRepositoryToken } from './domain/repositories/management
 import { IPracticeReadRepositoryToken } from './domain/repositories/practice.read.repository';
 import { IQuestionRepositoryToken } from './domain/repositories/question.repository';
 import { ISectionRepositoryToken } from './domain/repositories/section.repository';
+import { ITagReadRepositoryToken } from './domain/repositories/tag.read.repository';
 import { ITagRepositoryToken } from './domain/repositories/tag.repository';
-import { AttemptPrismaRepository } from './infra/repositories/attempt.prisma.repository.impl';
-import { ExamPrismaRepository } from './infra/repositories/exam.prisma.repository.impl';
+import { AttemptPrismaRepositoryImpl } from './infra/repositories/attempt.prisma.repository.impl';
+import { ExamPrismaRepositoryImpl } from './infra/repositories/exam.prisma.repository.impl';
 import { FilePrismaRepositoryImpl } from './infra/repositories/file.prisma.repository.impl';
 import { GoalPrismaRepositoryImpl } from './infra/repositories/goal.prisma.repository.impl';
 import { ManagementPrismaRepositoryImpl } from './infra/repositories/management.read.prisma.repository.impl';
 import { PracticeReadPrismaRepositoryImpl } from './infra/repositories/practice.read.prisma.repository.impl';
-import { QuestionPrismaRepository } from './infra/repositories/question.prisma.repository.impl';
-import { SectionPrismaRepository } from './infra/repositories/section.prisma.repository.impl';
-import { TagPrismaRepository } from './infra/repositories/tag.prisma.repository.impl';
+import { QuestionPrismaRepositoryImpl } from './infra/repositories/question.prisma.repository.impl';
+import { SectionPrismaRepositoryImpl } from './infra/repositories/section.prisma.repository.impl';
+import { TagPrismaRepositoryImpl } from './infra/repositories/tag.prisma.repository.impl';
+import { TagReadPrismaRepositoryImpl } from './infra/repositories/tag.read.prisma.repository.impl';
 import { ExamManagementController } from './presentation/controllers/exam-management.controller';
 import { ExamPracticeController } from './presentation/controllers/exam-practice.controller';
 import { GoalController } from './presentation/controllers/goal.controller';
@@ -50,11 +52,12 @@ import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { file } from '@server/generated';
 import { LoggerModule } from '@server/logger';
 import {
-	Any2RpcExceptionFilter,
 	ErrorHandlingGrpcProxy,
 	GlobalClassSerializerInterceptor,
+	GlobalRmqExceptionFilter,
+	GlobalRpcExceptionFilter,
 } from '@server/utils';
-import { Http2gRPCExceptionFilter } from '@server/utils';
+import '@server/utils';
 import { GlobalValidationPipe } from '@server/utils';
 import { ClsGuard, ClsModule } from 'nestjs-cls';
 
@@ -112,23 +115,23 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 		},
 		{
 			provide: IExamRepositoryToken,
-			useClass: ExamPrismaRepository,
+			useClass: ExamPrismaRepositoryImpl,
 		},
 		{
 			provide: ISectionRepositoryToken,
-			useClass: SectionPrismaRepository,
+			useClass: SectionPrismaRepositoryImpl,
 		},
 		{
 			provide: IQuestionRepositoryToken,
-			useClass: QuestionPrismaRepository,
+			useClass: QuestionPrismaRepositoryImpl,
 		},
 		{
 			provide: IAttemptRepositoryToken,
-			useClass: AttemptPrismaRepository,
+			useClass: AttemptPrismaRepositoryImpl,
 		},
 		{
 			provide: ITagRepositoryToken,
-			useClass: TagPrismaRepository,
+			useClass: TagPrismaRepositoryImpl,
 		},
 		{
 			provide: IFileRepositoryToken,
@@ -147,16 +150,20 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 			useClass: ManagementPrismaRepositoryImpl,
 		},
 		{
+			provide: ITagReadRepositoryToken,
+			useClass: TagReadPrismaRepositoryImpl,
+		},
+		{
+			provide: APP_FILTER,
+			useClass: GlobalRpcExceptionFilter,
+		},
+		{
+			provide: APP_FILTER,
+			useClass: GlobalRmqExceptionFilter,
+		},
+		{
 			provide: APP_GUARD,
 			useClass: ClsGuard,
-		},
-		{
-			provide: APP_FILTER,
-			useClass: Any2RpcExceptionFilter,
-		},
-		{
-			provide: APP_FILTER,
-			useClass: Http2gRPCExceptionFilter,
 		},
 		{
 			provide: APP_PIPE,

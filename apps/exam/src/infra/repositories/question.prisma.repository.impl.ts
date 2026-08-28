@@ -80,7 +80,7 @@ class QuestionPrismaMapper {
 }
 
 @Injectable()
-export class QuestionPrismaRepository implements IQuestionRepository {
+export class QuestionPrismaRepositoryImpl implements IQuestionRepository {
 	constructor(private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>) {}
 
 	async findOne(id: string): Promise<Question | null> {

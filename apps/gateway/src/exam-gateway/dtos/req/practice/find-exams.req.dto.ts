@@ -22,7 +22,7 @@ class FilterOptionsDto {
 	@IsOptional()
 	@IsString({ each: true })
 	@ApiPropertyOptional({ type: [String] })
-	tags!: string[];
+	tags: string[] = [];
 }
 
 class SortOptionsDto {

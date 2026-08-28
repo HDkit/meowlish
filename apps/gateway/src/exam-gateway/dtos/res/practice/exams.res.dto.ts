@@ -39,5 +39,9 @@ export class ExamsInfoDto {
 
 	@Expose()
 	@ApiProperty()
-	cursor!: string;
+	nextCursor!: string;
+
+	@Expose()
+	@ApiProperty()
+	prevCursor!: string;
 }

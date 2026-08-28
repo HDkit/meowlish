@@ -8,11 +8,22 @@ import { PrismaClient } from '@prisma-client/exam';
 export class FilePrismaRepositoryImpl implements IFileRepository {
 	constructor(private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>) {}
 
-	async getAndRemoveDeletedFileIds(): Promise<string[]> {
-		return await this.txHost.withTransaction(async (): Promise<string[]> => {
-			const fileIds = (await this.txHost.tx.deletedFile.findMany()).map(f => f.fileId);
-			await this.txHost.tx.deletedFile.deleteMany({ where: { fileId: { in: fileIds } } });
-			return fileIds;
+	async getAndRemoveDeletedFileIds(limit = 100): Promise<{ id: string; count: number }[]> {
+		return this.txHost.withTransaction(async () => {
+			const rows = await this.txHost.tx.$queryRaw<{ id: string; count: number }[]>`
+			DELETE FROM deleted_files
+			WHERE file_id IN (
+				SELECT file_id
+				FROM deleted_files
+				FOR UPDATE SKIP LOCKED
+				LIMIT ${limit}
+			)
+			RETURNING
+				file_id AS id,
+				count;
+		`;
+
+			return rows;
 		});
 	}
 }

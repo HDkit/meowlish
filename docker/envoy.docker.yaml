@@ -1,0 +1,15 @@
+services:
+  envoy:
+    build: .
+    ports:
+      - "8082:8082"
+      - "9902:9902"
+    volumes:
+      - ./envoy.yaml:/tmpl/envoy.yaml
+    environment:
+      - BACKEND_PORT=1511
+    command: >
+      sh -c 'envsubst < /tmpl/envoy.yaml > /tmp/envoy.yaml
+      && envoy -c /tmp/envoy.yaml'
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

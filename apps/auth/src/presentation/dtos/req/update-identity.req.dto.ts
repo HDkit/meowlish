@@ -21,6 +21,10 @@ export class UpdateIdentityDto implements auth.UpdateIdentityDto {
 	@IsString()
 	avatarId?: string;
 
+	@IsOptional()
+	@IsString()
+	phoneNumber?: string;
+
 	@IsBoolean()
 	@IsOptional()
 	setFullNameNull?: boolean;
@@ -32,4 +36,8 @@ export class UpdateIdentityDto implements auth.UpdateIdentityDto {
 	@IsBoolean()
 	@IsOptional()
 	setAvatarIdNull?: boolean;
+
+	@IsBoolean()
+	@IsOptional()
+	setPhoneNumberNull?: boolean;
 }

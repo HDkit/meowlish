@@ -21,6 +21,7 @@ model QuestionFile {
 
 model DeletedFile {
   fileId String @id @map("file_id")
+  count  Int    @default(1)
 
   @@map("deleted_files")
 }

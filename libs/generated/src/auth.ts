@@ -10,7 +10,7 @@ import type { handleUnaryCall, Metadata, UntypedServiceImplementation } from "@g
 import { GrpcMethod, GrpcStreamMethod } from "@nestjs/microservices";
 import { Observable } from "rxjs";
 import { Empty } from "./google/protobuf/empty";
-import { BoolValue, Int32Value, StringValue } from "./google/protobuf/wrappers";
+import { BoolValue, Int32Value, Int64Value, StringValue } from "./google/protobuf/wrappers";
 
 /** Request */
 export interface RegisterMailDto {
@@ -82,6 +82,8 @@ export interface UpdateIdentityDto {
   setBioNull?: boolean | undefined;
   avatarId?: string | undefined;
   setAvatarIdNull?: boolean | undefined;
+  phoneNumber?: string | undefined;
+  setPhoneNumberNull?: boolean | undefined;
 }
 
 export interface AssignRoleToDto {
@@ -101,11 +103,19 @@ export interface FindIdentityIdsDto {
 }
 
 export interface FindIdentitiesDto {
-  usernameOrCredIdentifier?: string | undefined;
+  usernameOrCredIdentifierOrId?: string | undefined;
   hasRoles: string[];
   hasPerms: string[];
   cursor?: string | undefined;
   limit?: number | undefined;
+}
+
+export interface HydrateIdentitiesDto {
+  identityIds: string[];
+}
+
+export interface HydrateIdentityDto {
+  identityId: string | undefined;
 }
 
 /** Response */
@@ -118,6 +128,8 @@ export interface Identity {
   id: string;
   username: string;
   roles: string[];
+  phoneNumber?: string | undefined;
+  isLocked: boolean;
 }
 
 export interface Role {
@@ -142,12 +154,14 @@ export interface PermList {
 
 export interface IdentityIds {
   ids: string[];
-  cursor: string;
+  nextCursor: string;
+  prevCursor: string;
 }
 
 export interface Identities {
   identities: Identities_Identity[];
-  cursor: string;
+  nextCursor: string;
+  prevCursor: string;
 }
 
 export interface Identities_Identity {
@@ -155,9 +169,25 @@ export interface Identities_Identity {
   username: string;
   fullName?: string | undefined;
   bio?: string | undefined;
-  avatarId?: string | undefined;
+  avatarUrl?: string | undefined;
   roles: string[];
   permissions: string[];
+  phoneNumber?: string | undefined;
+  isLocked: boolean;
+}
+
+export interface HydratedIdentities {
+  identities: HydratedIdentities_HydratedIdentity[];
+}
+
+export interface HydratedIdentities_HydratedIdentity {
+  id: string;
+  username: string;
+  fullName?: string | undefined;
+  bio?: string | undefined;
+  avatarUrl?: string | undefined;
+  phoneNumber?: string | undefined;
+  roles: string[];
 }
 
 export interface Credentials {
@@ -167,6 +197,51 @@ export interface Credentials {
 export interface Credentials_Credential {
   id: string;
   type: string;
+}
+
+/** Lock/Unlock */
+export interface LockIdentityDto {
+  identityId: string | undefined;
+  lockedBy: string | undefined;
+}
+
+export interface UnlockIdentityDto {
+  identityId: string | undefined;
+}
+
+/** Phone search */
+export interface FindIdentitiesByPhoneDto {
+  phoneNumber: string | undefined;
+  cursor?: string | undefined;
+  limit?: number | undefined;
+}
+
+/** Google Calendar */
+export interface ConnectGoogleCalendarDto {
+  identityId: string | undefined;
+  accessToken: string | undefined;
+  refreshToken: string | undefined;
+  expiresAt: number | undefined;
+  scopes: string | undefined;
+}
+
+export interface DisconnectGoogleCalendarDto {
+  identityId: string | undefined;
+}
+
+export interface GetGoogleCalendarTokenDto {
+  identityId: string | undefined;
+}
+
+export interface RefreshGoogleCalendarTokenDto {
+  identityId: string | undefined;
+}
+
+export interface GoogleCalendarTokenResponse {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+  scopes: string;
 }
 
 function createBaseRegisterMailDto(): RegisterMailDto {
@@ -775,6 +850,12 @@ export const UpdateIdentityDto: MessageFns<UpdateIdentityDto> = {
     if (message.setAvatarIdNull !== undefined) {
       BoolValue.encode({ value: message.setAvatarIdNull! }, writer.uint32(66).fork()).join();
     }
+    if (message.phoneNumber !== undefined) {
+      StringValue.encode({ value: message.phoneNumber! }, writer.uint32(74).fork()).join();
+    }
+    if (message.setPhoneNumberNull !== undefined) {
+      BoolValue.encode({ value: message.setPhoneNumberNull! }, writer.uint32(82).fork()).join();
+    }
     return writer;
   },
 
@@ -847,6 +928,22 @@ export const UpdateIdentityDto: MessageFns<UpdateIdentityDto> = {
           }
 
           message.setAvatarIdNull = BoolValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
+
+          message.phoneNumber = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 10: {
+          if (tag !== 82) {
+            break;
+          }
+
+          message.setPhoneNumberNull = BoolValue.decode(reader, reader.uint32()).value;
           continue;
         }
       }
@@ -1020,8 +1117,8 @@ function createBaseFindIdentitiesDto(): FindIdentitiesDto {
 
 export const FindIdentitiesDto: MessageFns<FindIdentitiesDto> = {
   encode(message: FindIdentitiesDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.usernameOrCredIdentifier !== undefined) {
-      StringValue.encode({ value: message.usernameOrCredIdentifier! }, writer.uint32(10).fork()).join();
+    if (message.usernameOrCredIdentifierOrId !== undefined) {
+      StringValue.encode({ value: message.usernameOrCredIdentifierOrId! }, writer.uint32(10).fork()).join();
     }
     for (const v of message.hasRoles) {
       StringValue.encode({ value: v!! }, writer.uint32(18).fork()).join();
@@ -1050,7 +1147,7 @@ export const FindIdentitiesDto: MessageFns<FindIdentitiesDto> = {
             break;
           }
 
-          message.usernameOrCredIdentifier = StringValue.decode(reader, reader.uint32()).value;
+          message.usernameOrCredIdentifierOrId = StringValue.decode(reader, reader.uint32()).value;
           continue;
         }
         case 2: {
@@ -1083,6 +1180,80 @@ export const FindIdentitiesDto: MessageFns<FindIdentitiesDto> = {
           }
 
           message.limit = Int32Value.decode(reader, reader.uint32()).value;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseHydrateIdentitiesDto(): HydrateIdentitiesDto {
+  return { identityIds: [] };
+}
+
+export const HydrateIdentitiesDto: MessageFns<HydrateIdentitiesDto> = {
+  encode(message: HydrateIdentitiesDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.identityIds) {
+      StringValue.encode({ value: v!! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): HydrateIdentitiesDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseHydrateIdentitiesDto();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.identityIds.push(StringValue.decode(reader, reader.uint32()).value);
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseHydrateIdentityDto(): HydrateIdentityDto {
+  return { identityId: undefined };
+}
+
+export const HydrateIdentityDto: MessageFns<HydrateIdentityDto> = {
+  encode(message: HydrateIdentityDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.identityId !== undefined) {
+      StringValue.encode({ value: message.identityId! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): HydrateIdentityDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseHydrateIdentityDto();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.identityId = StringValue.decode(reader, reader.uint32()).value;
           continue;
         }
       }
@@ -1144,7 +1315,7 @@ export const Tokens: MessageFns<Tokens> = {
 };
 
 function createBaseIdentity(): Identity {
-  return { id: "", username: "", roles: [] };
+  return { id: "", username: "", roles: [], isLocked: false };
 }
 
 export const Identity: MessageFns<Identity> = {
@@ -1157,6 +1328,12 @@ export const Identity: MessageFns<Identity> = {
     }
     for (const v of message.roles) {
       writer.uint32(26).string(v!);
+    }
+    if (message.phoneNumber !== undefined) {
+      writer.uint32(34).string(message.phoneNumber);
+    }
+    if (message.isLocked !== false) {
+      writer.uint32(40).bool(message.isLocked);
     }
     return writer;
   },
@@ -1190,6 +1367,22 @@ export const Identity: MessageFns<Identity> = {
           }
 
           message.roles.push(reader.string());
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.phoneNumber = reader.string();
+          continue;
+        }
+        case 5: {
+          if (tag !== 40) {
+            break;
+          }
+
+          message.isLocked = reader.bool();
           continue;
         }
       }
@@ -1395,7 +1588,7 @@ export const PermList: MessageFns<PermList> = {
 };
 
 function createBaseIdentityIds(): IdentityIds {
-  return { ids: [], cursor: "" };
+  return { ids: [], nextCursor: "", prevCursor: "" };
 }
 
 export const IdentityIds: MessageFns<IdentityIds> = {
@@ -1403,8 +1596,11 @@ export const IdentityIds: MessageFns<IdentityIds> = {
     for (const v of message.ids) {
       writer.uint32(10).string(v!);
     }
-    if (message.cursor !== "") {
-      writer.uint32(18).string(message.cursor);
+    if (message.nextCursor !== "") {
+      writer.uint32(18).string(message.nextCursor);
+    }
+    if (message.prevCursor !== "") {
+      writer.uint32(26).string(message.prevCursor);
     }
     return writer;
   },
@@ -1429,7 +1625,15 @@ export const IdentityIds: MessageFns<IdentityIds> = {
             break;
           }
 
-          message.cursor = reader.string();
+          message.nextCursor = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.prevCursor = reader.string();
           continue;
         }
       }
@@ -1443,7 +1647,7 @@ export const IdentityIds: MessageFns<IdentityIds> = {
 };
 
 function createBaseIdentities(): Identities {
-  return { identities: [], cursor: "" };
+  return { identities: [], nextCursor: "", prevCursor: "" };
 }
 
 export const Identities: MessageFns<Identities> = {
@@ -1451,8 +1655,11 @@ export const Identities: MessageFns<Identities> = {
     for (const v of message.identities) {
       Identities_Identity.encode(v!, writer.uint32(10).fork()).join();
     }
-    if (message.cursor !== "") {
-      writer.uint32(18).string(message.cursor);
+    if (message.nextCursor !== "") {
+      writer.uint32(18).string(message.nextCursor);
+    }
+    if (message.prevCursor !== "") {
+      writer.uint32(26).string(message.prevCursor);
     }
     return writer;
   },
@@ -1477,7 +1684,15 @@ export const Identities: MessageFns<Identities> = {
             break;
           }
 
-          message.cursor = reader.string();
+          message.nextCursor = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.prevCursor = reader.string();
           continue;
         }
       }
@@ -1491,7 +1706,7 @@ export const Identities: MessageFns<Identities> = {
 };
 
 function createBaseIdentities_Identity(): Identities_Identity {
-  return { id: "", username: "", roles: [], permissions: [] };
+  return { id: "", username: "", roles: [], permissions: [], isLocked: false };
 }
 
 export const Identities_Identity: MessageFns<Identities_Identity> = {
@@ -1508,14 +1723,20 @@ export const Identities_Identity: MessageFns<Identities_Identity> = {
     if (message.bio !== undefined) {
       writer.uint32(34).string(message.bio);
     }
-    if (message.avatarId !== undefined) {
-      writer.uint32(42).string(message.avatarId);
+    if (message.avatarUrl !== undefined) {
+      writer.uint32(42).string(message.avatarUrl);
     }
     for (const v of message.roles) {
       writer.uint32(50).string(v!);
     }
     for (const v of message.permissions) {
       writer.uint32(58).string(v!);
+    }
+    if (message.phoneNumber !== undefined) {
+      writer.uint32(66).string(message.phoneNumber);
+    }
+    if (message.isLocked !== false) {
+      writer.uint32(72).bool(message.isLocked);
     }
     return writer;
   },
@@ -1564,7 +1785,7 @@ export const Identities_Identity: MessageFns<Identities_Identity> = {
             break;
           }
 
-          message.avatarId = reader.string();
+          message.avatarUrl = reader.string();
           continue;
         }
         case 6: {
@@ -1581,6 +1802,162 @@ export const Identities_Identity: MessageFns<Identities_Identity> = {
           }
 
           message.permissions.push(reader.string());
+          continue;
+        }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
+
+          message.phoneNumber = reader.string();
+          continue;
+        }
+        case 9: {
+          if (tag !== 72) {
+            break;
+          }
+
+          message.isLocked = reader.bool();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseHydratedIdentities(): HydratedIdentities {
+  return { identities: [] };
+}
+
+export const HydratedIdentities: MessageFns<HydratedIdentities> = {
+  encode(message: HydratedIdentities, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.identities) {
+      HydratedIdentities_HydratedIdentity.encode(v!, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): HydratedIdentities {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseHydratedIdentities();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.identities.push(HydratedIdentities_HydratedIdentity.decode(reader, reader.uint32()));
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseHydratedIdentities_HydratedIdentity(): HydratedIdentities_HydratedIdentity {
+  return { id: "", username: "", roles: [] };
+}
+
+export const HydratedIdentities_HydratedIdentity: MessageFns<HydratedIdentities_HydratedIdentity> = {
+  encode(message: HydratedIdentities_HydratedIdentity, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.username !== "") {
+      writer.uint32(18).string(message.username);
+    }
+    if (message.fullName !== undefined) {
+      writer.uint32(26).string(message.fullName);
+    }
+    if (message.bio !== undefined) {
+      writer.uint32(34).string(message.bio);
+    }
+    if (message.avatarUrl !== undefined) {
+      writer.uint32(42).string(message.avatarUrl);
+    }
+    if (message.phoneNumber !== undefined) {
+      writer.uint32(50).string(message.phoneNumber);
+    }
+    for (const v of message.roles) {
+      writer.uint32(58).string(v!);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): HydratedIdentities_HydratedIdentity {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseHydratedIdentities_HydratedIdentity();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.id = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.username = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.fullName = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.bio = reader.string();
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.avatarUrl = reader.string();
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.phoneNumber = reader.string();
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.roles.push(reader.string());
           continue;
         }
       }
@@ -1678,6 +2055,418 @@ export const Credentials_Credential: MessageFns<Credentials_Credential> = {
   },
 };
 
+function createBaseLockIdentityDto(): LockIdentityDto {
+  return { identityId: undefined, lockedBy: undefined };
+}
+
+export const LockIdentityDto: MessageFns<LockIdentityDto> = {
+  encode(message: LockIdentityDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.identityId !== undefined) {
+      StringValue.encode({ value: message.identityId! }, writer.uint32(10).fork()).join();
+    }
+    if (message.lockedBy !== undefined) {
+      StringValue.encode({ value: message.lockedBy! }, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): LockIdentityDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseLockIdentityDto();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.identityId = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.lockedBy = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseUnlockIdentityDto(): UnlockIdentityDto {
+  return { identityId: undefined };
+}
+
+export const UnlockIdentityDto: MessageFns<UnlockIdentityDto> = {
+  encode(message: UnlockIdentityDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.identityId !== undefined) {
+      StringValue.encode({ value: message.identityId! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UnlockIdentityDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseUnlockIdentityDto();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.identityId = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseFindIdentitiesByPhoneDto(): FindIdentitiesByPhoneDto {
+  return { phoneNumber: undefined };
+}
+
+export const FindIdentitiesByPhoneDto: MessageFns<FindIdentitiesByPhoneDto> = {
+  encode(message: FindIdentitiesByPhoneDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.phoneNumber !== undefined) {
+      StringValue.encode({ value: message.phoneNumber! }, writer.uint32(10).fork()).join();
+    }
+    if (message.cursor !== undefined) {
+      StringValue.encode({ value: message.cursor! }, writer.uint32(18).fork()).join();
+    }
+    if (message.limit !== undefined) {
+      Int32Value.encode({ value: message.limit! }, writer.uint32(26).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): FindIdentitiesByPhoneDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseFindIdentitiesByPhoneDto();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.phoneNumber = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.cursor = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.limit = Int32Value.decode(reader, reader.uint32()).value;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseConnectGoogleCalendarDto(): ConnectGoogleCalendarDto {
+  return {
+    identityId: undefined,
+    accessToken: undefined,
+    refreshToken: undefined,
+    expiresAt: undefined,
+    scopes: undefined,
+  };
+}
+
+export const ConnectGoogleCalendarDto: MessageFns<ConnectGoogleCalendarDto> = {
+  encode(message: ConnectGoogleCalendarDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.identityId !== undefined) {
+      StringValue.encode({ value: message.identityId! }, writer.uint32(10).fork()).join();
+    }
+    if (message.accessToken !== undefined) {
+      StringValue.encode({ value: message.accessToken! }, writer.uint32(18).fork()).join();
+    }
+    if (message.refreshToken !== undefined) {
+      StringValue.encode({ value: message.refreshToken! }, writer.uint32(26).fork()).join();
+    }
+    if (message.expiresAt !== undefined) {
+      Int64Value.encode({ value: message.expiresAt! }, writer.uint32(34).fork()).join();
+    }
+    if (message.scopes !== undefined) {
+      StringValue.encode({ value: message.scopes! }, writer.uint32(42).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ConnectGoogleCalendarDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseConnectGoogleCalendarDto();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.identityId = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.accessToken = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.refreshToken = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.expiresAt = Int64Value.decode(reader, reader.uint32()).value;
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.scopes = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseDisconnectGoogleCalendarDto(): DisconnectGoogleCalendarDto {
+  return { identityId: undefined };
+}
+
+export const DisconnectGoogleCalendarDto: MessageFns<DisconnectGoogleCalendarDto> = {
+  encode(message: DisconnectGoogleCalendarDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.identityId !== undefined) {
+      StringValue.encode({ value: message.identityId! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): DisconnectGoogleCalendarDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDisconnectGoogleCalendarDto();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.identityId = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseGetGoogleCalendarTokenDto(): GetGoogleCalendarTokenDto {
+  return { identityId: undefined };
+}
+
+export const GetGoogleCalendarTokenDto: MessageFns<GetGoogleCalendarTokenDto> = {
+  encode(message: GetGoogleCalendarTokenDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.identityId !== undefined) {
+      StringValue.encode({ value: message.identityId! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetGoogleCalendarTokenDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGetGoogleCalendarTokenDto();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.identityId = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseRefreshGoogleCalendarTokenDto(): RefreshGoogleCalendarTokenDto {
+  return { identityId: undefined };
+}
+
+export const RefreshGoogleCalendarTokenDto: MessageFns<RefreshGoogleCalendarTokenDto> = {
+  encode(message: RefreshGoogleCalendarTokenDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.identityId !== undefined) {
+      StringValue.encode({ value: message.identityId! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RefreshGoogleCalendarTokenDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRefreshGoogleCalendarTokenDto();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.identityId = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseGoogleCalendarTokenResponse(): GoogleCalendarTokenResponse {
+  return { accessToken: "", refreshToken: "", expiresAt: 0, scopes: "" };
+}
+
+export const GoogleCalendarTokenResponse: MessageFns<GoogleCalendarTokenResponse> = {
+  encode(message: GoogleCalendarTokenResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.accessToken !== "") {
+      writer.uint32(10).string(message.accessToken);
+    }
+    if (message.refreshToken !== "") {
+      writer.uint32(18).string(message.refreshToken);
+    }
+    if (message.expiresAt !== 0) {
+      writer.uint32(24).int64(message.expiresAt);
+    }
+    if (message.scopes !== "") {
+      writer.uint32(34).string(message.scopes);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GoogleCalendarTokenResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGoogleCalendarTokenResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.accessToken = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.refreshToken = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.expiresAt = longToNumber(reader.int64());
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.scopes = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
 export interface AuthServiceClient {
   /** mail */
 
@@ -1725,11 +2514,42 @@ export interface AuthServiceClient {
 
   updateIdentity(request: UpdateIdentityDto, metadata?: Metadata): Observable<Empty>;
 
+  /** lock */
+
+  lockIdentity(request: LockIdentityDto, metadata?: Metadata): Observable<Empty>;
+
+  unlockIdentity(request: UnlockIdentityDto, metadata?: Metadata): Observable<Empty>;
+
+  /** google calendar */
+
+  connectGoogleCalendar(
+    request: ConnectGoogleCalendarDto,
+    metadata?: Metadata,
+  ): Observable<GoogleCalendarTokenResponse>;
+
+  disconnectGoogleCalendar(request: DisconnectGoogleCalendarDto, metadata?: Metadata): Observable<Empty>;
+
+  getGoogleCalendarToken(
+    request: GetGoogleCalendarTokenDto,
+    metadata?: Metadata,
+  ): Observable<GoogleCalendarTokenResponse>;
+
+  refreshGoogleCalendarToken(
+    request: RefreshGoogleCalendarTokenDto,
+    metadata?: Metadata,
+  ): Observable<GoogleCalendarTokenResponse>;
+
   /** qol */
 
   findIdentityIds(request: FindIdentityIdsDto, metadata?: Metadata): Observable<IdentityIds>;
 
   findIdentities(request: FindIdentitiesDto, metadata?: Metadata): Observable<Identities>;
+
+  findIdentitiesByPhone(request: FindIdentitiesByPhoneDto, metadata?: Metadata): Observable<Identities>;
+
+  hydrateIdentities(request: HydrateIdentitiesDto, metadata?: Metadata): Observable<HydratedIdentities>;
+
+  hydrateIdentity(request: HydrateIdentityDto, metadata?: Metadata): Observable<HydratedIdentities_HydratedIdentity>;
 }
 
 export interface AuthServiceController {
@@ -1785,6 +2605,31 @@ export interface AuthServiceController {
 
   updateIdentity(request: UpdateIdentityDto, metadata?: Metadata): void | Promise<void>;
 
+  /** lock */
+
+  lockIdentity(request: LockIdentityDto, metadata?: Metadata): void | Promise<void>;
+
+  unlockIdentity(request: UnlockIdentityDto, metadata?: Metadata): void | Promise<void>;
+
+  /** google calendar */
+
+  connectGoogleCalendar(
+    request: ConnectGoogleCalendarDto,
+    metadata?: Metadata,
+  ): Promise<GoogleCalendarTokenResponse> | Observable<GoogleCalendarTokenResponse> | GoogleCalendarTokenResponse;
+
+  disconnectGoogleCalendar(request: DisconnectGoogleCalendarDto, metadata?: Metadata): void | Promise<void>;
+
+  getGoogleCalendarToken(
+    request: GetGoogleCalendarTokenDto,
+    metadata?: Metadata,
+  ): Promise<GoogleCalendarTokenResponse> | Observable<GoogleCalendarTokenResponse> | GoogleCalendarTokenResponse;
+
+  refreshGoogleCalendarToken(
+    request: RefreshGoogleCalendarTokenDto,
+    metadata?: Metadata,
+  ): Promise<GoogleCalendarTokenResponse> | Observable<GoogleCalendarTokenResponse> | GoogleCalendarTokenResponse;
+
   /** qol */
 
   findIdentityIds(
@@ -1796,6 +2641,24 @@ export interface AuthServiceController {
     request: FindIdentitiesDto,
     metadata?: Metadata,
   ): Promise<Identities> | Observable<Identities> | Identities;
+
+  findIdentitiesByPhone(
+    request: FindIdentitiesByPhoneDto,
+    metadata?: Metadata,
+  ): Promise<Identities> | Observable<Identities> | Identities;
+
+  hydrateIdentities(
+    request: HydrateIdentitiesDto,
+    metadata?: Metadata,
+  ): Promise<HydratedIdentities> | Observable<HydratedIdentities> | HydratedIdentities;
+
+  hydrateIdentity(
+    request: HydrateIdentityDto,
+    metadata?: Metadata,
+  ):
+    | Promise<HydratedIdentities_HydratedIdentity>
+    | Observable<HydratedIdentities_HydratedIdentity>
+    | HydratedIdentities_HydratedIdentity;
 }
 
 export function AuthServiceControllerMethods() {
@@ -1818,8 +2681,17 @@ export function AuthServiceControllerMethods() {
       "assignRoleTo",
       "removeRoleFrom",
       "updateIdentity",
+      "lockIdentity",
+      "unlockIdentity",
+      "connectGoogleCalendar",
+      "disconnectGoogleCalendar",
+      "getGoogleCalendarToken",
+      "refreshGoogleCalendarToken",
       "findIdentityIds",
       "findIdentities",
+      "findIdentitiesByPhone",
+      "hydrateIdentities",
+      "hydrateIdentity",
     ];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
@@ -1998,6 +2870,69 @@ export const AuthServiceService = {
     responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
     responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
   },
+  /** lock */
+  lockIdentity: {
+    path: "/auth.AuthService/LockIdentity" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: LockIdentityDto): Buffer => Buffer.from(LockIdentityDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): LockIdentityDto => LockIdentityDto.decode(value),
+    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+  },
+  unlockIdentity: {
+    path: "/auth.AuthService/UnlockIdentity" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: UnlockIdentityDto): Buffer => Buffer.from(UnlockIdentityDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): UnlockIdentityDto => UnlockIdentityDto.decode(value),
+    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+  },
+  /** google calendar */
+  connectGoogleCalendar: {
+    path: "/auth.AuthService/ConnectGoogleCalendar" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: ConnectGoogleCalendarDto): Buffer =>
+      Buffer.from(ConnectGoogleCalendarDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ConnectGoogleCalendarDto => ConnectGoogleCalendarDto.decode(value),
+    responseSerialize: (value: GoogleCalendarTokenResponse): Buffer =>
+      Buffer.from(GoogleCalendarTokenResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): GoogleCalendarTokenResponse => GoogleCalendarTokenResponse.decode(value),
+  },
+  disconnectGoogleCalendar: {
+    path: "/auth.AuthService/DisconnectGoogleCalendar" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: DisconnectGoogleCalendarDto): Buffer =>
+      Buffer.from(DisconnectGoogleCalendarDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): DisconnectGoogleCalendarDto => DisconnectGoogleCalendarDto.decode(value),
+    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+  },
+  getGoogleCalendarToken: {
+    path: "/auth.AuthService/GetGoogleCalendarToken" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: GetGoogleCalendarTokenDto): Buffer =>
+      Buffer.from(GetGoogleCalendarTokenDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetGoogleCalendarTokenDto => GetGoogleCalendarTokenDto.decode(value),
+    responseSerialize: (value: GoogleCalendarTokenResponse): Buffer =>
+      Buffer.from(GoogleCalendarTokenResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): GoogleCalendarTokenResponse => GoogleCalendarTokenResponse.decode(value),
+  },
+  refreshGoogleCalendarToken: {
+    path: "/auth.AuthService/RefreshGoogleCalendarToken" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: RefreshGoogleCalendarTokenDto): Buffer =>
+      Buffer.from(RefreshGoogleCalendarTokenDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): RefreshGoogleCalendarTokenDto => RefreshGoogleCalendarTokenDto.decode(value),
+    responseSerialize: (value: GoogleCalendarTokenResponse): Buffer =>
+      Buffer.from(GoogleCalendarTokenResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): GoogleCalendarTokenResponse => GoogleCalendarTokenResponse.decode(value),
+  },
   /** qol */
   findIdentityIds: {
     path: "/auth.AuthService/FindIdentityIds" as const,
@@ -2016,6 +2951,36 @@ export const AuthServiceService = {
     requestDeserialize: (value: Buffer): FindIdentitiesDto => FindIdentitiesDto.decode(value),
     responseSerialize: (value: Identities): Buffer => Buffer.from(Identities.encode(value).finish()),
     responseDeserialize: (value: Buffer): Identities => Identities.decode(value),
+  },
+  findIdentitiesByPhone: {
+    path: "/auth.AuthService/FindIdentitiesByPhone" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: FindIdentitiesByPhoneDto): Buffer =>
+      Buffer.from(FindIdentitiesByPhoneDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): FindIdentitiesByPhoneDto => FindIdentitiesByPhoneDto.decode(value),
+    responseSerialize: (value: Identities): Buffer => Buffer.from(Identities.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Identities => Identities.decode(value),
+  },
+  hydrateIdentities: {
+    path: "/auth.AuthService/HydrateIdentities" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: HydrateIdentitiesDto): Buffer => Buffer.from(HydrateIdentitiesDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): HydrateIdentitiesDto => HydrateIdentitiesDto.decode(value),
+    responseSerialize: (value: HydratedIdentities): Buffer => Buffer.from(HydratedIdentities.encode(value).finish()),
+    responseDeserialize: (value: Buffer): HydratedIdentities => HydratedIdentities.decode(value),
+  },
+  hydrateIdentity: {
+    path: "/auth.AuthService/HydrateIdentity" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: HydrateIdentityDto): Buffer => Buffer.from(HydrateIdentityDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): HydrateIdentityDto => HydrateIdentityDto.decode(value),
+    responseSerialize: (value: HydratedIdentities_HydratedIdentity): Buffer =>
+      Buffer.from(HydratedIdentities_HydratedIdentity.encode(value).finish()),
+    responseDeserialize: (value: Buffer): HydratedIdentities_HydratedIdentity =>
+      HydratedIdentities_HydratedIdentity.decode(value),
   },
 } as const;
 
@@ -2043,9 +3008,31 @@ export interface AuthServiceServer extends UntypedServiceImplementation {
   removeRoleFrom: handleUnaryCall<RemoveRoleFromDto, Empty>;
   /** identity */
   updateIdentity: handleUnaryCall<UpdateIdentityDto, Empty>;
+  /** lock */
+  lockIdentity: handleUnaryCall<LockIdentityDto, Empty>;
+  unlockIdentity: handleUnaryCall<UnlockIdentityDto, Empty>;
+  /** google calendar */
+  connectGoogleCalendar: handleUnaryCall<ConnectGoogleCalendarDto, GoogleCalendarTokenResponse>;
+  disconnectGoogleCalendar: handleUnaryCall<DisconnectGoogleCalendarDto, Empty>;
+  getGoogleCalendarToken: handleUnaryCall<GetGoogleCalendarTokenDto, GoogleCalendarTokenResponse>;
+  refreshGoogleCalendarToken: handleUnaryCall<RefreshGoogleCalendarTokenDto, GoogleCalendarTokenResponse>;
   /** qol */
   findIdentityIds: handleUnaryCall<FindIdentityIdsDto, IdentityIds>;
   findIdentities: handleUnaryCall<FindIdentitiesDto, Identities>;
+  findIdentitiesByPhone: handleUnaryCall<FindIdentitiesByPhoneDto, Identities>;
+  hydrateIdentities: handleUnaryCall<HydrateIdentitiesDto, HydratedIdentities>;
+  hydrateIdentity: handleUnaryCall<HydrateIdentityDto, HydratedIdentities_HydratedIdentity>;
+}
+
+function longToNumber(int64: { toString(): string }): number {
+  const num = globalThis.Number(int64.toString());
+  if (num > globalThis.Number.MAX_SAFE_INTEGER) {
+    throw new globalThis.Error("Value is larger than Number.MAX_SAFE_INTEGER");
+  }
+  if (num < globalThis.Number.MIN_SAFE_INTEGER) {
+    throw new globalThis.Error("Value is smaller than Number.MIN_SAFE_INTEGER");
+  }
+  return num;
 }
 
 interface MessageFns<T> {

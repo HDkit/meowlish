@@ -144,7 +144,8 @@ export class FileService implements OnModuleInit {
 		const grouped = Object.groupBy(filesPrivacySettings, f => (f.isPublic ? 'public' : 'private'));
 		const idMap: Record<string, string> = {};
 		(grouped.public || []).forEach(f => {
-			idMap[f.id] = `${minioEnvs.host}:${minioEnvs.port}/${this.MINIO_PUBLIC_BUCKET_NAME}/${f.id}`;
+			idMap[f.id] =
+				`${minioEnvs.host}${minioEnvs.port ? `:${minioEnvs.port}` : ''}/${this.MINIO_PUBLIC_BUCKET_NAME}/${f.id}`;
 		});
 		await Promise.all(
 			(grouped.private || []).map(async f => {

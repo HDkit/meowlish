@@ -6,7 +6,7 @@ import {
 	GetUsersAttemptHistoryCursor,
 	GetUsersAttemptHistoryQuery,
 	GetUsersAttemptHistoryQueryResult,
-} from '../../practice/get-users-attempt-history.query';
+} from '../../practice/exam.get-users-attempt-history.query';
 import { Inject } from '@nestjs/common';
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { CursorPaginationHelper } from '@server/utils';
@@ -26,11 +26,14 @@ export class GetUsersAttemptHistoryHandler implements IQueryHandler<GetUsersAtte
 
 	async execute(query: GetUsersAttemptHistoryQuery): Promise<GetUsersAttemptHistoryQueryResult> {
 		const payload = query.payload;
-		const decodedCursor =
+		let decodedCursor =
 			payload.cursor ?
 				this.cursorPaginationHelper.decodeCursor<GetUsersAttemptHistoryCursor>(payload.cursor)
 			:	undefined;
 
+		// Invalidate cursor if payload and cursor uid is different
+		if (decodedCursor && decodedCursor?.uid && payload.uid && payload.uid !== decodedCursor.uid)
+			decodedCursor = undefined;
 		// cursor.uid has precedence
 		const inUseUserId = decodedCursor ? decodedCursor.uid : payload.uid;
 		// cursor.examId has precedence
@@ -39,22 +42,39 @@ export class GetUsersAttemptHistoryHandler implements IQueryHandler<GetUsersAtte
 		const inUseLimit = payload.limit ?? decodedCursor?.limit ?? 10;
 		// cursor.sortBy has precedence
 		const inUseSortBy = decodedCursor ? decodedCursor.sortBy : payload.sortBy;
+		const direction = decodedCursor?.direction ?? 1;
 
 		const attempts = await this.practiceReadRepository.getUsersAttemptHistory(inUseUserId, {
 			examId: inUseExamId,
 			lastId: decodedCursor?.lastId,
 			limit: inUseLimit,
 			sortBy: inUseSortBy,
+			direction: direction,
 		});
 
-		const encodedCursor = this.cursorPaginationHelper.encodeCursor<GetUsersAttemptHistoryCursor>({
-			lastId: attempts.at(-1)?.id,
-			uid: inUseUserId,
-			examId: inUseExamId,
-			limit: inUseLimit,
-			sortBy: inUseSortBy,
-		});
+		const encodedNextCursor =
+			this.cursorPaginationHelper.encodeCursor<GetUsersAttemptHistoryCursor>({
+				lastId: attempts.at(-1)?.id,
+				uid: inUseUserId,
+				examId: inUseExamId,
+				limit: inUseLimit,
+				sortBy: inUseSortBy,
+				direction: 1,
+			});
+		const encodedPrevCursor =
+			this.cursorPaginationHelper.encodeCursor<GetUsersAttemptHistoryCursor>({
+				lastId: attempts.at(0)?.id,
+				uid: inUseUserId,
+				examId: inUseExamId,
+				limit: inUseLimit,
+				sortBy: inUseSortBy,
+				direction: -1,
+			});
 
-		return { attempts: attempts, cursor: encodedCursor };
+		return {
+			attempts: attempts,
+			nextCursor: encodedNextCursor,
+			prevCursor: encodedPrevCursor,
+		};
 	}
 }

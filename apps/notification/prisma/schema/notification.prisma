@@ -1,0 +1,27 @@
+model Notification {
+  id          String    @id @default(uuid())
+  recipientId String    @map("recipient_id")
+  type        String
+  title       String
+  message     String
+  data        Json?
+  isRead      Boolean   @default(false) @map("is_read")
+  readAt      DateTime? @map("read_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([recipientId])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id                  String   @id @default(uuid())
+  identityId          String   @unique @map("identity_id")
+  emailEnabled        Boolean  @default(true) @map("email_enabled")
+  pushEnabled         Boolean  @default(true) @map("push_enabled")
+  achievementEnabled  Boolean  @default(true) @map("achievement_enabled")
+  reportEnabled       Boolean  @default(true) @map("report_enabled")
+  systemEnabled       Boolean  @default(true) @map("system_enabled")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("notification_preferences")
+}

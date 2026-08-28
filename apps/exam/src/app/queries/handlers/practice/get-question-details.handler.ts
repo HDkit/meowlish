@@ -4,7 +4,7 @@ import {
 	type IPracticeReadRepository,
 	IPracticeReadRepositoryToken,
 } from '../../../../domain/repositories/practice.read.repository';
-import { GetQuestionDetailsQuery } from '../../practice/get-question-details.query';
+import { GetQuestionDetailsQuery } from '../../practice/exam.get-question-details.query';
 import {
 	Inject,
 	NotFoundException,

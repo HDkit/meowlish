@@ -19,10 +19,10 @@ import { PrismaClient } from '@prisma-client/achievement';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { LoggerModule } from '@server/logger';
 import {
-	Any2RpcExceptionFilter,
 	GlobalClassSerializerInterceptor,
+	GlobalRmqExceptionFilter,
+	GlobalRpcExceptionFilter,
 	GlobalValidationPipe,
-	Http2gRPCExceptionFilter,
 } from '@server/utils';
 import { ClsGuard, ClsModule } from 'nestjs-cls';
 
@@ -70,11 +70,11 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 		},
 		{
 			provide: APP_FILTER,
-			useClass: Any2RpcExceptionFilter,
+			useClass: GlobalRpcExceptionFilter,
 		},
 		{
 			provide: APP_FILTER,
-			useClass: Http2gRPCExceptionFilter,
+			useClass: GlobalRmqExceptionFilter,
 		},
 		{
 			provide: APP_PIPE,

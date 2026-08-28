@@ -1,4 +1,4 @@
-import { RoleReadModel } from '../../domain/entities/role.read-model';
+import { RoleReadModel } from '../../domain/read-models/role.read-model';
 import { type IRoleReadRepository } from '../../domain/repositories/role.read.repository';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
@@ -26,5 +26,22 @@ export class RoleReadPrismaRepositoryImpl implements IRoleReadRepository {
 			name: r.name,
 			permissions: r.rolePermissions.map(p => p.permission.name),
 		}));
+	}
+
+	async findByName(name: string): Promise<RoleReadModel | null> {
+		const role = await this.txHost.tx.role.findUnique({
+			where: { name: name },
+			select: {
+				id: true,
+				name: true,
+				rolePermissions: { select: { permission: { select: { name: true } } } },
+			},
+		});
+		if (!role) return null;
+		return {
+			id: role.id,
+			name: role.name,
+			permissions: role.rolePermissions.map(p => p.permission.name),
+		};
 	}
 }

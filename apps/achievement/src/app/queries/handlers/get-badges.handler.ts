@@ -2,7 +2,7 @@ import {
 	type IBadgeReadRepository,
 	IBadgeReadRepositoryToken,
 } from '../../../domain/repositories/badge.read.repository';
-import { GetBadgesQuery, GetBadgesQueryResult } from '../get-badges.query';
+import { GetBadgesQuery, GetBadgesQueryResult } from '../achievement.get-badges.query';
 import { Inject } from '@nestjs/common';
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 

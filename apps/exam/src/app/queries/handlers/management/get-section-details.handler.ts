@@ -4,7 +4,7 @@ import {
 	type IManagementReadRepository,
 	IManagementReadRepositoryToken,
 } from '../../../../domain/repositories/management.read.repository';
-import { GetSectionManagementDetailsQuery } from '../../management/get-section-details.query';
+import { GetSectionManagementDetailsQuery } from '../../management/exam.get-section-details.query';
 import {
 	Inject,
 	NotFoundException,

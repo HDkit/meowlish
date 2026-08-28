@@ -348,7 +348,8 @@ export interface FindExamsDto_SortOption {
 
 export interface Exams {
   exams: Exams_MinimalExamInfo[];
-  cursor: string;
+  nextCursor: string;
+  prevCursor: string;
 }
 
 export interface Exams_MinimalExamInfo {
@@ -411,11 +412,14 @@ export interface GetUsersAttemptHistoryDto_SortOption {
 
 export interface UsersAttemptHistory {
   attempts: UsersAttemptHistory_MinimalAttemptInfo[];
-  cursor: string;
+  nextCursor: string;
+  prevCursor: string;
 }
 
 export interface UsersAttemptHistory_MinimalAttemptInfo {
   id: string;
+  examId: string;
+  examName: string;
   startedAt: Date | undefined;
   endedAt?: Date | undefined;
   durationLimit: number;
@@ -508,14 +512,15 @@ export interface SectionManagementInfo {
   name?: string | undefined;
   directive: string;
   contentType: string;
-  questionIds: string[];
+  childrenIds: string[];
   files: FilePreviewInfo[];
   tags: string[];
 }
 
 export interface FoundExamsForManagement {
   exams: FoundExamsForManagement_ExamManagementMinimalInfo[];
-  cursor: string;
+  nextCursor: string;
+  prevCursor: string;
 }
 
 export interface FoundExamsForManagement_ExamManagementMinimalInfo {
@@ -545,8 +550,9 @@ export interface TagList {
 }
 
 export interface TagList_TagNode {
+  id: string;
   name: string;
-  parent?: string | undefined;
+  parentId?: string | undefined;
 }
 
 export interface TagTrees {
@@ -554,6 +560,7 @@ export interface TagTrees {
 }
 
 export interface TagTrees_TagTree {
+  id: string;
   name: string;
   children: TagTrees_TagTree[];
 }
@@ -585,6 +592,13 @@ export interface GoalResponse {
   date: Date | undefined;
   target: number;
   type: string;
+}
+
+export interface ExamCountsResponse {
+  total: number;
+  approved: number;
+  pending: number;
+  rejected: number;
 }
 
 wrappers[".google.protobuf.Timestamp"] = {
@@ -3931,7 +3945,7 @@ export const FindExamsDto_SortOption: MessageFns<FindExamsDto_SortOption> = {
 };
 
 function createBaseExams(): Exams {
-  return { exams: [], cursor: "" };
+  return { exams: [], nextCursor: "", prevCursor: "" };
 }
 
 export const Exams: MessageFns<Exams> = {
@@ -3939,8 +3953,11 @@ export const Exams: MessageFns<Exams> = {
     for (const v of message.exams) {
       Exams_MinimalExamInfo.encode(v!, writer.uint32(10).fork()).join();
     }
-    if (message.cursor !== "") {
-      writer.uint32(18).string(message.cursor);
+    if (message.nextCursor !== "") {
+      writer.uint32(18).string(message.nextCursor);
+    }
+    if (message.prevCursor !== "") {
+      writer.uint32(26).string(message.prevCursor);
     }
     return writer;
   },
@@ -3965,7 +3982,15 @@ export const Exams: MessageFns<Exams> = {
             break;
           }
 
-          message.cursor = reader.string();
+          message.nextCursor = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.prevCursor = reader.string();
           continue;
         }
       }
@@ -4554,7 +4579,7 @@ export const GetUsersAttemptHistoryDto_SortOption: MessageFns<GetUsersAttemptHis
 };
 
 function createBaseUsersAttemptHistory(): UsersAttemptHistory {
-  return { attempts: [], cursor: "" };
+  return { attempts: [], nextCursor: "", prevCursor: "" };
 }
 
 export const UsersAttemptHistory: MessageFns<UsersAttemptHistory> = {
@@ -4562,8 +4587,11 @@ export const UsersAttemptHistory: MessageFns<UsersAttemptHistory> = {
     for (const v of message.attempts) {
       UsersAttemptHistory_MinimalAttemptInfo.encode(v!, writer.uint32(10).fork()).join();
     }
-    if (message.cursor !== "") {
-      writer.uint32(18).string(message.cursor);
+    if (message.nextCursor !== "") {
+      writer.uint32(18).string(message.nextCursor);
+    }
+    if (message.prevCursor !== "") {
+      writer.uint32(26).string(message.prevCursor);
     }
     return writer;
   },
@@ -4588,7 +4616,15 @@ export const UsersAttemptHistory: MessageFns<UsersAttemptHistory> = {
             break;
           }
 
-          message.cursor = reader.string();
+          message.nextCursor = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.prevCursor = reader.string();
           continue;
         }
       }
@@ -4602,7 +4638,7 @@ export const UsersAttemptHistory: MessageFns<UsersAttemptHistory> = {
 };
 
 function createBaseUsersAttemptHistory_MinimalAttemptInfo(): UsersAttemptHistory_MinimalAttemptInfo {
-  return { id: "", startedAt: undefined, durationLimit: 0, isStrict: false };
+  return { id: "", examId: "", examName: "", startedAt: undefined, durationLimit: 0, isStrict: false };
 }
 
 export const UsersAttemptHistory_MinimalAttemptInfo: MessageFns<UsersAttemptHistory_MinimalAttemptInfo> = {
@@ -4610,23 +4646,29 @@ export const UsersAttemptHistory_MinimalAttemptInfo: MessageFns<UsersAttemptHist
     if (message.id !== "") {
       writer.uint32(10).string(message.id);
     }
+    if (message.examId !== "") {
+      writer.uint32(18).string(message.examId);
+    }
+    if (message.examName !== "") {
+      writer.uint32(26).string(message.examName);
+    }
     if (message.startedAt !== undefined) {
-      Timestamp.encode(toTimestamp(message.startedAt), writer.uint32(18).fork()).join();
+      Timestamp.encode(toTimestamp(message.startedAt), writer.uint32(34).fork()).join();
     }
     if (message.endedAt !== undefined) {
-      Timestamp.encode(toTimestamp(message.endedAt), writer.uint32(26).fork()).join();
+      Timestamp.encode(toTimestamp(message.endedAt), writer.uint32(42).fork()).join();
     }
     if (message.durationLimit !== 0) {
-      writer.uint32(32).int32(message.durationLimit);
+      writer.uint32(48).int32(message.durationLimit);
     }
     if (message.score !== undefined) {
-      writer.uint32(41).double(message.score);
+      writer.uint32(57).double(message.score);
     }
     if (message.totalPoints !== undefined) {
-      writer.uint32(49).double(message.totalPoints);
+      writer.uint32(65).double(message.totalPoints);
     }
     if (message.isStrict !== false) {
-      writer.uint32(56).bool(message.isStrict);
+      writer.uint32(72).bool(message.isStrict);
     }
     return writer;
   },
@@ -4651,7 +4693,7 @@ export const UsersAttemptHistory_MinimalAttemptInfo: MessageFns<UsersAttemptHist
             break;
           }
 
-          message.startedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+          message.examId = reader.string();
           continue;
         }
         case 3: {
@@ -4659,35 +4701,51 @@ export const UsersAttemptHistory_MinimalAttemptInfo: MessageFns<UsersAttemptHist
             break;
           }
 
-          message.endedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+          message.examName = reader.string();
           continue;
         }
         case 4: {
-          if (tag !== 32) {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.startedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.endedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 6: {
+          if (tag !== 48) {
             break;
           }
 
           message.durationLimit = reader.int32();
           continue;
         }
-        case 5: {
-          if (tag !== 41) {
+        case 7: {
+          if (tag !== 57) {
             break;
           }
 
           message.score = reader.double();
           continue;
         }
-        case 6: {
-          if (tag !== 49) {
+        case 8: {
+          if (tag !== 65) {
             break;
           }
 
           message.totalPoints = reader.double();
           continue;
         }
-        case 7: {
-          if (tag !== 56) {
+        case 9: {
+          if (tag !== 72) {
             break;
           }
 
@@ -5464,7 +5522,7 @@ export const QuestionManagementInfo_ChoiceManagementInfo: MessageFns<QuestionMan
 };
 
 function createBaseSectionManagementInfo(): SectionManagementInfo {
-  return { id: "", examId: "", directive: "", contentType: "", questionIds: [], files: [], tags: [] };
+  return { id: "", examId: "", directive: "", contentType: "", childrenIds: [], files: [], tags: [] };
 }
 
 export const SectionManagementInfo: MessageFns<SectionManagementInfo> = {
@@ -5487,7 +5545,7 @@ export const SectionManagementInfo: MessageFns<SectionManagementInfo> = {
     if (message.contentType !== "") {
       writer.uint32(50).string(message.contentType);
     }
-    for (const v of message.questionIds) {
+    for (const v of message.childrenIds) {
       writer.uint32(58).string(v!);
     }
     for (const v of message.files) {
@@ -5559,7 +5617,7 @@ export const SectionManagementInfo: MessageFns<SectionManagementInfo> = {
             break;
           }
 
-          message.questionIds.push(reader.string());
+          message.childrenIds.push(reader.string());
           continue;
         }
         case 8: {
@@ -5589,7 +5647,7 @@ export const SectionManagementInfo: MessageFns<SectionManagementInfo> = {
 };
 
 function createBaseFoundExamsForManagement(): FoundExamsForManagement {
-  return { exams: [], cursor: "" };
+  return { exams: [], nextCursor: "", prevCursor: "" };
 }
 
 export const FoundExamsForManagement: MessageFns<FoundExamsForManagement> = {
@@ -5597,8 +5655,11 @@ export const FoundExamsForManagement: MessageFns<FoundExamsForManagement> = {
     for (const v of message.exams) {
       FoundExamsForManagement_ExamManagementMinimalInfo.encode(v!, writer.uint32(10).fork()).join();
     }
-    if (message.cursor !== "") {
-      writer.uint32(18).string(message.cursor);
+    if (message.nextCursor !== "") {
+      writer.uint32(18).string(message.nextCursor);
+    }
+    if (message.prevCursor !== "") {
+      writer.uint32(26).string(message.prevCursor);
     }
     return writer;
   },
@@ -5623,7 +5684,15 @@ export const FoundExamsForManagement: MessageFns<FoundExamsForManagement> = {
             break;
           }
 
-          message.cursor = reader.string();
+          message.nextCursor = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.prevCursor = reader.string();
           continue;
         }
       }
@@ -5917,16 +5986,19 @@ export const TagList: MessageFns<TagList> = {
 };
 
 function createBaseTagList_TagNode(): TagList_TagNode {
-  return { name: "" };
+  return { id: "", name: "" };
 }
 
 export const TagList_TagNode: MessageFns<TagList_TagNode> = {
   encode(message: TagList_TagNode, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.name !== "") {
-      writer.uint32(10).string(message.name);
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
     }
-    if (message.parent !== undefined) {
-      writer.uint32(18).string(message.parent);
+    if (message.name !== "") {
+      writer.uint32(18).string(message.name);
+    }
+    if (message.parentId !== undefined) {
+      writer.uint32(26).string(message.parentId);
     }
     return writer;
   },
@@ -5943,7 +6015,7 @@ export const TagList_TagNode: MessageFns<TagList_TagNode> = {
             break;
           }
 
-          message.name = reader.string();
+          message.id = reader.string();
           continue;
         }
         case 2: {
@@ -5951,7 +6023,15 @@ export const TagList_TagNode: MessageFns<TagList_TagNode> = {
             break;
           }
 
-          message.parent = reader.string();
+          message.name = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.parentId = reader.string();
           continue;
         }
       }
@@ -6002,16 +6082,19 @@ export const TagTrees: MessageFns<TagTrees> = {
 };
 
 function createBaseTagTrees_TagTree(): TagTrees_TagTree {
-  return { name: "", children: [] };
+  return { id: "", name: "", children: [] };
 }
 
 export const TagTrees_TagTree: MessageFns<TagTrees_TagTree> = {
   encode(message: TagTrees_TagTree, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
     if (message.name !== "") {
-      writer.uint32(10).string(message.name);
+      writer.uint32(18).string(message.name);
     }
     for (const v of message.children) {
-      TagTrees_TagTree.encode(v!, writer.uint32(18).fork()).join();
+      TagTrees_TagTree.encode(v!, writer.uint32(26).fork()).join();
     }
     return writer;
   },
@@ -6028,11 +6111,19 @@ export const TagTrees_TagTree: MessageFns<TagTrees_TagTree> = {
             break;
           }
 
-          message.name = reader.string();
+          message.id = reader.string();
           continue;
         }
         case 2: {
           if (tag !== 18) {
+            break;
+          }
+
+          message.name = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
             break;
           }
 
@@ -6333,6 +6424,76 @@ export const GoalResponse: MessageFns<GoalResponse> = {
   },
 };
 
+function createBaseExamCountsResponse(): ExamCountsResponse {
+  return { total: 0, approved: 0, pending: 0, rejected: 0 };
+}
+
+export const ExamCountsResponse: MessageFns<ExamCountsResponse> = {
+  encode(message: ExamCountsResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.total !== 0) {
+      writer.uint32(8).int32(message.total);
+    }
+    if (message.approved !== 0) {
+      writer.uint32(16).int32(message.approved);
+    }
+    if (message.pending !== 0) {
+      writer.uint32(24).int32(message.pending);
+    }
+    if (message.rejected !== 0) {
+      writer.uint32(32).int32(message.rejected);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ExamCountsResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseExamCountsResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.total = reader.int32();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.approved = reader.int32();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.pending = reader.int32();
+          continue;
+        }
+        case 4: {
+          if (tag !== 32) {
+            break;
+          }
+
+          message.rejected = reader.int32();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
 export interface ExamManagementServiceClient {
   createExam(request: CreateExamDto, metadata?: Metadata): Observable<CreatedExamDto>;
 
@@ -6367,6 +6528,8 @@ export interface ExamManagementServiceClient {
   getSectionDetails(request: GetSectionManagementDetailsDto, metadata?: Metadata): Observable<SectionManagementInfo>;
 
   getQuestionDetails(request: GetQuestionManagementDetailsDto, metadata?: Metadata): Observable<QuestionManagementInfo>;
+
+  getExamCounts(request: Empty, metadata?: Metadata): Observable<ExamCountsResponse>;
 }
 
 export interface ExamManagementServiceController {
@@ -6424,6 +6587,11 @@ export interface ExamManagementServiceController {
     request: GetQuestionManagementDetailsDto,
     metadata?: Metadata,
   ): Promise<QuestionManagementInfo> | Observable<QuestionManagementInfo> | QuestionManagementInfo;
+
+  getExamCounts(
+    request: Empty,
+    metadata?: Metadata,
+  ): Promise<ExamCountsResponse> | Observable<ExamCountsResponse> | ExamCountsResponse;
 }
 
 export function ExamManagementServiceControllerMethods() {
@@ -6445,6 +6613,7 @@ export function ExamManagementServiceControllerMethods() {
       "getExamDetails",
       "getSectionDetails",
       "getQuestionDetails",
+      "getExamCounts",
     ];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
@@ -6616,6 +6785,15 @@ export const ExamManagementServiceService = {
       Buffer.from(QuestionManagementInfo.encode(value).finish()),
     responseDeserialize: (value: Buffer): QuestionManagementInfo => QuestionManagementInfo.decode(value),
   },
+  getExamCounts: {
+    path: "/exam.ExamManagementService/GetExamCounts" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    requestDeserialize: (value: Buffer): Empty => Empty.decode(value),
+    responseSerialize: (value: ExamCountsResponse): Buffer => Buffer.from(ExamCountsResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ExamCountsResponse => ExamCountsResponse.decode(value),
+  },
 } as const;
 
 export interface ExamManagementServiceServer extends UntypedServiceImplementation {
@@ -6636,6 +6814,7 @@ export interface ExamManagementServiceServer extends UntypedServiceImplementatio
   getExamDetails: handleUnaryCall<GetExamManagementDetailsDto, ExamManagementDetailedInfo>;
   getSectionDetails: handleUnaryCall<GetSectionManagementDetailsDto, SectionManagementInfo>;
   getQuestionDetails: handleUnaryCall<GetQuestionManagementDetailsDto, QuestionManagementInfo>;
+  getExamCounts: handleUnaryCall<Empty, ExamCountsResponse>;
 }
 
 export interface ExamPracticeServiceClient {
@@ -6653,7 +6832,7 @@ export interface ExamPracticeServiceClient {
 
   /** query methods */
 
-  getUsesStats(request: GetUserStatsDto, metadata?: Metadata): Observable<UserStats>;
+  getUserStats(request: GetUserStatsDto, metadata?: Metadata): Observable<UserStats>;
 
   getUsersAttemptSummary(request: GetUsersAttemptSummaryDto, metadata?: Metadata): Observable<AttemptHistorySummary>;
 
@@ -6693,7 +6872,7 @@ export interface ExamPracticeServiceController {
 
   /** query methods */
 
-  getUsesStats(request: GetUserStatsDto, metadata?: Metadata): Promise<UserStats> | Observable<UserStats> | UserStats;
+  getUserStats(request: GetUserStatsDto, metadata?: Metadata): Promise<UserStats> | Observable<UserStats> | UserStats;
 
   getUsersAttemptSummary(
     request: GetUsersAttemptSummaryDto,
@@ -6742,7 +6921,7 @@ export function ExamPracticeServiceControllerMethods() {
       "removeAnswer",
       "addNote",
       "toggleFlag",
-      "getUsesStats",
+      "getUserStats",
       "getUsersAttemptSummary",
       "getUsersAttemptHistory",
       "findExams",
@@ -6823,8 +7002,8 @@ export const ExamPracticeServiceService = {
     responseDeserialize: (value: Buffer): FlagStateDto => FlagStateDto.decode(value),
   },
   /** query methods */
-  getUsesStats: {
-    path: "/exam.ExamPracticeService/GetUsesStats" as const,
+  getUserStats: {
+    path: "/exam.ExamPracticeService/GetUserStats" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: GetUserStatsDto): Buffer => Buffer.from(GetUserStatsDto.encode(value).finish()),
@@ -6921,7 +7100,7 @@ export interface ExamPracticeServiceServer extends UntypedServiceImplementation 
   addNote: handleUnaryCall<AddNoteDto, Empty>;
   toggleFlag: handleUnaryCall<ToggleFlagDto, FlagStateDto>;
   /** query methods */
-  getUsesStats: handleUnaryCall<GetUserStatsDto, UserStats>;
+  getUserStats: handleUnaryCall<GetUserStatsDto, UserStats>;
   getUsersAttemptSummary: handleUnaryCall<GetUsersAttemptSummaryDto, AttemptHistorySummary>;
   getUsersAttemptHistory: handleUnaryCall<GetUsersAttemptHistoryDto, UsersAttemptHistory>;
   findExams: handleUnaryCall<FindExamsDto, Exams>;

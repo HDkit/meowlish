@@ -14,6 +14,7 @@ import { MinimalAttemptInfo } from '../../domain/read-models/practice/minimal-at
 import { MinimalExamInfo } from '../../domain/read-models/practice/minimal-exam.read-model';
 import { UserStats } from '../../domain/read-models/practice/user-stats.read-model';
 import { type IPracticeReadRepository } from '../../domain/repositories/practice.read.repository';
+import { ExamStatus } from '../../enums/exam-status.enum';
 import { QuestionType, questionTypesThatShowChoices } from '../../enums/question-type.enum';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
@@ -127,15 +128,24 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 			};
 			lastId?: string;
 			limit?: number;
+			direction?: number;
 		},
 	): Promise<MinimalAttemptInfo[]> {
 		if (options?.limit && options.limit < 0)
 			throw new BadRequestException('Limit must be positive');
+		const limit = options?.limit ?? 10;
+		const dir = Math.sign(options?.direction || 1);
 
 		const foundHistory = await this.txHost.tx.attempt.findMany({
 			where: { attemptedBy: uid, ...(options?.examId ? { examId: options.examId } : {}) },
 			select: {
 				id: true,
+				exam: {
+					select: {
+						id: true,
+						title: true,
+					},
+				},
 				startedAt: true,
 				endedAt: true,
 				durationLimit: true,
@@ -150,7 +160,7 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 				:	[]),
 				{ id: 'asc' },
 			],
-			take: options?.limit ?? 10,
+			take: dir * limit,
 			...(options?.lastId && {
 				cursor: { id: options.lastId },
 				skip: 1,
@@ -159,6 +169,8 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 
 		return foundHistory.map(a => ({
 			...a,
+			examId: a.exam.id,
+			examName: a.exam.title,
 			endedAt: a.endedAt ?? undefined,
 			score: a.score ?? undefined,
 			totalPoints: a.totalPoints ?? undefined,
@@ -174,9 +186,12 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 			updatedAt?: Date;
 		};
 		limit?: number;
+		direction?: number;
 	}): Promise<MinimalExamInfo[]> {
 		if (options?.limit && options.limit < 0)
 			throw new BadRequestException('Limit must be positive');
+		const dir = Math.sign(options?.direction || 1);
+		const idOrder = dir === -1 ? 'DESC' : 'ASC';
 
 		// sort by attemptsCount or by update time
 		// fallback to sort by ID
@@ -185,13 +200,13 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 				options.sortBy.key === 'attemptsCount' ?
 					Prisma.sql`
           "attemptsCount" ${Prisma.raw(options.sortBy.direction)},
-          e.id ASC
+          e.id ${Prisma.raw(idOrder)}
         `
 				:	Prisma.sql`
           e.updated_at ${Prisma.raw(options.sortBy.direction)},
-          e.id ASC
+          e.id ${Prisma.raw(idOrder)}
         `
-			:	Prisma.sql`e.id ASC`;
+			:	Prisma.sql`e.id ${Prisma.raw(idOrder)}`;
 
 		// filter by name
 		const nameFilterSql =
@@ -247,8 +262,8 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
                 OR qs.exam_id = e.id
               )
 
-              -- the filter must be descendants of the tags inside exam (sections, questions and whatnot)
-              AND filter_t.lft BETWEEN t2.lft AND t2.rgt
+              -- the exam's tag must be a descendant (or equal) of the filter tag
+              AND t2.lft BETWEEN filter_t.lft AND filter_t.rgt
 
           )
 
@@ -258,71 +273,31 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 				// fallback take all
 			:	Prisma.sql`TRUE`;
 
+		const isForward = dir === 1;
+
 		const cursorWhereSql =
-			// updatedAt cursor when ASC updatedAt
-			(
-				options?.sortBy?.key === 'updatedAt' &&
-				options.sortBy.direction === SortDirection.ASC &&
-				options?.lastCursor?.updatedAt
-			) ?
-				Prisma.sql`
-      (
-        e.updated_at,
-        e.id
-      ) > (
-        ${options.lastCursor.updatedAt},
-        ${options.lastCursor.id}
-      )
-    `
-				// updatedAt cursor when DESC updatedAt
-			: (
-				options?.sortBy?.key === 'updatedAt' &&
-				options.sortBy.direction === SortDirection.DESC &&
-				options.lastCursor?.updatedAt
-			) ?
-				Prisma.sql`
-        e.updated_at < ${options.lastCursor.updatedAt}
-        OR (
-        e.updated_at = ${options.lastCursor.updatedAt}
-        AND e.id > ${options.lastCursor.id}
-      )
-    `
-				// id cursor
-			: !options?.sortBy && options?.lastCursor?.id ?
-				Prisma.sql`
-      e.id > ${options.lastCursor.id}
-    `
+			options?.sortBy?.key === 'updatedAt' && options?.lastCursor?.updatedAt ?
+				options.sortBy.direction === SortDirection.ASC ?
+					isForward ?
+						Prisma.sql`(e.updated_at, e.id) > (${options.lastCursor.updatedAt}, ${options.lastCursor.id})`
+					:	Prisma.sql`(e.updated_at, e.id) < (${options.lastCursor.updatedAt}, ${options.lastCursor.id})`
+				: isForward ?
+					Prisma.sql`e.updated_at < ${options.lastCursor.updatedAt} OR (e.updated_at = ${options.lastCursor.updatedAt} AND e.id > ${options.lastCursor.id})`
+				:	Prisma.sql`e.updated_at > ${options.lastCursor.updatedAt} OR (e.updated_at = ${options.lastCursor.updatedAt} AND e.id < ${options.lastCursor.id})`
+			: options?.lastCursor?.id ?
+				isForward ? Prisma.sql`e.id > ${options.lastCursor.id}`
+				:	Prisma.sql`e.id < ${options.lastCursor.id}`
 			:	Prisma.sql`TRUE`;
 
 		const cursorHavingSql =
-			// attemptsCount cursor when ASC attemptsCount
-			(
-				options?.sortBy?.key === 'attemptsCount' &&
-				options.sortBy.direction === SortDirection.ASC &&
-				options?.lastCursor?.attemptsCount !== undefined
-			) ?
-				Prisma.sql`
-      (
-        COUNT(DISTINCT a.id),
-        e.id
-      ) > (
-        ${options.lastCursor.attemptsCount},
-        ${options.lastCursor.id}
-      )
-    `
-				// attemptsCount cursor when DESC attemptsCount
-			: (
-				options?.sortBy?.key === 'attemptsCount' &&
-				options.sortBy.direction === SortDirection.DESC &&
-				options?.lastCursor?.attemptsCount !== undefined
-			) ?
-				Prisma.sql`
-        COUNT(DISTINCT a.id) < ${options.lastCursor.attemptsCount}
-        OR (
-        COUNT(DISTINCT a.id) = ${options.lastCursor.attemptsCount}
-        AND e.id > ${options.lastCursor.id}
-      )
-    `
+			options?.sortBy?.key === 'attemptsCount' && options?.lastCursor?.attemptsCount !== undefined ?
+				options.sortBy.direction === SortDirection.ASC ?
+					isForward ?
+						Prisma.sql`(COUNT(DISTINCT a.id), e.id) > (${options.lastCursor.attemptsCount}, ${options.lastCursor.id})`
+					:	Prisma.sql`(COUNT(DISTINCT a.id), e.id) < (${options.lastCursor.attemptsCount}, ${options.lastCursor.id})`
+				: isForward ?
+					Prisma.sql`COUNT(DISTINCT a.id) < ${options.lastCursor.attemptsCount} OR (COUNT(DISTINCT a.id) = ${options.lastCursor.attemptsCount} AND e.id > ${options.lastCursor.id})`
+				:	Prisma.sql`COUNT(DISTINCT a.id) > ${options.lastCursor.attemptsCount} OR (COUNT(DISTINCT a.id) = ${options.lastCursor.attemptsCount} AND e.id < ${options.lastCursor.id})`
 			:	Prisma.sql`TRUE`;
 
 		const rows = await this.txHost.tx.$queryRaw<
@@ -365,7 +340,8 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
         ON t.id = et.tag_id
 
       WHERE
-        ${nameFilterSql}
+        e.status = ${ExamStatus.Approved}
+        AND ${nameFilterSql}
         AND ${tagFilterSql}
         AND ${cursorWhereSql}
 
@@ -380,6 +356,7 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
     `,
 		);
 
+		if (dir === -1) rows.reverse();
 		return rows.map(r => ({ ...r, description: r.description ?? undefined }));
 	}
 
@@ -420,7 +397,8 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
       LEFT JOIN tags t
         ON t.id = et.tag_id
 
-      WHERE e.id = ${examId}
+      WHERE e.status = ${ExamStatus.Approved}
+      AND e.id = ${examId}
 
       GROUP BY e.id
     `,
@@ -494,7 +472,9 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 	}
 
 	async getExamStats(examId: string): Promise<ExamStatistics | null> {
-		const exam = await this.txHost.tx.exam.findUnique({ where: { id: examId } });
+		const exam = await this.txHost.tx.exam.findUnique({
+			where: { id: examId, status: ExamStatus.Approved },
+		});
 		if (!exam) return null;
 
 		const [stats] = await this.txHost.tx.$queryRaw<
@@ -877,7 +857,7 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 
 	async getDetailedQuestionInfo(questionId: string): Promise<DetailedQuestionInfo | null> {
 		const foundQuestion = await this.txHost.tx.question.findUnique({
-			where: { id: questionId },
+			where: { id: questionId, section: { exam: { status: ExamStatus.Approved } } },
 			select: {
 				id: true,
 				content: true,

@@ -1,0 +1,83 @@
+model Blog {
+  id        String   @id @default(uuid())
+  title     String
+  content   String
+  authorId  String   @map("author_id")
+  tags      String[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("blogs")
+}
+
+model FlashCard {
+  id            String   @id @default(uuid())
+  word          String
+  definition    String
+  image         String?
+  partOfSpeech  String?  @map("part_of_speech")
+  pronunciation String?
+  examples      String[]
+  notes         String?
+  authorId      String   @map("author_id")
+  tags          String[]
+  listId        String   @map("list_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  list FlashCardList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@index([listId])
+  @@map("flash_cards")
+}
+
+model FlashCardList {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  authorId    String   @map("author_id")
+  isPublic    Boolean  @default(false) @map("is_public")
+  tags        String[]
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  cards FlashCard[]
+
+  @@map("flash_card_lists")
+}
+
+model Report {
+  id            String    @id @default(uuid())
+  reportedBy    String    @map("reported_by")
+  type          String
+  status        String    @default("pending")
+  title         String
+  description   String
+  targetType    String?   @map("target_type")
+  targetId      String?   @map("target_id")
+  resolvedBy    String?   @map("resolved_by")
+  adminResponse String?   @map("admin_response")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  files ReportFile[]
+
+  @@map("reports")
+}
+
+model ReportFile {
+  reportId String @map("report_id")
+  fileId   String @map("file_id")
+
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@id([reportId, fileId])
+  @@map("report_files")
+}
+
+model DeletedFile {
+  fileId String @id @map("file_id")
+  count  Int    @default(1)
+
+  @@map("deleted_files")
+}

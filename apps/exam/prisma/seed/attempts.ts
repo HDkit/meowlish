@@ -3,6 +3,14 @@ import { PrismaClient } from '@prisma-client/exam';
 import { randomInt } from 'crypto';
 
 export async function seedAttempts(prisma: PrismaClient) {
+	const existingAttempts = await prisma.attempt.findMany({
+		where: { id: { in: ['1', '2', '3', '4', '5', '6'] } },
+	});
+	if (existingAttempts.length >= 6) {
+		console.warn('Attempts already seeded, skipping.');
+		return;
+	}
+
 	const exam1q = await prisma.question.findMany({
 		where: { section: { contentType: SectionType.Question, examId: '1' } },
 		include: { choices: true },
@@ -54,7 +62,7 @@ export async function seedAttempts(prisma: PrismaClient) {
 		data: [
 			{
 				id: '1',
-				attemptedBy: 'admin-id',
+				attemptedBy: 'admin',
 				durationLimit: 1000,
 				isStrict: false,
 				examId: '1',
@@ -63,7 +71,7 @@ export async function seedAttempts(prisma: PrismaClient) {
 			},
 			{
 				id: '2',
-				attemptedBy: 'admin-id',
+				attemptedBy: 'admin',
 				durationLimit: 1000,
 				isStrict: false,
 				examId: '1',
@@ -72,7 +80,7 @@ export async function seedAttempts(prisma: PrismaClient) {
 			},
 			{
 				id: '3',
-				attemptedBy: 'admin-id',
+				attemptedBy: 'admin',
 				durationLimit: 1000,
 				isStrict: false,
 				examId: '1',
@@ -81,7 +89,7 @@ export async function seedAttempts(prisma: PrismaClient) {
 			},
 			{
 				id: '4',
-				attemptedBy: 'admin-id',
+				attemptedBy: 'admin',
 				durationLimit: 1000,
 				isStrict: false,
 				examId: '2',
@@ -90,7 +98,7 @@ export async function seedAttempts(prisma: PrismaClient) {
 			},
 			{
 				id: '5',
-				attemptedBy: 'admin-id',
+				attemptedBy: 'admin',
 				durationLimit: 1000,
 				isStrict: false,
 				examId: '2',
@@ -99,7 +107,7 @@ export async function seedAttempts(prisma: PrismaClient) {
 			},
 			{
 				id: '6',
-				attemptedBy: 'admin-id',
+				attemptedBy: 'admin',
 				durationLimit: 1000,
 				isStrict: false,
 				examId: '3',

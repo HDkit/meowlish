@@ -3,7 +3,10 @@ import { Expose } from 'class-transformer';
 
 export class IdentityIdsDto implements auth.IdentityIds {
 	@Expose()
-	cursor!: string;
+	nextCursor!: string;
+
+	@Expose()
+	prevCursor!: string;
 
 	@Expose()
 	ids!: string[];

@@ -8,6 +8,6 @@ export const rmqPubConfig = (configService: ConfigService<IEnvVars>): RabbitMQCo
 		name: 'pub',
 		uri: `amqp://${rmqConfig.user}:${rmqConfig.password}@${rmqConfig.host}:${rmqConfig.port}`,
 		connectionInitOptions: { wait: true },
-		defaultSubscribeErrorBehavior: MessageHandlerErrorBehavior.REQUEUE,
+		defaultSubscribeErrorBehavior: MessageHandlerErrorBehavior.NACK,
 	};
 };

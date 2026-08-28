@@ -11,7 +11,7 @@ export class IeltsLExamSeeder {
 		const sect34 = new IeltsLExamSect34Seeder(this.tagNamesToIdInputs).seed();
 		return {
 			id: '2',
-			createdBy: 'admin-id',
+			createdBy: 'admin',
 			title: 'IELTS L 1',
 			duration: 60 * 60,
 			status: ExamStatus.Approved,

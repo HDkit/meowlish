@@ -46,10 +46,11 @@ import {
 	UpdateSectionCommand,
 	UpdateSectionCommandPayload,
 } from '../../app/commands/staff/exam.update-section.command';
-import { FindExamsForManagementQuery } from '../../app/queries/management/find-exams.query';
-import { GetExamManagementDetailsQuery } from '../../app/queries/management/get-exam-details.query';
-import { GetQuestionManagementDetailsQuery } from '../../app/queries/management/get-question-details.query';
-import { GetSectionManagementDetailsQuery } from '../../app/queries/management/get-section-details.query';
+import { FindExamsForManagementQuery } from '../../app/queries/management/exam.find-exams.query';
+import { GetExamCountsQuery } from '../../app/queries/management/exam.get-counts.query';
+import { GetExamManagementDetailsQuery } from '../../app/queries/management/exam.get-exam-details.query';
+import { GetQuestionManagementDetailsQuery } from '../../app/queries/management/exam.get-question-details.query';
+import { GetSectionManagementDetailsQuery } from '../../app/queries/management/exam.get-section-details.query';
 import { CreateExamDto } from '../dtos/req/management/create-exam.req.dto';
 import { CreateQuestionDto } from '../dtos/req/management/create-question.req.dto';
 import { CreateSectionDto } from '../dtos/req/management/create-section.req.dto';
@@ -73,11 +74,13 @@ import { ExamDetailedManagementInfoDto } from '../dtos/res/management/exam.res.d
 import { ExamsManagementInfoDto } from '../dtos/res/management/exams.res.dto';
 import { QuestionManagementInfoDto } from '../dtos/res/management/question.res.dto';
 import { SectionManagementInfoDto } from '../dtos/res/management/sections.res.dto';
-import { Controller, SerializeOptions } from '@nestjs/common';
+import { Controller, SerializeOptions, UseFilters } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { Payload } from '@nestjs/microservices';
 import { exam } from '@server/generated';
+import { GlobalRpcExceptionFilter } from '@server/utils';
 
+@UseFilters(GlobalRpcExceptionFilter)
 @exam.ExamManagementServiceControllerMethods()
 @Controller()
 export class ExamManagementController implements exam.ExamManagementServiceController {
@@ -177,5 +180,9 @@ export class ExamManagementController implements exam.ExamManagementServiceContr
 		@Payload() request: GetQuestionManagementDetailsDto,
 	): Promise<QuestionManagementInfoDto> {
 		return await this.queryBus.execute(new GetQuestionManagementDetailsQuery(request));
+	}
+
+	async getExamCounts(): Promise<exam.ExamCountsResponse> {
+		return await this.queryBus.execute(new GetExamCountsQuery());
 	}
 }

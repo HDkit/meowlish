@@ -1,4 +1,4 @@
-import { CredentialReadModel } from '../../domain/entities/credential.read-model';
+import { CredentialReadModel } from '../../domain/read-models/credential.read-model';
 import { type ICredentialReadRepository } from '../../domain/repositories/credential.read.repository';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';

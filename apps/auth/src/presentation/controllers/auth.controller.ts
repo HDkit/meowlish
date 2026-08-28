@@ -1,7 +1,10 @@
 import { AddGoogleCredCommand } from '../../app/commands/auth.add-google-cred.command';
 import { AddMailCredCommand } from '../../app/commands/auth.add-mail-cred.command';
 import { AssignRoleToCommand } from '../../app/commands/auth.assign-role-to.command';
+import { ConnectGoogleCalendarCommand } from '../../app/commands/auth.connect-google-calendar.command';
+import { DisconnectGoogleCalendarCommand } from '../../app/commands/auth.disconnect-google-calendar.command';
 import { GoogleRegisterOrLoginCommand } from '../../app/commands/auth.google-register-or-login.command';
+import { LockIdentityCommand } from '../../app/commands/auth.lock-identity.command';
 import {
 	LogoutAllCommand,
 	LogoutAllCommandPayload,
@@ -17,6 +20,7 @@ import {
 import { RefreshCommand, RefreshCommandPayload } from '../../app/commands/auth.refresh.command';
 import { RemoveCredCommand } from '../../app/commands/auth.remove-cred.command';
 import { RemoveRoleFromCommand } from '../../app/commands/auth.remove-role-from.command';
+import { UnlockIdentityCommand } from '../../app/commands/auth.unlock-identity.command';
 import {
 	UpdateIdentityCommand,
 	UpdateIdentityCommandPayload,
@@ -30,17 +34,28 @@ import {
 	ValidateRefreshCommand,
 	ValidateRefreshCommandPayload,
 } from '../../app/commands/auth.validate-refresh.command';
+import { FindIdentitiesByPhoneQuery } from '../../app/queries/auth.find-identities-by-phone.query';
 import { FindIdentitiesQuery } from '../../app/queries/auth.find-identities.query';
 import { FindIdentityIdsQuery } from '../../app/queries/auth.find-identity-ids.query';
-import { GetCredentialsQuery } from '../../app/queries/get-credentials.query';
-import { GetPermissionsQuery } from '../../app/queries/get-permissions.query';
-import { GetRolesQuery } from '../../app/queries/get-roles.query';
+import { GetCredentialsQuery } from '../../app/queries/auth.get-credentials.query';
+import { GetGoogleCalendarTokenQuery } from '../../app/queries/auth.get-google-calendar-token.query';
+import { GetPermissionsQuery } from '../../app/queries/auth.get-permissions.query';
+import { GetRolesQuery } from '../../app/queries/auth.get-roles.query';
+import { HydrateManyQuery } from '../../app/queries/auth.hydrate-many.query';
+import { HydrateQuery } from '../../app/queries/auth.hydrate.query';
 import { AddGoogleCredDto } from '../dtos/req/add-google-cred.req.dto';
 import { AddMailCredDto } from '../dtos/req/add-mail-cred.req.dto';
 import { AssignRoleToDto } from '../dtos/req/assign-role-to.req.dto';
+import { ConnectGoogleCalendarDto } from '../dtos/req/connect-google-calendar.req.dto';
+import { DisconnectGoogleCalendarDto } from '../dtos/req/disconnect-google-calendar.req.dto';
+import { FindIdentitiesByPhoneDto } from '../dtos/req/find-identities-by-phone.req.dto';
 import { FindIdentitiesDto } from '../dtos/req/find-identities.req.dto';
 import { FindIdentityIdsDto } from '../dtos/req/find-identity-ids.req.dto';
 import { GetCredsDto } from '../dtos/req/get-creds.req.dto';
+import { GetGoogleCalendarTokenDto } from '../dtos/req/get-google-calendar-token.req.dto';
+import { HydrateManyDto } from '../dtos/req/hydrate-many.req.dto';
+import { HydrateDto } from '../dtos/req/hydrate.req.dto';
+import { LockIdentityDto } from '../dtos/req/lock-identity.req.dto';
 import { LoginMailDto } from '../dtos/req/login-mail.req.dto';
 import { LogOutAllDto } from '../dtos/req/logout-all.req.dto';
 import { RefreshDto } from '../dtos/req/refresh-dto.req.dto';
@@ -48,22 +63,27 @@ import { RegisterMailDto } from '../dtos/req/register-mail.req.dto';
 import { RegisterOrLoginGoogleDto } from '../dtos/req/register-or-login-google.req.dto';
 import { RemoveCredDto } from '../dtos/req/remove-cred.req.dto';
 import { RemoveRoleFromDto } from '../dtos/req/remove-role-from.req.dto';
+import { UnlockIdentityDto } from '../dtos/req/unlock-identity.req.dto';
 import { UpdateIdentityDto } from '../dtos/req/update-identity.req.dto';
 import { UpdateMailPasswordDto } from '../dtos/req/update-password.req.dto';
 import { ValidateAccessDto } from '../dtos/req/validate-access.req.dto';
 import { ValidateRefreshDto } from '../dtos/req/validate-refresh.req.dto';
 import { ClaimsDto } from '../dtos/res/claims.res.dto';
 import { CredentialsDto } from '../dtos/res/credentials.res.dto';
+import { GoogleCalendarTokenResponseDto } from '../dtos/res/google-calendar-token.res.dto';
+import { HydratedIdentitiesDto, HydratedIdentityDto } from '../dtos/res/hydrated-identities.dto';
 import { IdentitiesDto } from '../dtos/res/identities.res.dto';
 import { IdentityIdsDto } from '../dtos/res/identity-ids.res.dto';
 import { PermissionsDto } from '../dtos/res/permissions.res.dto';
 import { RolesDto } from '../dtos/res/roles.res.dto';
 import { TokensDto } from '../dtos/res/tokens.res.dto';
-import { Controller, SerializeOptions } from '@nestjs/common';
+import { Controller, SerializeOptions, UseFilters } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { Payload } from '@nestjs/microservices';
 import { auth } from '@server/generated';
+import { GlobalRpcExceptionFilter } from '@server/utils';
 
+@UseFilters(GlobalRpcExceptionFilter)
 @auth.AuthServiceControllerMethods()
 @Controller()
 export class AuthController implements auth.AuthServiceController {
@@ -180,5 +200,75 @@ export class AuthController implements auth.AuthServiceController {
 
 	async updateMailPassword(@Payload() request: UpdateMailPasswordDto): Promise<void> {
 		await this.commandBus.execute(new UpdatePasswordCommand(request));
+	}
+
+	@SerializeOptions({ type: HydratedIdentitiesDto })
+	async hydrateIdentities(@Payload() request: HydrateManyDto): Promise<HydratedIdentitiesDto> {
+		return {
+			identities: await this.queryBus.execute(new HydrateManyQuery({ ids: request.identityIds })),
+		};
+	}
+
+	@SerializeOptions({ type: HydratedIdentityDto })
+	async hydrateIdentity(@Payload() request: HydrateDto): Promise<HydratedIdentityDto> {
+		return await this.queryBus.execute(new HydrateQuery({ id: request.identityId }));
+	}
+
+	async lockIdentity(@Payload() request: LockIdentityDto): Promise<void> {
+		await this.commandBus.execute(
+			new LockIdentityCommand({
+				identityId: request.identityId,
+				lockedBy: request.lockedBy,
+			}),
+		);
+	}
+
+	async unlockIdentity(@Payload() request: UnlockIdentityDto): Promise<void> {
+		await this.commandBus.execute(new UnlockIdentityCommand({ identityId: request.identityId }));
+	}
+
+	@SerializeOptions({ type: IdentitiesDto })
+	async findIdentitiesByPhone(
+		@Payload() request: FindIdentitiesByPhoneDto,
+	): Promise<IdentitiesDto> {
+		return await this.queryBus.execute(
+			new FindIdentitiesByPhoneQuery({
+				phoneNumber: request.phoneNumber,
+				cursor: request.cursor,
+				limit: request.limit,
+			}),
+		);
+	}
+
+	@SerializeOptions({ type: GoogleCalendarTokenResponseDto })
+	async connectGoogleCalendar(
+		@Payload() request: ConnectGoogleCalendarDto,
+	): Promise<GoogleCalendarTokenResponseDto> {
+		await this.commandBus.execute(new ConnectGoogleCalendarCommand(request));
+		return await this.queryBus.execute(
+			new GetGoogleCalendarTokenQuery({ identityId: request.identityId }),
+		);
+	}
+
+	async disconnectGoogleCalendar(@Payload() request: DisconnectGoogleCalendarDto): Promise<void> {
+		await this.commandBus.execute(new DisconnectGoogleCalendarCommand(request));
+	}
+
+	@SerializeOptions({ type: GoogleCalendarTokenResponseDto })
+	async getGoogleCalendarToken(
+		@Payload() request: GetGoogleCalendarTokenDto,
+	): Promise<GoogleCalendarTokenResponseDto> {
+		return await this.queryBus.execute(
+			new GetGoogleCalendarTokenQuery({ identityId: request.identityId }),
+		);
+	}
+
+	@SerializeOptions({ type: GoogleCalendarTokenResponseDto })
+	async refreshGoogleCalendarToken(
+		@Payload() request: GetGoogleCalendarTokenDto,
+	): Promise<GoogleCalendarTokenResponseDto> {
+		return await this.queryBus.execute(
+			new GetGoogleCalendarTokenQuery({ identityId: request.identityId }),
+		);
 	}
 }

@@ -20,5 +20,9 @@ export class FoundUsersBadgesDto {
 
 	@Expose()
 	@ApiPropertyOptional()
-	cursor?: string;
+	nextCursor?: string;
+
+	@Expose()
+	@ApiPropertyOptional()
+	prevCursor?: string;
 }

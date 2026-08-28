@@ -1,34 +1,72 @@
+import { HasPermissions } from '../auth/decorators/permissions.decorator';
 import { IsPublic } from '../auth/decorators/public.decorator';
+import { HasRoles } from '../auth/decorators/roles.decorator';
 import { GoogleOAuth2Guard } from '../auth/guards/google-oauth2.guard';
 import { JwtRefreshAuthGuard } from '../auth/guards/jwt-refresh-auth.guard';
+import { IEnvVars } from '../configs/config';
 import { type AuthenticatedRequest } from '../types/authenticated-request';
 import { AUTH_CLIENT } from './constants/auth';
+import { AddMailCredDto } from './dtos/req/add-mail-cred.req.dto';
+import { AssignRoleToDto } from './dtos/req/assign-role-to.req.dto';
+import { ConnectGoogleCalendarDto } from './dtos/req/connect-google-calendar.req.dto';
+import { ExchangeGoogleCalendarCodeDto } from './dtos/req/exchange-google-calendar-code.req.dto';
+import { FindIdentitiesLimitedDto } from './dtos/req/find-identities-limited.req.dto';
+import { FindIdentitiesDto } from './dtos/req/find-identities.req.dto';
+import { FindIdentityIdsDto } from './dtos/req/find-identity-ids.req.dto';
 import { LoginMailDto } from './dtos/req/login-mail.req.dto';
 import { RegisterMailDto } from './dtos/req/register-mail.req.dto';
+import { RemoveRoleFromDto } from './dtos/req/remove-role-from.req.dto';
+import { UpdateIdentityDto } from './dtos/req/update-identity.req.dto';
+import { UpdateMailPasswordDto } from './dtos/req/update-password.req.dto';
 import { ResponseTokensDto } from './dtos/res/auth.res.dto';
+import { CredentialsDto } from './dtos/res/credentials.res.dto';
+import { HydratedIdentitiesDto, HydratedIdentityDto } from './dtos/res/hydrated-identities.dto';
+import { IdentitiesDto } from './dtos/res/identities.res.dto';
+import { IdentityIdsDto } from './dtos/res/identity-ids.res.dto';
+import { LimitedIdentitiesDto } from './dtos/res/limited-identities.res.dto';
+import { PermissionsDto } from './dtos/res/permissions.res.dto';
+import { RolesDto } from './dtos/res/roles.res.dto';
+import { RedisService } from '@liaoliaots/nestjs-redis';
 import {
 	Body,
 	Controller,
+	Delete,
 	Get,
 	Inject,
 	OnModuleInit,
+	Param,
 	Post,
+	Query,
 	Req,
+	Res,
 	SerializeOptions,
+	UnauthorizedException,
 	UseGuards,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { type ClientGrpc } from '@nestjs/microservices';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { auth } from '@server/generated';
+import { Permission, Role } from '@server/typing';
 import { ApiEmptyResponseEntity, ApiResponseEntity } from '@server/utils';
-import { Observable } from 'rxjs';
+import { Response } from 'express';
+import Redis from 'ioredis';
+import { lastValueFrom } from 'rxjs';
 
+@ApiBearerAuth()
 @ApiTags('Auth')
 @Controller()
 export class AuthGatewayController implements OnModuleInit {
 	private authService!: auth.AuthServiceClient;
+	private readonly redis: Redis;
 
-	constructor(@Inject(AUTH_CLIENT) private readonly authClient: ClientGrpc) {}
+	constructor(
+		@Inject(AUTH_CLIENT) private readonly authClient: ClientGrpc,
+		private readonly configService: ConfigService<IEnvVars>,
+		private readonly redisService: RedisService,
+	) {
+		this.redis = this.redisService.getOrThrow();
+	}
 
 	onModuleInit() {
 		this.authService = this.authClient.getService<auth.AuthServiceClient>(auth.AUTH_SERVICE_NAME);
@@ -39,7 +77,7 @@ export class AuthGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Register with email and password' })
 	@ApiResponseEntity(ResponseTokensDto)
 	@SerializeOptions({ type: ResponseTokensDto })
-	registerMail(@Body() body: RegisterMailDto): Observable<ResponseTokensDto> {
+	registerMail(@Body() body: RegisterMailDto) {
 		const res = this.authService.registerMail(body);
 		return res;
 	}
@@ -49,7 +87,7 @@ export class AuthGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Log in with email and password' })
 	@ApiResponseEntity(ResponseTokensDto)
 	@SerializeOptions({ type: ResponseTokensDto })
-	loginMail(@Body() body: LoginMailDto): Observable<ResponseTokensDto> {
+	loginMail(@Body() body: LoginMailDto) {
 		const res = this.authService.loginMail(body);
 		return res;
 	}
@@ -57,17 +95,15 @@ export class AuthGatewayController implements OnModuleInit {
 	@Post('refresh')
 	@UseGuards(JwtRefreshAuthGuard)
 	@IsPublic()
-	@ApiBearerAuth()
 	@ApiOperation({ summary: 'Refresh access tokens using a refresh token' })
 	@ApiResponseEntity(ResponseTokensDto)
 	@SerializeOptions({ type: ResponseTokensDto })
-	refresh(@Req() req: AuthenticatedRequest): Observable<ResponseTokensDto> {
+	refresh(@Req() req: AuthenticatedRequest) {
 		const res = this.authService.refresh({ identityId: req.user.sub });
 		return res;
 	}
 
 	@Post('logout-all')
-	@ApiBearerAuth()
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Log out from all active sessions' })
 	logoutAll(@Req() req: AuthenticatedRequest) {
@@ -77,6 +113,8 @@ export class AuthGatewayController implements OnModuleInit {
 	@Get('google')
 	@UseGuards(GoogleOAuth2Guard)
 	@IsPublic()
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Get Google redirect to login/register with OAuth2' })
 	loginOrRegisterGoogle() {
 		return;
 	}
@@ -84,14 +122,275 @@ export class AuthGatewayController implements OnModuleInit {
 	@Get('google/callback')
 	@UseGuards(GoogleOAuth2Guard)
 	@IsPublic()
-	@SerializeOptions({ type: ResponseTokensDto })
-	googleCallback(@Req() request: { user: auth.Tokens | boolean }): auth.Tokens | boolean {
-		return request.user;
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Callback url for OAuth2' })
+	async googleCallback(@Req() request: { user: auth.Tokens | boolean }, @Res() res: Response) {
+		const loginToken = crypto.randomUUID();
+		await this.redis.setex(
+			`oauth2:google:loginToken:${loginToken}`,
+			60,
+			JSON.stringify(request.user),
+		);
+		const url = new URL(this.configService.getOrThrow('vps', { infer: true }).feLoginRedirectUrl);
+		url.searchParams.set('loginToken', loginToken);
+		return res.redirect(url.toString());
 	}
 
-	@Get('add/google')
+	@Get('google/tokens')
+	@IsPublic()
+	@ApiOperation({
+		summary: 'Get access and refresh tokens from login token',
+		description:
+			"Get access and refresh tokens from login token after /google/callback redirected to Frontend's redirection URL",
+	})
+	@ApiResponseEntity(ResponseTokensDto)
+	@SerializeOptions({ type: ResponseTokensDto })
+	async getGoogleTokens(@Query('loginToken') loginToken: string) {
+		const data = await this.redis.get(`oauth2:google:loginToken:${loginToken}`);
+		if (!data) {
+			throw new Error('Invalid or expired login token');
+		}
+		await this.redis.del(`oauth2:google:loginToken:${loginToken}`);
+		const tokens = JSON.parse(data) as auth.Tokens;
+		return tokens;
+	}
+
+	@Get('credentials/google')
 	@UseGuards(GoogleOAuth2Guard)
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Add Google credential to existing account' })
 	addGoogleCred() {
 		return;
+	}
+
+	@Post('credentials/mail')
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Add mail credential to existing account' })
+	addMailCredential(@Body() body: AddMailCredDto, @Req() request: AuthenticatedRequest) {
+		return this.authService.addMailCredential({ ...body, identityId: request.user.sub });
+	}
+
+	@Delete('credentials/:id')
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Delete credential from existing account' })
+	removeCredential(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
+		return this.authService.removeCredential({ id: id, identityId: request.user.sub });
+	}
+
+	@Get('identities')
+	@HasRoles(Role.Admin)
+	@ApiOperation({ summary: 'Find identities with roles and permissions' })
+	@ApiResponseEntity(IdentitiesDto)
+	@SerializeOptions({ type: IdentitiesDto })
+	findIdentities(@Query() query: FindIdentitiesDto) {
+		const res = this.authService.findIdentities(query);
+		return res;
+	}
+
+	@Get('identities-public')
+	@IsPublic()
+	@ApiOperation({ summary: 'Find public identity profiles' })
+	@ApiResponseEntity(LimitedIdentitiesDto)
+	@SerializeOptions({ type: LimitedIdentitiesDto })
+	findIdentitiesLimited(@Query() query: FindIdentitiesLimitedDto) {
+		const res = this.authService.findIdentities({ ...query, hasPerms: [], hasRoles: [] });
+		return res;
+	}
+
+	@Get('identity-ids')
+	@IsPublic()
+	@ApiOperation({ summary: 'Find identity ids only' })
+	@ApiResponseEntity(IdentityIdsDto)
+	@SerializeOptions({ type: IdentityIdsDto })
+	findIdentityIds(@Query() query: FindIdentityIdsDto) {
+		const res = this.authService.findIdentityIds(query);
+		return res;
+	}
+
+	@Get('credentials')
+	@ApiOperation({ summary: 'Get your credentials list' })
+	@ApiResponseEntity(CredentialsDto)
+	@SerializeOptions({ type: CredentialsDto })
+	getCredentials(@Req() request: AuthenticatedRequest) {
+		const res = this.authService.getCredentials({ identityId: request.user.sub });
+		return res;
+	}
+
+	@Get('roles')
+	@HasRoles(Role.Admin)
+	@ApiOperation({ summary: 'Get a roles list' })
+	@ApiResponseEntity(RolesDto)
+	@SerializeOptions({ type: RolesDto })
+	getRoleList() {
+		const res = this.authService.getRoleList({});
+		return res;
+	}
+
+	@Get('perms')
+	@HasRoles(Role.Admin)
+	@ApiOperation({ summary: 'Get a permissions list' })
+	@ApiResponseEntity(PermissionsDto)
+	@SerializeOptions({ type: PermissionsDto })
+	getPermList() {
+		const res = this.authService.getPermList({});
+		return res;
+	}
+
+	@Post('my/identity')
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Update your account information' })
+	updateIdentity(@Body() body: UpdateIdentityDto, @Req() request: AuthenticatedRequest) {
+		return this.authService.updateIdentity({ ...body, identityId: request.user.sub });
+	}
+
+	@Get('my/identity')
+	@ApiOperation({ summary: 'Get your own identity information' })
+	@ApiResponseEntity(HydratedIdentityDto)
+	@SerializeOptions({ type: HydratedIdentityDto })
+	getOwnIdentity(@Req() request: AuthenticatedRequest) {
+		return this.authService.hydrateIdentity({ identityId: request.user.sub });
+	}
+
+	@Post('credentials/mail/password')
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Change password' })
+	updateMailPassword(@Body() body: UpdateMailPasswordDto, @Req() request: AuthenticatedRequest) {
+		return this.authService.updateMailPassword({ ...body, identityId: request.user.sub });
+	}
+
+	@Get('hydrate-many')
+	@IsPublic()
+	@ApiOperation({ summary: 'Hydrate ids to identities' })
+	@ApiResponseEntity(HydratedIdentitiesDto)
+	@SerializeOptions({ type: HydratedIdentitiesDto })
+	hydrateIdentities(@Query('ids') ids: string[]) {
+		return this.authService.hydrateIdentities({ identityIds: ids ?? [] });
+	}
+
+	@Get('hydrate')
+	@IsPublic()
+	@ApiOperation({ summary: 'Hydrate an id to an identity' })
+	@ApiResponseEntity(HydratedIdentityDto)
+	@SerializeOptions({ type: HydratedIdentityDto })
+	hydrateIdentity(@Query('id') id: string) {
+		return this.authService.hydrateIdentity({ identityId: id });
+	}
+
+	@Post(':id/lock')
+	@HasPermissions(Permission.USER_LOCK)
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Lock an identity account' })
+	lockIdentity(@Param('id') identityId: string, @Req() request: AuthenticatedRequest) {
+		return this.authService.lockIdentity({ identityId: identityId, lockedBy: request.user.sub });
+	}
+
+	@Delete(':id/lock')
+	@HasPermissions(Permission.USER_UNLOCK)
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Unlock an identity account' })
+	unlockIdentity(@Param('id') identityId: string) {
+		return this.authService.unlockIdentity({ identityId: identityId });
+	}
+
+	@Get('identity/search/phone')
+	@ApiOperation({ summary: 'Search identities by phone number' })
+	@ApiResponseEntity(IdentitiesDto)
+	@SerializeOptions({ type: IdentitiesDto })
+	findIdentitiesByPhone(
+		@Query('phoneNumber') phoneNumber: string,
+		@Query('cursor') cursor?: string,
+		@Query('limit') limit?: number,
+	) {
+		return this.authService.findIdentitiesByPhone({
+			phoneNumber: phoneNumber,
+			cursor: cursor,
+			limit: limit,
+		});
+	}
+
+	@Post('google/calendar/exchange-code')
+	@ApiOperation({ summary: 'Exchange Google auth code for Calendar tokens and connect' })
+	async exchangeGoogleCalendarCode(
+		@Body() body: ExchangeGoogleCalendarCodeDto,
+		@Req() request: AuthenticatedRequest,
+	) {
+		const config = this.configService.getOrThrow('googleOAuth2', { infer: true });
+
+		const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+			body: new URLSearchParams({
+				code: body.code,
+				client_id: config.clientId,
+				client_secret: config.secret,
+				redirect_uri: 'postmessage',
+				grant_type: 'authorization_code',
+			}),
+		});
+
+		if (!tokenRes.ok) {
+			throw new UnauthorizedException('Failed to exchange Google authorization code');
+		}
+
+		const tokens = (await tokenRes.json()) as {
+			access_token: string;
+			refresh_token?: string;
+			expires_in?: number;
+			scope?: string;
+		};
+
+		return lastValueFrom(
+			this.authService.connectGoogleCalendar({
+				identityId: request.user.sub,
+				accessToken: tokens.access_token,
+				refreshToken: tokens.refresh_token ?? '',
+				expiresAt: Date.now() + (tokens.expires_in ?? 3600) * 1000,
+				scopes: tokens.scope ?? '',
+			}),
+		);
+	}
+
+	@Post('google/calendar/connect')
+	@ApiOperation({ summary: 'Connect Google Calendar account' })
+	connectGoogleCalendar(
+		@Body() body: ConnectGoogleCalendarDto,
+		@Req() request: AuthenticatedRequest,
+	) {
+		return this.authService.connectGoogleCalendar({
+			identityId: request.user.sub,
+			accessToken: body.accessToken,
+			refreshToken: body.refreshToken,
+			expiresAt: body.expiresAt,
+			scopes: body.scopes,
+		});
+	}
+
+	@Delete('google/calendar/connect')
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Disconnect Google Calendar account' })
+	disconnectGoogleCalendar(@Req() request: AuthenticatedRequest) {
+		return this.authService.disconnectGoogleCalendar({ identityId: request.user.sub });
+	}
+
+	@Get('google/calendar/token')
+	@ApiOperation({ summary: 'Get Google Calendar token' })
+	getGoogleCalendarToken(@Req() request: AuthenticatedRequest) {
+		return this.authService.getGoogleCalendarToken({ identityId: request.user.sub });
+	}
+
+	@Post(':id/roles')
+	@HasRoles(Role.Admin)
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Assign a role to someone' })
+	assignRoleTo(@Body() body: AssignRoleToDto, @Param('id') identityId: string) {
+		return this.authService.assignRoleTo({ ...body, identityId: identityId });
+	}
+
+	@Delete(':id/roles')
+	@HasRoles(Role.Admin)
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Remove a role of someone' })
+	removeRoleFrom(@Body() body: RemoveRoleFromDto, @Param('id') identityId: string) {
+		return this.authService.removeRoleFrom({ ...body, identityId: identityId });
 	}
 }

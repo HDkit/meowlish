@@ -2,7 +2,7 @@ import {
 	type IPracticeReadRepository,
 	IPracticeReadRepositoryToken,
 } from '../../../../domain/repositories/practice.read.repository';
-import { GetUserCalendarQuery, UsersCalendar } from '../../practice/get-user-calendar.query';
+import { GetUserCalendarQuery, UsersCalendar } from '../../practice/exam.get-user-calendar.query';
 import { Inject } from '@nestjs/common';
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 

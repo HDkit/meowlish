@@ -75,6 +75,51 @@
 			"skipFiles": ["<node_internals>/**"],
 			"sourceMaps": true,
 			"outFiles": ["${workspaceFolder}/apps/achievement/dist/**/*.(m|c|)js", "!**/node_modules/**"]
+		},
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Debug notification with Nx",
+			"runtimeExecutable": "pnpm exec",
+			"runtimeArgs": ["nx", "serve", "notification"],
+			"env": {
+				"NODE_OPTIONS": "--inspect=9235"
+			},
+			"console": "integratedTerminal",
+			"internalConsoleOptions": "neverOpen",
+			"skipFiles": ["<node_internals>/**"],
+			"sourceMaps": true,
+			"outFiles": ["${workspaceFolder}/apps/notification/dist/**/*.(m|c|)js", "!**/node_modules/**"]
+		},
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Debug live with Nx",
+			"runtimeExecutable": "pnpm exec",
+			"runtimeArgs": ["nx", "serve", "live"],
+			"env": {
+				"NODE_OPTIONS": "--inspect=9237"
+			},
+			"console": "integratedTerminal",
+			"internalConsoleOptions": "neverOpen",
+			"skipFiles": ["<node_internals>/**"],
+			"sourceMaps": true,
+			"outFiles": ["${workspaceFolder}/apps/live/dist/**/*.(m|c|)js", "!**/node_modules/**"]
+		},
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Debug resource with Nx",
+			"runtimeExecutable": "pnpm exec",
+			"runtimeArgs": ["nx", "serve", "resource"],
+			"env": {
+				"NODE_OPTIONS": "--inspect=9238"
+			},
+			"console": "integratedTerminal",
+			"internalConsoleOptions": "neverOpen",
+			"skipFiles": ["<node_internals>/**"],
+			"sourceMaps": true,
+			"outFiles": ["${workspaceFolder}/apps/resource/dist/**/*.(m|c|)js", "!**/node_modules/**"]
 		}
 	]
 }

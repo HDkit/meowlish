@@ -20,7 +20,7 @@ class FilterOptionsDto implements exam.FindExamsDto_FilterOption {
 	@IsArray()
 	@IsOptional()
 	@IsString({ each: true })
-	tags!: string[];
+	tags: string[] = [];
 }
 
 class SortOptionsDto implements exam.FindExamsDto_SortOption {

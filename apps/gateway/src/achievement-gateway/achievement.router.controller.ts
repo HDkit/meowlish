@@ -4,6 +4,7 @@ import { ACHIEVEMENT_CLIENT } from './constants/achievement';
 import { GetUsersBadgesDto } from './dtos/req/get-users-badges.req.dto';
 import { FoundBadgesDto } from './dtos/res/found-badges.res.dto';
 import { FoundUsersBadgesDto } from './dtos/res/found-users-badges.res.dto';
+import { ProgressDto } from './dtos/res/progress.res.dto';
 import {
 	Controller,
 	Get,
@@ -18,8 +19,8 @@ import { ClientGrpc } from '@nestjs/microservices';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { achievement } from '@server/generated';
 import { ApiResponseEntity } from '@server/utils';
-import { Observable } from 'rxjs';
 
+@ApiBearerAuth()
 @ApiTags('Achievements')
 @Controller('badges')
 export class AchievementGatewayController implements OnModuleInit {
@@ -39,20 +40,24 @@ export class AchievementGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Get all available badges' })
 	@ApiResponseEntity(FoundBadgesDto)
 	@SerializeOptions({ type: FoundBadgesDto })
-	getAllBadges(): Observable<FoundBadgesDto> {
+	getAllBadges() {
 		return this.achievementService.getAll({});
 	}
 
 	@Get('my')
-	@ApiBearerAuth()
 	@ApiOperation({ summary: 'Get the authenticated user badges' })
 	@ApiResponseEntity(FoundUsersBadgesDto)
 	@SerializeOptions({ type: FoundUsersBadgesDto })
-	getMyBadges(
-		@Query() body: GetUsersBadgesDto,
-		@Req() req: AuthenticatedRequest,
-	): Observable<FoundUsersBadgesDto> {
-		return this.achievementService.getUsersBadges({ ...body, userId: req.user.sub });
+	getMyBadges(@Query() query: GetUsersBadgesDto, @Req() req: AuthenticatedRequest) {
+		return this.achievementService.getUsersBadges({ ...query, userId: req.user.sub });
+	}
+
+	@Get('my/progress')
+	@ApiOperation({ summary: 'Get the authenticated user badges progress' })
+	@ApiResponseEntity(ProgressDto)
+	@SerializeOptions({ type: ProgressDto })
+	getMyProgress(@Req() req: AuthenticatedRequest) {
+		return this.achievementService.getUsersProgess({ userId: req.user.sub });
 	}
 
 	@Get(':uid')
@@ -60,10 +65,7 @@ export class AchievementGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Get badges earned by a specific user' })
 	@ApiResponseEntity(FoundUsersBadgesDto)
 	@SerializeOptions({ type: FoundUsersBadgesDto })
-	getSomeonesBadges(
-		@Query() body: GetUsersBadgesDto,
-		@Param('uid') uid: string,
-	): Observable<FoundUsersBadgesDto> {
-		return this.achievementService.getUsersBadges({ ...body, userId: uid });
+	getSomeonesBadges(@Query() query: GetUsersBadgesDto, @Param('uid') uid: string) {
+		return this.achievementService.getUsersBadges({ ...query, userId: uid });
 	}
 }

@@ -49,6 +49,24 @@
 			"configurations": {
 				"development": {
 					"command": "pnpm exec prisma migrate dev {args}"
+				},
+				"production": {
+					"command": "pnpm exec prisma migrate deploy {args}"
+				}
+			},
+			"defaultConfiguration": "development"
+		},
+		"prisma:migrate:reset": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/file-service"
+			},
+			"configurations": {
+				"development": {
+					"command": "pnpm exec prisma migrate reset {args}"
+				},
+				"production": {
+					"command": "echo '❌ prisma migrate reset is disabled in production' && exit 1"
 				}
 			},
 			"defaultConfiguration": "development"

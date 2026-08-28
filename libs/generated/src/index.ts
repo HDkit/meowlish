@@ -8,5 +8,9 @@
 export * as google from "./index.google";
 export * as achievement from "./index.achievement";
 export * as auth from "./index.auth";
+export * as authorization from "./index.authorization";
 export * as exam from "./index.exam";
 export * as file from "./index.file";
+export * as live from "./index.live";
+export * as notification from "./index.notification";
+export * as resource from "./index.resource";

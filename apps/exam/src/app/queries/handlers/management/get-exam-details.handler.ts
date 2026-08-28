@@ -3,7 +3,7 @@ import {
 	type IManagementReadRepository,
 	IManagementReadRepositoryToken,
 } from '../../../../domain/repositories/management.read.repository';
-import { GetExamManagementDetailsQuery } from '../../management/get-exam-details.query';
+import { GetExamManagementDetailsQuery } from '../../management/exam.get-exam-details.query';
 import { Inject, NotFoundException } from '@nestjs/common';
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 

@@ -15,7 +15,7 @@ export class ToeicLrExamSeeder {
 		const sect7 = new ToeicLrExamSect7Seeder(this.tagNamesToIdInputs).seed();
 		return {
 			id: '1',
-			createdBy: 'admin-id',
+			createdBy: 'admin',
 			title: 'TOEIC LR 1',
 			duration: 2 * 60 * 60,
 			status: ExamStatus.Approved,

@@ -3,7 +3,7 @@ import { Expose, Type } from 'class-transformer';
 
 class IdentityDto implements auth.Identities_Identity {
 	@Expose()
-	avatarId?: string;
+	avatarUrl?: string;
 
 	@Expose()
 	bio?: string;
@@ -22,6 +22,12 @@ class IdentityDto implements auth.Identities_Identity {
 
 	@Expose()
 	username!: string;
+
+	@Expose()
+	phoneNumber?: string;
+
+	@Expose()
+	isLocked!: boolean;
 }
 
 export class IdentitiesDto implements auth.Identities {
@@ -30,5 +36,8 @@ export class IdentitiesDto implements auth.Identities {
 	identities!: IdentityDto[];
 
 	@Expose()
-	cursor!: string;
+	nextCursor!: string;
+
+	@Expose()
+	prevCursor!: string;
 }

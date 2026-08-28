@@ -33,10 +33,26 @@ const servicesSchema = z.object({
 		port: z.coerce.number(),
 		host: z.string(),
 	}),
+	live: z.object({
+		port: z.coerce.number(),
+		host: z.string(),
+		portWs: z.coerce.number(),
+		hostWs: z.string(),
+	}),
+	notification: z.object({
+		port: z.coerce.number(),
+		host: z.string(),
+		httpPort: z.coerce.number(),
+	}),
+	resource: z.object({
+		port: z.coerce.number(),
+		host: z.string(),
+	}),
 });
 
 const vpsEnvSchema = z.object({
 	baseUrl: z.url(),
+	feLoginRedirectUrl: z.url(),
 });
 
 export const envFileSchema = z.object({
@@ -82,8 +98,26 @@ const loadEnv = (): DeepStringify<IEnvVars> => ({
 			port: process.env.ACHIEVEMENT_SERVICE_PORT,
 			host: process.env.ACHIEVEMENT_SERVICE_HOST,
 		},
+		live: {
+			port: process.env.LIVE_SERVICE_PORT,
+			host: process.env.LIVE_SERVICE_HOST,
+			portWs: process.env.LIVE_SERVICE_WS_PORT,
+			hostWs: process.env.LIVE_SERVICE_WS_HOST,
+		},
+		notification: {
+			port: process.env.NOTIFICATION_SERVICE_PORT,
+			host: process.env.NOTIFICATION_SERVICE_HOST,
+			httpPort: process.env.NOTIFICATION_SERVICE_HTTP_PORT,
+		},
+		resource: {
+			port: process.env.RESOURCE_SERVICE_PORT,
+			host: process.env.RESOURCE_SERVICE_HOST,
+		},
 	},
-	vps: { baseUrl: process.env.BASE_URL?.trim().replace(/\/+$/, '') },
+	vps: {
+		baseUrl: process.env.BASE_URL?.trim().replace(/\/+$/, ''),
+		feLoginRedirectUrl: process.env.FE_LOGIN_REDIRECT_URL?.trim().replace(/\/+$/, ''),
+	},
 });
 
 // validate and optionally transform your env variables here

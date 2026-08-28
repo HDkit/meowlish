@@ -3,6 +3,14 @@ import { Expose, Type } from 'class-transformer';
 
 class MinimalAttemptInfoDto {
 	@Expose()
+	@ApiProperty()
+	examId!: string;
+
+	@Expose()
+	@ApiProperty()
+	examName!: string;
+
+	@Expose()
 	@ApiProperty({ type: Number })
 	durationLimit!: number;
 
@@ -39,5 +47,9 @@ export class AttemptsHistoryDto {
 
 	@Expose()
 	@ApiProperty()
-	cursor!: string;
+	nextCursor!: string;
+
+	@Expose()
+	@ApiProperty()
+	prevCursor!: string;
 }

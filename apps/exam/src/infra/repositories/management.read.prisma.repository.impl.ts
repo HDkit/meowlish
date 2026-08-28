@@ -6,6 +6,7 @@ import { QuestionManagementInfo } from '../../domain/read-models/management/ques
 import { SectionManagementInfo } from '../../domain/read-models/management/section-info.read-model';
 import { IManagementReadRepository } from '../../domain/repositories/management.read.repository';
 import { ExamStatus } from '../../enums/exam-status.enum';
+import { SectionType } from '../../enums/section-type.enum';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { BadRequestException, Injectable } from '@nestjs/common';
@@ -27,10 +28,13 @@ export class ManagementPrismaRepositoryImpl implements IManagementReadRepository
 		sortBy?: { key: 'updatedAt' | 'createdAt'; direction: SortDirection };
 		lastId?: string;
 		limit?: number;
+		direction?: number;
 	}): Promise<ExamManagementMinimalInfo[]> {
 		if (options?.limit && options.limit < 0)
 			throw new BadRequestException('Limit must be positive');
 		const filter = options?.filter;
+		const limit = options?.limit ?? 10;
+		const dir = Math.sign(options?.direction || 1);
 
 		const foundExams = await this.txHost.tx.exam.findMany({
 			where: {
@@ -56,13 +60,13 @@ export class ManagementPrismaRepositoryImpl implements IManagementReadRepository
 				...(options?.sortBy ?
 					[{ [options.sortBy.key]: options.sortBy.direction.toLowerCase() }]
 				:	[]),
-				{ id: 'asc' },
+				{ id: dir === -1 ? 'desc' : 'asc' },
 			],
 			...(options?.lastId && {
 				cursor: { id: options.lastId },
 				skip: 1,
 			}),
-			take: options?.limit ?? 10,
+			take: dir * limit,
 		});
 		return foundExams;
 	}
@@ -109,6 +113,7 @@ export class ManagementPrismaRepositoryImpl implements IManagementReadRepository
 				directive: true,
 				contentType: true,
 				questions: { select: { id: true }, orderBy: [{ order: 'asc' }] },
+				childSections: { select: { id: true }, orderBy: [{ order: 'asc' }] },
 				sectionFiles: { select: { fileId: true }, orderBy: [{ updatedAt: 'asc' }] },
 				sectionTags: { select: { tag: { select: { name: true } } } },
 			},
@@ -120,7 +125,10 @@ export class ManagementPrismaRepositoryImpl implements IManagementReadRepository
 			...foundSection,
 			name: foundSection.name ?? undefined,
 			parentId: foundSection.parentId ?? undefined,
-			questionIds: foundSection.questions.map(q => q.id),
+			childrenIds:
+				foundSection.contentType === String(SectionType.Question) ?
+					foundSection.questions.map(q => q.id)
+				:	foundSection.childSections.map(q => q.id),
 			files: foundSection.sectionFiles.map(f => ({ id: f.fileId })),
 			tags: foundSection.sectionTags.map(t => t.tag.name),
 		};
@@ -152,5 +160,23 @@ export class ManagementPrismaRepositoryImpl implements IManagementReadRepository
 			files: foundQuestion.questionFiles.map(f => ({ id: f.fileId })),
 			tags: foundQuestion.questionTags.map(t => t.tag.name),
 		};
+	}
+
+	async getExamCounts() {
+		const groups = await this.txHost.tx.exam.groupBy({
+			by: ['status'],
+			_count: { _all: true },
+		});
+		let total = 0;
+		let approved = 0;
+		let pending = 0;
+		let rejected = 0;
+		for (const g of groups) {
+			total += g._count._all;
+			if (g.status === 'APPROVED') approved = g._count._all;
+			else if (g.status === 'PENDING') pending = g._count._all;
+			else if (g.status === 'REJECTED') rejected = g._count._all;
+		}
+		return { total: total, approved: approved, pending: pending, rejected: rejected };
 	}
 }

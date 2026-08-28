@@ -2,6 +2,9 @@ import {
 	CredAddedEvent,
 	CredDeletedEvent,
 	CredUpdatedEvent,
+	IdentityAvatarUpdatedEvent,
+	IdentityLockedEvent,
+	IdentityUnlockedEvent,
 	IdentityUpdatedEvent,
 	RoleAddedEvent,
 	RoleDeletedEvent,
@@ -22,6 +25,10 @@ export class Identity extends AggregateRoot<Event<any>> implements IAggregate<Id
 	public fullName: string | null;
 	public bio: string | null;
 	public avatarFileId: string | null;
+	public phoneNumber: string | null;
+	public isLocked: boolean;
+	public lockedAt: Date | null;
+	public lockedBy: string | null;
 	public roleIds: Set<string>;
 	public credentials: Credential[];
 	public readonly createdAt: Date;
@@ -35,6 +42,10 @@ export class Identity extends AggregateRoot<Event<any>> implements IAggregate<Id
 		fullName?: string | null;
 		bio?: string | null;
 		avatarFileId?: string | null;
+		phoneNumber?: string | null;
+		isLocked?: boolean;
+		lockedAt?: Date | null;
+		lockedBy?: string | null;
 		createdAt?: Date;
 		updatedAt?: Date;
 		deletedAt?: Date | null;
@@ -48,6 +59,10 @@ export class Identity extends AggregateRoot<Event<any>> implements IAggregate<Id
 		this.fullName = constructorOptions.fullName ?? null;
 		this.bio = constructorOptions.bio ?? null;
 		this.avatarFileId = constructorOptions.avatarFileId ?? null;
+		this.phoneNumber = constructorOptions.phoneNumber ?? null;
+		this.isLocked = constructorOptions.isLocked ?? false;
+		this.lockedAt = constructorOptions.lockedAt ?? null;
+		this.lockedBy = constructorOptions.lockedBy ?? null;
 		this.createdAt = constructorOptions.createdAt ?? new Date();
 		this.updatedAt = constructorOptions.updatedAt ?? new Date();
 		this.deletedAt = constructorOptions.deletedAt ?? null;
@@ -59,9 +74,33 @@ export class Identity extends AggregateRoot<Event<any>> implements IAggregate<Id
 		if (options.username) this.username = options.username;
 		if (options.fullName || options.fullName === null) this.fullName = options.fullName;
 		if (options.bio || options.bio === null) this.bio = options.bio;
-		if (options.avatarFileId || options.avatarFileId === null)
+		if (options.phoneNumber || options.phoneNumber === null) this.phoneNumber = options.phoneNumber;
+		if (
+			(options.avatarFileId || options.avatarFileId === null) &&
+			options.avatarFileId !== this.avatarFileId
+		) {
 			this.avatarFileId = options.avatarFileId;
+			this.apply(
+				new IdentityAvatarUpdatedEvent({ identityId: this.id, avatarFileId: this.avatarFileId }),
+			);
+		}
 		this.apply(new IdentityUpdatedEvent({ identityId: this.id, data: structuredClone(this) }));
+	}
+
+	public lock(adminId: string): void {
+		if (this.isLocked) throw new ConflictException('Identity is already locked');
+		this.isLocked = true;
+		this.lockedAt = new Date();
+		this.lockedBy = adminId;
+		this.apply(new IdentityLockedEvent({ identityId: this.id, lockedBy: adminId }));
+	}
+
+	public unlock(): void {
+		if (!this.isLocked) throw new ConflictException('Identity is not locked');
+		this.isLocked = false;
+		this.lockedAt = null;
+		this.lockedBy = null;
+		this.apply(new IdentityUnlockedEvent({ identityId: this.id }));
 	}
 
 	public addRole(roleId: string): void {
@@ -127,5 +166,5 @@ export class Identity extends AggregateRoot<Event<any>> implements IAggregate<Id
 }
 
 type IdentityUpdatableProperties = Partial<
-	Pick<Identity, 'username' | 'fullName' | 'bio' | 'avatarFileId'>
+	Pick<Identity, 'username' | 'fullName' | 'bio' | 'avatarFileId' | 'phoneNumber'>
 >;

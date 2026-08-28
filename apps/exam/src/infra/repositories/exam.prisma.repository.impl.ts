@@ -61,7 +61,7 @@ class ExamPrismaMapper {
 }
 
 @Injectable()
-export class ExamPrismaRepository implements IExamRepository {
+export class ExamPrismaRepositoryImpl implements IExamRepository {
 	constructor(private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>) {}
 
 	async findOne(id: string): Promise<Exam | null> {

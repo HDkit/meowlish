@@ -2,7 +2,7 @@ import {
 	type IRoleReadRepository,
 	IRoleReadRepositoryToken,
 } from '../../../domain/repositories/role.read.repository';
-import { GetPermissionsQuery } from '../get-permissions.query';
+import { GetPermissionsQuery } from '../auth.get-permissions.query';
 import { Inject } from '@nestjs/common';
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 

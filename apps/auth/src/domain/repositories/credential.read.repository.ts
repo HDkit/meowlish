@@ -1,4 +1,4 @@
-import { CredentialReadModel } from '../entities/credential.read-model';
+import { CredentialReadModel } from '../read-models/credential.read-model';
 
 export interface ICredentialReadRepository {
 	getCredentialList(identityId: string): Promise<CredentialReadModel[]>;

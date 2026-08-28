@@ -4,7 +4,7 @@ import {
 	type IManagementReadRepository,
 	IManagementReadRepositoryToken,
 } from '../../../../domain/repositories/management.read.repository';
-import { GetQuestionManagementDetailsQuery } from '../../management/get-question-details.query';
+import { GetQuestionManagementDetailsQuery } from '../../management/exam.get-question-details.query';
 import {
 	Inject,
 	NotFoundException,

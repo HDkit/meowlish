@@ -3,7 +3,7 @@ import {
 	type IPracticeReadRepository,
 	IPracticeReadRepositoryToken,
 } from '../../../../domain/repositories/practice.read.repository';
-import { GetExamStatsQuery } from '../../practice/get-exam-stats.query';
+import { GetExamStatsQuery } from '../../practice/exam.get-exam-stats.query';
 import { Inject, NotFoundException } from '@nestjs/common';
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 

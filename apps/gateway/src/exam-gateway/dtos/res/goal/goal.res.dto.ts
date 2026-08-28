@@ -4,7 +4,7 @@ import { Expose } from 'class-transformer';
 export class GoalResDto {
 	@Expose()
 	@ApiPropertyOptional({ type: String, format: 'date-time' })
-	date!: Date | undefined;
+	date!: Date;
 
 	@Expose()
 	@ApiProperty({ type: Number })

@@ -6,7 +6,6 @@ import { ClientGrpc } from '@nestjs/microservices';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { file } from '@server/generated';
 import { ApiResponseEntity } from '@server/utils';
-import { Observable } from 'rxjs';
 
 @ApiBearerAuth()
 @ApiTags('Files')
@@ -24,7 +23,7 @@ export class FileGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Create a presigned upload URL' })
 	@ApiResponseEntity(PresignedUrlResponseDto)
 	@SerializeOptions({ type: PresignedUrlResponseDto, strategy: 'exposeAll' })
-	getPresignedUrl(@Body() body: GetPresignedUrlDto): Observable<PresignedUrlResponseDto> {
+	getPresignedUrl(@Body() body: GetPresignedUrlDto) {
 		return this.fileService.getPresignedUrl(body);
 	}
 }

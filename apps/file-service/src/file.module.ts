@@ -6,7 +6,7 @@ import { minioConfig } from './configs/minio.config';
 import { rmqSubConfig } from './configs/rmq.sub.config';
 import { IFileRepositoryToken } from './domain/repositories/file.repository';
 import { OrphanCleanupScheduler, OrphanCleanupWorker } from './infra/jobs/orphan-cleanup.job';
-import { FilePrismaRepository } from './infra/repositories/file.prisma.repository.impl';
+import { FilePrismaRepositoryImpl } from './infra/repositories/file.prisma.repository.impl';
 import { FileController } from './presentation/controllers/file.controller';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { ClsPluginTransactional } from '@nestjs-cls/transactional';
@@ -19,10 +19,10 @@ import { PrismaClient } from '@prisma-client/file';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { LoggerModule } from '@server/logger';
 import {
-	Any2RpcExceptionFilter,
 	GlobalClassSerializerInterceptor,
+	GlobalRmqExceptionFilter,
+	GlobalRpcExceptionFilter,
 	GlobalValidationPipe,
-	Http2gRPCExceptionFilter,
 } from '@server/utils';
 import { ClsGuard, ClsModule } from 'nestjs-cls';
 import { NestMinioModule } from 'nestjs-minio';
@@ -62,7 +62,7 @@ import { NestMinioModule } from 'nestjs-minio';
 		OrphanCleanupWorker,
 		{
 			provide: IFileRepositoryToken,
-			useClass: FilePrismaRepository,
+			useClass: FilePrismaRepositoryImpl,
 		},
 		{
 			provide: APP_GUARD,
@@ -70,11 +70,11 @@ import { NestMinioModule } from 'nestjs-minio';
 		},
 		{
 			provide: APP_FILTER,
-			useClass: Any2RpcExceptionFilter,
+			useClass: GlobalRpcExceptionFilter,
 		},
 		{
 			provide: APP_FILTER,
-			useClass: Http2gRPCExceptionFilter,
+			useClass: GlobalRmqExceptionFilter,
 		},
 		{
 			provide: APP_PIPE,

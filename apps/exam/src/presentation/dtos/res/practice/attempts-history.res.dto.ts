@@ -3,6 +3,12 @@ import { Expose, Type } from 'class-transformer';
 
 class MinimalAttemptInfoDto implements exam.UsersAttemptHistory_MinimalAttemptInfo {
 	@Expose()
+	examId!: string;
+
+	@Expose()
+	examName!: string;
+
+	@Expose()
 	durationLimit!: number;
 
 	@Expose()
@@ -30,5 +36,8 @@ export class AttemptsHistoryDto implements exam.UsersAttemptHistory {
 	attempts!: MinimalAttemptInfoDto[];
 
 	@Expose()
-	cursor!: string;
+	nextCursor!: string;
+
+	@Expose()
+	prevCursor!: string;
 }

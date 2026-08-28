@@ -40,7 +40,29 @@ export interface UserBadgesRequestDto {
 
 export interface UserBadgesResponseDto {
   badges: UserBadges[];
-  cursor?: string | undefined;
+  nextCursor?: string | undefined;
+  prevCursor?: string | undefined;
+}
+
+export interface UserProgressRequestDto {
+  userId: string | undefined;
+}
+
+export interface UserProgressDto {
+  loginProgress?: UserProgressDto_LoginProgress | undefined;
+  submissionProgress?: UserProgressDto_SubmissionProgress | undefined;
+}
+
+export interface UserProgressDto_LoginProgress {
+  streak: number;
+  longestStreak: number;
+  total: number;
+}
+
+export interface UserProgressDto_SubmissionProgress {
+  goodScore: number;
+  perfectScore: number;
+  total: number;
 }
 
 wrappers[".google.protobuf.Timestamp"] = {
@@ -297,8 +319,11 @@ export const UserBadgesResponseDto: MessageFns<UserBadgesResponseDto> = {
     for (const v of message.badges) {
       UserBadges.encode(v!, writer.uint32(10).fork()).join();
     }
-    if (message.cursor !== undefined) {
-      writer.uint32(18).string(message.cursor);
+    if (message.nextCursor !== undefined) {
+      writer.uint32(18).string(message.nextCursor);
+    }
+    if (message.prevCursor !== undefined) {
+      writer.uint32(26).string(message.prevCursor);
     }
     return writer;
   },
@@ -323,7 +348,218 @@ export const UserBadgesResponseDto: MessageFns<UserBadgesResponseDto> = {
             break;
           }
 
-          message.cursor = reader.string();
+          message.nextCursor = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.prevCursor = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseUserProgressRequestDto(): UserProgressRequestDto {
+  return { userId: undefined };
+}
+
+export const UserProgressRequestDto: MessageFns<UserProgressRequestDto> = {
+  encode(message: UserProgressRequestDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== undefined) {
+      StringValue.encode({ value: message.userId! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UserProgressRequestDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseUserProgressRequestDto();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.userId = StringValue.decode(reader, reader.uint32()).value;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseUserProgressDto(): UserProgressDto {
+  return {};
+}
+
+export const UserProgressDto: MessageFns<UserProgressDto> = {
+  encode(message: UserProgressDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.loginProgress !== undefined) {
+      UserProgressDto_LoginProgress.encode(message.loginProgress, writer.uint32(10).fork()).join();
+    }
+    if (message.submissionProgress !== undefined) {
+      UserProgressDto_SubmissionProgress.encode(message.submissionProgress, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UserProgressDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseUserProgressDto();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.loginProgress = UserProgressDto_LoginProgress.decode(reader, reader.uint32());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.submissionProgress = UserProgressDto_SubmissionProgress.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseUserProgressDto_LoginProgress(): UserProgressDto_LoginProgress {
+  return { streak: 0, longestStreak: 0, total: 0 };
+}
+
+export const UserProgressDto_LoginProgress: MessageFns<UserProgressDto_LoginProgress> = {
+  encode(message: UserProgressDto_LoginProgress, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.streak !== 0) {
+      writer.uint32(8).int32(message.streak);
+    }
+    if (message.longestStreak !== 0) {
+      writer.uint32(16).int32(message.longestStreak);
+    }
+    if (message.total !== 0) {
+      writer.uint32(24).int32(message.total);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UserProgressDto_LoginProgress {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseUserProgressDto_LoginProgress();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.streak = reader.int32();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.longestStreak = reader.int32();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.total = reader.int32();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseUserProgressDto_SubmissionProgress(): UserProgressDto_SubmissionProgress {
+  return { goodScore: 0, perfectScore: 0, total: 0 };
+}
+
+export const UserProgressDto_SubmissionProgress: MessageFns<UserProgressDto_SubmissionProgress> = {
+  encode(message: UserProgressDto_SubmissionProgress, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.goodScore !== 0) {
+      writer.uint32(8).int32(message.goodScore);
+    }
+    if (message.perfectScore !== 0) {
+      writer.uint32(16).int32(message.perfectScore);
+    }
+    if (message.total !== 0) {
+      writer.uint32(24).int32(message.total);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UserProgressDto_SubmissionProgress {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseUserProgressDto_SubmissionProgress();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.goodScore = reader.int32();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.perfectScore = reader.int32();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.total = reader.int32();
           continue;
         }
       }
@@ -340,6 +576,8 @@ export interface AchievementServiceClient {
   getAll(request: Empty, metadata?: Metadata): Observable<BadgesResponseDto>;
 
   getUsersBadges(request: UserBadgesRequestDto, metadata?: Metadata): Observable<UserBadgesResponseDto>;
+
+  getUsersProgess(request: UserProgressRequestDto, metadata?: Metadata): Observable<UserProgressDto>;
 }
 
 export interface AchievementServiceController {
@@ -352,11 +590,16 @@ export interface AchievementServiceController {
     request: UserBadgesRequestDto,
     metadata?: Metadata,
   ): Promise<UserBadgesResponseDto> | Observable<UserBadgesResponseDto> | UserBadgesResponseDto;
+
+  getUsersProgess(
+    request: UserProgressRequestDto,
+    metadata?: Metadata,
+  ): Promise<UserProgressDto> | Observable<UserProgressDto> | UserProgressDto;
 }
 
 export function AchievementServiceControllerMethods() {
   return function (constructor: Function) {
-    const grpcMethods: string[] = ["getAll", "getUsersBadges"];
+    const grpcMethods: string[] = ["getAll", "getUsersBadges", "getUsersProgess"];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
       GrpcMethod("AchievementService", method)(constructor.prototype[method], method, descriptor);
@@ -392,11 +635,22 @@ export const AchievementServiceService = {
       Buffer.from(UserBadgesResponseDto.encode(value).finish()),
     responseDeserialize: (value: Buffer): UserBadgesResponseDto => UserBadgesResponseDto.decode(value),
   },
+  getUsersProgess: {
+    path: "/achievement.AchievementService/GetUsersProgess" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: UserProgressRequestDto): Buffer =>
+      Buffer.from(UserProgressRequestDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): UserProgressRequestDto => UserProgressRequestDto.decode(value),
+    responseSerialize: (value: UserProgressDto): Buffer => Buffer.from(UserProgressDto.encode(value).finish()),
+    responseDeserialize: (value: Buffer): UserProgressDto => UserProgressDto.decode(value),
+  },
 } as const;
 
 export interface AchievementServiceServer extends UntypedServiceImplementation {
   getAll: handleUnaryCall<Empty, BadgesResponseDto>;
   getUsersBadges: handleUnaryCall<UserBadgesRequestDto, UserBadgesResponseDto>;
+  getUsersProgess: handleUnaryCall<UserProgressRequestDto, UserProgressDto>;
 }
 
 function toTimestamp(date: Date): Timestamp {

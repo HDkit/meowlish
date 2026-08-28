@@ -1,9 +1,11 @@
 import { Badge, UserBadge } from '../../domain/read-models/badge.read-model';
+import { Progress } from '../../domain/read-models/progress.read-model';
 import { IBadgeReadRepository } from '../../domain/repositories/badge.read.repository';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaClient } from '@prisma-client/achievement';
+import { differenceInCalendarDays } from 'date-fns';
 
 @Injectable()
 export class BadgeReadPrismaRepositoryImpl implements IBadgeReadRepository {
@@ -23,9 +25,11 @@ export class BadgeReadPrismaRepositoryImpl implements IBadgeReadRepository {
 	 */
 	async getUsersBadges(
 		userId: string,
-		opts?: { lastId?: string; limit?: number },
+		opts?: { lastId?: string; limit?: number; direction?: number },
 	): Promise<UserBadge[]> {
 		if (opts?.limit && opts.limit < 0) throw new BadRequestException('Limit must be positive');
+		const limit = opts?.limit ?? 10;
+		const dir = Math.sign(opts?.direction || 1);
 
 		const badges = await this.txHost.tx.userBadge.findMany({
 			where: { uid: userId },
@@ -35,7 +39,7 @@ export class BadgeReadPrismaRepositoryImpl implements IBadgeReadRepository {
 				badge: { select: { name: true, displayName: true, description: true } },
 				updatedAt: true,
 			},
-			take: opts?.limit ?? 10,
+			take: dir * limit,
 			...(opts?.lastId && {
 				cursor: { id: opts.lastId },
 				skip: 1,
@@ -48,5 +52,31 @@ export class BadgeReadPrismaRepositoryImpl implements IBadgeReadRepository {
 			description: b.badge.description,
 			date: b.updatedAt,
 		}));
+	}
+
+	async getUsersProgress(userId: string): Promise<Progress> {
+		const loginProgress = await this.txHost.tx.loginCriteria.findUnique({ where: { uid: userId } });
+		const submissionProgress = await this.txHost.tx.attemptCriteria.findUnique({
+			where: { uid: userId },
+		});
+
+		return {
+			loginProgress:
+				loginProgress ?
+					{
+						longestStreak: loginProgress.longestStreak,
+						streak: differenceInCalendarDays(loginProgress.lastLogin, loginProgress.startedAt),
+						total: loginProgress.total,
+					}
+				:	undefined,
+			submissionProgress:
+				submissionProgress ?
+					{
+						goodScore: submissionProgress.good,
+						perfectScore: submissionProgress.perfect,
+						total: submissionProgress.total,
+					}
+				:	undefined,
+		};
 	}
 }
