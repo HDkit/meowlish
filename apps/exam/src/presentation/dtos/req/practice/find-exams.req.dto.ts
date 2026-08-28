@@ -1,6 +1,6 @@
 import { exam } from '@server/generated';
 import { SortDirection } from '@server/typing';
-import { Transform, Type } from 'class-transformer';
+import { Type } from 'class-transformer';
 import {
 	IsArray,
 	IsEnum,

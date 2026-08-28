@@ -1,5 +1,4 @@
 import { auth } from '@server/generated';
-import { Transform } from 'class-transformer';
 import { IsArray, IsNumber, IsOptional, IsPositive, IsString } from 'class-validator';
 
 export class FindIdentitiesDto implements auth.FindIdentitiesDto {
