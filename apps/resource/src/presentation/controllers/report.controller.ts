@@ -6,7 +6,8 @@ import { GetReportReqDto } from '../dtos/req/get-report.req.dto';
 import { ListReportsReqDto } from '../dtos/req/list-reports.req.dto';
 import { RemoveFileFromReportReqDto } from '../dtos/req/remove-file-from-report.req.dto';
 import { UpdateReportReqDto } from '../dtos/req/update-report.req.dto';
-import { Controller, UseFilters } from '@nestjs/common';
+import { ListReportsDto, ReportDto } from '../dtos/res/report.res.dto';
+import { Controller, SerializeOptions, UseFilters } from '@nestjs/common';
 import { Payload } from '@nestjs/microservices';
 import { resource } from '@server/generated';
 import { GlobalRpcExceptionFilter } from '@server/utils';
@@ -17,15 +18,18 @@ import { GlobalRpcExceptionFilter } from '@server/utils';
 export class ReportController implements resource.ReportServiceController {
 	constructor(private readonly reportService: ReportService) {}
 
-	async createReport(@Payload() data: CreateReportReqDto): Promise<resource.ReportResponse> {
+	@SerializeOptions({ type: ReportDto, strategy: 'exposeAll' })
+	async createReport(@Payload() data: CreateReportReqDto): Promise<ReportDto> {
 		return this.reportService.createReport(data);
 	}
 
-	async getReport(@Payload() data: GetReportReqDto): Promise<resource.ReportResponse> {
+	@SerializeOptions({ type: ReportDto, strategy: 'exposeAll' })
+	async getReport(@Payload() data: GetReportReqDto): Promise<ReportDto> {
 		return this.reportService.getReport(data.id);
 	}
 
-	async updateReport(@Payload() data: UpdateReportReqDto): Promise<resource.ReportResponse> {
+	@SerializeOptions({ type: ReportDto, strategy: 'exposeAll' })
+	async updateReport(@Payload() data: UpdateReportReqDto): Promise<ReportDto> {
 		return this.reportService.updateReport(data);
 	}
 
@@ -33,7 +37,8 @@ export class ReportController implements resource.ReportServiceController {
 		await this.reportService.deleteReport(data.id);
 	}
 
-	async listReports(@Payload() data: ListReportsReqDto): Promise<resource.ListReportsResponse> {
+	@SerializeOptions({ type: ListReportsDto, strategy: 'exposeAll' })
+	async listReports(@Payload() data: ListReportsReqDto): Promise<ListReportsDto> {
 		return this.reportService.listReports(data);
 	}
 

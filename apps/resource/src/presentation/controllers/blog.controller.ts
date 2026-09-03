@@ -4,7 +4,8 @@ import { DeleteBlogReqDto } from '../dtos/req/delete-blog.req.dto';
 import { GetBlogReqDto } from '../dtos/req/get-blog.req.dto';
 import { ListBlogsReqDto } from '../dtos/req/list-blogs.req.dto';
 import { UpdateBlogReqDto } from '../dtos/req/update-blog.req.dto';
-import { Controller, UseFilters } from '@nestjs/common';
+import { BlogDto, ListBlogsDto } from '../dtos/res/blog.res.dto';
+import { Controller, SerializeOptions, UseFilters } from '@nestjs/common';
 import { Payload } from '@nestjs/microservices';
 import { resource } from '@server/generated';
 import { GlobalRpcExceptionFilter } from '@server/utils';
@@ -15,15 +16,18 @@ import { GlobalRpcExceptionFilter } from '@server/utils';
 export class BlogController implements resource.BlogServiceController {
 	constructor(private readonly blogService: BlogService) {}
 
-	async createBlog(@Payload() data: CreateBlogReqDto): Promise<resource.BlogResponse> {
+	@SerializeOptions({ type: BlogDto, strategy: 'exposeAll' })
+	async createBlog(@Payload() data: CreateBlogReqDto): Promise<BlogDto> {
 		return this.blogService.createBlog(data);
 	}
 
-	async getBlog(@Payload() data: GetBlogReqDto): Promise<resource.BlogResponse> {
+	@SerializeOptions({ type: BlogDto, strategy: 'exposeAll' })
+	async getBlog(@Payload() data: GetBlogReqDto): Promise<BlogDto> {
 		return this.blogService.getBlog(data.id);
 	}
 
-	async updateBlog(@Payload() data: UpdateBlogReqDto): Promise<resource.BlogResponse> {
+	@SerializeOptions({ type: BlogDto, strategy: 'exposeAll' })
+	async updateBlog(@Payload() data: UpdateBlogReqDto): Promise<BlogDto> {
 		return this.blogService.updateBlog(data);
 	}
 
@@ -31,7 +35,8 @@ export class BlogController implements resource.BlogServiceController {
 		await this.blogService.deleteBlog(data.id);
 	}
 
-	async listBlogs(@Payload() data: ListBlogsReqDto): Promise<resource.ListBlogsResponse> {
+	@SerializeOptions({ type: ListBlogsDto, strategy: 'exposeAll' })
+	async listBlogs(@Payload() data: ListBlogsReqDto): Promise<ListBlogsDto> {
 		return this.blogService.listBlogs(data);
 	}
 }

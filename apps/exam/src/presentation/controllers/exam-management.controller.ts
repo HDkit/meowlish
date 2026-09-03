@@ -70,6 +70,7 @@ import { UpdateSectionDto } from '../dtos/req/management/update-section.req.dto'
 import { CreatedExamDto } from '../dtos/res/management/created-exam.res.dto';
 import { CreatedQuestionDto } from '../dtos/res/management/created-question.res.dto';
 import { CreatedSectionDto } from '../dtos/res/management/created-section.res.dto';
+import { ExamCountsDto } from '../dtos/res/management/exam-counts.res.dto';
 import { ExamDetailedManagementInfoDto } from '../dtos/res/management/exam.res.dto';
 import { ExamsManagementInfoDto } from '../dtos/res/management/exams.res.dto';
 import { QuestionManagementInfoDto } from '../dtos/res/management/question.res.dto';
@@ -182,7 +183,8 @@ export class ExamManagementController implements exam.ExamManagementServiceContr
 		return await this.queryBus.execute(new GetQuestionManagementDetailsQuery(request));
 	}
 
-	async getExamCounts(): Promise<exam.ExamCountsResponse> {
+	@SerializeOptions({ type: ExamCountsDto, strategy: 'exposeAll' })
+	async getExamCounts(): Promise<ExamCountsDto> {
 		return await this.queryBus.execute(new GetExamCountsQuery());
 	}
 }

@@ -6,6 +6,7 @@ import { BanUserFromRoomDto } from './dtos/req/ban-user-from-room.req.dto';
 import { CreateRoomDto } from './dtos/req/create-room.req.dto';
 import { UpdateRoomScheduleDto } from './dtos/req/update-room-schedule.req.dto';
 import { ChatLogDto } from './dtos/res/chat-log.dto';
+import { CreatedRoomDto } from './dtos/res/created-room.dto';
 import { RoomListDto } from './dtos/res/room.dto';
 import {
 	BadRequestException,
@@ -65,8 +66,9 @@ export class LiveGatewayController implements OnModuleInit {
 
 	@Post()
 	@HasRoles(Role.Mod, Role.Admin)
-	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Create a chat room' })
+	@ApiResponseEntity(CreatedRoomDto)
+	@SerializeOptions({ type: CreatedRoomDto })
 	createRoom(@Req() req: AuthenticatedRequest, @Body() body: CreateRoomDto) {
 		return this.chatService.createRoom({ ...body, createdBy: req.user.sub });
 	}

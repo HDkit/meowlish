@@ -1,7 +1,8 @@
 import { NotificationPreferencesService } from '../../app/services/notification-preferences.service';
 import { GetPreferencesReqDto } from '../dtos/req/get-preferences.req.dto';
 import { UpdatePreferencesReqDto } from '../dtos/req/update-preferences.req.dto';
-import { Controller, UseFilters } from '@nestjs/common';
+import { NotificationPreferencesDto } from '../dtos/res/notification-preferences.res.dto';
+import { Controller, SerializeOptions, UseFilters } from '@nestjs/common';
 import { Payload } from '@nestjs/microservices';
 import { notification } from '@server/generated';
 import { GlobalRpcExceptionFilter } from '@server/utils';
@@ -14,15 +15,15 @@ export class NotificationPreferencesController
 {
 	constructor(private readonly notificationPreferencesService: NotificationPreferencesService) {}
 
-	async getPreferences(
-		@Payload() data: GetPreferencesReqDto,
-	): Promise<notification.NotificationPreferencesResponse> {
+	@SerializeOptions({ type: NotificationPreferencesDto, strategy: 'exposeAll' })
+	async getPreferences(@Payload() data: GetPreferencesReqDto): Promise<NotificationPreferencesDto> {
 		return this.notificationPreferencesService.getPreferences(data.identityId);
 	}
 
+	@SerializeOptions({ type: NotificationPreferencesDto, strategy: 'exposeAll' })
 	async updatePreferences(
 		@Payload() data: UpdatePreferencesReqDto,
-	): Promise<notification.NotificationPreferencesResponse> {
+	): Promise<NotificationPreferencesDto> {
 		return this.notificationPreferencesService.updatePreferences(data);
 	}
 }

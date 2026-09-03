@@ -69,6 +69,8 @@ export class NotificationGatewayController implements OnModuleInit {
 
 	@Post()
 	@ApiOperation({ summary: 'Create a notification' })
+	@ApiResponseEntity(NotificationDto)
+	@SerializeOptions({ type: NotificationDto, strategy: 'exposeAll' })
 	createNotification(@Body() body: CreateNotificationDto) {
 		return this.notificationService.createNotification(body);
 	}
@@ -110,6 +112,8 @@ export class NotificationGatewayController implements OnModuleInit {
 
 	@Patch(':id/read')
 	@ApiOperation({ summary: 'Mark a notification as read' })
+	@ApiResponseEntity(NotificationDto)
+	@SerializeOptions({ type: NotificationDto, strategy: 'exposeAll' })
 	markAsRead(@Param('id') id: string) {
 		return this.notificationService.markAsRead({ id: id });
 	}

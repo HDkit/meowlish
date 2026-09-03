@@ -4,7 +4,8 @@ import { DeleteFlashCardReqDto } from '../dtos/req/delete-flash-card.req.dto';
 import { GetFlashCardReqDto } from '../dtos/req/get-flash-card.req.dto';
 import { ListFlashCardsReqDto } from '../dtos/req/list-flash-cards.req.dto';
 import { UpdateFlashCardReqDto } from '../dtos/req/update-flash-card.req.dto';
-import { Controller, UseFilters } from '@nestjs/common';
+import { FlashCardDto, ListFlashCardsDto } from '../dtos/res/flash-card.res.dto';
+import { Controller, SerializeOptions, UseFilters } from '@nestjs/common';
 import { Payload } from '@nestjs/microservices';
 import { resource } from '@server/generated';
 import { GlobalRpcExceptionFilter } from '@server/utils';
@@ -15,19 +16,18 @@ import { GlobalRpcExceptionFilter } from '@server/utils';
 export class FlashcardController implements resource.FlashCardServiceController {
 	constructor(private readonly flashcardService: FlashcardService) {}
 
-	async createFlashCard(
-		@Payload() data: CreateFlashCardReqDto,
-	): Promise<resource.FlashCardResponse> {
+	@SerializeOptions({ type: FlashCardDto, strategy: 'exposeAll' })
+	async createFlashCard(@Payload() data: CreateFlashCardReqDto): Promise<FlashCardDto> {
 		return this.flashcardService.createFlashCard(data);
 	}
 
-	async getFlashCard(@Payload() data: GetFlashCardReqDto): Promise<resource.FlashCardResponse> {
+	@SerializeOptions({ type: FlashCardDto, strategy: 'exposeAll' })
+	async getFlashCard(@Payload() data: GetFlashCardReqDto): Promise<FlashCardDto> {
 		return this.flashcardService.getFlashCard(data.id);
 	}
 
-	async updateFlashCard(
-		@Payload() data: UpdateFlashCardReqDto,
-	): Promise<resource.FlashCardResponse> {
+	@SerializeOptions({ type: FlashCardDto, strategy: 'exposeAll' })
+	async updateFlashCard(@Payload() data: UpdateFlashCardReqDto): Promise<FlashCardDto> {
 		return this.flashcardService.updateFlashCard(data);
 	}
 
@@ -35,9 +35,8 @@ export class FlashcardController implements resource.FlashCardServiceController 
 		await this.flashcardService.deleteFlashCard(data.id);
 	}
 
-	async listFlashCards(
-		@Payload() data: ListFlashCardsReqDto,
-	): Promise<resource.ListFlashCardsResponse> {
+	@SerializeOptions({ type: ListFlashCardsDto, strategy: 'exposeAll' })
+	async listFlashCards(@Payload() data: ListFlashCardsReqDto): Promise<ListFlashCardsDto> {
 		return this.flashcardService.listFlashCards(data);
 	}
 }

@@ -5,7 +5,8 @@ import { GetNotificationReqDto } from '../dtos/req/get-notification.req.dto';
 import { ListNotificationsReqDto } from '../dtos/req/list-notifications.req.dto';
 import { MarkAllAsReadReqDto } from '../dtos/req/mark-all-as-read.req.dto';
 import { MarkAsReadReqDto } from '../dtos/req/mark-as-read.req.dto';
-import { Controller, UseFilters } from '@nestjs/common';
+import { ListNotificationsDto, NotificationDto } from '../dtos/res/notification.res.dto';
+import { Controller, SerializeOptions, UseFilters } from '@nestjs/common';
 import { Payload } from '@nestjs/microservices';
 import { notification } from '@server/generated';
 import { GlobalRpcExceptionFilter } from '@server/utils';
@@ -16,15 +17,13 @@ import { GlobalRpcExceptionFilter } from '@server/utils';
 export class NotificationController implements notification.NotificationServiceController {
 	constructor(private readonly notificationService: NotificationService) {}
 
-	async createNotification(
-		@Payload() data: CreateNotificationReqDto,
-	): Promise<notification.NotificationResponse> {
+	@SerializeOptions({ type: NotificationDto, strategy: 'exposeAll' })
+	async createNotification(@Payload() data: CreateNotificationReqDto): Promise<NotificationDto> {
 		return this.notificationService.createNotification(data);
 	}
 
-	async getNotification(
-		@Payload() data: GetNotificationReqDto,
-	): Promise<notification.NotificationResponse> {
+	@SerializeOptions({ type: NotificationDto, strategy: 'exposeAll' })
+	async getNotification(@Payload() data: GetNotificationReqDto): Promise<NotificationDto> {
 		return this.notificationService.getNotification(data.id);
 	}
 
@@ -32,13 +31,13 @@ export class NotificationController implements notification.NotificationServiceC
 		await this.notificationService.deleteNotification(data.id);
 	}
 
-	async listNotifications(
-		@Payload() data: ListNotificationsReqDto,
-	): Promise<notification.ListNotificationsResponse> {
+	@SerializeOptions({ type: ListNotificationsDto, strategy: 'exposeAll' })
+	async listNotifications(@Payload() data: ListNotificationsReqDto): Promise<ListNotificationsDto> {
 		return this.notificationService.listNotifications(data);
 	}
 
-	async markAsRead(@Payload() data: MarkAsReadReqDto): Promise<notification.NotificationResponse> {
+	@SerializeOptions({ type: NotificationDto, strategy: 'exposeAll' })
+	async markAsRead(@Payload() data: MarkAsReadReqDto): Promise<NotificationDto> {
 		return this.notificationService.markAsRead(data.id);
 	}
 

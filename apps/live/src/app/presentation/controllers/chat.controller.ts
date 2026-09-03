@@ -7,6 +7,7 @@ import { RemoveRoomDto } from '../dtos/req/remove-room.req.dto';
 import { UnbanUserDto } from '../dtos/req/unban-user.req.dto';
 import { UpdateRoomDto } from '../dtos/req/update-room.req.dto';
 import { ChatLogDto } from '../dtos/res/chat-log.res.dto';
+import { CreatedRoomDto } from '../dtos/res/created-room.res.dto';
 import { RoomsDto } from '../dtos/res/rooms.res.dto';
 import { Controller, SerializeOptions, UseFilters } from '@nestjs/common';
 import { Payload } from '@nestjs/microservices';
@@ -37,7 +38,8 @@ export class ChatController implements live.ChatServiceController {
 		});
 	}
 
-	async createRoom(@Payload() request: CreateRoomDto): Promise<live.CreatedRoomResponse> {
+	@SerializeOptions({ type: CreatedRoomDto })
+	async createRoom(@Payload() request: CreateRoomDto): Promise<CreatedRoomDto> {
 		const roomId = await this.chatService.createRoom(request.name, request.createdBy);
 		return { id: roomId };
 	}

@@ -321,6 +321,8 @@ export class ResourceGatewayController implements OnModuleInit {
 
 	@Post('reports')
 	@ApiOperation({ summary: 'Create a report' })
+	@ApiResponseEntity(ReportDto)
+	@SerializeOptions({ type: ReportDto, strategy: 'exposeAll' })
 	createReport(@Req() req: AuthenticatedRequest, @Body() body: CreateReportDto) {
 		return this.reportService.createReport({
 			...body,
@@ -339,6 +341,8 @@ export class ResourceGatewayController implements OnModuleInit {
 
 	@Patch('reports/:id')
 	@ApiOperation({ summary: 'Update a report' })
+	@ApiResponseEntity(ReportDto)
+	@SerializeOptions({ type: ReportDto, strategy: 'exposeAll' })
 	updateReport(@Param('id') id: string, @Body() body: Omit<resource.UpdateReportRequest, 'id'>) {
 		return this.reportService.updateReport({ ...body, id: id });
 	}
