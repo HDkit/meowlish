@@ -5,7 +5,7 @@ import {
 	IsArray,
 	IsEnum,
 	IsIn,
-	IsNumber,
+	IsInt,
 	IsOptional,
 	IsPositive,
 	IsString,
@@ -46,7 +46,7 @@ export class FindExamsDto implements exam.FindExamsDto {
 	@IsString()
 	cursor?: string;
 
-	@IsNumber()
+	@IsInt()
 	@IsOptional()
 	@IsPositive()
 	limit?: number;

@@ -2,15 +2,7 @@ import { ExamStatus } from '../../../../enums/exam-status.enum';
 import { exam } from '@server/generated';
 import { SortDirection } from '@server/typing';
 import { Type } from 'class-transformer';
-import {
-	IsDate,
-	IsEnum,
-	IsIn,
-	IsNumber,
-	IsOptional,
-	IsString,
-	ValidateNested,
-} from 'class-validator';
+import { IsDate, IsEnum, IsIn, IsInt, IsOptional, IsString, ValidateNested } from 'class-validator';
 
 class TimeRangeDto implements exam.FindExamsManagementDto_TimeRange {
 	@Type(() => Date)
@@ -65,7 +57,7 @@ export class FindExamsForManagentDto implements exam.FindExamsManagementDto {
 	@ValidateNested()
 	filter?: FilterOptionsDto;
 
-	@IsNumber()
+	@IsInt()
 	@IsOptional()
 	limit?: number;
 

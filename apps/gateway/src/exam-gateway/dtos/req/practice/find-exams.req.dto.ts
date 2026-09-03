@@ -5,7 +5,7 @@ import {
 	IsArray,
 	IsEnum,
 	IsIn,
-	IsNumber,
+	IsInt,
 	IsOptional,
 	IsPositive,
 	IsString,
@@ -54,7 +54,7 @@ export class FindExamsDto {
 	cursor?: string;
 
 	@Type(() => Number)
-	@IsNumber()
+	@IsInt()
 	@IsOptional()
 	@IsPositive()
 	@ApiPropertyOptional({ type: Number })

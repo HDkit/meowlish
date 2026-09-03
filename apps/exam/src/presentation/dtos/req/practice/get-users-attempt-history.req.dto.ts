@@ -4,7 +4,7 @@ import { Type } from 'class-transformer';
 import {
 	IsEnum,
 	IsIn,
-	IsNumber,
+	IsInt,
 	IsOptional,
 	IsPositive,
 	IsString,
@@ -31,7 +31,7 @@ export class GetUsersAttemptHistoryDto implements exam.GetUsersAttemptHistoryDto
 	@IsString()
 	cursor?: string;
 
-	@IsNumber()
+	@IsInt()
 	@IsOptional()
 	@IsPositive()
 	limit?: number;

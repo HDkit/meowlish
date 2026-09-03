@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsNumber, IsOptional, IsPositive, IsString } from 'class-validator';
+import { IsInt, IsOptional, IsPositive, IsString } from 'class-validator';
 
 export class FindIdentityIdsDto {
 	@IsOptional()
@@ -14,7 +14,7 @@ export class FindIdentityIdsDto {
 	cursor?: string;
 
 	@Type(() => Number)
-	@IsNumber()
+	@IsInt()
 	@IsOptional()
 	@IsPositive()
 	@ApiPropertyOptional({ type: Number })

@@ -1,15 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { SortDirection } from '@server/typing';
 import { Type } from 'class-transformer';
-import {
-	IsDate,
-	IsEnum,
-	IsIn,
-	IsNumber,
-	IsOptional,
-	IsString,
-	ValidateNested,
-} from 'class-validator';
+import { IsDate, IsEnum, IsIn, IsInt, IsOptional, IsString, ValidateNested } from 'class-validator';
 
 class TimeRangeDto {
 	@Type(() => Date)
@@ -76,7 +68,7 @@ export class FindExamsForManagentDto {
 	filter?: FilterOptionsDto;
 
 	@Type(() => Number)
-	@IsNumber()
+	@IsInt()
 	@IsOptional()
 	@ApiPropertyOptional({ type: Number })
 	limit?: number;

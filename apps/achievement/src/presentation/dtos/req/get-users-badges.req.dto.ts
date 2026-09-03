@@ -1,5 +1,5 @@
 import { achievement } from '@server/generated';
-import { IsNumber, IsOptional, IsPositive, IsString } from 'class-validator';
+import { IsInt, IsOptional, IsPositive, IsString } from 'class-validator';
 
 export class GetUsersBadgesDto implements achievement.UserBadgesRequestDto {
 	@IsString()
@@ -9,7 +9,7 @@ export class GetUsersBadgesDto implements achievement.UserBadgesRequestDto {
 	@IsString()
 	cursor?: string;
 
-	@IsNumber()
+	@IsInt()
 	@IsOptional()
 	@IsPositive()
 	limit?: number;

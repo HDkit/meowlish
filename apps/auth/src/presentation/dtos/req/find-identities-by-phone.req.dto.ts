@@ -1,5 +1,5 @@
 import { auth } from '@server/generated';
-import { IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsInt, IsOptional, IsString } from 'class-validator';
 
 export class FindIdentitiesByPhoneDto implements auth.FindIdentitiesByPhoneDto {
 	@IsString()
@@ -9,7 +9,7 @@ export class FindIdentitiesByPhoneDto implements auth.FindIdentitiesByPhoneDto {
 	@IsString()
 	cursor?: string;
 
-	@IsNumber()
+	@IsInt()
 	@IsOptional()
 	limit?: number;
 }

@@ -4,7 +4,7 @@ import { Type } from 'class-transformer';
 import {
 	IsEnum,
 	IsIn,
-	IsNumber,
+	IsInt,
 	IsOptional,
 	IsPositive,
 	IsString,
@@ -33,7 +33,7 @@ export class GetUsersAttemptHistoryDto {
 	cursor?: string;
 
 	@Type(() => Number)
-	@IsNumber()
+	@IsInt()
 	@IsOptional()
 	@IsPositive()
 	@ApiPropertyOptional({ type: Number })

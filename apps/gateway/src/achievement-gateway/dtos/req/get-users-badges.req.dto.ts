@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsNumber, IsOptional, IsPositive, IsString } from 'class-validator';
+import { IsInt, IsOptional, IsPositive, IsString } from 'class-validator';
 
 export class GetUsersBadgesDto {
 	@IsOptional()
@@ -9,7 +9,7 @@ export class GetUsersBadgesDto {
 	cursor?: string;
 
 	@Type(() => Number)
-	@IsNumber()
+	@IsInt()
 	@IsOptional()
 	@IsPositive()
 	@ApiPropertyOptional({ type: Number })
