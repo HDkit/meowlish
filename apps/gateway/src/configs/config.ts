@@ -7,8 +7,7 @@ const redisVarsSchema = z.object({
 });
 
 const jwtVarsSchema = z.object({
-	accessSecret: z.string(),
-	refreshSecret: z.string(),
+	publicKey: z.string(),
 });
 
 const googleOAuth2Schema = z.object({
@@ -74,8 +73,7 @@ const loadEnv = (): DeepStringify<IEnvVars> => ({
 		port: process.env.REDIS_PORT,
 	},
 	jwt: {
-		accessSecret: process.env.JWT_SECRET,
-		refreshSecret: process.env.JWT_REFRESH_SECRET,
+		publicKey: process.env.JWT_PUBLIC_KEY,
 	},
 	googleOAuth2: {
 		clientId: process.env.GOOGLE_OA2_CLIENT_ID,

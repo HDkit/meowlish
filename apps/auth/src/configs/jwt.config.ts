@@ -6,8 +6,9 @@ export default (configService: ConfigService<IEnvVars>): JwtModuleOptions => {
 	const jwtEnvs = configService.getOrThrow('jwt', { infer: true });
 
 	return {
-		secret: jwtEnvs.accessSecret,
+		privateKey: jwtEnvs.privateKey,
 		signOptions: {
+			algorithm: 'RS256',
 			expiresIn: jwtEnvs.accessTokenExpiration,
 		},
 	};

@@ -20,7 +20,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'access-jwt') implem
 	) {
 		super({
 			jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-			secretOrKey: configService.getOrThrow('jwt', { infer: true }).accessSecret,
+			secretOrKey: configService.getOrThrow('jwt', { infer: true }).publicKey,
+			algorithms: ['RS256'],
 		});
 	}
 

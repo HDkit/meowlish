@@ -23,7 +23,8 @@ export class JwtRefreshStrategy
 	) {
 		super({
 			jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-			secretOrKey: configService.getOrThrow('jwt', { infer: true }).refreshSecret,
+			secretOrKey: configService.getOrThrow('jwt', { infer: true }).publicKey,
+			algorithms: ['RS256'],
 		});
 	}
 

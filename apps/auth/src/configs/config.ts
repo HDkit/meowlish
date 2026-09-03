@@ -15,8 +15,7 @@ const redisVarsSchema = z.object({
 });
 
 const jwtVarsSchema = z.object({
-	accessSecret: z.string(),
-	refreshSecret: z.string(),
+	privateKey: z.string(),
 	accessTokenExpiration: z.coerce.number().default(15 * 60), // 15 minutes in seconds
 	refreshTokenExpiration: z.coerce.number().default(7 * 24 * 60 * 60), // 7 days in seconds
 });
@@ -67,8 +66,7 @@ const loadEnv = (): DeepStringify<IEnvVars> => ({
 		port: process.env.REDIS_PORT,
 	},
 	jwt: {
-		accessSecret: process.env.JWT_SECRET,
-		refreshSecret: process.env.JWT_REFRESH_SECRET,
+		privateKey: process.env.JWT_PRIVATE_KEY,
 		accessTokenExpiration: process.env.JWT_ACCESS_TOKEN_EXPIRATION,
 		refreshTokenExpiration: process.env.JWT_REFRESH_TOKEN_EXPIRATION,
 	},

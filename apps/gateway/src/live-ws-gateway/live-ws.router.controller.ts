@@ -33,9 +33,11 @@ export class LiveWsGatewayController {
 						}
 					}
 					if (!token) throw Error('No token found');
-					const secret = process.env.JWT_SECRET;
-					if (!secret) throw Error('JWT_SECRET not configured');
-					const payload = jwt.verify(token, secret) as { sub: string };
+					const publicKey = process.env.JWT_PUBLIC_KEY;
+					if (!publicKey) throw Error('JWT_PUBLIC_KEY not configured');
+					const payload = jwt.verify(token, publicKey, {
+						algorithms: ['RS256'],
+					}) as { sub: string };
 					proxyReq.setHeader('Authorization', payload.sub);
 				} catch (e) {
 					console.error(e);
