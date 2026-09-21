@@ -1,5 +1,17 @@
 # English Application Server
 
+![TypeScript](https://img.shields.io/badge/TypeScript-%233178C6?style=flat-square&logo=typescript&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js%2024-%23339933?style=flat-square&logo=nodedotjs&logoColor=white)
+![NestJS](https://img.shields.io/badge/NestJS-%23E0234E?style=flat-square&logo=nestjs&logoColor=white)
+![gRPC](https://img.shields.io/badge/gRPC-%235B4EE1?style=flat-square&logo=grpc&logoColor=white)
+![RabbitMQ](https://img.shields.io/badge/RabbitMQ-%23FF6600?style=flat-square&logo=rabbitmq&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-%23DC382D?style=flat-square&logo=redis&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-%234169E1?style=flat-square&logo=postgresql&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-%232D3748?style=flat-square&logo=prisma&logoColor=white)
+![MinIO](https://img.shields.io/badge/MinIO-%23C72E49?style=flat-square&logo=minio&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-%232496ED?style=flat-square&logo=docker&logoColor=white)
+![pnpm](https://img.shields.io/badge/pnpm-%23F69220?style=flat-square&logo=pnpm&logoColor=white)
+
 A microservices-based backend for an English-learning application, built with **NestJS**, **gRPC** (protobuf), **RabbitMQ**, **Redis**, **PostgreSQL**, and **MinIO**. The system is composed of a single HTTP **gateway** that fans out to multiple **gRPC microservices**, each handling its own domain.
 
 ## Architecture
