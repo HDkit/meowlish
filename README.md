@@ -14,6 +14,10 @@
 
 A microservices-based backend for an English-learning application, built with **NestJS**, **gRPC** (protobuf), **RabbitMQ**, **Redis**, **PostgreSQL**, and **MinIO**. The system is composed of a single HTTP **gateway** that fans out to multiple **gRPC microservices**, each handling its own domain.
 
+## Architectural diagram
+
+<img width="1113" height="824" alt="Architecture" src="https://github.com/user-attachments/assets/53519866-ef18-411f-aa8d-b1ab2f6fd43b" />
+
 ## Architecture
 
 ```
