@@ -16,7 +16,7 @@ A microservices-based backend for an English-learning application, built with **
 
 ## Architectural diagram
 
-<img width="1113" height="824" alt="Architecture" src="https://github.com/user-attachments/assets/53519866-ef18-411f-aa8d-b1ab2f6fd43b" />
+<img width="1113" height="824" alt="Architecture" src="https://github.com/user-attachments/assets/2bc5ce0b-ff57-4d9f-9e7b-776b89cb0644" />
 
 ## Architecture
 
