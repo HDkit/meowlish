@@ -62,7 +62,7 @@ This means the private key must only exist in the auth service environment, whil
 - **Framework:** NestJS 11
 - **Monorepo:** Nx + pnpm workspaces
 - **Communication:** gRPC (protobuf, generated via `ts-proto`), RabbitMQ (CQRS/events), Socket.IO (websockets)
-- **Data:** PostgreSQL (Prisma ORM), Redis (caching / tokens / pub-sub)
+- **Data:** PostgreSQL (Prisma ORM), Redis (caching / tokens revocation)
 - **Object storage:** MinIO (S3-compatible)
 - **Validation / Schemas:** Zod, class-validator
 - **Auth:** Passport (JWT, Google OAuth2), `@nestjs/jwt`
