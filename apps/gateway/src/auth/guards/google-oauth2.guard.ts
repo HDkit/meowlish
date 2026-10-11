@@ -19,6 +19,10 @@ export class GoogleOAuth2Guard extends AuthGuard('google') {
 		if (stateKey) {
 			await this.redis.set(stateKey, request.user.sub, 'EX', 300);
 		}
+		// the `state` is one of the option key that's very hard to find document for when using passport-google-oauth20
+		// and the guard method getAuthenticateOptions of nestjs passport will pass the returned state to be used in canActivate()
+		// which is passed to passport.authenticate() function
+		// https://github.com/nestjs/passport/blob/master/lib/auth.guard.ts
 		return {
 			state: stateKey,
 		};
