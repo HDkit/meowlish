@@ -19,11 +19,22 @@ describe('startTelemetry', () => {
 		}
 	};
 
+	const initialSigtermListeners = process.listeners('SIGTERM');
+
+	const removeAddedSigtermListeners = (): void => {
+		process.listeners('SIGTERM').forEach(listener => {
+			if (!initialSigtermListeners.includes(listener)) {
+				process.removeListener('SIGTERM', listener);
+			}
+		});
+	};
+
 	beforeEach(() => {
 		MockedNodeSDK.mockClear();
 	});
 
 	afterEach(() => {
+		removeAddedSigtermListeners();
 		restore('OTEL_SDK_DISABLED');
 		restore('OTEL_EXPORTER_OTLP_ENDPOINT');
 	});
@@ -46,6 +57,42 @@ describe('startTelemetry', () => {
 		expect(options?.resource?.attributes['service.name']).toBe('exam');
 		// eslint-disable-next-line @typescript-eslint/unbound-method
 		expect(MockedNodeSDK.mock.instances[0].start).toHaveBeenCalledTimes(1);
+	});
+
+	it('re-raises SIGTERM after shutting the SDK down', async () => {
+		delete process.env['OTEL_SDK_DISABLED'];
+		removeAddedSigtermListeners();
+		const before = process.listeners('SIGTERM');
+		const order: string[] = [];
+		const killSpy = jest.spyOn(process, 'kill').mockImplementation(() => {
+			order.push('kill');
+			return true;
+		});
+		let shutdownPromise: Promise<void> | undefined;
+		MockedNodeSDK.mockImplementationOnce(
+			() =>
+				({
+					start: jest.fn(),
+					shutdown: jest.fn(() => {
+						order.push('shutdown');
+						shutdownPromise = Promise.resolve();
+						return shutdownPromise;
+					}),
+				}) as unknown as NodeSDK,
+		);
+
+		try {
+			startTelemetry({ serviceName: 'x' });
+			process.emit('SIGTERM');
+			await shutdownPromise;
+			await new Promise(resolve => setImmediate(resolve));
+
+			expect(order).toEqual(['shutdown', 'kill']);
+			expect(killSpy).toHaveBeenCalledWith(process.pid, 'SIGTERM');
+			expect(process.listeners('SIGTERM')).toEqual(before);
+		} finally {
+			killSpy.mockRestore();
+		}
 	});
 
 	it('does not throw when the collector is unreachable', async () => {

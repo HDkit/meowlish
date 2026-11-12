@@ -41,9 +41,15 @@ export function startTelemetry(options: StartTelemetryOptions): NodeSDK | undefi
 	sdk.start();
 
 	process.once('SIGTERM', () => {
-		sdk.shutdown().catch((error: unknown) => {
-			console.error('Error shutting down telemetry', error);
-		});
+		// A SIGTERM listener disables Node's default exit, so re-raise once the SDK has flushed.
+		sdk
+			.shutdown()
+			.catch((error: unknown) => {
+				console.error('Error shutting down telemetry', error);
+			})
+			.finally(() => {
+				process.kill(process.pid, 'SIGTERM');
+			});
 	});
 
 	return sdk;
