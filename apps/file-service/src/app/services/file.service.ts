@@ -22,11 +22,40 @@ export class FileService implements OnModuleInit {
 		'audio/mpeg',
 	];
 
+	/**
+	 * Client used only to sign URLs handed to browsers. A presigned URL's signature
+	 * covers its host, so it must be signed for the address the browser will use
+	 * (MINIO_PUBLIC_URL), not the internal one (e.g. `min-io` inside docker).
+	 * Signing is local; the fixed region avoids a region lookup request.
+	 */
+	private readonly signingClient: Client;
+
 	constructor(
 		@Inject(MINIO_CONNECTION) private readonly minioClient: Client,
 		@Inject(IFileRepositoryToken) private readonly fileRepository: IFileRepository,
 		private readonly configService: ConfigService<IEnvVars>,
-	) {}
+	) {
+		this.signingClient = this.createSigningClient();
+	}
+
+	private createSigningClient(): Client {
+		const minioEnvs = this.configService.getOrThrow('objStorage', { infer: true });
+		if (!minioEnvs.publicUrl) return this.minioClient;
+
+		const url = new URL(minioEnvs.publicUrl);
+		const useSSL = url.protocol === 'https:';
+		return new Client({
+			endPoint: url.hostname,
+			port:
+				url.port ? Number(url.port)
+				: useSSL ? 443
+				: 80,
+			useSSL: useSSL,
+			accessKey: minioEnvs.user,
+			secretKey: minioEnvs.password,
+			region: 'us-east-1',
+		});
+	}
 
 	async onModuleInit() {
 		// PUBLIC BUCKET
@@ -110,7 +139,7 @@ export class FileService implements OnModuleInit {
 		policy.setContentType(fileMetadata.contentType);
 
 		// Generate presigned POST
-		const presigned = await this.minioClient.presignedPostPolicy(policy);
+		const presigned = await this.signingClient.presignedPostPolicy(policy);
 
 		return {
 			id: id,
@@ -140,16 +169,21 @@ export class FileService implements OnModuleInit {
 	 */
 	async getFilesUrls(ids: string[]): Promise<Record<string, string>> {
 		const minioEnvs = this.configService.getOrThrow('objStorage', { infer: true });
+		const env = this.configService.getOrThrow('env', { infer: true });
+		// Absolute URL (scheme included) so browsers don't treat it as a relative path.
+		const publicBase = (
+			minioEnvs.publicUrl ??
+			`${(minioEnvs.useSSL ?? env === 'production') ? 'https' : 'http'}://${minioEnvs.host}${minioEnvs.port ? `:${minioEnvs.port}` : ''}`
+		).replace(/\/+$/, '');
 		const filesPrivacySettings = await this.fileRepository.getFilesPravicySettings(ids);
 		const grouped = Object.groupBy(filesPrivacySettings, f => (f.isPublic ? 'public' : 'private'));
 		const idMap: Record<string, string> = {};
 		(grouped.public || []).forEach(f => {
-			idMap[f.id] =
-				`${minioEnvs.host}${minioEnvs.port ? `:${minioEnvs.port}` : ''}/${this.MINIO_PUBLIC_BUCKET_NAME}/${f.id}`;
+			idMap[f.id] = `${publicBase}/${this.MINIO_PUBLIC_BUCKET_NAME}/${f.id}`;
 		});
 		await Promise.all(
 			(grouped.private || []).map(async f => {
-				idMap[f.id] = await this.minioClient.presignedGetObject(
+				idMap[f.id] = await this.signingClient.presignedGetObject(
 					this.MINIO_PRIVATE_BUCKET_NAME,
 					f.id,
 					60 * 5,

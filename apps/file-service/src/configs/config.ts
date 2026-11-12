@@ -3,7 +3,7 @@ import { z } from 'zod/v4';
 
 const dbVarsSchema = z.object({
 	host: z.string(),
-	port: z.coerce.number().default(5432),
+	port: z.preprocess(v => (v === '' ? undefined : v), z.coerce.number().default(5432)),
 	username: z.string(),
 	password: z.string(),
 	dbName: z.string(),
@@ -19,6 +19,13 @@ const objStorageVarsSchema = z.object({
 	port: z.coerce.number().optional(),
 	user: z.string(),
 	password: z.string(),
+	// unset => TLS only in production (previous behaviour)
+	useSSL: z
+		.enum(['true', 'false'])
+		.optional()
+		.transform(v => (v === undefined ? undefined : v === 'true')),
+	// browser-facing base for public objects, e.g. https://cdn.example.com or http://localhost:9000
+	publicUrl: z.preprocess(v => (v === '' ? undefined : v), z.url().optional()),
 });
 
 const mqSchema = z.object({
@@ -57,6 +64,8 @@ const loadEnv = (): DeepStringify<IEnvVars> => ({
 		port: process.env.MINIO_PORT,
 		user: process.env.MINIO_USER,
 		password: process.env.MINIO_PASSWORD,
+		useSSL: process.env.MINIO_USE_SSL,
+		publicUrl: process.env.MINIO_PUBLIC_URL,
 	},
 	messageQueue: {
 		host: process.env.RMQ_HOST,

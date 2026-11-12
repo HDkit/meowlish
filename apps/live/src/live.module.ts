@@ -36,6 +36,7 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 	controllers: [ChatController],
 	imports: [
 		ConfigModule.forRoot({
+			envFilePath: ['apps/live/.env', '.env'], // nx serve runs from the workspace root
 			expandVariables: true,
 			cache: true,
 			isGlobal: true,

@@ -23,7 +23,13 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 @Module({
 	controllers: [AuthorizationGrpcController],
 	imports: [
-		ConfigModule.forRoot({ expandVariables: true, cache: true, isGlobal: true, load: [config] }),
+		ConfigModule.forRoot({
+			envFilePath: ['apps/authorization/.env', '.env'], // nx serve runs from the workspace root
+			expandVariables: true,
+			cache: true,
+			isGlobal: true,
+			load: [config],
+		}),
 		ClsModule.forRoot({
 			global: true,
 			guard: { mount: false },

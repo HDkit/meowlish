@@ -27,6 +27,7 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 	controllers: [BlogController, FlashcardController, FlashcardListController, ReportController],
 	imports: [
 		ConfigModule.forRoot({
+			envFilePath: ['apps/resource/.env', '.env'], // nx serve runs from the workspace root
 			expandVariables: true,
 			cache: true,
 			isGlobal: true,

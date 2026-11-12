@@ -31,6 +31,7 @@ import { NestMinioModule } from 'nestjs-minio';
 	controllers: [FileController],
 	imports: [
 		ConfigModule.forRoot({
+			envFilePath: ['apps/file-service/.env', '.env'], // nx serve runs from the workspace root
 			expandVariables: true,
 			cache: true,
 			isGlobal: true,

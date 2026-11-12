@@ -3,7 +3,7 @@ import { z } from 'zod/v4';
 
 const dbVarsSchema = z.object({
 	host: z.string(),
-	port: z.coerce.number().default(5432),
+	port: z.preprocess(v => (v === '' ? undefined : v), z.coerce.number().default(5432)),
 	username: z.string(),
 	password: z.string(),
 	dbName: z.string(),

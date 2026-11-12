@@ -65,6 +65,7 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 	controllers: [ExamManagementController, ExamPracticeController, TagController, GoalController],
 	imports: [
 		ConfigModule.forRoot({
+			envFilePath: ['apps/exam/.env', '.env'], // nx serve runs from the workspace root
 			expandVariables: true,
 			cache: true,
 			isGlobal: true,

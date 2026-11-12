@@ -31,6 +31,7 @@ import { GlobalValidationPipe } from '@server/utils';
 @Module({
 	imports: [
 		ConfigModule.forRoot({
+			envFilePath: ['apps/gateway/.env', '.env'], // nx serve runs from the workspace root
 			expandVariables: true,
 			cache: true,
 			isGlobal: true,

@@ -3,7 +3,7 @@ import { z } from 'zod/v4';
 
 const dbVarsSchema = z.object({
 	host: z.string(),
-	port: z.coerce.number().default(5432),
+	port: z.preprocess(v => (v === '' ? undefined : v), z.coerce.number().default(5432)),
 	username: z.string(),
 	password: z.string(),
 	dbName: z.string(),
@@ -16,8 +16,14 @@ const redisVarsSchema = z.object({
 
 const jwtVarsSchema = z.object({
 	privateKey: z.string(),
-	accessTokenExpiration: z.coerce.number().default(15 * 60), // 15 minutes in seconds
-	refreshTokenExpiration: z.coerce.number().default(7 * 24 * 60 * 60), // 7 days in seconds
+	accessTokenExpiration: z.preprocess(
+		v => (v === '' ? undefined : v),
+		z.coerce.number().default(15 * 60),
+	), // 15 minutes in seconds
+	refreshTokenExpiration: z.preprocess(
+		v => (v === '' ? undefined : v),
+		z.coerce.number().default(7 * 24 * 60 * 60),
+	), // 7 days in seconds
 });
 
 const googleOAuth2VarsSchema = z.object({

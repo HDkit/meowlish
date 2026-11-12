@@ -51,6 +51,7 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 	controllers: [AuthController],
 	imports: [
 		ConfigModule.forRoot({
+			envFilePath: ['apps/auth/.env', '.env'], // nx serve runs from the workspace root
 			expandVariables: true,
 			cache: true,
 			isGlobal: true,

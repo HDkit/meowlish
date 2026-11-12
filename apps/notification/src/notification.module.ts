@@ -35,6 +35,7 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 	],
 	imports: [
 		ConfigModule.forRoot({
+			envFilePath: ['apps/notification/.env', '.env'], // nx serve runs from the workspace root
 			expandVariables: true,
 			cache: true,
 			isGlobal: true,

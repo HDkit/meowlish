@@ -30,6 +30,7 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 	controllers: [BadgeController],
 	imports: [
 		ConfigModule.forRoot({
+			envFilePath: ['apps/achievement/.env', '.env'], // nx serve runs from the workspace root
 			expandVariables: true,
 			cache: true,
 			isGlobal: true,
