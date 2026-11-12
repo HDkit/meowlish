@@ -19,6 +19,12 @@ services:
       - ./observability/dashboards/dashboards.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/meowlish-dashboards.yaml:ro
       - ./observability/dashboards/platform-status.json:/otel-lgtm/meowlish-dashboards/platform-status.json:ro
       - ./observability/alerting/platform.yaml:/otel-lgtm/grafana/conf/provisioning/alerting/meowlish-platform.yaml:ro
+      - ./observability/dashboards/messaging.json:/otel-lgtm/meowlish-dashboards/messaging.json:ro
+      - ./observability/alerting/messaging.yaml:/otel-lgtm/grafana/conf/provisioning/alerting/meowlish-messaging.yaml:ro
+      - ./observability/otelcol-rabbitmq.yaml:/otel-lgtm/otelcol-rabbitmq.yaml:ro
+    environment:
+      # Extra collector config merged over the image's own (scrapes RabbitMQ queue metrics).
+      OTELCOL_EXTRA_ARGS: --config=file:/otel-lgtm/otelcol-rabbitmq.yaml
     networks:
       - api-network
 

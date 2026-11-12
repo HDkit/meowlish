@@ -185,6 +185,7 @@ configs/        config.ts (zod env schema), rmq/bullmq configs
 - **Errors:** throw Nest exceptions (`NotFoundException`, …). The shared RPC/HTTP filters translate them across gRPC.
 - **Config:** each service validates env with a zod schema in `configs/config.ts`. Add new env vars there and to that app's `.env.example`.
 - **Entry point and health:** new apps must use the `main.ts` → `bootstrap.ts` split (`main.ts` calls `startTelemetry({ serviceName })` from `@server/telemetry`, then `void import('./bootstrap.js')`) and import `HealthModule.forRoot({ serviceName, ... })` in the app module. Also add a healthcheck in `docker/docker-compose.app.yaml` and a `ServiceMissing` rule in `docker/observability/alerting/platform.yaml`.
+- **Messaging:** publish events only through `OutboxPublisher.add` inside `@Transactional()`, never straight to the broker. Consumers use `@UseCls()` + `@Transactional()`, declare a `deadLetterQueue`, read the payload with `unwrapEvent` (and validate it), and call `InboxService.claim(eventId, consumer)` first so redeliveries are skipped. Consumers must not swallow errors: let them propagate so the message is dead-lettered (the writing-scored handler is the one documented exception).
 
 ### Gateway conventions
 

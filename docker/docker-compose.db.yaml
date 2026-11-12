@@ -73,6 +73,9 @@ services:
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-password}
     volumes:
       - rabbitmq_data:/data
+      # Enables the Prometheus endpoint (:15692) scraped by the observability collector.
+      # Takes effect when the container is recreated.
+      - ./rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
     networks:
       - api-network
 

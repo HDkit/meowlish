@@ -101,7 +101,55 @@ gRPC-only apps have no business HTTP traffic, so their HTTP panels only show the
 
 ### Later dashboards
 
-Dashboards for "Authz sync health" and "Messaging" will be added by later plans. Each will be a JSON file in `docker/observability/dashboards/` with its own `:ro` mount added to the `lgtm` service (see above), and will appear next to "Platform status" in Grafana's Dashboards list.
+A dashboard for "Authz sync health" will be added by a later plan. Each will be a JSON file in `docker/observability/dashboards/` with its own `:ro` mount added to the `lgtm` service (see above), and will appear next to "Platform status" in Grafana's Dashboards list.
+
+## Messaging dashboard
+
+Grafana > Dashboards > "Messaging" (uid `meowlish-messaging`, `docker/observability/dashboards/messaging.json`). Every service publishes events through a transactional outbox and consumes them through an inbox (`@server/messaging`). Panels:
+
+- **Outbox pending events** (`outbox_pending_events{service}`): rows in `outbox_events` not yet published. Normally 0 or a few.
+- **Outbox oldest pending age** (`outbox_oldest_pending_age_seconds{service}`): age of the oldest unpublished row. A growing value means the relay cannot reach the broker or keeps failing.
+- **Outbox publish errors** (`outbox_publish_errors_total{service}`, 5 min increase): failed publish attempts. The relay retries with back-off, so a short burst during a broker restart is normal.
+- **Inbox duplicates skipped** (`inbox_duplicates_total{service,consumer}`, 5 min increase): redeliveries that the inbox recognised and ignored. Occasional values are expected (at-least-once delivery); a steady stream means a consumer keeps failing after commit or a queue keeps redelivering.
+- **Dead-letter queue depth** (`rabbitmq_detailed_queue_messages{queue=~".*\\.dlq"}`): messages sitting in each `<queue>.dlq`. Comes from RabbitMQ, not the apps.
+
+There is no `consumer_failures_total` metric and so no panel for it. Consumer failures show up as dead-lettered messages (the DLQ panel) and in the service logs.
+
+RabbitMQ metrics reach Grafana through `docker/observability/otelcol-rabbitmq.yaml`, an extra collector config passed to `lgtm` through `OTELCOL_EXTRA_ARGS`. It scrapes `rabbit-mq:15692/metrics/detailed?family=queue_coarse_metrics` every 15 s, which needs the `rabbitmq_prometheus` plugin. `docker/docker-compose.db.yaml` enables it with `docker/rabbitmq/enabled_plugins`; the file only takes effect when the `rabbit-mq` container is recreated (`docker compose -f docker/docker-compose.db.yaml up -d --force-recreate rabbit-mq`). Until then the DLQ panel and the `DeadLetters` alert have no data.
+
+## Event bus: dead letters and replay
+
+Every consumer queue `<q>` dead-letters (nack without requeue) to the `eventbus.dlx` exchange, which routes to the queue `<q>.dlq`. Consumers do not swallow errors: a failure nacks the message, so it lands in the DLQ instead of being lost. The one documented exception is the writing-scored handler.
+
+`exam.writing.submitted` is published bare, without the event envelope, because its consumer is the external AI scorer. All other events are wrapped in an envelope with an event id that the inbox uses for deduplication.
+
+To inspect a dead-lettered message: RabbitMQ management UI (<http://localhost:15672>) > Queues > `<q>.dlq` > Get messages (choose "Nack message requeue true" so it stays). The `x-death` header shows the original queue and the reason; the service logs have the error.
+
+To replay it after fixing the cause: on the same page open "Move messages", enter the original queue name `<q>` as destination, and move. Alternatively use a shovel from `<q>.dlq` to `<q>`. The inbox makes a replay safe: if the first attempt had already committed, the message is skipped as a duplicate.
+
+## One-time upgrade: recreate consumer queues
+
+Consumer queues now carry the arguments `x-dead-letter-exchange=eventbus.dlx` and `x-dead-letter-routing-key=<queue>`. RabbitMQ refuses to redeclare an existing queue with different arguments (`PRECONDITION_FAILED`), so the queues that existed before this change must be deleted once. The services recreate them with the new arguments on startup. These were all empty when checked:
+
+- `achievement.events.user.login`
+- `achievement.events.attempt.submitted`
+- `achievement.events.attempt.scored`
+- `notification.events.badge.earned`
+- `notification.events.report.status-changed`
+- `file.events.file.added`
+- `file.events.files.removed`
+- `authorization.events.exam.created`
+- `authorization.events.exam.deleted`
+- `authorization.events.room.created`
+- `authorization.events.room.deleted`
+- `authorization.events.resource.created`
+- `authorization.events.resource.deleted`
+
+How: RabbitMQ management UI > Queues > pick the queue > Delete, or `docker exec meowlish-rabbit-mq-1 rabbitmqctl delete_queue <name>`.
+
+When: after stopping the old containers and before starting the new build. Check that each queue is empty first (0 ready, 0 unacked), because deleting a queue discards its messages.
+
+Afterwards the old `achievement.dlx` and `notification.dlx` exchanges and their bindings are unused and can be removed (optional).
 
 ## Alerts
 
@@ -129,6 +177,18 @@ First response:
 3. If the app is running, check `OTEL_EXPORTER_OTLP_ENDPOINT`, that `lgtm` is up, and that `OTEL_SDK_DISABLED` is not `true`.
 
 `ServiceMissing` uses `absent_over_time`, which returns 1 whenever no sample exists, even if the service never reported. So after starting only the observability stack (or when an app is intentionally not running), these rules fire after about a minute. Silence them in Grafana in that case. Add a rule for each new app to this file.
+
+## Messaging alerts
+
+Rules live in `docker/observability/alerting/messaging.yaml` (folder "Meowlish", group `messaging`, evaluated every minute).
+
+### OutboxStuck
+
+Severity `critical`. Fires when `outbox_oldest_pending_age_seconds` of a service is above 60 for 1 minute. The `service` label names the app. First response: check the service logs for relay errors, check that RabbitMQ is up (`/health/ready` shows the `rabbitmq` check), and look at the "Outbox publish errors" panel. The backlog drains by itself once the broker is reachable.
+
+### DeadLetters
+
+Severity `warning`. Fires as soon as `rabbitmq_detailed_queue_messages{queue=~".*\\.dlq"}` is above 0; the `queue` label names the DLQ. First response: inspect the message and the service logs, fix the cause, then replay (see "Event bus: dead letters and replay"). It clears when the DLQ is empty. It needs the RabbitMQ scrape described above.
 
 ## Adding a new app
 

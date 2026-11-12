@@ -52,3 +52,4 @@ When you fix an item, delete it here in the same commit.
 - `exchangeGoogleCalendarCode`, `connectGoogleCalendar` and `getGoogleCalendarToken` are missing `@ApiResponseEntity`/`@SerializeOptions`.
 - `review-exam.req.dto.ts` documents `status` as a free string instead of an enum.
 - `process.env` is still read directly in client module registration and in `live/main.ts`.
+- Remove legacy bare-payload support from `@server/messaging` (`unwrapEvent`/`claim`) once every service runs the outbox build and all queues are drained. It needs two spec changes: `unwrapEvent rejects a bare payload` and `claim rejects a missing id`. (`exam.writing.submitted` stays bare on purpose; it is not read through `unwrapEvent`.)
