@@ -8,6 +8,8 @@
 	"dependencies": {
 		"tslib": "2.9.1",
 		"@nestjs/common": "11.2.8",
-		"@nestjs-cls/transactional": "3.3.1"
+		"@nestjs-cls/transactional": "3.3.1",
+		"@golevelup/nestjs-rabbitmq": "7.1.2",
+    "@server/telemetry": "0.0.1"
 	}
 }
