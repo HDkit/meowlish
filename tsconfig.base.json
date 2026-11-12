@@ -20,7 +20,8 @@
 			"@server/logger": ["libs/logger/src/index.ts"],
 			"@server/utils": ["libs/utils/src/index.ts"],
 			"@server/generated": ["libs/generated/src/index.ts"],
-			"@server/typing": ["libs/typing/src/index.ts"]
+			"@server/typing": ["libs/typing/src/index.ts"],
+			"@server/telemetry": ["libs/telemetry/src/index.ts"]
 		},
 		"declaration": true,
 		"esModuleInterop": true
