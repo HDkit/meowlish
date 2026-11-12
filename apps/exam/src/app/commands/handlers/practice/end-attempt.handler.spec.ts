@@ -38,7 +38,10 @@ class VersionedAttemptStore {
 			startedAt: new Date(),
 			endedAt: this.row.endedAt,
 			durationLimit: 3600,
-			questions: [{ id: 'q1', type: QuestionType.MultipleChoiceSingle }],
+			questions: [
+				{ id: 'q1', type: QuestionType.MultipleChoiceSingle },
+				{ id: 'q2', type: QuestionType.MultipleChoiceSingle },
+			],
 			responses: this.row.responses.map(
 				r => new AttemptResponse({ ...r, answers: [...r.answers] }),
 			),
@@ -116,5 +119,19 @@ describe('EndAttemptHandler idempotency (C4)', () => {
 			answerHandler.execute(new AnswerCommand(new AnswerCommandPayload('a1', 'q1', 'b'))),
 		).rejects.toBeInstanceOf(ConflictException);
 		expect(store.saves).toBe(1);
+	});
+
+	it('two concurrent answers on different questions of one attempt both succeed', async () => {
+		const { store } = setup();
+		const answerHandler = new AnswerHandler(store as never);
+		await Promise.all([
+			answerHandler.execute(new AnswerCommand(new AnswerCommandPayload('a1', 'q1', 'b'))),
+			answerHandler.execute(new AnswerCommand(new AnswerCommandPayload('a1', 'q2', 'c'))),
+		]);
+		expect(store.saves).toBe(2);
+		const answers = Object.fromEntries(
+			store.row.responses.map(r => [r.questionId, [...r.answers]]),
+		);
+		expect(answers).toEqual({ q1: ['b'], q2: ['c'] });
 	});
 });

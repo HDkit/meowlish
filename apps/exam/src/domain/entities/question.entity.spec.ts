@@ -35,28 +35,30 @@ describe('Question points (C14)', () => {
 });
 
 describe('Question single correct choice on updates (C14)', () => {
-	it('rejects marking a second choice correct on a single-choice question', () => {
+	it('rejects a batch that ends with two correct choices on a single-choice question', () => {
 		const question = newQuestion(QuestionType.MultipleChoiceSingle);
-		expect(() => question.updateChoice('c1', { isCorrect: true })).toThrow(ConflictException);
-		expect(question.choices.filter(c => c.isCorrect)).toHaveLength(1);
-	});
-
-	it('allows moving the correct answer (unmark first, then mark)', () => {
-		const question = newQuestion(QuestionType.MultipleChoiceSingle);
-		question.updateChoice('c0', { isCorrect: false });
 		question.updateChoice('c1', { isCorrect: true });
-		expect(question.choices.map(c => c.isCorrect)).toEqual([false, true]);
+		expect(() => question.assertChoicesConsistent()).toThrow(ConflictException);
 	});
 
-	it('allows re-marking the already-correct choice', () => {
+	it('rejects adding a second correct choice in a batch', () => {
 		const question = newQuestion(QuestionType.MultipleChoiceSingle);
-		expect(() => question.updateChoice('c0', { isCorrect: true })).not.toThrow();
+		question.addChoice(new Choice({ key: 'k2', isCorrect: true }));
+		expect(() => question.assertChoicesConsistent()).toThrow(ConflictException);
+	});
+
+	it('accepts moving the correct answer in either order within a batch', () => {
+		const markFirst = newQuestion(QuestionType.MultipleChoiceSingle);
+		markFirst.updateChoice('c1', { isCorrect: true });
+		markFirst.updateChoice('c0', { isCorrect: false });
+		expect(() => markFirst.assertChoicesConsistent()).not.toThrow();
+		expect(markFirst.choices.map(c => c.isCorrect)).toEqual([false, true]);
 	});
 
 	it('allows several correct choices on a multi-choice question', () => {
 		const question = newQuestion(QuestionType.MultipleChoiceMultiple);
 		question.updateChoice('c1', { isCorrect: true });
-		expect(question.choices.every(c => c.isCorrect)).toBe(true);
+		expect(() => question.assertChoicesConsistent()).not.toThrow();
 	});
 
 	it('rejects a duplicate key on update', () => {
