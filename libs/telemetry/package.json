@@ -16,6 +16,9 @@
 		"@opentelemetry/sdk-logs": "3.1.0",
 		"@opentelemetry/sdk-metrics": "3.1.0",
 		"@opentelemetry/sdk-node": "0.301.0",
-		"@opentelemetry/semantic-conventions": "1.45.0"
+		"@opentelemetry/semantic-conventions": "1.45.0",
+		"@nestjs/common": "11.2.8",
+		"@nestjs/terminus": "11.1.1",
+		"@golevelup/nestjs-rabbitmq": "7.1.2"
 	}
 }
