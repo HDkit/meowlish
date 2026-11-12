@@ -132,17 +132,17 @@ Root:
 
 Per app (`apps/<svc>/`):
 
-| File                                                         | Purpose                                                                               |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| `project.json`                                               | Nx project. Defines explicit `prisma:*` targets, and other targets are inferred       |
-| `webpack.config.js`                                          | `NxAppWebpackPlugin` with the swc compiler and output to `dist/apps/<svc>`            |
-| `.swcrc`                                                     | swc transpile options (decorators on, es2023)                                         |
-| `tsconfig.json` / `tsconfig.app.json` / `tsconfig.spec.json` | Extend `tsconfig.base.json`                                                           |
-| `eslint.config.mjs`                                          | Extends the root config and points `parserOptions.project` at the app's tsconfigs     |
-| `jest.config.cts` (plus a duplicate `jest.config.js`)        | Jest config. Keep them identical if you change one                                    |
-| `prisma.config.ts`                                           | Prisma schema folder, migrations path, seed command                                   |
-| `.env.example`                                               | Every env var the app reads, with working local values. The real `.env` is gitignored |
-| `.nvmrc`                                                     | Node version                                                                          |
+| File                                                         | Purpose                                                                                                       |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `project.json`                                               | Nx project. Defines explicit `prisma:*` targets, and other targets are inferred                               |
+| `webpack.config.js`                                          | `NxAppWebpackPlugin` with the swc compiler and output to `dist/apps/<svc>`                                    |
+| `.swcrc`                                                     | swc transpile options (decorators on, es2023)                                                                 |
+| `tsconfig.json` / `tsconfig.app.json` / `tsconfig.spec.json` | Extend `tsconfig.base.json`                                                                                   |
+| `eslint.config.mjs`                                          | Extends the root config and points `parserOptions.project` at the app's tsconfigs                             |
+| `jest.config.ts`                                             | Jest config. Must be `.ts`/`.js`: Jest 29 ignores `jest.config.cts` and silently falls back to Babel defaults |
+| `prisma.config.ts`                                           | Prisma schema folder, migrations path, seed command                                                           |
+| `.env.example`                                               | Every env var the app reads, with working local values. The real `.env` is gitignored                         |
+| `.nvmrc`                                                     | Node version                                                                                                  |
 
 Libs (`libs/<lib>/`) have `project.json` (`@nx/js:tsc` build), `package.json` (deps checked by `@nx/dependency-checks`), and `tsconfig.lib.json`.
 
