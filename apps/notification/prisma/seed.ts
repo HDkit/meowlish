@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma-client/notification';
+import { createHash } from 'node:crypto';
 
 const prisma = new PrismaClient();
 
@@ -62,11 +63,13 @@ async function main() {
 	]);
 
 	for (const n of notifications) {
+		// deterministic id so re-running the seed updates instead of duplicating
+		const id = `seed-${createHash('sha1').update(`${n.recipientId}|${n.type}|${n.title}`).digest('hex').slice(0, 24)}`;
 		await prisma.notification.upsert({
-			where: { id: n.recipientId + n.type + n.title },
+			where: { id: id },
 			update: {},
 			create: {
-				id: `${n.recipientId}-${n.type}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+				id: id,
 				...n,
 				isRead: Math.random() > 0.5,
 				readAt: Math.random() > 0.5 ? new Date() : null,

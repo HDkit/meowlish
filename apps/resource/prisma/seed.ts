@@ -85,6 +85,10 @@ const FLASHCARD_LISTS = [
 async function main() {
 	// Seed blogs
 	for (const blog of BLOGS) {
+		if (await prisma.blog.findFirst({ where: { title: blog.title } })) {
+			console.warn(`Blog "${blog.title}" already exists, skipping`);
+			continue;
+		}
 		const authorId = USER_IDS[Math.floor(Math.random() * USER_IDS.length)];
 		await prisma.blog.create({
 			data: {
@@ -98,6 +102,10 @@ async function main() {
 
 	// Seed flashcard lists with cards
 	for (const list of FLASHCARD_LISTS) {
+		if (await prisma.flashCardList.findFirst({ where: { name: list.name } })) {
+			console.warn(`List "${list.name}" already exists, skipping`);
+			continue;
+		}
 		const authorId = USER_IDS[Math.floor(Math.random() * USER_IDS.length)];
 		const created = await prisma.flashCardList.create({
 			data: {
