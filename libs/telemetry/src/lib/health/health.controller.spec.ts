@@ -3,11 +3,23 @@ import { ReadinessRegistry } from './readiness.registry';
 import { AmqpConnectionManager } from '@golevelup/nestjs-rabbitmq';
 import { type INestApplication } from '@nestjs/common';
 import { Global, Module } from '@nestjs/common';
+import { HealthCheckService } from '@nestjs/terminus';
 import { Test } from '@nestjs/testing';
+import { metrics } from '@opentelemetry/api';
+import { MeterProvider, MetricReader } from '@opentelemetry/sdk-metrics';
 import { type Server } from 'node:http';
 import request from 'supertest';
 
 const PRISMA = Symbol('PRISMA');
+
+class TestReader extends MetricReader {
+	protected onShutdown(): Promise<void> {
+		return Promise.resolve();
+	}
+	protected onForceFlush(): Promise<void> {
+		return Promise.resolve();
+	}
+}
 
 interface HealthBody {
 	status: string;
@@ -18,6 +30,7 @@ interface HealthBody {
 describe('HealthController', () => {
 	let app: INestApplication;
 	let registry: ReadinessRegistry;
+	let reader: TestReader;
 
 	const get = async (path: string, status: number): Promise<HealthBody> => {
 		const res = await request(app.getHttpServer() as Server)
@@ -29,6 +42,9 @@ describe('HealthController', () => {
 	const connection = { connected: true };
 
 	beforeEach(async () => {
+		metrics.disable();
+		reader = new TestReader();
+		metrics.setGlobalMeterProvider(new MeterProvider({ readers: [reader] }));
 		prisma.$queryRawUnsafe.mockReset().mockResolvedValue([{ '?column?': 1 }]);
 		connection.connected = true;
 
@@ -48,7 +64,12 @@ describe('HealthController', () => {
 		const moduleRef = await Test.createTestingModule({
 			imports: [
 				FakesModule,
-				HealthModule.forRoot({ serviceName: 'test', prismaToken: PRISMA, rabbitmq: true }),
+				HealthModule.forRoot({
+					serviceName: 'test',
+					prismaToken: PRISMA,
+					rabbitmq: true,
+					checkTimeoutMs: 50,
+				}),
 			],
 		}).compile();
 		app = moduleRef.createNestApplication();
@@ -58,6 +79,7 @@ describe('HealthController', () => {
 
 	afterEach(async () => {
 		await app.close();
+		metrics.disable();
 	});
 
 	it('live returns 200 ok', async () => {
@@ -100,5 +122,40 @@ describe('HealthController', () => {
 		});
 		const body = await get('/health/ready', 503);
 		expect(body.error).toHaveProperty('authz-catchup');
+	});
+
+	it('ready treats a hanging check as down', async () => {
+		registry.register('authz-catchup', () => new Promise<boolean>(() => undefined));
+		const body = await get('/health/ready', 503);
+		expect(body.error).toHaveProperty('authz-catchup');
+	});
+
+	describe('service_ready gauge', () => {
+		const readGauge = async (): Promise<{ value: number; service: unknown } | undefined> => {
+			const { resourceMetrics } = await reader.collect();
+			const metric = resourceMetrics.scopeMetrics
+				.flatMap(scope => scope.metrics)
+				.find(m => m.descriptor.name === 'service_ready');
+			const point = metric?.dataPoints[0];
+			return point ?
+					{ value: point.value as number, service: point.attributes['service'] }
+				:	undefined;
+		};
+
+		it('is 1 when all checks pass', async () => {
+			expect(await readGauge()).toEqual({ value: 1, service: 'test' });
+		});
+
+		it('is 0 when a check fails, and recovers', async () => {
+			connection.connected = false;
+			expect(await readGauge()).toEqual({ value: 0, service: 'test' });
+			connection.connected = true;
+			expect(await readGauge()).toEqual({ value: 1, service: 'test' });
+		});
+
+		it('is 0 when evaluation throws', async () => {
+			jest.spyOn(app.get(HealthCheckService), 'check').mockRejectedValue(new Error('kaboom'));
+			expect(await readGauge()).toEqual({ value: 0, service: 'test' });
+		});
 	});
 });

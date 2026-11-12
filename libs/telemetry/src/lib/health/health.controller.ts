@@ -15,6 +15,7 @@ import {
 	type HealthCheckResult,
 	HealthCheckService,
 	type HealthIndicatorFunction,
+	type HealthIndicatorResult,
 	HealthIndicatorService,
 } from '@nestjs/terminus';
 
@@ -25,19 +26,18 @@ export interface HealthModuleOptions {
 	serviceName: string;
 	prismaToken?: string | symbol;
 	rabbitmq?: boolean;
+	checkTimeoutMs?: number;
 }
 
 interface PingableClient {
 	$queryRawUnsafe: (query: string) => unknown;
 }
 
-const DATABASE_TIMEOUT_MS = 1000;
+const CHECK_TIMEOUT_MS = 1000;
 
 @SetMetadata('isPublic', true)
 @Controller({ path: 'health', version: VERSION_NEUTRAL })
 export class HealthController implements OnModuleInit {
-	private lastReady = false;
-
 	constructor(
 		private readonly health: HealthCheckService,
 		private readonly indicatorService: HealthIndicatorService,
@@ -53,12 +53,14 @@ export class HealthController implements OnModuleInit {
 				description: '1 when the service passed its last readiness evaluation, else 0',
 			})
 			.addCallback(async result => {
+				let ready = false;
 				try {
 					await this.evaluate();
+					ready = true;
 				} catch {
-					this.lastReady = false;
+					ready = false;
 				}
-				result.observe(this.lastReady ? 1 : 0, { service: this.options.serviceName });
+				result.observe(ready ? 1 : 0, { service: this.options.serviceName });
 			});
 	}
 
@@ -74,14 +76,30 @@ export class HealthController implements OnModuleInit {
 		return this.evaluate();
 	}
 
-	private async evaluate(): Promise<HealthCheckResult> {
+	private evaluate(): Promise<HealthCheckResult> {
+		return this.health.check(this.indicators());
+	}
+
+	private async guarded(
+		key: string,
+		run: () => unknown,
+		isUp: (value: unknown) => boolean,
+	): Promise<HealthIndicatorResult> {
+		const session = this.indicatorService.check(key);
+		const timeoutMs = this.options.checkTimeoutMs ?? CHECK_TIMEOUT_MS;
+		let timer: NodeJS.Timeout | undefined;
 		try {
-			const result = await this.health.check(this.indicators());
-			this.lastReady = true;
-			return result;
+			const value = await Promise.race([
+				Promise.resolve().then(run),
+				new Promise<never>((_, reject) => {
+					timer = setTimeout(() => reject(new Error(`timed out after ${timeoutMs}ms`)), timeoutMs);
+				}),
+			]);
+			return isUp(value) ? session.up() : session.down();
 		} catch (error) {
-			this.lastReady = false;
-			throw error;
+			return session.down(error instanceof Error ? error.message : `${key} check failed`);
+		} finally {
+			clearTimeout(timer);
 		}
 	}
 
@@ -89,36 +107,19 @@ export class HealthController implements OnModuleInit {
 		const list: HealthIndicatorFunction[] = [];
 		const prisma = this.prisma;
 		if (prisma) {
-			list.push(async () => {
-				const session = this.indicatorService.check('database');
-				let timer: NodeJS.Timeout | undefined;
-				try {
-					await Promise.race([
-						Promise.resolve(prisma.$queryRawUnsafe('SELECT 1')),
-						new Promise((_, reject) => {
-							timer = setTimeout(() => reject(new Error('timeout')), DATABASE_TIMEOUT_MS);
-						}),
-					]);
-					return session.up();
-				} catch (error) {
-					return session.down(error instanceof Error ? error.message : 'database check failed');
-				} finally {
-					clearTimeout(timer);
-				}
-			});
+			list.push(() =>
+				this.guarded(
+					'database',
+					() => prisma.$queryRawUnsafe('SELECT 1'),
+					() => true,
+				),
+			);
 		}
 		if (this.options.rabbitmq) {
 			list.push(() => this.rabbit.check('rabbitmq'));
 		}
 		for (const [name, check] of this.registry.entries()) {
-			list.push(async () => {
-				const session = this.indicatorService.check(name);
-				try {
-					return (await check()) ? session.up() : session.down();
-				} catch (error) {
-					return session.down(error instanceof Error ? error.message : 'check failed');
-				}
-			});
+			list.push(() => this.guarded(name, check, value => value === true));
 		}
 		return list;
 	}
