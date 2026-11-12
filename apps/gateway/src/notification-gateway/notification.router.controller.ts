@@ -24,6 +24,7 @@ import {
 } from '@nestjs/common';
 import { type ClientGrpc } from '@nestjs/microservices';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import { notification } from '@server/generated';
 import { Role } from '@server/typing';
 import { ApiEmptyResponseEntity, ApiResponseEntity } from '@server/utils';
@@ -62,6 +63,7 @@ export class NotificationGatewayController implements OnModuleInit {
 
 	@All('stream/:recipientId')
 	@ApiOperation({ summary: 'SSE stream for notifications' })
+	@SkipThrottle()
 	async streamNotifications(
 		@Param('recipientId') recipientId: string,
 		@Req() req: AuthenticatedRequest,

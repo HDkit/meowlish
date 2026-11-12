@@ -1,6 +1,7 @@
 import { AuthGatewayController } from './auth-gateway/auth.router.controller';
 import { AUTH_CLIENT } from './auth-gateway/constants/auth';
 import { corsOptions } from './cors';
+import { LiveWsGatewayController } from './live-ws-gateway/live-ws.router.controller';
 import { throttlerOptions } from './throttle';
 import { RedisService } from '@liaoliaots/nestjs-redis';
 import { Controller, Get, type INestApplication } from '@nestjs/common';
@@ -29,10 +30,11 @@ describe('gateway throttling and CORS', () => {
 	let base: string;
 
 	beforeAll(async () => {
+		process.env.LIVE_SERVICE_WS_URL = 'http://127.0.0.1:1'; // nothing listens: proxy errors fast
 		const authService = { loginMail: () => of({}), registerMail: () => of({}) };
 		const moduleRef = await Test.createTestingModule({
 			imports: [ThrottlerModule.forRoot(throttlerOptions)],
-			controllers: [AuthGatewayController, FakeHealthController],
+			controllers: [AuthGatewayController, FakeHealthController, LiveWsGatewayController],
 			providers: [
 				{ provide: APP_GUARD, useClass: ThrottlerGuard },
 				{
@@ -71,6 +73,12 @@ describe('gateway throttling and CORS', () => {
 		for (let i = 0; i < 101; i++) statuses.push((await fetch(`${base}/ping`)).status);
 		expect(statuses[99]).toBe(200);
 		expect(statuses[100]).toBe(429);
+	});
+
+	it('does not throttle the socket.io proxy route', async () => {
+		for (let i = 0; i < 120; i++) {
+			expect((await fetch(`${base}/socket.io/?EIO=4&transport=polling`)).status).not.toBe(429);
+		}
 	});
 
 	it('sends CORS headers only to allowed origins', async () => {

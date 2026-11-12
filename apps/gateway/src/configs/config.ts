@@ -54,7 +54,7 @@ const vpsEnvSchema = z.object({
 	feLoginRedirectUrl: z.url(),
 });
 
-const DEV_CORS_ORIGINS = 'http://localhost:3000,http://localhost:5173';
+const DEV_CORS_ORIGINS = 'http://localhost:6767,http://localhost:5173';
 
 /** Comma-separated origins -> list. Never contains `*`: credentials are always allowed. */
 const corsOriginsSchema = z.preprocess(
@@ -76,8 +76,11 @@ export const envFileSchema = z.object({
 	env: z.union([z.literal('development'), z.literal('production')]),
 	/** Origins allowed by CORS; empty means no cross-origin access. */
 	corsOrigins: corsOriginsSchema,
-	/** Honour X-Forwarded-For (express `trust proxy`) when behind a reverse proxy. */
-	trustProxy: z.preprocess(v => v === 'true' || v === '1', z.boolean()),
+	/** express `trust proxy`: false, true, or the number of trusted proxy hops. */
+	trustProxy: z.preprocess(
+		v => (typeof v === 'string' && /^\d+$/.test(v.trim()) ? Number(v) : v === 'true'),
+		z.union([z.boolean(), z.number().int().min(0)]),
+	),
 	redis: redisVarsSchema,
 	jwt: jwtVarsSchema,
 	googleOAuth2: googleOAuth2Schema,

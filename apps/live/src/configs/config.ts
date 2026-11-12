@@ -21,7 +21,7 @@ const mqSchema = z.object({
 	port: z.coerce.number(),
 });
 
-const DEV_CORS_ORIGINS = 'http://localhost:3000,http://localhost:5173';
+const DEV_CORS_ORIGINS = 'http://localhost:6767,http://localhost:5173';
 
 /** Comma-separated origins -> list. Never contains `*`: credentials are always allowed. */
 const corsOriginsSchema = z.preprocess(
