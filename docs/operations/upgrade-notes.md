@@ -45,6 +45,18 @@ Set these before starting the new build (`docker/.env.services`, or each app's `
 | `FE_LOGIN_REDIRECT_URL`  | gateway                       | The frontend's Google login callback page, e.g. `https://app.example.com/auth/callback` (locally `http://localhost:6767/auth/callback`). The frontend root redirects and drops `?loginToken`, so Google login fails if this points at `/`. |
 | `FILE_SERVICE_HOST/PORT` | resource (new)                | file-service gRPC address. Resource now checks file ownership when attaching files to reports.                                                                                                                                             |
 
+### 3a. Mock AI scorer (dev and staging only)
+
+`apps/mock-ai-scorer` is a stand-in for the external AI writing scorer. It consumes `exam.writing.submitted` from the `mock-ai-scorer.writing.submitted` queue and publishes random IELTS scores (4.0-8.5, no real AI) on `exam.writing.scored` after a random delay. Docker starts it only with `--profile mock-ai`.
+
+| Variable                   | Default | Meaning                                                        |
+| -------------------------- | ------- | -------------------------------------------------------------- |
+| `MOCK_SCORER_MIN_DELAY_MS` | `2000`  | Lower bound of the random delay before scoring (<= max).       |
+| `MOCK_SCORER_MAX_DELAY_MS` | `8000`  | Upper bound of the random delay.                               |
+| `RMQ_*`, `HEALTH_PORT`     | -       | Same as the other services; health is served on `HEALTH_PORT`. |
+
+**Never run it in production or alongside the real AI scorer.** Both would consume `exam.writing.submitted` (each with its own queue, so every submission is scored twice and the later result overwrites the earlier one).
+
 ### 4. Database
 
 Run in this order:

@@ -77,6 +77,7 @@ This means the private key must only exist in the auth service environment, whil
 │   ├── auth/                 # Identity, credentials, roles/permissions, JWT
 │   ├── authorization/        # Resource ownership checks
 │   ├── exam/                 # Exam management, practice, tags, goals
+│   ├── mock-ai-scorer/       # Dev-only random writing scorer (no DB, no gRPC)
 │   ├── achievement/          # Badges and user progress
 │   ├── resource/             # Blogs, flash cards, reports
 │   ├── file-service/         # Presigned URLs & file metadata (MinIO)
@@ -96,17 +97,18 @@ This means the private key must only exist in the auth service environment, whil
 
 ### Services (apps)
 
-| App             | gRPC services                                                               | Responsibility                                                                                                                |
-| --------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `gateway`       | — (HTTP)                                                                    | API routing, JWT verification, role/permission guards, docs                                                                   |
-| `auth`          | `AuthService`                                                               | Registration/login (mail & Google), token issuance & refresh, roles/permissions, identity management, Google Calendar linking |
-| `authorization` | `AuthorizationService`                                                      | Ownership registration/checking (`is owner?`) for resources                                                                   |
-| `exam`          | `ExamManagementService`, `ExamPracticeService`, `TagService`, `GoalService` | Create/manage exams, sections & questions; answer attempts, stats, tags, user goals                                           |
-| `achievement`   | `AchievementService`                                                        | Badges catalog, user badges, login/submission progress                                                                        |
-| `resource`      | `BlogService`, `FlashCardService`, `FlashCardListService`, `ReportService`  | Blogs, flash cards (and lists), moderation reports                                                                            |
-| `file-service`  | `FileService`                                                               | Presigned upload/download URLs, file metadata (MinIO)                                                                         |
-| `live`          | `ChatService`                                                               | Chat rooms, chat logs, room scheduling, bans; Socket.IO real-time                                                             |
-| `notification`  | `NotificationService`, `NotificationPreferencesService`                     | Create/list notifications, mark read, preferences; SSE streaming                                                              |
+| App              | gRPC services                                                               | Responsibility                                                                                                                |
+| ---------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `gateway`        | — (HTTP)                                                                    | API routing, JWT verification, role/permission guards, docs                                                                   |
+| `auth`           | `AuthService`                                                               | Registration/login (mail & Google), token issuance & refresh, roles/permissions, identity management, Google Calendar linking |
+| `authorization`  | `AuthorizationService`                                                      | Ownership registration/checking (`is owner?`) for resources                                                                   |
+| `exam`           | `ExamManagementService`, `ExamPracticeService`, `TagService`, `GoalService` | Create/manage exams, sections & questions; answer attempts, stats, tags, user goals                                           |
+| `achievement`    | `AchievementService`                                                        | Badges catalog, user badges, login/submission progress                                                                        |
+| `resource`       | `BlogService`, `FlashCardService`, `FlashCardListService`, `ReportService`  | Blogs, flash cards (and lists), moderation reports                                                                            |
+| `file-service`   | `FileService`                                                               | Presigned upload/download URLs, file metadata (MinIO)                                                                         |
+| `live`           | `ChatService`                                                               | Chat rooms, chat logs, room scheduling, bans; Socket.IO real-time                                                             |
+| `notification`   | `NotificationService`, `NotificationPreferencesService`                     | Create/list notifications, mark read, preferences; SSE streaming                                                              |
+| `mock-ai-scorer` | — (RabbitMQ only)                                                           | Dev stand-in for the external AI writing scorer: random scores after a random delay (see below)                               |
 
 ### Libraries (libs)
 
@@ -231,6 +233,16 @@ Keep the double quotes so the multi-line value survives `.env` parsing.
 - `MINIO_HOST` / `MINIO_PORT` / `MINIO_USER` / `MINIO_PASSWORD` — object storage
 - `MINIO_USE_SSL` — TLS to MinIO (default: on only when `NODE_ENV=production`)
 - `MINIO_PUBLIC_URL` — browser-facing MinIO address: base of public file links, and the host presigned upload/download URLs are signed for. Set it whenever `MINIO_HOST` is an internal name (e.g. `min-io` in docker). Default: `http(s)://MINIO_HOST:MINIO_PORT`
+
+### Mock AI scorer (`apps/mock-ai-scorer/.env.example`)
+
+Dev stand-in for the external AI writing scorer. It consumes `exam.writing.submitted` and, after a random delay, publishes `exam.writing.scored` with random IELTS bands (4.0-8.5 in 0.5 steps, no real AI, feedback text says it is a mock). It has no database and no gRPC API.
+
+- `RMQ_HOST`, `RMQ_PORT`, `RMQ_USER`, `RMQ_PASS` — RabbitMQ, same as the other apps
+- `MOCK_SCORER_MIN_DELAY_MS` / `MOCK_SCORER_MAX_DELAY_MS` — uniform random delay per submission (defaults `2000` / `8000`; min must be <= max)
+- `HOST`, `HEALTH_PORT` — bind address and port for `/health/live` and `/health/ready`
+
+Run it with `nx serve mock-ai-scorer` (also started by `nx run-many -t serve`), or in Docker with `docker compose --profile mock-ai up`. **Do not run it next to the real AI scorer**: both would consume `exam.writing.submitted` and race to score each submission.
 
 ### Gateway (`apps/gateway/.env.example`)
 

@@ -114,6 +114,31 @@ services:
     networks:
       - api-network
 
+  # Stand-in for the external AI writing scorer (random scores). Opt-in:
+  #   docker compose --profile mock-ai up
+  # Never run it next to the real scorer: both consume exam.writing.submitted.
+  mock-ai-scorer:
+    init: true
+    profiles: ["mock-ai"]
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        APP: mock-ai-scorer
+    environment:
+      - HOST=0.0.0.0
+      - HEALTH_PORT=9110
+    env_file: .env.services
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9110/health/ready"]
+      interval: 15s
+      timeout: 3s
+      retries: 4
+      start_period: 30s
+    depends_on: [rabbit-mq]
+    networks:
+      - api-network
+
   achievement:
     init: true
     build:

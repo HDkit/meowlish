@@ -499,6 +499,55 @@
               'annotations': { 'summary': 'notification has stopped reporting service_ready' },
               'labels': { 'severity': 'critical', 'service': 'notification' },
             },
+            {
+              'uid': 'meowlish-missing-mock-ai-scorer',
+              'title': 'ServiceMissing',
+              'condition': 'C',
+              'for': '1m',
+              'noDataState': 'OK',
+              'execErrState': 'Error',
+              'data':
+                [
+                  {
+                    'refId': 'A',
+                    'relativeTimeRange': { 'from': 600, 'to': 0 },
+                    'datasourceUid': 'prometheus',
+                    'model': {
+                        'refId': 'A',
+                        # Opt-in service: only alert when it ran in the last hour and then went quiet.
+                        'expr': '(count_over_time(service_ready{service="mock-ai-scorer"}[1h]) > 0) unless (count_over_time(service_ready{service="mock-ai-scorer"}[2m]) > 0)',
+                        'instant': true,
+                        'intervalMs': 1000,
+                        'maxDataPoints': 43200,
+                      },
+                  },
+                  {
+                    'refId': 'B',
+                    'datasourceUid': '__expr__',
+                    'model':
+                      {
+                        'refId': 'B',
+                        'type': 'reduce',
+                        'expression': 'A',
+                        'reducer': 'last',
+                        'settings': { 'mode': 'dropNN' },
+                      },
+                  },
+                  {
+                    'refId': 'C',
+                    'datasourceUid': '__expr__',
+                    'model':
+                      {
+                        'refId': 'C',
+                        'type': 'threshold',
+                        'expression': 'B',
+                        'conditions': [{ 'evaluator': { 'type': 'gt', 'params': [0] } }],
+                      },
+                  },
+                ],
+              'annotations': { 'summary': 'mock-ai-scorer has stopped reporting service_ready' },
+              'labels': { 'severity': 'warning', 'service': 'mock-ai-scorer' },
+            },
           ],
       },
     ],
