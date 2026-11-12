@@ -9,18 +9,17 @@ import {
 } from '../achievement.get-users-badges.query';
 import { Inject } from '@nestjs/common';
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
-import { CursorPaginationHelper } from '@server/utils';
+import { CursorPaginationFactory, CursorPaginationHelper } from '@server/utils';
 
 @QueryHandler(GetUsersBadgesQuery)
 export class GetUsersBadgesQueryHandler implements IQueryHandler<GetUsersBadgesQuery> {
 	private readonly cursorPaginationHelper: CursorPaginationHelper;
 
 	constructor(
+		cursorPaginationFactory: CursorPaginationFactory,
 		@Inject(IBadgeReadRepositoryToken) private readonly badgeReadRepository: IBadgeReadRepository,
 	) {
-		this.cursorPaginationHelper = new CursorPaginationHelper(
-			`${process.env.HOST}${process.env.PORT}GetBadges`,
-		);
+		this.cursorPaginationHelper = cursorPaginationFactory.create('GetBadges');
 	}
 
 	async execute(query: GetUsersBadgesQuery): Promise<GetUsersBadgesQueryResult> {

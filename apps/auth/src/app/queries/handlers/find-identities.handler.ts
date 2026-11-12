@@ -12,7 +12,7 @@ import { Inject, OnModuleInit, ServiceUnavailableException } from '@nestjs/commo
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { ClientGrpc } from '@nestjs/microservices';
 import { file } from '@server/generated';
-import { CursorPaginationHelper } from '@server/utils';
+import { CursorPaginationFactory, CursorPaginationHelper } from '@server/utils';
 import { firstValueFrom } from 'rxjs';
 
 @QueryHandler(FindIdentitiesQuery)
@@ -23,13 +23,12 @@ export class FindIdentitiesQueryHandler
 	private fileService!: file.FileServiceClient;
 
 	constructor(
+		cursorPaginationFactory: CursorPaginationFactory,
 		@Inject(IIdentityReadRepositoryToken)
 		private readonly identityReadRepository: IIdentityReadRepository,
 		@Inject(FILE_CLIENT) private readonly fileClient: ClientGrpc,
 	) {
-		this.cursorPaginationHelper = new CursorPaginationHelper(
-			`${process.env.HOST}${process.env.PORT}FindIdentities`,
-		);
+		this.cursorPaginationHelper = cursorPaginationFactory.create('FindIdentities');
 	}
 
 	onModuleInit() {

@@ -16,7 +16,7 @@ import { ChatGateway } from './chat.gateway';
 import { AmqpConnectionManager } from '@golevelup/nestjs-rabbitmq';
 import { Inject, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { AppLoggerService } from '@server/logger';
-import { CursorPaginationHelper } from '@server/utils';
+import { CursorPaginationFactory, CursorPaginationHelper } from '@server/utils';
 
 @Injectable()
 export class ChatService {
@@ -26,6 +26,7 @@ export class ChatService {
 	>;
 
 	constructor(
+		cursorPaginationFactory: CursorPaginationFactory,
 		private readonly chatGateway: ChatGateway,
 		@Inject(IChatLogReadRepositoryToken)
 		private readonly chatLogReadRepository: IChatLogReadRepository,
@@ -37,10 +38,8 @@ export class ChatService {
 		private readonly logger: AppLoggerService,
 	) {
 		this.cursorPaginationHelpers = {
-			getRoomList: new CursorPaginationHelper(`${process.env.HOST}${process.env.PORT}GetRoomList`),
-			getChatLogsOf: new CursorPaginationHelper(
-				`${process.env.HOST}${process.env.PORT}GetChatLogsOf`,
-			),
+			getRoomList: cursorPaginationFactory.create('GetRoomList'),
+			getChatLogsOf: cursorPaginationFactory.create('GetChatLogsOf'),
 		};
 	}
 

@@ -9,19 +9,18 @@ import {
 } from '../auth.find-identity-ids.query';
 import { Inject } from '@nestjs/common';
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
-import { CursorPaginationHelper } from '@server/utils';
+import { CursorPaginationFactory, CursorPaginationHelper } from '@server/utils';
 
 @QueryHandler(FindIdentityIdsQuery)
 export class FindIdentityIdsQueryHandler implements IQueryHandler<FindIdentityIdsQuery> {
 	private readonly cursorPaginationHelper: CursorPaginationHelper;
 
 	constructor(
+		cursorPaginationFactory: CursorPaginationFactory,
 		@Inject(IIdentityReadRepositoryToken)
 		private readonly identityReadRepository: IIdentityReadRepository,
 	) {
-		this.cursorPaginationHelper = new CursorPaginationHelper(
-			`${process.env.HOST}${process.env.PORT}FindIdentityIds`,
-		);
+		this.cursorPaginationHelper = cursorPaginationFactory.create('FindIdentityIds');
 	}
 
 	async execute(query: FindIdentityIdsQuery): Promise<FindIdentityIdsQueryResult> {

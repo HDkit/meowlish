@@ -9,19 +9,18 @@ import {
 } from '../../practice/exam.find-exams.query';
 import { Inject } from '@nestjs/common';
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
-import { CursorPaginationHelper } from '@server/utils';
+import { CursorPaginationFactory, CursorPaginationHelper } from '@server/utils';
 
 @QueryHandler(FindExamsQuery)
 export class FindExamsHandler implements IQueryHandler<FindExamsQuery> {
 	private readonly cursorPaginationHelper: CursorPaginationHelper;
 
 	constructor(
+		cursorPaginationFactory: CursorPaginationFactory,
 		@Inject(IPracticeReadRepositoryToken)
 		private readonly practiceReadRepository: IPracticeReadRepository,
 	) {
-		this.cursorPaginationHelper = new CursorPaginationHelper(
-			`${process.env.HOST}${process.env.PORT}FindExams`,
-		);
+		this.cursorPaginationHelper = cursorPaginationFactory.create('FindExams');
 	}
 
 	async execute(query: FindExamsQuery): Promise<FindExamsQueryResult> {

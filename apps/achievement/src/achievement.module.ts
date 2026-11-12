@@ -19,6 +19,7 @@ import { PrismaClient } from '@prisma-client/achievement';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { LoggerModule } from '@server/logger';
 import {
+	CursorPaginationFactory,
 	GlobalClassSerializerInterceptor,
 	GlobalRmqExceptionFilter,
 	GlobalRpcExceptionFilter,
@@ -55,6 +56,7 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 		LoggerModule.forRoot({ appName: 'AchievementModule' }),
 	],
 	providers: [
+		CursorPaginationFactory,
 		...IntegrationEventHandlers,
 		...BadgesQueryHandlers,
 		{

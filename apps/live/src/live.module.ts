@@ -22,6 +22,7 @@ import { PrismaClient } from '@prisma-client/live';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { LoggerModule } from '@server/logger';
 import {
+	CursorPaginationFactory,
 	GlobalClassSerializerInterceptor,
 	GlobalHttpExceptionFilter,
 	GlobalRpcExceptionFilter,
@@ -62,6 +63,7 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 		LoggerModule.forRoot({ appName: 'LiveModule' }),
 	],
 	providers: [
+		CursorPaginationFactory,
 		ChatService,
 		ChatGateway,
 		{

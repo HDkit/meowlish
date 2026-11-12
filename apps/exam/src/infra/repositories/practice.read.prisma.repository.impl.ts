@@ -192,6 +192,8 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 			throw new BadRequestException('Limit must be positive');
 		const dir = Math.sign(options?.direction || 1);
 		const idOrder = dir === -1 ? 'DESC' : 'ASC';
+		// Never interpolate the caller's value into raw SQL: it can come from a decoded cursor.
+		const sortOrder = options?.sortBy?.direction === SortDirection.ASC ? 'ASC' : 'DESC';
 
 		// sort by attemptsCount or by update time
 		// fallback to sort by ID
@@ -199,11 +201,11 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 			options?.sortBy ?
 				options.sortBy.key === 'attemptsCount' ?
 					Prisma.sql`
-          "attemptsCount" ${Prisma.raw(options.sortBy.direction)},
+          "attemptsCount" ${Prisma.raw(sortOrder)},
           e.id ${Prisma.raw(idOrder)}
         `
 				:	Prisma.sql`
-          e.updated_at ${Prisma.raw(options.sortBy.direction)},
+          e.updated_at ${Prisma.raw(sortOrder)},
           e.id ${Prisma.raw(idOrder)}
         `
 			:	Prisma.sql`e.id ${Prisma.raw(idOrder)}`;
@@ -282,8 +284,8 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 						Prisma.sql`(e.updated_at, e.id) > (${options.lastCursor.updatedAt}, ${options.lastCursor.id})`
 					:	Prisma.sql`(e.updated_at, e.id) < (${options.lastCursor.updatedAt}, ${options.lastCursor.id})`
 				: isForward ?
-					Prisma.sql`e.updated_at < ${options.lastCursor.updatedAt} OR (e.updated_at = ${options.lastCursor.updatedAt} AND e.id > ${options.lastCursor.id})`
-				:	Prisma.sql`e.updated_at > ${options.lastCursor.updatedAt} OR (e.updated_at = ${options.lastCursor.updatedAt} AND e.id < ${options.lastCursor.id})`
+					Prisma.sql`(e.updated_at < ${options.lastCursor.updatedAt} OR (e.updated_at = ${options.lastCursor.updatedAt} AND e.id > ${options.lastCursor.id}))`
+				:	Prisma.sql`(e.updated_at > ${options.lastCursor.updatedAt} OR (e.updated_at = ${options.lastCursor.updatedAt} AND e.id < ${options.lastCursor.id}))`
 			: options?.lastCursor?.id ?
 				isForward ? Prisma.sql`e.id > ${options.lastCursor.id}`
 				:	Prisma.sql`e.id < ${options.lastCursor.id}`
@@ -296,8 +298,8 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 						Prisma.sql`(COUNT(DISTINCT a.id), e.id) > (${options.lastCursor.attemptsCount}, ${options.lastCursor.id})`
 					:	Prisma.sql`(COUNT(DISTINCT a.id), e.id) < (${options.lastCursor.attemptsCount}, ${options.lastCursor.id})`
 				: isForward ?
-					Prisma.sql`COUNT(DISTINCT a.id) < ${options.lastCursor.attemptsCount} OR (COUNT(DISTINCT a.id) = ${options.lastCursor.attemptsCount} AND e.id > ${options.lastCursor.id})`
-				:	Prisma.sql`COUNT(DISTINCT a.id) > ${options.lastCursor.attemptsCount} OR (COUNT(DISTINCT a.id) = ${options.lastCursor.attemptsCount} AND e.id < ${options.lastCursor.id})`
+					Prisma.sql`(COUNT(DISTINCT a.id) < ${options.lastCursor.attemptsCount} OR (COUNT(DISTINCT a.id) = ${options.lastCursor.attemptsCount} AND e.id > ${options.lastCursor.id}))`
+				:	Prisma.sql`(COUNT(DISTINCT a.id) > ${options.lastCursor.attemptsCount} OR (COUNT(DISTINCT a.id) = ${options.lastCursor.attemptsCount} AND e.id < ${options.lastCursor.id}))`
 			:	Prisma.sql`TRUE`;
 
 		const rows = await this.txHost.tx.$queryRaw<

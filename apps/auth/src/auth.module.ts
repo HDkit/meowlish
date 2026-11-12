@@ -39,6 +39,7 @@ import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { file } from '@server/generated';
 import { LoggerModule } from '@server/logger';
 import {
+	CursorPaginationFactory,
 	ErrorHandlingGrpcProxy,
 	GlobalClassSerializerInterceptor,
 	GlobalRmqExceptionFilter,
@@ -82,6 +83,7 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 		}),
 	],
 	providers: [
+		CursorPaginationFactory,
 		TokenService,
 		...AuthCommandHandlers,
 		...AuthQueryHandlers,

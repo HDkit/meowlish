@@ -47,6 +47,8 @@ const servicesSchema = z.object({
 
 export const envFileSchema = z.object({
 	env: z.union([z.literal('development'), z.literal('production')]),
+	/** Signs pagination cursors (see CursorPaginationFactory). */
+	cursorSecret: z.string().min(32).optional(),
 	database: dbVarsSchema,
 	redis: redisVarsSchema,
 	jwt: jwtVarsSchema,
@@ -60,6 +62,7 @@ export type IEnvVars = z.infer<typeof envFileSchema>;
 // map your env vars to ConfigService's properties
 const loadEnv = (): DeepStringify<IEnvVars> => ({
 	env: process.env.NODE_ENV,
+	cursorSecret: process.env.CURSOR_SECRET || undefined,
 	database: {
 		host: process.env.POSTGRES_HOST,
 		port: process.env.POSTGRES_PORT,
