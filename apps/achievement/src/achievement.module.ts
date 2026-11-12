@@ -37,7 +37,7 @@ const databaseModule = DatabaseModule.forRoot(PrismaClient);
 		MessagingModule.forRoot({
 			serviceName: 'achievement',
 			prismaToken: DATABASE_SERVICE,
-			relay: false,
+			relay: true,
 			imports: [databaseModule],
 		}),
 		HealthModule.forRoot({

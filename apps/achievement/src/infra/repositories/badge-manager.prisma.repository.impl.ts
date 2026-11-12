@@ -14,6 +14,7 @@ import {
 	PrismaClient,
 	UserBadge,
 } from '@prisma-client/achievement';
+import { OutboxPublisher } from '@server/messaging';
 import { Event, parseEnum } from '@server/utils';
 
 class BadgeManagerPrismaMapper {
@@ -79,7 +80,10 @@ class BadgeManagerPrismaMapper {
 
 @Injectable()
 export class BadgeManagerPrismaRepositoryImpl implements IBadgeManagerRepository {
-	constructor(private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>) {}
+	constructor(
+		private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>,
+		private readonly outbox: OutboxPublisher,
+	) {}
 
 	async getAttemptCounterBadgeManager(uid: string): Promise<AttemptCounterBadgeManager> {
 		const foundManager = await this.txHost.tx.attemptCriteria.upsert({
@@ -177,5 +181,10 @@ export class BadgeManagerPrismaRepositoryImpl implements IBadgeManagerRepository
 			}
 			throw e;
 		}
+		// Same transaction as the award: a rolled-back or retried attempt publishes nothing.
+		await this.outbox.add('achievement.badge.earned', {
+			uid: event.payload.uid,
+			badgeName: event.payload.badge,
+		});
 	}
 }

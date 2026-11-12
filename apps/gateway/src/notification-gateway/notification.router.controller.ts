@@ -3,6 +3,8 @@ import { type AuthenticatedRequest } from '../types/authenticated-request';
 import { NOTIFICATION_CLIENT } from './constants/notification';
 import { CreateNotificationDto } from './dtos/req/create-notification.req.dto';
 import { ListNotificationsQueryDto } from './dtos/req/list-notifications.query.dto';
+import { UpdatePreferencesReqDto } from './dtos/req/update-preferences.req.dto';
+import { NotificationPreferencesDto } from './dtos/res/notification-preferences.res.dto';
 import { NotificationDto, NotificationListDto } from './dtos/res/notification.dto';
 import {
 	All,
@@ -84,6 +86,30 @@ export class NotificationGatewayController implements OnModuleInit {
 	@SerializeOptions({ type: NotificationDto, strategy: 'exposeAll' })
 	createNotification(@Body() body: CreateNotificationDto) {
 		return this.notificationService.createNotification(body);
+	}
+
+	// Declared before `:id` routes so `preferences` is never captured as an id.
+	@Get('preferences')
+	@ApiOperation({ summary: 'Get my notification preferences' })
+	@ApiResponseEntity(NotificationPreferencesDto)
+	@SerializeOptions({ type: NotificationPreferencesDto, strategy: 'exposeAll' })
+	getPreferences(@Req() req: AuthenticatedRequest) {
+		return this.notificationPreferencesService.getPreferences({ identityId: req.user.sub });
+	}
+
+	@Patch('preferences')
+	@ApiOperation({ summary: 'Update my notification preferences' })
+	@ApiResponseEntity(NotificationPreferencesDto)
+	@SerializeOptions({ type: NotificationPreferencesDto, strategy: 'exposeAll' })
+	updatePreferences(@Req() req: AuthenticatedRequest, @Body() body: UpdatePreferencesReqDto) {
+		return this.notificationPreferencesService.updatePreferences({
+			emailEnabled: body.emailEnabled,
+			pushEnabled: body.pushEnabled,
+			achievementEnabled: body.achievementEnabled,
+			reportEnabled: body.reportEnabled,
+			systemEnabled: body.systemEnabled,
+			identityId: req.user.sub,
+		});
 	}
 
 	@Get(':id')
