@@ -21,6 +21,7 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { PrismaClient } from '@prisma-client/live';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { LoggerModule } from '@server/logger';
+import { MessagingModule } from '@server/messaging';
 import { HealthModule } from '@server/telemetry';
 import {
 	CursorPaginationFactory,
@@ -34,11 +35,22 @@ import {
 import { ClsGuard, ClsModule } from 'nestjs-cls';
 
 const databaseModule = DatabaseModule.forRoot(PrismaClient);
+// shared with MessagingModule so OutboxRelay can resolve AmqpConnectionManager
+const rmqPubModule = RabbitMQModule.forRootAsync({
+	inject: [ConfigService],
+	useFactory: rmqPubConfig,
+});
 
 @Module({
 	exports: [],
 	controllers: [ChatController],
 	imports: [
+		MessagingModule.forRoot({
+			serviceName: 'live',
+			prismaToken: DATABASE_SERVICE,
+			relay: true,
+			imports: [databaseModule, rmqPubModule],
+		}),
 		HealthModule.forRoot({
 			serviceName: 'live',
 			prismaToken: DATABASE_SERVICE,
@@ -67,7 +79,7 @@ const databaseModule = DatabaseModule.forRoot(PrismaClient);
 		}),
 		BullModule.forRootAsync({ inject: [ConfigService], useFactory: bullConfig }),
 		BullModule.registerQueue({ name: 'live' }),
-		RabbitMQModule.forRootAsync({ inject: [ConfigService], useFactory: rmqPubConfig }),
+		rmqPubModule,
 		RabbitMQModule.forRootAsync({ inject: [ConfigService], useFactory: rmqSubConfig }),
 		LoggerModule.forRoot({ appName: 'LiveModule' }),
 	],

@@ -19,6 +19,7 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { PrismaClient } from '@prisma-client/resource';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { LoggerModule } from '@server/logger';
+import { MessagingModule } from '@server/messaging';
 import { HealthModule } from '@server/telemetry';
 import { GlobalClassSerializerInterceptor, GlobalRpcExceptionFilter } from '@server/utils';
 import { gRPC2HttpExceptionFilter } from '@server/utils';
@@ -26,10 +27,21 @@ import { GlobalValidationPipe } from '@server/utils';
 import { ClsGuard, ClsModule } from 'nestjs-cls';
 
 const databaseModule = DatabaseModule.forRoot(PrismaClient);
+// shared with MessagingModule so OutboxRelay can resolve AmqpConnectionManager
+const rmqPubModule = RabbitMQModule.forRootAsync({
+	inject: [ConfigService],
+	useFactory: rmqPubConfig,
+});
 
 @Module({
 	controllers: [BlogController, FlashcardController, FlashcardListController, ReportController],
 	imports: [
+		MessagingModule.forRoot({
+			serviceName: 'resource',
+			prismaToken: DATABASE_SERVICE,
+			relay: true,
+			imports: [databaseModule, rmqPubModule],
+		}),
 		HealthModule.forRoot({
 			serviceName: 'resource',
 			prismaToken: DATABASE_SERVICE,
@@ -44,7 +56,7 @@ const databaseModule = DatabaseModule.forRoot(PrismaClient);
 			load: [config],
 		}),
 		CqrsModule.forRoot(),
-		RabbitMQModule.forRootAsync({ inject: [ConfigService], useFactory: rmqPubConfig }),
+		rmqPubModule,
 		ClsModule.forRoot({
 			global: true,
 			guard: { mount: false },

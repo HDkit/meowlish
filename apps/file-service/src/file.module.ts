@@ -18,6 +18,7 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { PrismaClient } from '@prisma-client/file';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { LoggerModule } from '@server/logger';
+import { MessagingModule } from '@server/messaging';
 import { HealthModule } from '@server/telemetry';
 import {
 	GlobalClassSerializerInterceptor,
@@ -33,6 +34,12 @@ const databaseModule = DatabaseModule.forRoot(PrismaClient);
 @Module({
 	controllers: [FileController],
 	imports: [
+		MessagingModule.forRoot({
+			serviceName: 'file-service',
+			prismaToken: DATABASE_SERVICE,
+			relay: false,
+			imports: [databaseModule],
+		}),
 		HealthModule.forRoot({
 			serviceName: 'file-service',
 			prismaToken: DATABASE_SERVICE,

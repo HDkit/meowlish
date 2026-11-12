@@ -13,6 +13,7 @@ import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { PrismaClient } from '@prisma-client/authorization';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { LoggerModule } from '@server/logger';
+import { MessagingModule } from '@server/messaging';
 import { HealthModule } from '@server/telemetry';
 import {
 	GlobalRmqExceptionFilter,
@@ -22,10 +23,22 @@ import {
 import { ClsGuard, ClsModule } from 'nestjs-cls';
 
 const databaseModule = DatabaseModule.forRoot(PrismaClient);
+// shared with MessagingModule so OutboxRelay can resolve AmqpConnectionManager
+const rmqSubModule = RabbitMQModule.forRootAsync({
+	inject: [ConfigService],
+	useFactory: rmqSubConfig,
+});
 
 @Module({
 	controllers: [AuthorizationGrpcController],
 	imports: [
+		MessagingModule.forRoot({
+			serviceName: 'authorization',
+			prismaToken: DATABASE_SERVICE,
+			relay: true,
+			connectionName: 'sub',
+			imports: [databaseModule, rmqSubModule],
+		}),
 		HealthModule.forRoot({
 			serviceName: 'authorization',
 			prismaToken: DATABASE_SERVICE,
@@ -52,7 +65,7 @@ const databaseModule = DatabaseModule.forRoot(PrismaClient);
 				}),
 			],
 		}),
-		RabbitMQModule.forRootAsync({ inject: [ConfigService], useFactory: rmqSubConfig }),
+		rmqSubModule,
 		LoggerModule.forRoot({ appName: 'AuthorizationModule' }),
 	],
 	providers: [

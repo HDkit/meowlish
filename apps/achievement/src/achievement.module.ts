@@ -18,6 +18,7 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { PrismaClient } from '@prisma-client/achievement';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { LoggerModule } from '@server/logger';
+import { MessagingModule } from '@server/messaging';
 import { HealthModule } from '@server/telemetry';
 import {
 	CursorPaginationFactory,
@@ -33,6 +34,12 @@ const databaseModule = DatabaseModule.forRoot(PrismaClient);
 @Module({
 	controllers: [BadgeController],
 	imports: [
+		MessagingModule.forRoot({
+			serviceName: 'achievement',
+			prismaToken: DATABASE_SERVICE,
+			relay: false,
+			imports: [databaseModule],
+		}),
 		HealthModule.forRoot({
 			serviceName: 'achievement',
 			prismaToken: DATABASE_SERVICE,

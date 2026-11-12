@@ -38,6 +38,7 @@ import { PrismaClient } from '@prisma-client/auth';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { file } from '@server/generated';
 import { LoggerModule } from '@server/logger';
+import { MessagingModule } from '@server/messaging';
 import { HealthModule } from '@server/telemetry';
 import {
 	CursorPaginationFactory,
@@ -50,10 +51,21 @@ import {
 import { ClsGuard, ClsModule } from 'nestjs-cls';
 
 const databaseModule = DatabaseModule.forRoot(PrismaClient);
+// shared with MessagingModule so OutboxRelay can resolve AmqpConnectionManager
+const rmqPubModule = RabbitMQModule.forRootAsync({
+	inject: [ConfigService],
+	useFactory: rmqPubConfig,
+});
 
 @Module({
 	controllers: [AuthController],
 	imports: [
+		MessagingModule.forRoot({
+			serviceName: 'auth',
+			prismaToken: DATABASE_SERVICE,
+			relay: true,
+			imports: [databaseModule, rmqPubModule],
+		}),
 		HealthModule.forRoot({
 			serviceName: 'auth',
 			prismaToken: DATABASE_SERVICE,
@@ -81,7 +93,7 @@ const databaseModule = DatabaseModule.forRoot(PrismaClient);
 				}),
 			],
 		}),
-		RabbitMQModule.forRootAsync({ inject: [ConfigService], useFactory: rmqPubConfig }),
+		rmqPubModule,
 		RabbitMQModule.forRootAsync({ inject: [ConfigService], useFactory: rmqSubConfig }),
 		BullModule.forRootAsync({ inject: [ConfigService], useFactory: bullConfig }),
 		BullModule.registerQueue({ name: 'auth' }),

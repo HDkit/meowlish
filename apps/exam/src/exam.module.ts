@@ -51,6 +51,7 @@ import { PrismaClient } from '@prisma-client/exam';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { file } from '@server/generated';
 import { LoggerModule } from '@server/logger';
+import { MessagingModule } from '@server/messaging';
 import { HealthModule } from '@server/telemetry';
 import {
 	CursorPaginationFactory,
@@ -64,10 +65,21 @@ import { GlobalValidationPipe } from '@server/utils';
 import { ClsGuard, ClsModule } from 'nestjs-cls';
 
 const databaseModule = DatabaseModule.forRoot(PrismaClient);
+// shared with MessagingModule so OutboxRelay can resolve AmqpConnectionManager
+const rmqPubModule = RabbitMQModule.forRootAsync({
+	inject: [ConfigService],
+	useFactory: rmqPubConfig,
+});
 
 @Module({
 	controllers: [ExamManagementController, ExamPracticeController, TagController, GoalController],
 	imports: [
+		MessagingModule.forRoot({
+			serviceName: 'exam',
+			prismaToken: DATABASE_SERVICE,
+			relay: true,
+			imports: [databaseModule, rmqPubModule],
+		}),
 		HealthModule.forRoot({
 			serviceName: 'exam',
 			prismaToken: DATABASE_SERVICE,
@@ -97,7 +109,7 @@ const databaseModule = DatabaseModule.forRoot(PrismaClient);
 		}),
 		BullModule.forRootAsync({ inject: [ConfigService], useFactory: bullConfig }),
 		BullModule.registerQueue({ name: 'exam' }),
-		RabbitMQModule.forRootAsync({ inject: [ConfigService], useFactory: rmqPubConfig }),
+		rmqPubModule,
 		RabbitMQModule.forRootAsync({ inject: [ConfigService], useFactory: rmqSubConfig }),
 		LoggerModule.forRoot({ appName: 'ExamModule' }),
 	],
