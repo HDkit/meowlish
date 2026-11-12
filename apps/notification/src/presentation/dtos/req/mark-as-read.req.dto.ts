@@ -4,4 +4,7 @@ import { IsString } from 'class-validator';
 export class MarkAsReadReqDto implements notification.MarkAsReadRequest {
 	@IsString()
 	id!: string;
+
+	@IsString()
+	recipientId!: string;
 }

@@ -24,11 +24,11 @@ export class NotificationController implements notification.NotificationServiceC
 
 	@SerializeOptions({ type: NotificationDto, strategy: 'exposeAll' })
 	async getNotification(@Payload() data: GetNotificationReqDto): Promise<NotificationDto> {
-		return this.notificationService.getNotification(data.id);
+		return this.notificationService.getNotification(data.id, data.recipientId);
 	}
 
 	async deleteNotification(@Payload() data: DeleteNotificationReqDto): Promise<void> {
-		await this.notificationService.deleteNotification(data.id);
+		await this.notificationService.deleteNotification(data.id, data.recipientId);
 	}
 
 	@SerializeOptions({ type: ListNotificationsDto, strategy: 'exposeAll' })
@@ -38,7 +38,7 @@ export class NotificationController implements notification.NotificationServiceC
 
 	@SerializeOptions({ type: NotificationDto, strategy: 'exposeAll' })
 	async markAsRead(@Payload() data: MarkAsReadReqDto): Promise<NotificationDto> {
-		return this.notificationService.markAsRead(data.id);
+		return this.notificationService.markAsRead(data.id, data.recipientId);
 	}
 
 	async markAllAsRead(@Payload() data: MarkAllAsReadReqDto): Promise<void> {

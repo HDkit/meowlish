@@ -42,11 +42,15 @@ message CreateNotificationRequest {
 }
 
 message GetNotificationRequest {
-	google.protobuf.StringValue id = 1;
+	google.protobuf.StringValue id           = 1;
+	// Set by the gateway from the JWT; the notification must belong to it.
+	google.protobuf.StringValue recipient_id = 2;
 }
 
 message DeleteNotificationRequest {
-	google.protobuf.StringValue id = 1;
+	google.protobuf.StringValue id           = 1;
+	// Set by the gateway from the JWT; the notification must belong to it.
+	google.protobuf.StringValue recipient_id = 2;
 }
 
 message ListNotificationsRequest {
@@ -64,7 +68,9 @@ message ListNotificationsResponse {
 }
 
 message MarkAsReadRequest {
-	google.protobuf.StringValue id = 1;
+	google.protobuf.StringValue id           = 1;
+	// Set by the gateway from the JWT; the notification must belong to it.
+	google.protobuf.StringValue recipient_id = 2;
 }
 
 message MarkAllAsReadRequest {

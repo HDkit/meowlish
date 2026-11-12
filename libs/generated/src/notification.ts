@@ -33,11 +33,19 @@ export interface CreateNotificationRequest {
 }
 
 export interface GetNotificationRequest {
-  id: string | undefined;
+  id:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; the notification must belong to it. */
+  recipientId: string | undefined;
 }
 
 export interface DeleteNotificationRequest {
-  id: string | undefined;
+  id:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; the notification must belong to it. */
+  recipientId: string | undefined;
 }
 
 export interface ListNotificationsRequest {
@@ -55,7 +63,11 @@ export interface ListNotificationsResponse {
 }
 
 export interface MarkAsReadRequest {
-  id: string | undefined;
+  id:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; the notification must belong to it. */
+  recipientId: string | undefined;
 }
 
 export interface MarkAllAsReadRequest {
@@ -311,13 +323,16 @@ export const CreateNotificationRequest: MessageFns<CreateNotificationRequest> = 
 };
 
 function createBaseGetNotificationRequest(): GetNotificationRequest {
-  return { id: undefined };
+  return { id: undefined, recipientId: undefined };
 }
 
 export const GetNotificationRequest: MessageFns<GetNotificationRequest> = {
   encode(message: GetNotificationRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.id !== undefined) {
       StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.recipientId !== undefined) {
+      StringValue.encode({ value: message.recipientId! }, writer.uint32(18).fork()).join();
     }
     return writer;
   },
@@ -343,6 +358,14 @@ export const GetNotificationRequest: MessageFns<GetNotificationRequest> = {
             message.id = StringValue.decode(reader, reader.uint32()).value;
             continue;
           }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.recipientId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -357,13 +380,16 @@ export const GetNotificationRequest: MessageFns<GetNotificationRequest> = {
 };
 
 function createBaseDeleteNotificationRequest(): DeleteNotificationRequest {
-  return { id: undefined };
+  return { id: undefined, recipientId: undefined };
 }
 
 export const DeleteNotificationRequest: MessageFns<DeleteNotificationRequest> = {
   encode(message: DeleteNotificationRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.id !== undefined) {
       StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.recipientId !== undefined) {
+      StringValue.encode({ value: message.recipientId! }, writer.uint32(18).fork()).join();
     }
     return writer;
   },
@@ -387,6 +413,14 @@ export const DeleteNotificationRequest: MessageFns<DeleteNotificationRequest> = 
             }
 
             message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.recipientId = StringValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }
@@ -561,13 +595,16 @@ export const ListNotificationsResponse: MessageFns<ListNotificationsResponse> = 
 };
 
 function createBaseMarkAsReadRequest(): MarkAsReadRequest {
-  return { id: undefined };
+  return { id: undefined, recipientId: undefined };
 }
 
 export const MarkAsReadRequest: MessageFns<MarkAsReadRequest> = {
   encode(message: MarkAsReadRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.id !== undefined) {
       StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.recipientId !== undefined) {
+      StringValue.encode({ value: message.recipientId! }, writer.uint32(18).fork()).join();
     }
     return writer;
   },
@@ -591,6 +628,14 @@ export const MarkAsReadRequest: MessageFns<MarkAsReadRequest> = {
             }
 
             message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.recipientId = StringValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }

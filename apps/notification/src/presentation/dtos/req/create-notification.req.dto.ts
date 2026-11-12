@@ -1,5 +1,5 @@
 import { notification } from '@server/generated';
-import { IsOptional, IsString } from 'class-validator';
+import { IsJSON, IsOptional, IsString } from 'class-validator';
 
 export class CreateNotificationReqDto implements notification.CreateNotificationRequest {
 	@IsString()
@@ -14,7 +14,7 @@ export class CreateNotificationReqDto implements notification.CreateNotification
 	@IsString()
 	message!: string;
 
+	@IsJSON()
 	@IsOptional()
-	@IsString()
 	data?: string;
 }

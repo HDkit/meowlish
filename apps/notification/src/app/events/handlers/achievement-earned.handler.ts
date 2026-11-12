@@ -1,3 +1,4 @@
+import { NotificationPreferencesService } from '../../services/notification-preferences.service';
 import { NotificationService } from '../../services/notification.service';
 import {
 	RabbitPayload,
@@ -17,6 +18,7 @@ class AchievementEarnedEvent {
 export class AchievementEarnedHandler {
 	constructor(
 		private readonly notificationService: NotificationService,
+		private readonly preferencesService: NotificationPreferencesService,
 		private readonly logger: AppLoggerService,
 	) {}
 
@@ -34,6 +36,7 @@ export class AchievementEarnedHandler {
 	})
 	async handle(@RabbitPayload() payload: AchievementEarnedEvent) {
 		try {
+			if (!(await this.preferencesService.isEnabled(payload.uid, 'achievement'))) return;
 			await this.notificationService.createNotification({
 				recipientId: payload.uid,
 				type: 'achievement',
@@ -42,7 +45,9 @@ export class AchievementEarnedHandler {
 				data: JSON.stringify({ badgeName: payload.badgeName }),
 			});
 		} catch (e) {
-			this.logger.error(e as string);
+			this.logger.error(
+				`Failed to create achievement notification: ${e instanceof Error ? (e.stack ?? e.message) : String(e)}`,
+			);
 		}
 	}
 }

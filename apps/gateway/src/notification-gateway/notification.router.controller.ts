@@ -1,12 +1,15 @@
+import { HasRoles } from '../auth/decorators/roles.decorator';
 import { type AuthenticatedRequest } from '../types/authenticated-request';
 import { NOTIFICATION_CLIENT } from './constants/notification';
 import { CreateNotificationDto } from './dtos/req/create-notification.req.dto';
+import { ListNotificationsQueryDto } from './dtos/req/list-notifications.query.dto';
 import { NotificationDto, NotificationListDto } from './dtos/res/notification.dto';
 import {
 	All,
 	Body,
 	Controller,
 	Delete,
+	ForbiddenException,
 	Get,
 	Inject,
 	Next,
@@ -22,6 +25,7 @@ import {
 import { type ClientGrpc } from '@nestjs/microservices';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { notification } from '@server/generated';
+import { Role } from '@server/typing';
 import { ApiEmptyResponseEntity, ApiResponseEntity } from '@server/utils';
 import { NextFunction, Response } from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
@@ -59,16 +63,21 @@ export class NotificationGatewayController implements OnModuleInit {
 	@All('stream/:recipientId')
 	@ApiOperation({ summary: 'SSE stream for notifications' })
 	async streamNotifications(
-		@Param('recipientId') _recipientId: string,
+		@Param('recipientId') recipientId: string,
 		@Req() req: AuthenticatedRequest,
 		@Res() res: Response,
 		@Next() next: NextFunction,
 	) {
+		// The notification service streams whatever recipient is in the path, so only allow your own.
+		if (recipientId !== req.user.sub) {
+			throw new ForbiddenException('You can only subscribe to your own notifications');
+		}
 		await this.sseProxy(req, res, next);
 	}
 
 	@Post()
-	@ApiOperation({ summary: 'Create a notification' })
+	@HasRoles(Role.Admin)
+	@ApiOperation({ summary: 'Create a notification (admins)' })
 	@ApiResponseEntity(NotificationDto)
 	@SerializeOptions({ type: NotificationDto, strategy: 'exposeAll' })
 	createNotification(@Body() body: CreateNotificationDto) {
@@ -79,43 +88,31 @@ export class NotificationGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Get a notification by ID' })
 	@ApiResponseEntity(NotificationDto)
 	@SerializeOptions({ type: NotificationDto, strategy: 'exposeAll' })
-	getNotification(@Param('id') id: string) {
-		return this.notificationService.getNotification({ id: id });
+	getNotification(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
+		return this.notificationService.getNotification({ id: id, recipientId: req.user.sub });
 	}
 
 	@Delete(':id')
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Delete a notification' })
-	deleteNotification(@Param('id') id: string) {
-		return this.notificationService.deleteNotification({ id: id });
+	deleteNotification(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
+		return this.notificationService.deleteNotification({ id: id, recipientId: req.user.sub });
 	}
 
 	@Get()
 	@ApiOperation({ summary: 'List notifications' })
 	@ApiResponseEntity(NotificationListDto)
 	@SerializeOptions({ type: NotificationListDto, strategy: 'exposeAll' })
-	listNotifications(
-		@Req() req: AuthenticatedRequest,
-		@Query('type') type?: string,
-		@Query('isRead') isRead?: boolean,
-		@Query('page') page?: number,
-		@Query('limit') limit?: number,
-	) {
-		return this.notificationService.listNotifications({
-			recipientId: req.user.sub,
-			type: type,
-			isRead: isRead,
-			page: page,
-			limit: limit,
-		});
+	listNotifications(@Req() req: AuthenticatedRequest, @Query() query: ListNotificationsQueryDto) {
+		return this.notificationService.listNotifications({ ...query, recipientId: req.user.sub });
 	}
 
 	@Patch(':id/read')
 	@ApiOperation({ summary: 'Mark a notification as read' })
 	@ApiResponseEntity(NotificationDto)
 	@SerializeOptions({ type: NotificationDto, strategy: 'exposeAll' })
-	markAsRead(@Param('id') id: string) {
-		return this.notificationService.markAsRead({ id: id });
+	markAsRead(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
+		return this.notificationService.markAsRead({ id: id, recipientId: req.user.sub });
 	}
 
 	@Post('read-all')

@@ -1,11 +1,11 @@
+import { type NotificationReadModel } from '../../domain/read-models/notification.read-model';
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { notification } from '@server/generated';
 import { Observable, Subject, filter, finalize, map } from 'rxjs';
 
 interface NotificationEvent {
 	recipientId: string;
-	notification: notification.NotificationResponse;
+	notification: NotificationReadModel;
 }
 
 interface MessageEvent {
@@ -25,7 +25,7 @@ export class NotificationSseService implements OnModuleDestroy {
 		});
 	}
 
-	emit(recipientId: string, notif: notification.NotificationResponse) {
+	emit(recipientId: string, notif: NotificationReadModel): void {
 		this.eventEmitter.emit('notification.created', {
 			recipientId: recipientId,
 			notification: notif,
