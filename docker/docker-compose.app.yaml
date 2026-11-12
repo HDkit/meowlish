@@ -30,6 +30,12 @@ services:
       - RESOURCE_SERVICE_HOST=resource
       - RESOURCE_SERVICE_PORT=50050
     env_file: .env.services
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health/ready"]
+      interval: 15s
+      timeout: 3s
+      retries: 4
+      start_period: 30s
     depends_on: [auth, authorization, exam, file-service, achievement, notification, resource, live]
     networks:
       - api-network
@@ -43,10 +49,17 @@ services:
     environment:
       - POSTGRES_DB=auth_db
       - HOST=0.0.0.0
+      - HEALTH_PORT=9101
       - PORT=50050
       - FILE_SERVICE_HOST=file-service
       - FILE_SERVICE_PORT=50050
     env_file: .env.services
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9101/health/ready"]
+      interval: 15s
+      timeout: 3s
+      retries: 4
+      start_period: 30s
     depends_on: [db, redis, rabbit-mq]
     networks:
       - api-network
@@ -60,8 +73,15 @@ services:
     environment:
       - POSTGRES_DB=authorization_db
       - HOST=0.0.0.0
+      - HEALTH_PORT=9108
       - PORT=50050
     env_file: .env.services
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9108/health/ready"]
+      interval: 15s
+      timeout: 3s
+      retries: 4
+      start_period: 30s
     depends_on: [db, rabbit-mq]
     networks:
       - api-network
@@ -75,10 +95,17 @@ services:
     environment:
       - POSTGRES_DB=exam_db
       - HOST=0.0.0.0
+      - HEALTH_PORT=9102
       - PORT=50050
       - FILE_SERVICE_HOST=file-service
       - FILE_SERVICE_PORT=50050
     env_file: .env.services
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9102/health/ready"]
+      interval: 15s
+      timeout: 3s
+      retries: 4
+      start_period: 30s
     depends_on: [db, redis, rabbit-mq]
     networks:
       - api-network
@@ -92,8 +119,15 @@ services:
     environment:
       - POSTGRES_DB=achievement_db
       - HOST=0.0.0.0
+      - HEALTH_PORT=9103
       - PORT=50050
     env_file: .env.services
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9103/health/ready"]
+      interval: 15s
+      timeout: 3s
+      retries: 4
+      start_period: 30s
     depends_on: [db, redis, rabbit-mq]
     networks:
       - api-network
@@ -107,8 +141,15 @@ services:
     environment:
       - POSTGRES_DB=resource_db
       - HOST=0.0.0.0
+      - HEALTH_PORT=9104
       - PORT=50050
     env_file: .env.services
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9104/health/ready"]
+      interval: 15s
+      timeout: 3s
+      retries: 4
+      start_period: 30s
     depends_on: [db, redis]
     networks:
       - api-network
@@ -126,6 +167,12 @@ services:
       - HTTP_HOST=0.0.0.0
       - HTTP_PORT=50061
     env_file: .env.services
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:50061/health/ready"]
+      interval: 15s
+      timeout: 3s
+      retries: 4
+      start_period: 30s
     depends_on: [db, redis, rabbit-mq]
     networks:
       - api-network
@@ -142,8 +189,15 @@ services:
       # min-io is only resolvable inside the compose network; browsers use the published port
       - MINIO_PUBLIC_URL=http://localhost:${MINIO_PORT:-9000}
       - HOST=0.0.0.0
+      - HEALTH_PORT=9106
       - PORT=50050
     env_file: .env.services
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9106/health/ready"]
+      interval: 15s
+      timeout: 3s
+      retries: 4
+      start_period: 30s
     depends_on: [db, redis, rabbit-mq, min-io]
     networks:
       - api-network
@@ -161,6 +215,12 @@ services:
       - GRPC_HOST=0.0.0.0
       - GRPC_PORT=50050
     env_file: .env.services
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:1511/health/ready"]
+      interval: 15s
+      timeout: 3s
+      retries: 4
+      start_period: 30s
     depends_on: [db, redis, rabbit-mq]
     networks:
       - api-network

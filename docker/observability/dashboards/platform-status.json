@@ -1,0 +1,325 @@
+{
+	"uid": "meowlish-platform-status",
+	"title": "Platform status",
+	"tags": ["meowlish"],
+	"schemaVersion": 39,
+	"version": 1,
+	"editable": true,
+	"refresh": "30s",
+	"time": {
+		"from": "now-1h",
+		"to": "now"
+	},
+	"templating": {
+		"list": [
+			{
+				"name": "service",
+				"type": "query",
+				"datasource": {
+					"type": "prometheus",
+					"uid": "prometheus"
+				},
+				"query": {
+					"query": "label_values(service_ready, service)",
+					"refId": "s"
+				},
+				"definition": "label_values(service_ready, service)",
+				"refresh": 2,
+				"includeAll": true,
+				"multi": true,
+				"current": {
+					"selected": true,
+					"text": ["All"],
+					"value": ["$__all"]
+				},
+				"sort": 1
+			}
+		]
+	},
+	"panels": [
+		{
+			"type": "row",
+			"title": "$service",
+			"id": 2,
+			"repeat": "service",
+			"collapsed": false,
+			"gridPos": {
+				"h": 1,
+				"w": 24,
+				"x": 0,
+				"y": 0
+			},
+			"panels": []
+		},
+		{
+			"type": "stat",
+			"title": "Ready",
+			"id": 3,
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"gridPos": {
+				"h": 4,
+				"w": 4,
+				"x": 0,
+				"y": 1
+			},
+			"targets": [
+				{
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					},
+					"expr": "max by (service) (service_ready{service=\"$service\"})",
+					"legendFormat": "",
+					"refId": "A"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"unit": "none",
+					"noValue": "no data",
+					"thresholds": {
+						"mode": "absolute",
+						"steps": [
+							{
+								"color": "red",
+								"value": null
+							},
+							{
+								"color": "green",
+								"value": 1
+							}
+						]
+					},
+					"color": {
+						"mode": "thresholds"
+					},
+					"mappings": [
+						{
+							"type": "value",
+							"options": {
+								"0": {
+									"text": "NOT READY",
+									"index": 0
+								},
+								"1": {
+									"text": "READY",
+									"index": 1
+								}
+							}
+						}
+					]
+				},
+				"overrides": []
+			},
+			"options": {
+				"reduceOptions": {
+					"calcs": ["lastNotNull"],
+					"fields": "",
+					"values": false
+				},
+				"colorMode": "background",
+				"graphMode": "none",
+				"textMode": "auto"
+			}
+		},
+		{
+			"type": "stat",
+			"title": "Restarts (1h)",
+			"id": 4,
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"gridPos": {
+				"h": 4,
+				"w": 4,
+				"x": 4,
+				"y": 1
+			},
+			"targets": [
+				{
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					},
+					"expr": "count(count by (service_instance_id) (max_over_time(service_ready{service=\"$service\"}[1h]))) - 1",
+					"legendFormat": "",
+					"refId": "A"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"unit": "none",
+					"noValue": "no data",
+					"thresholds": {
+						"mode": "absolute",
+						"steps": [
+							{
+								"color": "green",
+								"value": null
+							},
+							{
+								"color": "orange",
+								"value": 1
+							},
+							{
+								"color": "red",
+								"value": 3
+							}
+						]
+					},
+					"color": {
+						"mode": "thresholds"
+					},
+					"mappings": []
+				},
+				"overrides": []
+			},
+			"options": {
+				"reduceOptions": {
+					"calcs": ["lastNotNull"],
+					"fields": "",
+					"values": false
+				},
+				"colorMode": "background",
+				"graphMode": "none",
+				"textMode": "auto"
+			}
+		},
+		{
+			"type": "timeseries",
+			"title": "Request rate (HTTP)",
+			"id": 5,
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"gridPos": {
+				"h": 8,
+				"w": 8,
+				"x": 0,
+				"y": 5
+			},
+			"targets": [
+				{
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					},
+					"expr": "sum by (http_response_status_code) (rate(http_server_request_duration_seconds_count{service_name=\"$service\"}[$__rate_interval]))",
+					"legendFormat": "{{http_response_status_code}}",
+					"refId": "A"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"unit": "reqps",
+					"custom": {
+						"fillOpacity": 10
+					}
+				},
+				"overrides": []
+			},
+			"options": {
+				"legend": {
+					"displayMode": "list",
+					"placement": "bottom"
+				},
+				"tooltip": {
+					"mode": "multi"
+				}
+			}
+		},
+		{
+			"type": "timeseries",
+			"title": "Error rate (HTTP 5xx)",
+			"id": 6,
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"gridPos": {
+				"h": 8,
+				"w": 8,
+				"x": 8,
+				"y": 5
+			},
+			"targets": [
+				{
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					},
+					"expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"$service\",http_response_status_code=~\"5..\"}[$__rate_interval])) / sum(rate(http_server_request_duration_seconds_count{service_name=\"$service\"}[$__rate_interval]))",
+					"legendFormat": "5xx ratio",
+					"refId": "A"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"unit": "percentunit",
+					"custom": {
+						"fillOpacity": 10
+					}
+				},
+				"overrides": []
+			},
+			"options": {
+				"legend": {
+					"displayMode": "list",
+					"placement": "bottom"
+				},
+				"tooltip": {
+					"mode": "multi"
+				}
+			}
+		},
+		{
+			"type": "timeseries",
+			"title": "p95 latency (HTTP)",
+			"id": 7,
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"gridPos": {
+				"h": 8,
+				"w": 8,
+				"x": 16,
+				"y": 5
+			},
+			"targets": [
+				{
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					},
+					"expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_seconds_bucket{service_name=\"$service\"}[$__rate_interval])))",
+					"legendFormat": "p95",
+					"refId": "A"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"unit": "s",
+					"custom": {
+						"fillOpacity": 10
+					}
+				},
+				"overrides": []
+			},
+			"options": {
+				"legend": {
+					"displayMode": "list",
+					"placement": "bottom"
+				},
+				"tooltip": {
+					"mode": "multi"
+				}
+			}
+		}
+	]
+}
