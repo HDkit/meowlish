@@ -17,6 +17,10 @@ export const rmqSubConfig = (configService: ConfigService<IEnvVars>): RabbitMQCo
 			...consumerQueueConfigs(ATTEMPT_SUBMITTED_QUEUE),
 			...consumerQueueConfigs(ATTEMPT_SCORED_QUEUE),
 		],
+		// One unacked message per consumer (basic.qos is per consumer): an instance works through
+		// each queue serially, so the only version races left are across queues or instances, and
+		// those are absorbed by the handlers' conflict retry plus the broker-level backoff retries.
+		prefetchCount: 1,
 		uri: `amqp://${rmqConfig.user}:${rmqConfig.password}@${rmqConfig.host}:${rmqConfig.port}`,
 		connectionInitOptions: { wait: true },
 		defaultSubscribeErrorBehavior: MessageHandlerErrorBehavior.NACK,
