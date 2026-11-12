@@ -17,19 +17,22 @@ async function bootstrap() {
 	const notificationModule = await NestFactory.create<NestExpressApplication>(NotificationModule);
 	notificationModule.enableCors();
 
-	notificationModule.connectMicroservice<MicroserviceOptions>({
-		transport: Transport.GRPC,
-		options: {
-			url: `${process.env.GRPC_HOST ?? '127.0.0.1'}:${process.env.GRPC_PORT ?? 50050}`,
-			package: 'notification',
-			packageDefinition: {
-				[`notification.${notification.NOTIFICATION_SERVICE_NAME}`]:
-					notification.NotificationServiceService,
-				[`notification.${notification.NOTIFICATION_PREFERENCES_SERVICE_NAME}`]:
-					notification.NotificationPreferencesServiceService,
-			} satisfies PackageDefinition,
+	notificationModule.connectMicroservice<MicroserviceOptions>(
+		{
+			transport: Transport.GRPC,
+			options: {
+				url: `${process.env.GRPC_HOST ?? '127.0.0.1'}:${process.env.GRPC_PORT ?? 50050}`,
+				package: 'notification',
+				packageDefinition: {
+					[`notification.${notification.NOTIFICATION_SERVICE_NAME}`]:
+						notification.NotificationServiceService,
+					[`notification.${notification.NOTIFICATION_PREFERENCES_SERVICE_NAME}`]:
+						notification.NotificationPreferencesServiceService,
+				} satisfies PackageDefinition,
+			},
 		},
-	});
+		{ inheritAppConfig: true },
+	);
 	await notificationModule.startAllMicroservices();
 	useLogger(notificationModule);
 	await notificationModule.listen(

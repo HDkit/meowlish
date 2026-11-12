@@ -25,16 +25,19 @@ async function bootstrap() {
 	const liveModule = await NestFactory.create<NestExpressApplication>(LiveModule);
 	liveModule.enableCors();
 
-	liveModule.connectMicroservice<MicroserviceOptions>({
-		transport: Transport.GRPC,
-		options: {
-			url: `${process.env.GRPC_HOST ?? '127.0.0.1'}:${process.env.GRPC_PORT ?? 50050}`,
-			package: 'live',
-			packageDefinition: {
-				[`live.${live.CHAT_SERVICE_NAME}`]: live.ChatServiceService,
-			} satisfies PackageDefinition,
+	liveModule.connectMicroservice<MicroserviceOptions>(
+		{
+			transport: Transport.GRPC,
+			options: {
+				url: `${process.env.GRPC_HOST ?? '127.0.0.1'}:${process.env.GRPC_PORT ?? 50050}`,
+				package: 'live',
+				packageDefinition: {
+					[`live.${live.CHAT_SERVICE_NAME}`]: live.ChatServiceService,
+				} satisfies PackageDefinition,
+			},
 		},
-	});
+		{ inheritAppConfig: true },
+	);
 	await liveModule.startAllMicroservices();
 	useLogger(liveModule);
 	await useRedisWsAdapter(liveModule);
