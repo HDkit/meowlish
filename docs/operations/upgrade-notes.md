@@ -10,16 +10,27 @@ Covers cookie sessions, requester-scoped authorization on exam/live/files, consu
 
 The HTTP contract changed in ways an old frontend can't handle, and an old backend can't serve the new frontend:
 
-- **Cookie auth**: login, register, refresh and Google token exchange return `data: null` and set HttpOnly `access_token` / `refresh_token` cookies. The frontend must send credentials (`credentials: 'include'` / `withCredentials`), refresh with `POST /auth/refresh` and no body, and log out with `POST /auth/logout`.
+- **Cookie auth**: login, register, refresh and Google token exchange return `data: null` and set HttpOnly `access_token` / `refresh_token` cookies. The frontend must send credentials (`credentials: 'include'` / `withCredentials`), refresh with `POST /auth/refresh` and no body, and log out with `POST /auth/logout`. `POST /auth/logout` only clears this browser's cookies: the refresh token stays valid until it expires. `POST /auth/logout-all` revokes every token of the identity (use it for "log out everywhere" or a suspected token leak).
 - **Password change** requires `currentPassword` (401 "Wrong password" otherwise).
 - **Exam tags** are added and removed by tag **ID**, not name.
 - **Google Calendar**: `GET .../google/calendar/token` returns `{ accessToken, expiresAt }`; connect/exchange return `{ connected, expiresAt }`. Refresh tokens no longer leave the server.
 
 Also deploy **gateway and auth together**: the three Google Calendar RPCs changed their return types, so a mixed-version pair fails those routes.
 
-### 2. Frontend and API must be same-site
+### 2. Frontend and API must be same-site (proxy `/api` and `/socket.io` through the frontend)
 
-Cookies are `SameSite=Lax`, so the frontend and the API must share a registrable domain (e.g. `app.example.com` + `api.example.com`; different ports or subdomains are fine). A cross-site frontend can't store the cookies, and `CookieIssuanceGuard` refuses cross-site cookie-issuing requests with 403. See backlog S15 for the remaining limits.
+Cookies are `SameSite=Lax`, so the browser must see the frontend and the API as one site. A cross-site frontend can't store the cookies, `CookieIssuanceGuard` refuses its cookie-issuing requests with 403, and the socket handshake arrives without the access cookie. Note that hosts under a public suffix such as `servebeer.com` or `ddns.net` are **different sites** even when they share that suffix (`app.servebeer.com` and `meowlish.servebeer.com` are cross-site).
+
+The supported setup: the frontend calls the API on **its own origin** and proxies to the gateway:
+
+- `/api/*` -> gateway `/api/*` (this also carries `GET /api/v1/auth/google/callback`, so set `BASE_URL` to the **frontend's** public origin: Google must redirect back through the proxy, where the `oauth2_state` cookie of the linking flow lives);
+- `/socket.io/*` -> gateway `/api/v1/chat/ws/socket.io/*`. WebSocket upgrades need a reverse proxy that forwards them (nginx/Envoy, or `next start` itself); without one socket.io falls back to long-polling.
+
+The frontend's Next.js config does both rewrites (target: `NEXT_PUBLIC_API_URL`). In production, prefer a reverse proxy in front of both that routes these paths straight to the gateway: Next's built-in proxy does not add `X-Forwarded-For`, so the gateway sees the Next server as every client's address (shared rate-limit buckets) unless a proxy in front sets it and `TRUST_PROXY` counts both hops.
+
+Alternatively serve frontend and API on hosts of one registrable domain (`app.example.com` + `api.example.com`) and let the frontend call the API directly.
+
+Either way, **`CORS_ORIGINS` (gateway and live) must include the frontend origin**: when the frontend calls the API directly for CORS, and behind the proxy too, because the browser still sends `Origin: <frontend>`, which `CookieIssuanceGuard` and live's socket handshake check against that list. See backlog S15 for the remaining limits.
 
 ### 3. Configuration
 
