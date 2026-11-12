@@ -85,7 +85,15 @@ export interface CreateFlashCardRequest {
 }
 
 export interface GetFlashCardRequest {
-  id: string | undefined;
+  id:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester may bypass ownership/visibility (role decided by the gateway). */
+  privileged?: boolean | undefined;
 }
 
 export interface UpdateFlashCardRequest {
@@ -108,7 +116,15 @@ export interface ListFlashCardsRequest {
   authorId?: string | undefined;
   tags: string[];
   page?: number | undefined;
-  limit?: number | undefined;
+  limit?:
+    | number
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester may bypass ownership/visibility (role decided by the gateway). */
+  privileged?: boolean | undefined;
 }
 
 export interface ListFlashCardsResponse {
@@ -149,7 +165,15 @@ export interface CreateFlashCardListRequest {
 }
 
 export interface GetFlashCardListRequest {
-  id: string | undefined;
+  id:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester may bypass ownership/visibility (role decided by the gateway). */
+  privileged?: boolean | undefined;
 }
 
 export interface UpdateFlashCardListRequest {
@@ -158,10 +182,24 @@ export interface UpdateFlashCardListRequest {
   description?: string | undefined;
   isPublic?: boolean | undefined;
   tags: string[];
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester may bypass ownership/visibility (role decided by the gateway). */
+  privileged?: boolean | undefined;
 }
 
 export interface DeleteFlashCardListRequest {
-  id: string | undefined;
+  id:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester may bypass ownership/visibility (role decided by the gateway). */
+  privileged?: boolean | undefined;
 }
 
 export interface ListFlashCardListsRequest {
@@ -169,7 +207,15 @@ export interface ListFlashCardListsRequest {
   isPublic?: boolean | undefined;
   tags: string[];
   page?: number | undefined;
-  limit?: number | undefined;
+  limit?:
+    | number
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester may bypass ownership/visibility (role decided by the gateway). */
+  privileged?: boolean | undefined;
 }
 
 export interface ListFlashCardListsResponse {
@@ -180,18 +226,42 @@ export interface ListFlashCardListsResponse {
 export interface AddCardToListRequest {
   listId: string | undefined;
   flashCardId: string | undefined;
-  position?: number | undefined;
+  position?:
+    | number
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester may bypass ownership/visibility (role decided by the gateway). */
+  privileged?: boolean | undefined;
 }
 
 export interface RemoveCardFromListRequest {
   listId: string | undefined;
-  flashCardId: string | undefined;
+  flashCardId:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester may bypass ownership/visibility (role decided by the gateway). */
+  privileged?: boolean | undefined;
 }
 
 export interface ListCardsInListRequest {
   listId: string | undefined;
   page?: number | undefined;
-  limit?: number | undefined;
+  limit?:
+    | number
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester may bypass ownership/visibility (role decided by the gateway). */
+  privileged?: boolean | undefined;
 }
 
 export interface ReportResponse {
@@ -221,7 +291,15 @@ export interface CreateReportRequest {
 }
 
 export interface GetReportRequest {
-  id: string | undefined;
+  id:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester may bypass ownership/visibility (role decided by the gateway). */
+  privileged?: boolean | undefined;
 }
 
 export interface UpdateReportRequest {
@@ -242,7 +320,15 @@ export interface ListReportsRequest {
   targetType?: string | undefined;
   targetId?: string | undefined;
   page?: number | undefined;
-  limit?: number | undefined;
+  limit?:
+    | number
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester may bypass ownership/visibility (role decided by the gateway). */
+  privileged?: boolean | undefined;
 }
 
 export interface ListReportsResponse {
@@ -252,12 +338,28 @@ export interface ListReportsResponse {
 
 export interface AddFileToReportRequest {
   reportId: string | undefined;
-  fileId: string | undefined;
+  fileId:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester may bypass ownership/visibility (role decided by the gateway). */
+  privileged?: boolean | undefined;
 }
 
 export interface RemoveFileFromReportRequest {
   reportId: string | undefined;
-  fileId: string | undefined;
+  fileId:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester may bypass ownership/visibility (role decided by the gateway). */
+  privileged?: boolean | undefined;
 }
 
 function createBaseBlogResponse(): BlogResponse {
@@ -1071,13 +1173,19 @@ export const CreateFlashCardRequest: MessageFns<CreateFlashCardRequest> = {
 };
 
 function createBaseGetFlashCardRequest(): GetFlashCardRequest {
-  return { id: undefined };
+  return { id: undefined, requesterId: undefined };
 }
 
 export const GetFlashCardRequest: MessageFns<GetFlashCardRequest> = {
   encode(message: GetFlashCardRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.id !== undefined) {
       StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(26).fork()).join();
     }
     return writer;
   },
@@ -1101,6 +1209,22 @@ export const GetFlashCardRequest: MessageFns<GetFlashCardRequest> = {
             }
 
             message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }
@@ -1297,7 +1421,7 @@ export const DeleteFlashCardRequest: MessageFns<DeleteFlashCardRequest> = {
 };
 
 function createBaseListFlashCardsRequest(): ListFlashCardsRequest {
-  return { tags: [] };
+  return { tags: [], requesterId: undefined };
 }
 
 export const ListFlashCardsRequest: MessageFns<ListFlashCardsRequest> = {
@@ -1313,6 +1437,12 @@ export const ListFlashCardsRequest: MessageFns<ListFlashCardsRequest> = {
     }
     if (message.limit !== undefined) {
       Int32Value.encode({ value: message.limit! }, writer.uint32(34).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(42).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(50).fork()).join();
     }
     return writer;
   },
@@ -1360,6 +1490,22 @@ export const ListFlashCardsRequest: MessageFns<ListFlashCardsRequest> = {
             }
 
             message.limit = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }
@@ -1802,13 +1948,19 @@ export const CreateFlashCardListRequest: MessageFns<CreateFlashCardListRequest> 
 };
 
 function createBaseGetFlashCardListRequest(): GetFlashCardListRequest {
-  return { id: undefined };
+  return { id: undefined, requesterId: undefined };
 }
 
 export const GetFlashCardListRequest: MessageFns<GetFlashCardListRequest> = {
   encode(message: GetFlashCardListRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.id !== undefined) {
       StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(26).fork()).join();
     }
     return writer;
   },
@@ -1834,6 +1986,22 @@ export const GetFlashCardListRequest: MessageFns<GetFlashCardListRequest> = {
             message.id = StringValue.decode(reader, reader.uint32()).value;
             continue;
           }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -1848,7 +2016,7 @@ export const GetFlashCardListRequest: MessageFns<GetFlashCardListRequest> = {
 };
 
 function createBaseUpdateFlashCardListRequest(): UpdateFlashCardListRequest {
-  return { id: undefined, tags: [] };
+  return { id: undefined, tags: [], requesterId: undefined };
 }
 
 export const UpdateFlashCardListRequest: MessageFns<UpdateFlashCardListRequest> = {
@@ -1867,6 +2035,12 @@ export const UpdateFlashCardListRequest: MessageFns<UpdateFlashCardListRequest> 
     }
     for (const v of message.tags) {
       StringValue.encode({ value: v!! }, writer.uint32(42).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(50).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(58).fork()).join();
     }
     return writer;
   },
@@ -1924,6 +2098,22 @@ export const UpdateFlashCardListRequest: MessageFns<UpdateFlashCardListRequest> 
             message.tags.push(StringValue.decode(reader, reader.uint32()).value);
             continue;
           }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 7: {
+            if (tag !== 58) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -1938,13 +2128,19 @@ export const UpdateFlashCardListRequest: MessageFns<UpdateFlashCardListRequest> 
 };
 
 function createBaseDeleteFlashCardListRequest(): DeleteFlashCardListRequest {
-  return { id: undefined };
+  return { id: undefined, requesterId: undefined };
 }
 
 export const DeleteFlashCardListRequest: MessageFns<DeleteFlashCardListRequest> = {
   encode(message: DeleteFlashCardListRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.id !== undefined) {
       StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(26).fork()).join();
     }
     return writer;
   },
@@ -1970,6 +2166,22 @@ export const DeleteFlashCardListRequest: MessageFns<DeleteFlashCardListRequest> 
             message.id = StringValue.decode(reader, reader.uint32()).value;
             continue;
           }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -1984,7 +2196,7 @@ export const DeleteFlashCardListRequest: MessageFns<DeleteFlashCardListRequest> 
 };
 
 function createBaseListFlashCardListsRequest(): ListFlashCardListsRequest {
-  return { tags: [] };
+  return { tags: [], requesterId: undefined };
 }
 
 export const ListFlashCardListsRequest: MessageFns<ListFlashCardListsRequest> = {
@@ -2003,6 +2215,12 @@ export const ListFlashCardListsRequest: MessageFns<ListFlashCardListsRequest> = 
     }
     if (message.limit !== undefined) {
       Int32Value.encode({ value: message.limit! }, writer.uint32(42).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(50).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(58).fork()).join();
     }
     return writer;
   },
@@ -2058,6 +2276,22 @@ export const ListFlashCardListsRequest: MessageFns<ListFlashCardListsRequest> = 
             }
 
             message.limit = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 7: {
+            if (tag !== 58) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }
@@ -2131,7 +2365,7 @@ export const ListFlashCardListsResponse: MessageFns<ListFlashCardListsResponse> 
 };
 
 function createBaseAddCardToListRequest(): AddCardToListRequest {
-  return { listId: undefined, flashCardId: undefined };
+  return { listId: undefined, flashCardId: undefined, requesterId: undefined };
 }
 
 export const AddCardToListRequest: MessageFns<AddCardToListRequest> = {
@@ -2144,6 +2378,12 @@ export const AddCardToListRequest: MessageFns<AddCardToListRequest> = {
     }
     if (message.position !== undefined) {
       Int32Value.encode({ value: message.position! }, writer.uint32(26).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(34).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(42).fork()).join();
     }
     return writer;
   },
@@ -2185,6 +2425,22 @@ export const AddCardToListRequest: MessageFns<AddCardToListRequest> = {
             message.position = Int32Value.decode(reader, reader.uint32()).value;
             continue;
           }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -2199,7 +2455,7 @@ export const AddCardToListRequest: MessageFns<AddCardToListRequest> = {
 };
 
 function createBaseRemoveCardFromListRequest(): RemoveCardFromListRequest {
-  return { listId: undefined, flashCardId: undefined };
+  return { listId: undefined, flashCardId: undefined, requesterId: undefined };
 }
 
 export const RemoveCardFromListRequest: MessageFns<RemoveCardFromListRequest> = {
@@ -2209,6 +2465,12 @@ export const RemoveCardFromListRequest: MessageFns<RemoveCardFromListRequest> = 
     }
     if (message.flashCardId !== undefined) {
       StringValue.encode({ value: message.flashCardId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(26).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(34).fork()).join();
     }
     return writer;
   },
@@ -2242,6 +2504,22 @@ export const RemoveCardFromListRequest: MessageFns<RemoveCardFromListRequest> = 
             message.flashCardId = StringValue.decode(reader, reader.uint32()).value;
             continue;
           }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -2256,7 +2534,7 @@ export const RemoveCardFromListRequest: MessageFns<RemoveCardFromListRequest> = 
 };
 
 function createBaseListCardsInListRequest(): ListCardsInListRequest {
-  return { listId: undefined };
+  return { listId: undefined, requesterId: undefined };
 }
 
 export const ListCardsInListRequest: MessageFns<ListCardsInListRequest> = {
@@ -2269,6 +2547,12 @@ export const ListCardsInListRequest: MessageFns<ListCardsInListRequest> = {
     }
     if (message.limit !== undefined) {
       Int32Value.encode({ value: message.limit! }, writer.uint32(26).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(34).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(42).fork()).join();
     }
     return writer;
   },
@@ -2308,6 +2592,22 @@ export const ListCardsInListRequest: MessageFns<ListCardsInListRequest> = {
             }
 
             message.limit = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }
@@ -2624,13 +2924,19 @@ export const CreateReportRequest: MessageFns<CreateReportRequest> = {
 };
 
 function createBaseGetReportRequest(): GetReportRequest {
-  return { id: undefined };
+  return { id: undefined, requesterId: undefined };
 }
 
 export const GetReportRequest: MessageFns<GetReportRequest> = {
   encode(message: GetReportRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.id !== undefined) {
       StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(26).fork()).join();
     }
     return writer;
   },
@@ -2654,6 +2960,22 @@ export const GetReportRequest: MessageFns<GetReportRequest> = {
             }
 
             message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }
@@ -2795,7 +3117,7 @@ export const DeleteReportRequest: MessageFns<DeleteReportRequest> = {
 };
 
 function createBaseListReportsRequest(): ListReportsRequest {
-  return {};
+  return { requesterId: undefined };
 }
 
 export const ListReportsRequest: MessageFns<ListReportsRequest> = {
@@ -2820,6 +3142,12 @@ export const ListReportsRequest: MessageFns<ListReportsRequest> = {
     }
     if (message.limit !== undefined) {
       Int32Value.encode({ value: message.limit! }, writer.uint32(58).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(66).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(74).fork()).join();
     }
     return writer;
   },
@@ -2893,6 +3221,22 @@ export const ListReportsRequest: MessageFns<ListReportsRequest> = {
             message.limit = Int32Value.decode(reader, reader.uint32()).value;
             continue;
           }
+          case 8: {
+            if (tag !== 66) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 9: {
+            if (tag !== 74) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -2964,7 +3308,7 @@ export const ListReportsResponse: MessageFns<ListReportsResponse> = {
 };
 
 function createBaseAddFileToReportRequest(): AddFileToReportRequest {
-  return { reportId: undefined, fileId: undefined };
+  return { reportId: undefined, fileId: undefined, requesterId: undefined };
 }
 
 export const AddFileToReportRequest: MessageFns<AddFileToReportRequest> = {
@@ -2974,6 +3318,12 @@ export const AddFileToReportRequest: MessageFns<AddFileToReportRequest> = {
     }
     if (message.fileId !== undefined) {
       StringValue.encode({ value: message.fileId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(26).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(34).fork()).join();
     }
     return writer;
   },
@@ -3007,6 +3357,22 @@ export const AddFileToReportRequest: MessageFns<AddFileToReportRequest> = {
             message.fileId = StringValue.decode(reader, reader.uint32()).value;
             continue;
           }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -3021,7 +3387,7 @@ export const AddFileToReportRequest: MessageFns<AddFileToReportRequest> = {
 };
 
 function createBaseRemoveFileFromReportRequest(): RemoveFileFromReportRequest {
-  return { reportId: undefined, fileId: undefined };
+  return { reportId: undefined, fileId: undefined, requesterId: undefined };
 }
 
 export const RemoveFileFromReportRequest: MessageFns<RemoveFileFromReportRequest> = {
@@ -3031,6 +3397,12 @@ export const RemoveFileFromReportRequest: MessageFns<RemoveFileFromReportRequest
     }
     if (message.fileId !== undefined) {
       StringValue.encode({ value: message.fileId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(26).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(34).fork()).join();
     }
     return writer;
   },
@@ -3062,6 +3434,22 @@ export const RemoveFileFromReportRequest: MessageFns<RemoveFileFromReportRequest
             }
 
             message.fileId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }

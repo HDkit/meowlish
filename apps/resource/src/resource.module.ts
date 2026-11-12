@@ -1,3 +1,4 @@
+import { ResourceEventsPublisher } from './app/events/resource-events.publisher';
 import { BlogService } from './app/services/blog.service';
 import { FlashcardListService } from './app/services/flashcard-list.service';
 import { FlashcardService } from './app/services/flashcard.service';
@@ -55,6 +56,7 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 		FlashcardService,
 		FlashcardListService,
 		ReportService,
+		ResourceEventsPublisher,
 		{
 			provide: APP_GUARD,
 			useClass: ClsGuard,

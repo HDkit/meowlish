@@ -1,8 +1,9 @@
+import { RequesterReqDto } from './requester.req.dto';
 import { resource } from '@server/generated';
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 
-export class ListReportsReqDto implements resource.ListReportsRequest {
+export class ListReportsReqDto extends RequesterReqDto implements resource.ListReportsRequest {
 	@IsOptional()
 	@IsString()
 	reportedBy?: string;

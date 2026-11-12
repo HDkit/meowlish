@@ -6,6 +6,7 @@ import { GetFlashCardListReqDto } from '../dtos/req/get-flash-card-list.req.dto'
 import { ListCardsInListReqDto } from '../dtos/req/list-cards-in-list.req.dto';
 import { ListFlashCardListsReqDto } from '../dtos/req/list-flash-card-lists.req.dto';
 import { RemoveCardFromListReqDto } from '../dtos/req/remove-card-from-list.req.dto';
+import { toRequester } from '../dtos/req/requester.req.dto';
 import { UpdateFlashCardListReqDto } from '../dtos/req/update-flash-card-list.req.dto';
 import {
 	FlashCardListDetailDto,
@@ -31,35 +32,39 @@ export class FlashcardListController implements resource.FlashCardListServiceCon
 
 	@SerializeOptions({ type: FlashCardListDetailDto, strategy: 'exposeAll' })
 	async getFlashCardList(@Payload() data: GetFlashCardListReqDto): Promise<FlashCardListDetailDto> {
-		return this.flashcardListService.getFlashCardList(data.id);
+		return this.flashcardListService.getFlashCardList(data.id, toRequester(data));
 	}
 
 	@SerializeOptions({ type: FlashCardListDto, strategy: 'exposeAll' })
 	async updateFlashCardList(@Payload() data: UpdateFlashCardListReqDto): Promise<FlashCardListDto> {
-		return this.flashcardListService.updateFlashCardList(data);
+		return this.flashcardListService.updateFlashCardList(data, toRequester(data));
 	}
 
 	async deleteFlashCardList(@Payload() data: DeleteFlashCardListReqDto): Promise<void> {
-		await this.flashcardListService.deleteFlashCardList(data.id);
+		await this.flashcardListService.deleteFlashCardList(data.id, toRequester(data));
 	}
 
 	@SerializeOptions({ type: ListFlashCardListsDto, strategy: 'exposeAll' })
 	async listFlashCardLists(
 		@Payload() data: ListFlashCardListsReqDto,
 	): Promise<ListFlashCardListsDto> {
-		return this.flashcardListService.listFlashCardLists(data);
+		return this.flashcardListService.listFlashCardLists(data, toRequester(data));
 	}
 
 	async addCardToList(@Payload() data: AddCardToListReqDto): Promise<void> {
-		await this.flashcardListService.addCardToList(data);
+		await this.flashcardListService.addCardToList(data.listId, data.flashCardId, toRequester(data));
 	}
 
 	async removeCardFromList(@Payload() data: RemoveCardFromListReqDto): Promise<void> {
-		await this.flashcardListService.removeCardFromList(data);
+		await this.flashcardListService.removeCardFromList(
+			data.listId,
+			data.flashCardId,
+			toRequester(data),
+		);
 	}
 
 	@SerializeOptions({ type: ListFlashCardsDto, strategy: 'exposeAll' })
 	async listCardsInList(@Payload() data: ListCardsInListReqDto): Promise<ListFlashCardsDto> {
-		return this.flashcardListService.listCardsInList(data);
+		return this.flashcardListService.listCardsInList(data, toRequester(data));
 	}
 }

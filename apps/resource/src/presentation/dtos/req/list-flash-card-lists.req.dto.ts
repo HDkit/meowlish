@@ -1,8 +1,12 @@
+import { RequesterReqDto } from './requester.req.dto';
 import { resource } from '@server/generated';
 import { Type } from 'class-transformer';
 import { IsArray, IsBoolean, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
-export class ListFlashCardListsReqDto implements resource.ListFlashCardListsRequest {
+export class ListFlashCardListsReqDto
+	extends RequesterReqDto
+	implements resource.ListFlashCardListsRequest
+{
 	@IsOptional()
 	@IsString()
 	authorId?: string;

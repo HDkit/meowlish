@@ -42,8 +42,7 @@ export class CreateFlashCardDto {
 	@ApiPropertyOptional({ type: [String] })
 	tags?: string[];
 
-	@IsOptional()
 	@IsString()
-	@ApiPropertyOptional()
-	listId?: string;
+	@ApiProperty({ description: 'List the card belongs to; must be one of your own lists' })
+	listId!: string;
 }

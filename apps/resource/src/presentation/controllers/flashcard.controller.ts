@@ -3,6 +3,7 @@ import { CreateFlashCardReqDto } from '../dtos/req/create-flash-card.req.dto';
 import { DeleteFlashCardReqDto } from '../dtos/req/delete-flash-card.req.dto';
 import { GetFlashCardReqDto } from '../dtos/req/get-flash-card.req.dto';
 import { ListFlashCardsReqDto } from '../dtos/req/list-flash-cards.req.dto';
+import { toRequester } from '../dtos/req/requester.req.dto';
 import { UpdateFlashCardReqDto } from '../dtos/req/update-flash-card.req.dto';
 import { FlashCardDto, ListFlashCardsDto } from '../dtos/res/flash-card.res.dto';
 import { Controller, SerializeOptions, UseFilters } from '@nestjs/common';
@@ -23,7 +24,7 @@ export class FlashcardController implements resource.FlashCardServiceController 
 
 	@SerializeOptions({ type: FlashCardDto, strategy: 'exposeAll' })
 	async getFlashCard(@Payload() data: GetFlashCardReqDto): Promise<FlashCardDto> {
-		return this.flashcardService.getFlashCard(data.id);
+		return this.flashcardService.getFlashCard(data.id, toRequester(data));
 	}
 
 	@SerializeOptions({ type: FlashCardDto, strategy: 'exposeAll' })
@@ -37,6 +38,6 @@ export class FlashcardController implements resource.FlashCardServiceController 
 
 	@SerializeOptions({ type: ListFlashCardsDto, strategy: 'exposeAll' })
 	async listFlashCards(@Payload() data: ListFlashCardsReqDto): Promise<ListFlashCardsDto> {
-		return this.flashcardService.listFlashCards(data);
+		return this.flashcardService.listFlashCards(data, toRequester(data));
 	}
 }

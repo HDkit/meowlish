@@ -1,130 +1,94 @@
-import { AmqpConnectionManager } from '@golevelup/nestjs-rabbitmq';
+import {
+	type BlogListReadModel,
+	type BlogReadModel,
+} from '../../domain/read-models/blog.read-model';
+import { ResourceEventsPublisher } from '../events/resource-events.publisher';
+import {
+	type CreateBlogInput,
+	type ListBlogsInput,
+	type UpdateBlogInput,
+} from '../types/blog.input';
+import { toSkipTake } from '../types/pagination';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
-import { Blog, PrismaClient } from '@prisma-client/resource';
-import { resource } from '@server/generated';
-import { AppLoggerService } from '@server/logger';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { Blog, Prisma, PrismaClient } from '@prisma-client/resource';
 
 @Injectable()
 export class BlogService {
 	constructor(
 		private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>,
-		private readonly amqpConnectionManager: AmqpConnectionManager,
-		private readonly logger: AppLoggerService,
+		private readonly events: ResourceEventsPublisher,
 	) {}
 
-	private get amqpConnection() {
-		const connection = this.amqpConnectionManager.getConnection('pub');
-		if (!connection) throw new InternalServerErrorException('AMQP "pub" connection not available');
-		return connection;
-	}
-
-	private mapToResponse(entity: Blog): resource.BlogResponse {
+	private toReadModel(entity: Blog): BlogReadModel {
 		return {
 			id: entity.id,
 			title: entity.title,
 			content: entity.content,
 			authorId: entity.authorId,
-			tags: entity.tags || [],
+			tags: entity.tags,
 			createdAt: entity.createdAt.toISOString(),
 			updatedAt: entity.updatedAt.toISOString(),
 		};
 	}
 
-	async createBlog(data: resource.CreateBlogRequest): Promise<resource.BlogResponse> {
+	async createBlog(data: CreateBlogInput): Promise<BlogReadModel> {
 		const created = await this.txHost.tx.blog.create({
 			data: {
-				title: data.title as string,
-				content: data.content as string,
-				authorId: data.authorId as string,
-				tags: data.tags || [],
+				title: data.title,
+				content: data.content,
+				authorId: data.authorId,
+				tags: data.tags,
 			},
 		});
-
-		try {
-			await this.amqpConnection.publish(
-				'eventbus',
-				'resource.resource.created',
-				{ resourceType: 'blog', resourceId: created.id, ownerId: data.authorId },
-				{ persistent: true },
-			);
-		} catch (e) {
-			this.logger.error(`Failed to publish resource.resource.created event: ${e as string}`);
-		}
-
-		return this.mapToResponse(created);
+		await this.events.resourceCreated('blog', created.id, created.authorId);
+		return this.toReadModel(created);
 	}
 
-	async getBlog(id: string): Promise<resource.BlogResponse> {
+	async getBlog(id: string): Promise<BlogReadModel> {
 		const entity = await this.txHost.tx.blog.findUnique({ where: { id: id } });
-		if (!entity) {
-			throw new NotFoundException('Blog not found');
-		}
-		return this.mapToResponse(entity);
+		if (!entity) throw new NotFoundException('Blog not found');
+		return this.toReadModel(entity);
 	}
 
-	async updateBlog(data: resource.UpdateBlogRequest): Promise<resource.BlogResponse> {
+	async updateBlog(data: UpdateBlogInput): Promise<BlogReadModel> {
 		const entity = await this.txHost.tx.blog.findUnique({ where: { id: data.id } });
-		if (!entity) {
-			throw new NotFoundException('Blog not found');
-		}
+		if (!entity) throw new NotFoundException('Blog not found');
+
 		const updated = await this.txHost.tx.blog.update({
 			where: { id: data.id },
 			data: {
 				title: data.title ?? entity.title,
 				content: data.content ?? entity.content,
-				tags: data.tags && data.tags.length > 0 ? data.tags : entity.tags,
+				tags: data.tags.length > 0 ? data.tags : entity.tags,
 			},
 		});
-		return this.mapToResponse(updated);
+		return this.toReadModel(updated);
 	}
 
 	async deleteBlog(id: string): Promise<void> {
 		const entity = await this.txHost.tx.blog.findUnique({ where: { id: id } });
-		if (!entity) {
-			throw new NotFoundException('Blog not found');
-		}
-		await this.txHost.tx.blog.delete({ where: { id: id } });
+		if (!entity) throw new NotFoundException('Blog not found');
 
-		try {
-			await this.amqpConnection.publish(
-				'eventbus',
-				'resource.resource.deleted',
-				{ resourceType: 'blog', resourceId: id },
-				{ persistent: true },
-			);
-		} catch (e) {
-			this.logger.error(`Failed to publish resource.resource.deleted event: ${e as string}`);
-		}
+		await this.txHost.tx.blog.delete({ where: { id: id } });
+		await this.events.resourcesDeleted('blog', [id]);
 	}
 
-	async listBlogs(data: resource.ListBlogsRequest): Promise<resource.ListBlogsResponse> {
-		const page = data.page || 1;
-		const limit = data.limit || 10;
-		const skip = (page - 1) * limit;
-
-		const where: { authorId?: string; tags?: { hasSome: string[] } } = {};
-		if (data.authorId) {
-			where.authorId = data.authorId;
-		}
-		if (data.tags && data.tags.length > 0) {
-			where.tags = { hasSome: data.tags };
-		}
+	async listBlogs(data: ListBlogsInput): Promise<BlogListReadModel> {
+		const where: Prisma.BlogWhereInput = {};
+		if (data.authorId) where.authorId = data.authorId;
+		if (data.tags.length > 0) where.tags = { hasSome: data.tags };
 
 		const [blogs, totalCount] = await Promise.all([
 			this.txHost.tx.blog.findMany({
 				where: where,
-				skip: skip,
-				take: limit,
+				...toSkipTake(data),
 				orderBy: { createdAt: 'desc' },
 			}),
 			this.txHost.tx.blog.count({ where: where }),
 		]);
 
-		return {
-			blogs: blogs.map(b => this.mapToResponse(b)),
-			totalCount: totalCount,
-		};
+		return { blogs: blogs.map(b => this.toReadModel(b)), totalCount: totalCount };
 	}
 }

@@ -5,6 +5,7 @@ import { DeleteReportReqDto } from '../dtos/req/delete-report.req.dto';
 import { GetReportReqDto } from '../dtos/req/get-report.req.dto';
 import { ListReportsReqDto } from '../dtos/req/list-reports.req.dto';
 import { RemoveFileFromReportReqDto } from '../dtos/req/remove-file-from-report.req.dto';
+import { toRequester } from '../dtos/req/requester.req.dto';
 import { UpdateReportReqDto } from '../dtos/req/update-report.req.dto';
 import { ListReportsDto, ReportDto } from '../dtos/res/report.res.dto';
 import { Controller, SerializeOptions, UseFilters } from '@nestjs/common';
@@ -25,7 +26,7 @@ export class ReportController implements resource.ReportServiceController {
 
 	@SerializeOptions({ type: ReportDto, strategy: 'exposeAll' })
 	async getReport(@Payload() data: GetReportReqDto): Promise<ReportDto> {
-		return this.reportService.getReport(data.id);
+		return this.reportService.getReport(data.id, toRequester(data));
 	}
 
 	@SerializeOptions({ type: ReportDto, strategy: 'exposeAll' })
@@ -39,14 +40,14 @@ export class ReportController implements resource.ReportServiceController {
 
 	@SerializeOptions({ type: ListReportsDto, strategy: 'exposeAll' })
 	async listReports(@Payload() data: ListReportsReqDto): Promise<ListReportsDto> {
-		return this.reportService.listReports(data);
+		return this.reportService.listReports(data, toRequester(data));
 	}
 
 	async addFileToReport(@Payload() data: AddFileToReportReqDto): Promise<void> {
-		await this.reportService.addFileToReport(data);
+		await this.reportService.addFileToReport(data.reportId, data.fileId, toRequester(data));
 	}
 
 	async removeFileFromReport(@Payload() data: RemoveFileFromReportReqDto): Promise<void> {
-		await this.reportService.removeFileFromReport(data);
+		await this.reportService.removeFileFromReport(data.reportId, data.fileId, toRequester(data));
 	}
 }
