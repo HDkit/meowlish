@@ -55,6 +55,24 @@ describe('ChatGateway authentication', () => {
 		expect(socket.data.uid).toBe('user-1');
 	});
 
+	it('socket accepts the cookie', async () => {
+		const token = jwt.sign({ sub: 'user-2' }, privateKey, { algorithm: 'RS256' });
+		const socket = makeSocket({ headers: { cookie: `theme=dark; access_token=${token}` } });
+		await makeGateway().handleConnection(socket as never);
+		expect(socket.disconnect).not.toHaveBeenCalled();
+		expect(socket.data.uid).toBe('user-2');
+	});
+
+	it('prefers the cookie over the header', async () => {
+		const cookie = jwt.sign({ sub: 'from-cookie' }, privateKey, { algorithm: 'RS256' });
+		const header = jwt.sign({ sub: 'from-header' }, privateKey, { algorithm: 'RS256' });
+		const socket = makeSocket({
+			headers: { cookie: `access_token=${cookie}`, authorization: `Bearer ${header}` },
+		});
+		await makeGateway().handleConnection(socket as never);
+		expect(socket.data.uid).toBe('from-cookie');
+	});
+
 	it('refuses to join a non-room id, e.g. another user uid room', async () => {
 		const socket = makeSocket({});
 		socket.data.uid = 'me';

@@ -1,4 +1,5 @@
 import { IEnvVars } from '../../configs/config';
+import { ACCESS_TOKEN_COOKIE, cookieExtractor } from '../auth-cookies';
 import { AUTH_CLIENT } from '../constants/auth';
 import { Inject, Injectable, OnModuleInit, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -19,7 +20,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'access-jwt') implem
 		private readonly configService: ConfigService<IEnvVars>,
 	) {
 		super({
-			jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+			// cookie first (browser session), then the Bearer header (API clients, Swagger)
+			jwtFromRequest: ExtractJwt.fromExtractors([
+				cookieExtractor(ACCESS_TOKEN_COOKIE),
+				ExtractJwt.fromAuthHeaderAsBearerToken(),
+			]),
 			secretOrKey: configService.getOrThrow('jwt', { infer: true }).publicKey,
 			algorithms: ['RS256'],
 		});

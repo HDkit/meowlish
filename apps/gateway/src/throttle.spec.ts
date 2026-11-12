@@ -31,7 +31,8 @@ describe('gateway throttling and CORS', () => {
 
 	beforeAll(async () => {
 		process.env.LIVE_SERVICE_WS_URL = 'http://127.0.0.1:1'; // nothing listens: proxy errors fast
-		const authService = { loginMail: () => of({}), registerMail: () => of({}) };
+		const tokens = { accessToken: 'not-a-jwt' };
+		const authService = { loginMail: () => of(tokens), registerMail: () => of(tokens) };
 		const moduleRef = await Test.createTestingModule({
 			imports: [ThrottlerModule.forRoot(throttlerOptions)],
 			controllers: [AuthGatewayController, FakeHealthController, LiveWsGatewayController],
@@ -41,7 +42,7 @@ describe('gateway throttling and CORS', () => {
 					provide: AUTH_CLIENT,
 					useValue: { getService: () => authService },
 				},
-				{ provide: ConfigService, useValue: {} },
+				{ provide: ConfigService, useValue: { getOrThrow: () => 'development' } },
 				{ provide: RedisService, useValue: { getOrThrow: () => ({}) } },
 			],
 		}).compile();

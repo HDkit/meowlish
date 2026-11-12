@@ -23,7 +23,7 @@ import {
 	WebSocketServer,
 } from '@nestjs/websockets';
 import { AppLoggerService } from '@server/logger';
-import { GlobalValidationPipe, GlobalWsExceptionFilter } from '@server/utils';
+import { GlobalValidationPipe, GlobalWsExceptionFilter, readCookie } from '@server/utils';
 import { isUUID } from 'class-validator';
 import jwt from 'jsonwebtoken';
 import { ClsGuard } from 'nestjs-cls';
@@ -51,8 +51,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 		}
 	}
 
-	/** Token from socket.io `auth`, `?token=`, or `Authorization: Bearer`. */
+	/**
+	 * Token from the `access_token` cookie (browser session, same order as the gateway: cookie
+	 * before anything the client passes explicitly), then socket.io `auth`, `?token=`, or
+	 * `Authorization: Bearer`.
+	 */
 	private extractToken(socket: ModifiedSocket): string | undefined {
+		const cookie = readCookie(socket.handshake.headers.cookie, 'access_token');
+		if (cookie) return cookie;
 		const auth = socket.handshake.auth as { token?: unknown } | undefined;
 		if (typeof auth?.token === 'string') return auth.token;
 		const query = socket.handshake.query.token;

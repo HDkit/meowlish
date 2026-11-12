@@ -5,8 +5,8 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { NextFunction, Request, Response } from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 
-// The live service verifies the access token itself (socket.io `auth.token`, `?token=` or
-// `Authorization: Bearer`), so this proxy forwards the handshake untouched.
+// The live service verifies the access token itself (`access_token` cookie, socket.io
+// `auth.token`, `?token=` or `Authorization: Bearer`), so this proxy forwards the handshake untouched.
 @IsPublic()
 @ApiBearerAuth()
 @ApiTags('Live Service Websocket')

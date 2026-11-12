@@ -1,4 +1,5 @@
 import { IEnvVars } from '../../configs/config';
+import { REFRESH_TOKEN_COOKIE, cookieExtractor } from '../auth-cookies';
 import { AUTH_CLIENT } from '../constants/auth';
 import { Inject, Injectable, OnModuleInit, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -22,7 +23,11 @@ export class JwtRefreshStrategy
 		private readonly configService: ConfigService<IEnvVars>,
 	) {
 		super({
-			jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+			// cookie first (browser session), then the Bearer header (API clients, Swagger)
+			jwtFromRequest: ExtractJwt.fromExtractors([
+				cookieExtractor(REFRESH_TOKEN_COOKIE),
+				ExtractJwt.fromAuthHeaderAsBearerToken(),
+			]),
 			secretOrKey: configService.getOrThrow('jwt', { infer: true }).publicKey,
 			algorithms: ['RS256'],
 		});

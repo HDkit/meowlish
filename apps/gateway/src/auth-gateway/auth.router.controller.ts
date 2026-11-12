@@ -6,6 +6,7 @@ import { JwtRefreshAuthGuard } from '../auth/guards/jwt-refresh-auth.guard';
 import { IEnvVars } from '../configs/config';
 import { strictThrottle } from '../throttle';
 import { type AuthenticatedRequest } from '../types/authenticated-request';
+import { clearAuthCookies, setAuthCookies } from './auth-cookies';
 import { AUTH_CLIENT } from './constants/auth';
 import { AddMailCredDto } from './dtos/req/add-mail-cred.req.dto';
 import { AssignRoleToDto } from './dtos/req/assign-role-to.req.dto';
@@ -20,7 +21,6 @@ import { RegisterMailDto } from './dtos/req/register-mail.req.dto';
 import { RemoveRoleFromDto } from './dtos/req/remove-role-from.req.dto';
 import { UpdateIdentityDto } from './dtos/req/update-identity.req.dto';
 import { UpdateMailPasswordDto } from './dtos/req/update-password.req.dto';
-import { ResponseTokensDto } from './dtos/res/auth.res.dto';
 import { CredentialsDto } from './dtos/res/credentials.res.dto';
 import {
 	GoogleCalendarAccessTokenDto,
@@ -60,9 +60,12 @@ import { Throttle } from '@nestjs/throttler';
 import { auth } from '@server/generated';
 import { Permission, Role } from '@server/typing';
 import { ApiEmptyResponseEntity, ApiResponseEntity } from '@server/utils';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import Redis from 'ioredis';
-import { lastValueFrom } from 'rxjs';
+import { Observable, lastValueFrom } from 'rxjs';
+
+const SETS_COOKIES =
+	'Sets the `access_token` (Path=/) and `refresh_token` (Path=/api/v1/auth) HttpOnly cookies; `data` is null.';
 
 @ApiBearerAuth()
 @ApiTags('Auth')
@@ -83,45 +86,81 @@ export class AuthGatewayController implements OnModuleInit {
 		this.authService = this.authClient.getService<auth.AuthServiceClient>(auth.AUTH_SERVICE_NAME);
 	}
 
+	private get env(): string {
+		return this.configService.getOrThrow('env', { infer: true });
+	}
+
+	/** Puts the tokens in HttpOnly cookies; the JSON body never carries them. */
+	private async issueCookies(req: Request, res: Response, tokens$: Observable<auth.Tokens>) {
+		setAuthCookies(req, res, await lastValueFrom(tokens$), this.env);
+		return null;
+	}
+
 	@Post('register')
 	@IsPublic()
-	@ApiOperation({ summary: 'Register with email and password' })
-	@ApiResponseEntity(ResponseTokensDto)
-	@SerializeOptions({ type: ResponseTokensDto })
+	@ApiEmptyResponseEntity()
+	@ApiOperation({
+		summary: 'Register with email and password',
+		description: SETS_COOKIES,
+	})
 	@Throttle(strictThrottle)
-	registerMail(@Body() body: RegisterMailDto) {
-		const res = this.authService.registerMail(body);
-		return res;
+	registerMail(
+		@Body() body: RegisterMailDto,
+		@Req() req: Request,
+		@Res({ passthrough: true }) res: Response,
+	) {
+		return this.issueCookies(req, res, this.authService.registerMail(body));
 	}
 
 	@Post('login')
 	@IsPublic()
-	@ApiOperation({ summary: 'Log in with email and password' })
-	@ApiResponseEntity(ResponseTokensDto)
-	@SerializeOptions({ type: ResponseTokensDto })
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Log in with email and password', description: SETS_COOKIES })
 	@Throttle(strictThrottle)
-	loginMail(@Body() body: LoginMailDto) {
-		const res = this.authService.loginMail(body);
-		return res;
+	loginMail(
+		@Body() body: LoginMailDto,
+		@Req() req: Request,
+		@Res({ passthrough: true }) res: Response,
+	) {
+		return this.issueCookies(req, res, this.authService.loginMail(body));
 	}
 
 	@Post('refresh')
 	@UseGuards(JwtRefreshAuthGuard)
 	@IsPublic()
-	@ApiOperation({ summary: 'Refresh access tokens using a refresh token' })
-	@ApiResponseEntity(ResponseTokensDto)
-	@SerializeOptions({ type: ResponseTokensDto })
+	@ApiEmptyResponseEntity()
+	@ApiOperation({
+		summary: 'Refresh access tokens using a refresh token',
+		description: `Reads the refresh token from the \`refresh_token\` cookie, else \`Authorization: Bearer\`. ${SETS_COOKIES}`,
+	})
 	@Throttle(strictThrottle)
-	refresh(@Req() req: AuthenticatedRequest) {
-		const res = this.authService.refresh({ identityId: req.user.sub });
-		return res;
+	refresh(@Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
+		return this.issueCookies(req, res, this.authService.refresh({ identityId: req.user.sub }));
+	}
+
+	@Post('logout')
+	@IsPublic()
+	@ApiEmptyResponseEntity()
+	@ApiOperation({
+		summary: 'Log out of this browser',
+		description:
+			'Clears the `access_token` and `refresh_token` cookies. Tokens are not revoked server-side; use /logout-all for that.',
+	})
+	logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+		clearAuthCookies(req, res, this.env);
+		return null;
 	}
 
 	@Post('logout-all')
 	@ApiEmptyResponseEntity()
-	@ApiOperation({ summary: 'Log out from all active sessions' })
-	logoutAll(@Req() req: AuthenticatedRequest) {
-		return this.authService.logOutAll({ identityId: req.user.sub });
+	@ApiOperation({
+		summary: 'Log out from all active sessions',
+		description: 'Revokes every token of this identity and clears the auth cookies.',
+	})
+	async logoutAll(@Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
+		await lastValueFrom(this.authService.logOutAll({ identityId: req.user.sub }));
+		clearAuthCookies(req, res, this.env);
+		return null;
 	}
 
 	@Get('google')
@@ -152,27 +191,37 @@ export class AuthGatewayController implements OnModuleInit {
 
 	@Get('google/tokens')
 	@IsPublic()
+	@ApiEmptyResponseEntity()
 	@ApiOperation({
-		summary: 'Get access and refresh tokens from login token',
-		description:
-			"Get access and refresh tokens from login token after /google/callback redirected to Frontend's redirection URL",
+		summary: 'Exchange the one-time login token for session cookies',
+		description: `Call with the \`loginToken\` that /google/callback put on the frontend redirect URL. ${SETS_COOKIES}`,
 	})
-	@ApiResponseEntity(ResponseTokensDto)
-	@SerializeOptions({ type: ResponseTokensDto })
-	async getGoogleTokens(@Query('loginToken') loginToken: string) {
+	async getGoogleTokens(
+		@Query('loginToken') loginToken: string,
+		@Req() req: Request,
+		@Res({ passthrough: true }) res: Response,
+	) {
 		const data = await this.redis.get(`oauth2:google:loginToken:${loginToken}`);
 		if (!data) {
 			throw new UnauthorizedException('Invalid or expired login token');
 		}
 		await this.redis.del(`oauth2:google:loginToken:${loginToken}`);
-		const tokens = JSON.parse(data) as auth.Tokens;
-		return tokens;
+		const result = JSON.parse(data) as auth.Tokens | boolean;
+		// linking flow stores `true`: the browser already has its session, nothing to set
+		if (typeof result === 'object' && result.accessToken) {
+			setAuthCookies(req, res, result, this.env);
+		}
+		return null;
 	}
 
 	@Get('credentials/google')
 	@UseGuards(GoogleOAuth2Guard)
 	@ApiEmptyResponseEntity()
-	@ApiOperation({ summary: 'Add Google credential to existing account' })
+	@ApiOperation({
+		summary: 'Add Google credential to existing account',
+		description:
+			'Open with a top-level navigation (not fetch/XHR): the `access_token` cookie authenticates it and the `oauth2_state` cookie set here must come back on /google/callback.',
+	})
 	addGoogleCred() {
 		return;
 	}

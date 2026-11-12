@@ -15,7 +15,7 @@ This is the "distributed execution, centralized management" model from [Aserto's
 ## Request flow
 
 ```
-Client ──Bearer access token──► Gateway
+Client ──access token (access_token cookie, else Bearer)──► Gateway
                                  │ 1. JwtAuthGuard: verify RS256 signature + ask auth "is this token revoked?"
                                  │ 2. Coarse route gates (@IsPublic, @HasPermissions) – optional fast-fail only
                                  │ 3. Forward the SAME token in gRPC metadata: `authorization: Bearer <token>`
@@ -29,6 +29,8 @@ Client ──Bearer access token──► Gateway
                                  ▼
                               404 (not visible) / 403 (visible, not allowed) / result
 ```
+
+Browsers send the token as the HttpOnly `access_token` cookie; API clients may still use `Authorization: Bearer`. Step 3 must forward the token the strategy extracted (cookie or header), not just the incoming `Authorization` header, or cookie sessions arrive at services without a token.
 
 Why the service verifies the token again instead of trusting the gateway:
 
