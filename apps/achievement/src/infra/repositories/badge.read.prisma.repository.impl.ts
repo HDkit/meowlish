@@ -1,3 +1,4 @@
+import { loginStreakDays } from '../../domain/entities/login-badge-manager.entity';
 import { Badge, UserBadge } from '../../domain/read-models/badge.read-model';
 import { Progress } from '../../domain/read-models/progress.read-model';
 import { IBadgeReadRepository } from '../../domain/repositories/badge.read.repository';
@@ -5,7 +6,6 @@ import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaClient } from '@prisma-client/achievement';
-import { differenceInCalendarDays } from 'date-fns';
 
 @Injectable()
 export class BadgeReadPrismaRepositoryImpl implements IBadgeReadRepository {
@@ -65,7 +65,7 @@ export class BadgeReadPrismaRepositoryImpl implements IBadgeReadRepository {
 				loginProgress ?
 					{
 						longestStreak: loginProgress.longestStreak,
-						streak: differenceInCalendarDays(loginProgress.lastLogin, loginProgress.startedAt),
+						streak: loginStreakDays(loginProgress.startedAt, loginProgress.lastLogin),
 						total: loginProgress.total,
 					}
 				:	undefined,

@@ -1,8 +1,8 @@
 import { Badge } from '../../enums/badge.enum';
 import { BadgeAddedEvent } from '../events/badge.event';
+import { utcCalendarDaysBetween } from '../utc-calendar-days';
 import { AggregateRoot } from '@nestjs/cqrs';
 import { Event, IAggregate } from '@server/utils';
-import { differenceInCalendarDays } from 'date-fns';
 
 export class LoginBadgeManager
 	extends AggregateRoot<Event<any>>
@@ -35,20 +35,29 @@ export class LoginBadgeManager
 		this.badges = new Set(constructorOptions.badges);
 	}
 
+	/**
+	 * Records a login. Days are UTC calendar dates: the first login is day 1, a login on the next
+	 * UTC day extends the streak, another login the same UTC day changes nothing, and a missed
+	 * day restarts the streak at 1. `total` counts distinct login days.
+	 */
 	updateProgress(loginTime: Date) {
-		// update recorded time
-		const diffDays = differenceInCalendarDays(loginTime, this.lastLogin);
-		// consecutive login
-		if (diffDays >= 1) this.total++;
-		// forgot to login
-		if (diffDays >= 2) this.startedAt = loginTime;
-		// update last login
-		this.lastLogin = loginTime;
+		if (this.total === 0) {
+			// First login. The row's dates are just its creation time; start from the login itself.
+			this.total = 1;
+			this.startedAt = loginTime;
+			this.lastLogin = loginTime;
+		} else {
+			const diffDays = utcCalendarDaysBetween(loginTime, this.lastLogin);
+			// A late, out-of-order event for an older login: that day is already accounted for.
+			if (diffDays < 0) return;
+			if (diffDays >= 1) this.total++;
+			if (diffDays >= 2) this.startedAt = loginTime;
+			this.lastLogin = loginTime;
+		}
 		if (this.total >= 7) this.addBadge(Badge.LoginSevenDays);
 		if (this.total >= 30) this.addBadge(Badge.LoginOneMonth);
 		if (this.total >= 365) this.addBadge(Badge.LoginOneYear);
-		// update streak
-		const currentStreak = differenceInCalendarDays(this.lastLogin, this.startedAt);
+		const currentStreak = loginStreakDays(this.startedAt, this.lastLogin);
 		if (currentStreak >= this.longestStreak) {
 			this.longestStreak = currentStreak;
 			if (this.longestStreak >= 7) this.addBadge(Badge.LoginSevenDaysStreak);
@@ -64,3 +73,7 @@ export class LoginBadgeManager
 		}
 	}
 }
+
+/** Length in UTC calendar days of the streak running from `startedAt` to `lastLogin`, both included. */
+export const loginStreakDays = (startedAt: Date, lastLogin: Date): number =>
+	utcCalendarDaysBetween(lastLogin, startedAt) + 1;
