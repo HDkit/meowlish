@@ -19,14 +19,22 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { PrismaClient } from '@prisma-client/resource';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { LoggerModule } from '@server/logger';
+import { HealthModule } from '@server/telemetry';
 import { GlobalClassSerializerInterceptor, GlobalRpcExceptionFilter } from '@server/utils';
 import { gRPC2HttpExceptionFilter } from '@server/utils';
 import { GlobalValidationPipe } from '@server/utils';
 import { ClsGuard, ClsModule } from 'nestjs-cls';
 
+const databaseModule = DatabaseModule.forRoot(PrismaClient);
+
 @Module({
 	controllers: [BlogController, FlashcardController, FlashcardListController, ReportController],
 	imports: [
+		HealthModule.forRoot({
+			serviceName: 'resource',
+			prismaToken: DATABASE_SERVICE,
+			rabbitmq: true,
+		}),
 		ConfigModule.forRoot({
 			envFilePath: ['apps/resource/.env', '.env'], // nx serve runs from the workspace root
 			expandVariables: true,
@@ -41,7 +49,7 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 			guard: { mount: false },
 			plugins: [
 				new ClsPluginTransactional({
-					imports: [DatabaseModule.forRoot(PrismaClient)],
+					imports: [databaseModule],
 					adapter: new TransactionalAdapterPrisma({
 						prismaInjectionToken: DATABASE_SERVICE,
 						sqlFlavor: 'postgresql',

@@ -5,6 +5,7 @@ import {
 	Controller,
 	Get,
 	Inject,
+	type ModuleMetadata,
 	type OnModuleInit,
 	Optional,
 	SetMetadata,
@@ -27,6 +28,8 @@ export interface HealthModuleOptions {
 	prismaToken?: string | symbol;
 	rabbitmq?: boolean;
 	checkTimeoutMs?: number;
+	/** Modules that provide `prismaToken` when it is not globally visible. */
+	imports?: ModuleMetadata['imports'];
 }
 
 interface PingableClient {

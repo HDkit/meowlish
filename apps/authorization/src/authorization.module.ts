@@ -13,6 +13,7 @@ import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { PrismaClient } from '@prisma-client/authorization';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { LoggerModule } from '@server/logger';
+import { HealthModule } from '@server/telemetry';
 import {
 	GlobalRmqExceptionFilter,
 	GlobalRpcExceptionFilter,
@@ -20,9 +21,16 @@ import {
 } from '@server/utils';
 import { ClsGuard, ClsModule } from 'nestjs-cls';
 
+const databaseModule = DatabaseModule.forRoot(PrismaClient);
+
 @Module({
 	controllers: [AuthorizationGrpcController],
 	imports: [
+		HealthModule.forRoot({
+			serviceName: 'authorization',
+			prismaToken: DATABASE_SERVICE,
+			rabbitmq: true,
+		}),
 		ConfigModule.forRoot({
 			envFilePath: ['apps/authorization/.env', '.env'], // nx serve runs from the workspace root
 			expandVariables: true,
@@ -35,7 +43,7 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 			guard: { mount: false },
 			plugins: [
 				new ClsPluginTransactional({
-					imports: [DatabaseModule.forRoot(PrismaClient)],
+					imports: [databaseModule],
 					adapter: new TransactionalAdapterPrisma({
 						prismaInjectionToken: DATABASE_SERVICE,
 						sqlFlavor: 'postgresql',

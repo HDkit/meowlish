@@ -32,6 +32,8 @@ jobs:
 
       - name: Run Tests
         run: pnpm exec nx run-many -t test
+        env:
+          OTEL_SDK_DISABLED: 'true'
 
       - name: Build app
         run: pnpm exec nx run-many -t build

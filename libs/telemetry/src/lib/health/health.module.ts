@@ -15,7 +15,7 @@ export class HealthModule {
 	static forRoot(options: HealthModuleOptions): DynamicModule {
 		return {
 			module: HealthModule,
-			imports: [TerminusModule],
+			imports: [TerminusModule, ...(options.imports ?? [])],
 			controllers: [HealthController],
 			providers: [
 				ReadinessRegistry,

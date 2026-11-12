@@ -19,6 +19,7 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { CqrsModule } from '@nestjs/cqrs';
 // import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from '@server/logger';
+import { HealthModule } from '@server/telemetry';
 import {
 	GlobalClassSerializerInterceptor,
 	GlobalHttpExceptionFilter,
@@ -30,6 +31,7 @@ import { GlobalValidationPipe } from '@server/utils';
 
 @Module({
 	imports: [
+		HealthModule.forRoot({ serviceName: 'gateway', rabbitmq: false }),
 		ConfigModule.forRoot({
 			envFilePath: ['apps/gateway/.env', '.env'], // nx serve runs from the workspace root
 			expandVariables: true,

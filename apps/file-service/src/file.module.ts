@@ -18,6 +18,7 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { PrismaClient } from '@prisma-client/file';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { LoggerModule } from '@server/logger';
+import { HealthModule } from '@server/telemetry';
 import {
 	GlobalClassSerializerInterceptor,
 	GlobalRmqExceptionFilter,
@@ -27,9 +28,16 @@ import {
 import { ClsGuard, ClsModule } from 'nestjs-cls';
 import { NestMinioModule } from 'nestjs-minio';
 
+const databaseModule = DatabaseModule.forRoot(PrismaClient);
+
 @Module({
 	controllers: [FileController],
 	imports: [
+		HealthModule.forRoot({
+			serviceName: 'file-service',
+			prismaToken: DATABASE_SERVICE,
+			rabbitmq: true,
+		}),
 		ConfigModule.forRoot({
 			envFilePath: ['apps/file-service/.env', '.env'], // nx serve runs from the workspace root
 			expandVariables: true,
@@ -42,7 +50,7 @@ import { NestMinioModule } from 'nestjs-minio';
 			guard: { mount: false },
 			plugins: [
 				new ClsPluginTransactional({
-					imports: [DatabaseModule.forRoot(PrismaClient)],
+					imports: [databaseModule],
 					adapter: new TransactionalAdapterPrisma({
 						prismaInjectionToken: DATABASE_SERVICE,
 						sqlFlavor: 'postgresql',
