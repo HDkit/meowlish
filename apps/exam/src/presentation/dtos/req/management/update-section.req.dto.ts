@@ -45,4 +45,10 @@ export class UpdateSectionDto implements exam.UpdateSectionDto {
 	@IsString({ each: true })
 	@ArrayUnique()
 	removeFiles!: string[];
+
+	@IsString()
+	requesterId!: string;
+
+	@IsBoolean()
+	privileged!: boolean;
 }

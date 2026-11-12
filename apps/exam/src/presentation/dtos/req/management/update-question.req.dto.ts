@@ -107,4 +107,10 @@ export class UpdateQuestionDto implements exam.UpdateQuestionDto {
 	@IsString({ each: true })
 	@ArrayUnique()
 	removeFiles!: string[];
+
+	@IsString()
+	requesterId!: string;
+
+	@IsBoolean()
+	privileged!: boolean;
 }

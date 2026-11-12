@@ -79,6 +79,9 @@ message CreateSectionDto {
 	optional google.protobuf.StringValue section_id = 1;
 	optional google.protobuf.StringValue exam_id    = 2;
 	optional google.protobuf.Int32Value  index      = 3;
+	// Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it.
+	google.protobuf.StringValue requester_id = 4;
+	google.protobuf.BoolValue   privileged   = 5;
 }
 
 message CreatedSectionDto {
@@ -88,6 +91,9 @@ message CreatedSectionDto {
 message CreateQuestionDto {
 	google.protobuf.StringValue         section_id = 1;
 	optional google.protobuf.Int32Value index      = 2;
+	// Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it.
+	google.protobuf.StringValue requester_id = 3;
+	google.protobuf.BoolValue   privileged   = 4;
 }
 
 message CreatedQuestionDto {
@@ -102,6 +108,9 @@ message UpdateExamDto {
 	optional google.protobuf.Int32Value  duration             = 5;
 	repeated google.protobuf.StringValue add_tags             = 6;
 	repeated google.protobuf.StringValue remove_tags          = 7;
+	// Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it.
+	google.protobuf.StringValue requester_id = 8;
+	google.protobuf.BoolValue   privileged   = 9;
 }
 
 message UpdateSectionDto {
@@ -114,6 +123,9 @@ message UpdateSectionDto {
 	repeated google.protobuf.StringValue remove_tags   = 7;
 	repeated google.protobuf.StringValue add_files     = 8;
 	repeated google.protobuf.StringValue remove_files  = 9;
+	// Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it.
+	google.protobuf.StringValue requester_id = 10;
+	google.protobuf.BoolValue   privileged   = 11;
 }
 
 message UpdateQuestionDto {
@@ -133,6 +145,10 @@ message UpdateQuestionDto {
 	repeated google.protobuf.StringValue add_files    = 11;
 	repeated google.protobuf.StringValue remove_files = 12;
 
+	// Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it.
+	google.protobuf.StringValue requester_id = 13;
+	google.protobuf.BoolValue   privileged   = 14;
+
 	message AddChoice {
 		google.protobuf.StringValue          key        = 1;
 		optional google.protobuf.StringValue content    = 2;
@@ -150,14 +166,23 @@ message UpdateQuestionDto {
 
 message DeleteExamDto {
 	google.protobuf.StringValue id = 1;
+	// Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it.
+	google.protobuf.StringValue requester_id = 2;
+	google.protobuf.BoolValue   privileged   = 3;
 }
 
 message DeleteSectionDto {
 	google.protobuf.StringValue id = 1;
+	// Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it.
+	google.protobuf.StringValue requester_id = 2;
+	google.protobuf.BoolValue   privileged   = 3;
 }
 
 message DeleteQuestionDto {
 	google.protobuf.StringValue id = 1;
+	// Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it.
+	google.protobuf.StringValue requester_id = 2;
+	google.protobuf.BoolValue   privileged   = 3;
 }
 
 message MoveSectionDto {
@@ -165,12 +190,18 @@ message MoveSectionDto {
 	optional google.protobuf.Int32Value  index     = 2;
 	optional google.protobuf.StringValue parent_id = 3;
 	optional google.protobuf.BoolValue   to_root   = 4;
+	// Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it.
+	google.protobuf.StringValue requester_id = 5;
+	google.protobuf.BoolValue   privileged   = 6;
 }
 
 message MoveQuestionDto {
 	google.protobuf.StringValue          id         = 1;
 	optional google.protobuf.Int32Value  index      = 2;
 	optional google.protobuf.StringValue section_id = 3;
+	// Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it.
+	google.protobuf.StringValue requester_id = 4;
+	google.protobuf.BoolValue   privileged   = 5;
 }
 
 message ReviewExamDto {

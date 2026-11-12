@@ -32,4 +32,10 @@ export class UpdateExamDto implements exam.UpdateExamDto {
 	@IsString({ each: true })
 	@ArrayUnique()
 	removeTags!: string[];
+
+	@IsString()
+	requesterId!: string;
+
+	@IsBoolean()
+	privileged!: boolean;
 }
