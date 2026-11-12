@@ -1,7 +1,11 @@
 import { startTelemetry } from './start-telemetry';
+import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 
 jest.mock('@opentelemetry/sdk-node');
+jest.mock('@opentelemetry/auto-instrumentations-node', () => ({
+	getNodeAutoInstrumentations: jest.fn(() => []),
+}));
 
 const MockedNodeSDK = jest.mocked(NodeSDK);
 
@@ -93,6 +97,43 @@ describe('startTelemetry', () => {
 		} finally {
 			killSpy.mockRestore();
 		}
+	});
+
+	it('re-raises SIGTERM even if shutdown hangs', async () => {
+		jest.useFakeTimers();
+		delete process.env['OTEL_SDK_DISABLED'];
+		removeAddedSigtermListeners();
+		const killSpy = jest.spyOn(process, 'kill').mockImplementation(() => true);
+		MockedNodeSDK.mockImplementationOnce(
+			() =>
+				({
+					start: jest.fn(),
+					shutdown: jest.fn(() => new Promise<void>(() => undefined)),
+				}) as unknown as NodeSDK,
+		);
+
+		try {
+			startTelemetry({ serviceName: 'x' });
+			process.emit('SIGTERM');
+			await jest.advanceTimersByTimeAsync(4999);
+			expect(killSpy).not.toHaveBeenCalled();
+			await jest.advanceTimersByTimeAsync(1);
+			expect(killSpy).toHaveBeenCalledWith(process.pid, 'SIGTERM');
+		} finally {
+			killSpy.mockRestore();
+			jest.useRealTimers();
+		}
+	});
+
+	it('excludes /health/* requests from HTTP instrumentation', () => {
+		delete process.env['OTEL_SDK_DISABLED'];
+
+		startTelemetry({ serviceName: 'x' });
+
+		const config = jest.mocked(getNodeAutoInstrumentations).mock.calls.at(-1)?.[0];
+		const hook = config?.['@opentelemetry/instrumentation-http']?.ignoreIncomingRequestHook;
+		expect(hook?.({ url: '/health/ready' } as never)).toBe(true);
+		expect(hook?.({ url: '/api/v1/blogs' } as never)).toBe(false);
 	});
 
 	it('does not throw when the collector is unreachable', async () => {

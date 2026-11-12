@@ -48,7 +48,7 @@ Each app splits its entry point in two:
 - `apps/<app>/src/main.ts` calls `startTelemetry({ serviceName })` from `@server/telemetry`, then dynamically imports `./bootstrap.js`. Telemetry must start before Nest and the instrumented libraries are loaded.
 - `apps/<app>/src/bootstrap.ts` holds the normal Nest bootstrap.
 
-`startTelemetry` starts the Node SDK with OTLP trace, metric (exported every 15 s), and log exporters plus the Node auto-instrumentations (`fs` is disabled). On `SIGTERM` it flushes the SDK and then re-raises the signal.
+`startTelemetry` starts the Node SDK with OTLP trace, metric (exported every 15 s), and log exporters plus the Node auto-instrumentations (`fs` is disabled, and incoming `/health/*` requests are excluded from HTTP traces and metrics so probes and healthchecks do not add noise). Logs are shipped to Loki from the Docker images too: `@opentelemetry/winston-transport` is imported by `startTelemetry` so it is bundled into each app's production dependencies. On `SIGTERM` it flushes the SDK (waiting at most 5 s so a hung collector cannot block exit) and then re-raises the signal. Every app service in `docker/docker-compose.app.yaml` sets `init: true`, because the kernel ignores default-action signals sent to PID 1; the init process forwards `SIGTERM` and reaps the re-raised one, so containers stop promptly instead of waiting for `SIGKILL`.
 
 `HealthModule.forRoot({ serviceName, prismaToken?, rabbitmq? })` is imported by every app module. It provides the health controller, the `service_ready` gauge, and the gRPC metrics interceptor.
 
