@@ -237,19 +237,6 @@ export interface AddCardToListRequest {
   privileged?: boolean | undefined;
 }
 
-export interface RemoveCardFromListRequest {
-  listId: string | undefined;
-  flashCardId:
-    | string
-    | undefined;
-  /** Set by the gateway from the JWT; never from client input. */
-  requesterId:
-    | string
-    | undefined;
-  /** Requester may bypass ownership/visibility (role decided by the gateway). */
-  privileged?: boolean | undefined;
-}
-
 export interface ListCardsInListRequest {
   listId: string | undefined;
   page?: number | undefined;
@@ -2458,85 +2445,6 @@ export const AddCardToListRequest: MessageFns<AddCardToListRequest> = {
   },
 };
 
-function createBaseRemoveCardFromListRequest(): RemoveCardFromListRequest {
-  return { listId: undefined, flashCardId: undefined, requesterId: undefined };
-}
-
-export const RemoveCardFromListRequest: MessageFns<RemoveCardFromListRequest> = {
-  encode(message: RemoveCardFromListRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.listId !== undefined) {
-      StringValue.encode({ value: message.listId! }, writer.uint32(10).fork()).join();
-    }
-    if (message.flashCardId !== undefined) {
-      StringValue.encode({ value: message.flashCardId! }, writer.uint32(18).fork()).join();
-    }
-    if (message.requesterId !== undefined) {
-      StringValue.encode({ value: message.requesterId! }, writer.uint32(26).fork()).join();
-    }
-    if (message.privileged !== undefined) {
-      BoolValue.encode({ value: message.privileged! }, writer.uint32(34).fork()).join();
-    }
-    return writer;
-  },
-
-  decode(input: BinaryReader | Uint8Array, length?: number): RemoveCardFromListRequest {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-    if (previousRecursionDepth >= 100) {
-      throw new globalThis.Error("protobuf decode recursion limit exceeded");
-    }
-    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-    try {
-      const end = length === undefined ? reader.len : reader.pos + length;
-      const message = createBaseRemoveCardFromListRequest();
-      while (reader.pos < end) {
-        const tag = reader.uint32();
-        switch (tag >>> 3) {
-          case 1: {
-            if (tag !== 10) {
-              break;
-            }
-
-            message.listId = StringValue.decode(reader, reader.uint32()).value;
-            continue;
-          }
-          case 2: {
-            if (tag !== 18) {
-              break;
-            }
-
-            message.flashCardId = StringValue.decode(reader, reader.uint32()).value;
-            continue;
-          }
-          case 3: {
-            if (tag !== 26) {
-              break;
-            }
-
-            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
-            continue;
-          }
-          case 4: {
-            if (tag !== 34) {
-              break;
-            }
-
-            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
-            continue;
-          }
-        }
-        if ((tag & 7) === 4 || tag === 0) {
-          break;
-        }
-        reader.skip(tag & 7);
-      }
-      return message;
-    } finally {
-      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-    }
-  },
-};
-
 function createBaseListCardsInListRequest(): ListCardsInListRequest {
   return { listId: undefined, requesterId: undefined };
 }
@@ -3878,8 +3786,6 @@ export interface FlashCardListServiceClient {
 
   addCardToList(request: AddCardToListRequest, metadata?: Metadata): Observable<Empty>;
 
-  removeCardFromList(request: RemoveCardFromListRequest, metadata?: Metadata): Observable<Empty>;
-
   listCardsInList(request: ListCardsInListRequest, metadata?: Metadata): Observable<ListFlashCardsResponse>;
 }
 
@@ -3908,8 +3814,6 @@ export interface FlashCardListServiceController {
 
   addCardToList(request: AddCardToListRequest, metadata?: Metadata): void | Promise<void>;
 
-  removeCardFromList(request: RemoveCardFromListRequest, metadata?: Metadata): void | Promise<void>;
-
   listCardsInList(
     request: ListCardsInListRequest,
     metadata?: Metadata,
@@ -3925,7 +3829,6 @@ export function FlashCardListServiceControllerMethods() {
       "deleteFlashCardList",
       "listFlashCardLists",
       "addCardToList",
-      "removeCardFromList",
       "listCardsInList",
     ];
     for (const method of grpcMethods) {
@@ -4009,16 +3912,6 @@ export const FlashCardListServiceService = {
     responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
     responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
   },
-  removeCardFromList: {
-    path: "/resource.FlashCardListService/RemoveCardFromList" as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: RemoveCardFromListRequest): Buffer =>
-      Buffer.from(RemoveCardFromListRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): RemoveCardFromListRequest => RemoveCardFromListRequest.decode(value),
-    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
-  },
   listCardsInList: {
     path: "/resource.FlashCardListService/ListCardsInList" as const,
     requestStream: false as const,
@@ -4039,7 +3932,6 @@ export interface FlashCardListServiceServer extends UntypedServiceImplementation
   deleteFlashCardList: handleUnaryCall<DeleteFlashCardListRequest, Empty>;
   listFlashCardLists: handleUnaryCall<ListFlashCardListsRequest, ListFlashCardListsResponse>;
   addCardToList: handleUnaryCall<AddCardToListRequest, Empty>;
-  removeCardFromList: handleUnaryCall<RemoveCardFromListRequest, Empty>;
   listCardsInList: handleUnaryCall<ListCardsInListRequest, ListFlashCardsResponse>;
 }
 

@@ -294,21 +294,6 @@ export class ResourceGatewayController implements OnModuleInit {
 		});
 	}
 
-	@Delete('flash-card-lists/:listId/cards/:cardId')
-	@ApiEmptyResponseEntity()
-	@ApiOperation({ summary: 'Remove a card from a list' })
-	removeCardFromList(
-		@Req() req: AuthenticatedRequest,
-		@Param('listId') listId: string,
-		@Param('cardId') cardId: string,
-	) {
-		return this.flashCardListService.removeCardFromList({
-			listId: listId,
-			flashCardId: cardId,
-			...requesterOf(req.user, FLASH_CARD_ADMIN_ROLES),
-		});
-	}
-
 	@Get('flash-card-lists/:id/cards')
 	@ApiOperation({ summary: 'List cards in a list' })
 	@ApiResponseEntity(ListFlashCardsDto)

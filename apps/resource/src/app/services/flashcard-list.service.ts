@@ -143,24 +143,6 @@ export class FlashcardListService {
 		});
 	}
 
-	/** listId is required on cards, so removing a card from its list deletes the card. */
-	@Transactional()
-	async removeCardFromList(
-		listId: string,
-		flashCardId: string,
-		requester: Requester,
-	): Promise<void> {
-		await this.findOwnedList(listId, requester);
-
-		const card = await this.txHost.tx.flashCard.findFirst({
-			where: { id: flashCardId, listId: listId },
-		});
-		if (!card) throw new NotFoundException('Card not found in the specified list');
-
-		await this.txHost.tx.flashCard.delete({ where: { id: flashCardId } });
-		await this.events.resourcesDeleted('flashcard', [flashCardId]);
-	}
-
 	async listCardsInList(
 		data: ListCardsInListInput,
 		requester: Requester,

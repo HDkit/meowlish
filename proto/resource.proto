@@ -38,7 +38,6 @@ service FlashCardListService {
 	rpc DeleteFlashCardList(DeleteFlashCardListRequest) returns (google.protobuf.Empty) {}
 	rpc ListFlashCardLists(ListFlashCardListsRequest) returns (ListFlashCardListsResponse) {}
 	rpc AddCardToList(AddCardToListRequest) returns (google.protobuf.Empty) {}
-	rpc RemoveCardFromList(RemoveCardFromListRequest) returns (google.protobuf.Empty) {}
 	rpc ListCardsInList(ListCardsInListRequest) returns (ListFlashCardsResponse) {}
 }
 
@@ -239,15 +238,6 @@ message AddCardToListRequest {
 	google.protobuf.StringValue          requester_id   = 4;
 	// Requester may bypass ownership/visibility (role decided by the gateway).
 	optional google.protobuf.BoolValue   privileged     = 5;
-}
-
-message RemoveCardFromListRequest {
-	google.protobuf.StringValue list_id       = 1;
-	google.protobuf.StringValue flash_card_id = 2;
-	// Set by the gateway from the JWT; never from client input.
-	google.protobuf.StringValue          requester_id   = 3;
-	// Requester may bypass ownership/visibility (role decided by the gateway).
-	optional google.protobuf.BoolValue   privileged     = 4;
 }
 
 message ListCardsInListRequest {
