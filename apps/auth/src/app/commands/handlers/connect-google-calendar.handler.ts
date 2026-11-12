@@ -13,16 +13,23 @@ export class ConnectGoogleCalendarCommandHandler implements ICommandHandler<Conn
 		private readonly tokenRepository: IGoogleCalendarTokenRepository,
 	) {}
 
-	public async execute(command: ConnectGoogleCalendarCommand): Promise<void> {
+	public async execute(command: ConnectGoogleCalendarCommand): Promise<{ expiresAt: number }> {
 		const payload = command.payload;
 		const expiresAt = new Date(payload.expiresAt);
+
+		// Google omits the refresh token on re-consent; keep the stored one then.
+		const refreshToken =
+			payload.refreshToken ||
+			(await this.tokenRepository.findByIdentityId(payload.identityId))?.refreshToken ||
+			'';
 
 		await this.tokenRepository.upsert({
 			identityId: payload.identityId,
 			accessToken: payload.accessToken,
-			refreshToken: payload.refreshToken,
+			refreshToken: refreshToken,
 			expiresAt: expiresAt,
 			scopes: payload.scopes,
 		});
+		return { expiresAt: expiresAt.getTime() };
 	}
 }

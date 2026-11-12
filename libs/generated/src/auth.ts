@@ -248,6 +248,18 @@ export interface RefreshGoogleCalendarTokenDto {
   identityId: string | undefined;
 }
 
+/** Never carries the refresh token: auth keeps it server-side. */
+export interface GoogleCalendarAccessToken {
+  accessToken: string;
+  expiresAt: number;
+}
+
+export interface GoogleCalendarConnection {
+  connected: boolean;
+  expiresAt: number;
+}
+
+/** Deprecated: no RPC returns this any more (it exposed the refresh token). */
 export interface GoogleCalendarTokenResponse {
   accessToken: string;
   refreshToken: string;
@@ -2814,6 +2826,120 @@ export const RefreshGoogleCalendarTokenDto: MessageFns<RefreshGoogleCalendarToke
   },
 };
 
+function createBaseGoogleCalendarAccessToken(): GoogleCalendarAccessToken {
+  return { accessToken: "", expiresAt: 0 };
+}
+
+export const GoogleCalendarAccessToken: MessageFns<GoogleCalendarAccessToken> = {
+  encode(message: GoogleCalendarAccessToken, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.accessToken !== "") {
+      writer.uint32(10).string(message.accessToken);
+    }
+    if (message.expiresAt !== 0) {
+      writer.uint32(16).int64(message.expiresAt);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GoogleCalendarAccessToken {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGoogleCalendarAccessToken();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.accessToken = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 16) {
+              break;
+            }
+
+            message.expiresAt = longToNumber(reader.int64());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseGoogleCalendarConnection(): GoogleCalendarConnection {
+  return { connected: false, expiresAt: 0 };
+}
+
+export const GoogleCalendarConnection: MessageFns<GoogleCalendarConnection> = {
+  encode(message: GoogleCalendarConnection, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.connected !== false) {
+      writer.uint32(8).bool(message.connected);
+    }
+    if (message.expiresAt !== 0) {
+      writer.uint32(16).int64(message.expiresAt);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GoogleCalendarConnection {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGoogleCalendarConnection();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 8) {
+              break;
+            }
+
+            message.connected = reader.bool();
+            continue;
+          }
+          case 2: {
+            if (tag !== 16) {
+              break;
+            }
+
+            message.expiresAt = longToNumber(reader.int64());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
 function createBaseGoogleCalendarTokenResponse(): GoogleCalendarTokenResponse {
   return { accessToken: "", refreshToken: "", expiresAt: 0, scopes: "" };
 }
@@ -2948,22 +3074,19 @@ export interface AuthServiceClient {
 
   /** google calendar */
 
-  connectGoogleCalendar(
-    request: ConnectGoogleCalendarDto,
-    metadata?: Metadata,
-  ): Observable<GoogleCalendarTokenResponse>;
+  connectGoogleCalendar(request: ConnectGoogleCalendarDto, metadata?: Metadata): Observable<GoogleCalendarConnection>;
 
   disconnectGoogleCalendar(request: DisconnectGoogleCalendarDto, metadata?: Metadata): Observable<Empty>;
 
   getGoogleCalendarToken(
     request: GetGoogleCalendarTokenDto,
     metadata?: Metadata,
-  ): Observable<GoogleCalendarTokenResponse>;
+  ): Observable<GoogleCalendarAccessToken>;
 
   refreshGoogleCalendarToken(
     request: RefreshGoogleCalendarTokenDto,
     metadata?: Metadata,
-  ): Observable<GoogleCalendarTokenResponse>;
+  ): Observable<GoogleCalendarAccessToken>;
 
   /** qol */
 
@@ -3042,19 +3165,19 @@ export interface AuthServiceController {
   connectGoogleCalendar(
     request: ConnectGoogleCalendarDto,
     metadata?: Metadata,
-  ): Promise<GoogleCalendarTokenResponse> | Observable<GoogleCalendarTokenResponse> | GoogleCalendarTokenResponse;
+  ): Promise<GoogleCalendarConnection> | Observable<GoogleCalendarConnection> | GoogleCalendarConnection;
 
   disconnectGoogleCalendar(request: DisconnectGoogleCalendarDto, metadata?: Metadata): void | Promise<void>;
 
   getGoogleCalendarToken(
     request: GetGoogleCalendarTokenDto,
     metadata?: Metadata,
-  ): Promise<GoogleCalendarTokenResponse> | Observable<GoogleCalendarTokenResponse> | GoogleCalendarTokenResponse;
+  ): Promise<GoogleCalendarAccessToken> | Observable<GoogleCalendarAccessToken> | GoogleCalendarAccessToken;
 
   refreshGoogleCalendarToken(
     request: RefreshGoogleCalendarTokenDto,
     metadata?: Metadata,
-  ): Promise<GoogleCalendarTokenResponse> | Observable<GoogleCalendarTokenResponse> | GoogleCalendarTokenResponse;
+  ): Promise<GoogleCalendarAccessToken> | Observable<GoogleCalendarAccessToken> | GoogleCalendarAccessToken;
 
   /** qol */
 
@@ -3325,9 +3448,9 @@ export const AuthServiceService = {
     requestSerialize: (value: ConnectGoogleCalendarDto): Buffer =>
       Buffer.from(ConnectGoogleCalendarDto.encode(value).finish()),
     requestDeserialize: (value: Buffer): ConnectGoogleCalendarDto => ConnectGoogleCalendarDto.decode(value),
-    responseSerialize: (value: GoogleCalendarTokenResponse): Buffer =>
-      Buffer.from(GoogleCalendarTokenResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GoogleCalendarTokenResponse => GoogleCalendarTokenResponse.decode(value),
+    responseSerialize: (value: GoogleCalendarConnection): Buffer =>
+      Buffer.from(GoogleCalendarConnection.encode(value).finish()),
+    responseDeserialize: (value: Buffer): GoogleCalendarConnection => GoogleCalendarConnection.decode(value),
   },
   disconnectGoogleCalendar: {
     path: "/auth.AuthService/DisconnectGoogleCalendar" as const,
@@ -3346,9 +3469,9 @@ export const AuthServiceService = {
     requestSerialize: (value: GetGoogleCalendarTokenDto): Buffer =>
       Buffer.from(GetGoogleCalendarTokenDto.encode(value).finish()),
     requestDeserialize: (value: Buffer): GetGoogleCalendarTokenDto => GetGoogleCalendarTokenDto.decode(value),
-    responseSerialize: (value: GoogleCalendarTokenResponse): Buffer =>
-      Buffer.from(GoogleCalendarTokenResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GoogleCalendarTokenResponse => GoogleCalendarTokenResponse.decode(value),
+    responseSerialize: (value: GoogleCalendarAccessToken): Buffer =>
+      Buffer.from(GoogleCalendarAccessToken.encode(value).finish()),
+    responseDeserialize: (value: Buffer): GoogleCalendarAccessToken => GoogleCalendarAccessToken.decode(value),
   },
   refreshGoogleCalendarToken: {
     path: "/auth.AuthService/RefreshGoogleCalendarToken" as const,
@@ -3357,9 +3480,9 @@ export const AuthServiceService = {
     requestSerialize: (value: RefreshGoogleCalendarTokenDto): Buffer =>
       Buffer.from(RefreshGoogleCalendarTokenDto.encode(value).finish()),
     requestDeserialize: (value: Buffer): RefreshGoogleCalendarTokenDto => RefreshGoogleCalendarTokenDto.decode(value),
-    responseSerialize: (value: GoogleCalendarTokenResponse): Buffer =>
-      Buffer.from(GoogleCalendarTokenResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GoogleCalendarTokenResponse => GoogleCalendarTokenResponse.decode(value),
+    responseSerialize: (value: GoogleCalendarAccessToken): Buffer =>
+      Buffer.from(GoogleCalendarAccessToken.encode(value).finish()),
+    responseDeserialize: (value: Buffer): GoogleCalendarAccessToken => GoogleCalendarAccessToken.decode(value),
   },
   /** qol */
   findIdentityIds: {
@@ -3440,10 +3563,10 @@ export interface AuthServiceServer extends UntypedServiceImplementation {
   lockIdentity: handleUnaryCall<LockIdentityDto, Empty>;
   unlockIdentity: handleUnaryCall<UnlockIdentityDto, Empty>;
   /** google calendar */
-  connectGoogleCalendar: handleUnaryCall<ConnectGoogleCalendarDto, GoogleCalendarTokenResponse>;
+  connectGoogleCalendar: handleUnaryCall<ConnectGoogleCalendarDto, GoogleCalendarConnection>;
   disconnectGoogleCalendar: handleUnaryCall<DisconnectGoogleCalendarDto, Empty>;
-  getGoogleCalendarToken: handleUnaryCall<GetGoogleCalendarTokenDto, GoogleCalendarTokenResponse>;
-  refreshGoogleCalendarToken: handleUnaryCall<RefreshGoogleCalendarTokenDto, GoogleCalendarTokenResponse>;
+  getGoogleCalendarToken: handleUnaryCall<GetGoogleCalendarTokenDto, GoogleCalendarAccessToken>;
+  refreshGoogleCalendarToken: handleUnaryCall<RefreshGoogleCalendarTokenDto, GoogleCalendarAccessToken>;
   /** qol */
   findIdentityIds: handleUnaryCall<FindIdentityIdsDto, IdentityIds>;
   findIdentities: handleUnaryCall<FindIdentitiesDto, Identities>;

@@ -33,10 +33,10 @@ service AuthService {
 	rpc LockIdentity(LockIdentityDto) returns (google.protobuf.Empty) {}
 	rpc UnlockIdentity(UnlockIdentityDto) returns (google.protobuf.Empty) {}
     // google calendar
-	rpc ConnectGoogleCalendar(ConnectGoogleCalendarDto) returns (GoogleCalendarTokenResponse) {}
+	rpc ConnectGoogleCalendar(ConnectGoogleCalendarDto) returns (GoogleCalendarConnection) {}
 	rpc DisconnectGoogleCalendar(DisconnectGoogleCalendarDto) returns (google.protobuf.Empty) {}
-	rpc GetGoogleCalendarToken(GetGoogleCalendarTokenDto) returns (GoogleCalendarTokenResponse) {}
-	rpc RefreshGoogleCalendarToken(RefreshGoogleCalendarTokenDto) returns (GoogleCalendarTokenResponse) {}
+	rpc GetGoogleCalendarToken(GetGoogleCalendarTokenDto) returns (GoogleCalendarAccessToken) {}
+	rpc RefreshGoogleCalendarToken(RefreshGoogleCalendarTokenDto) returns (GoogleCalendarAccessToken) {}
     // qol
 	rpc FindIdentityIds(FindIdentityIdsDto) returns (IdentityIds){}
 	rpc FindIdentities(FindIdentitiesDto) returns (Identities) {}
@@ -277,6 +277,18 @@ message RefreshGoogleCalendarTokenDto {
 	google.protobuf.StringValue identity_id = 1;
 }
 
+// Never carries the refresh token: auth keeps it server-side.
+message GoogleCalendarAccessToken {
+	string access_token = 1;
+	int64  expires_at   = 2;
+}
+
+message GoogleCalendarConnection {
+	bool  connected  = 1;
+	int64 expires_at = 2;
+}
+
+// Deprecated: no RPC returns this any more (it exposed the refresh token).
 message GoogleCalendarTokenResponse {
 	string access_token  = 1;
 	string refresh_token = 2;

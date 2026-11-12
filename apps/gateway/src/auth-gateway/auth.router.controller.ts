@@ -22,6 +22,10 @@ import { UpdateMailPasswordDto } from './dtos/req/update-password.req.dto';
 import { ResponseTokensDto } from './dtos/res/auth.res.dto';
 import { CredentialsDto } from './dtos/res/credentials.res.dto';
 import {
+	GoogleCalendarAccessTokenDto,
+	GoogleCalendarConnectionDto,
+} from './dtos/res/google-calendar.res.dto';
+import {
 	HydratedIdentityDto,
 	PublicIdentitiesDto,
 	PublicIdentityDto,
@@ -324,6 +328,8 @@ export class AuthGatewayController implements OnModuleInit {
 
 	@Post('google/calendar/exchange-code')
 	@ApiOperation({ summary: 'Exchange Google auth code for Calendar tokens and connect' })
+	@ApiResponseEntity(GoogleCalendarConnectionDto)
+	@SerializeOptions({ type: GoogleCalendarConnectionDto })
 	async exchangeGoogleCalendarCode(
 		@Body() body: ExchangeGoogleCalendarCodeDto,
 		@Req() request: AuthenticatedRequest,
@@ -366,6 +372,8 @@ export class AuthGatewayController implements OnModuleInit {
 
 	@Post('google/calendar/connect')
 	@ApiOperation({ summary: 'Connect Google Calendar account' })
+	@ApiResponseEntity(GoogleCalendarConnectionDto)
+	@SerializeOptions({ type: GoogleCalendarConnectionDto })
 	connectGoogleCalendar(
 		@Body() body: ConnectGoogleCalendarDto,
 		@Req() request: AuthenticatedRequest,
@@ -387,7 +395,11 @@ export class AuthGatewayController implements OnModuleInit {
 	}
 
 	@Get('google/calendar/token')
-	@ApiOperation({ summary: 'Get Google Calendar token' })
+	@ApiOperation({
+		summary: 'Get a short-lived Google Calendar access token (refreshed server-side)',
+	})
+	@ApiResponseEntity(GoogleCalendarAccessTokenDto)
+	@SerializeOptions({ type: GoogleCalendarAccessTokenDto })
 	getGoogleCalendarToken(@Req() request: AuthenticatedRequest) {
 		return this.authService.getGoogleCalendarToken({ identityId: request.user.sub });
 	}

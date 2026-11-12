@@ -70,7 +70,10 @@ import { ValidateAccessDto } from '../dtos/req/validate-access.req.dto';
 import { ValidateRefreshDto } from '../dtos/req/validate-refresh.req.dto';
 import { ClaimsDto } from '../dtos/res/claims.res.dto';
 import { CredentialsDto } from '../dtos/res/credentials.res.dto';
-import { GoogleCalendarTokenResponseDto } from '../dtos/res/google-calendar-token.res.dto';
+import {
+	GoogleCalendarAccessTokenDto,
+	GoogleCalendarConnectionDto,
+} from '../dtos/res/google-calendar-token.res.dto';
 import { HydratedIdentitiesDto, HydratedIdentityDto } from '../dtos/res/hydrated-identities.dto';
 import { IdentitiesDto } from '../dtos/res/identities.res.dto';
 import { IdentityIdsDto } from '../dtos/res/identity-ids.res.dto';
@@ -258,33 +261,31 @@ export class AuthController implements auth.AuthServiceController {
 		);
 	}
 
-	@SerializeOptions({ type: GoogleCalendarTokenResponseDto })
+	@SerializeOptions({ type: GoogleCalendarConnectionDto })
 	async connectGoogleCalendar(
 		@Payload() request: ConnectGoogleCalendarDto,
-	): Promise<GoogleCalendarTokenResponseDto> {
-		await this.commandBus.execute(new ConnectGoogleCalendarCommand(request));
-		return await this.queryBus.execute(
-			new GetGoogleCalendarTokenQuery({ identityId: request.identityId }),
-		);
+	): Promise<GoogleCalendarConnectionDto> {
+		const { expiresAt } = await this.commandBus.execute(new ConnectGoogleCalendarCommand(request));
+		return { connected: true, expiresAt: expiresAt };
 	}
 
 	async disconnectGoogleCalendar(@Payload() request: DisconnectGoogleCalendarDto): Promise<void> {
 		await this.commandBus.execute(new DisconnectGoogleCalendarCommand(request));
 	}
 
-	@SerializeOptions({ type: GoogleCalendarTokenResponseDto })
+	@SerializeOptions({ type: GoogleCalendarAccessTokenDto })
 	async getGoogleCalendarToken(
 		@Payload() request: GetGoogleCalendarTokenDto,
-	): Promise<GoogleCalendarTokenResponseDto> {
+	): Promise<GoogleCalendarAccessTokenDto> {
 		return await this.queryBus.execute(
 			new GetGoogleCalendarTokenQuery({ identityId: request.identityId }),
 		);
 	}
 
-	@SerializeOptions({ type: GoogleCalendarTokenResponseDto })
+	@SerializeOptions({ type: GoogleCalendarAccessTokenDto })
 	async refreshGoogleCalendarToken(
 		@Payload() request: GetGoogleCalendarTokenDto,
-	): Promise<GoogleCalendarTokenResponseDto> {
+	): Promise<GoogleCalendarAccessTokenDto> {
 		return await this.queryBus.execute(
 			new GetGoogleCalendarTokenQuery({ identityId: request.identityId }),
 		);
