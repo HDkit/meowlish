@@ -1,7 +1,7 @@
 import { IRoomRepository } from '../../../domain/repositories/room.repository';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma-client/live';
 
 @Injectable()
@@ -21,30 +21,36 @@ export class RoomPrismaRepositoryImpl implements IRoomRepository {
 		});
 	}
 
+	/** A user may join only an existing, non-deleted room they are not banned from. */
 	async canJoinRoom(roomId: string, uid: string): Promise<boolean> {
-		const isBanned = await this.txHost.tx.banned.findUnique({
-			where: { roomId_uid: { roomId: roomId, uid: uid }, room: { isDeleted: false } },
-			select: {},
+		const room = await this.txHost.tx.room.findFirst({
+			where: { id: roomId, isDeleted: false },
+			select: { banneds: { where: { uid: uid }, select: { uid: true } } },
 		});
-
-		if (!isBanned) return true;
-		return false;
+		return !!room && room.banneds.length === 0;
 	}
 
 	async createRoom(name: string): Promise<string> {
-		const room = await this.txHost.tx.room.upsert({
-			where: { name: name },
-			update: { isDeleted: false },
-			create: { name: name },
-			select: { id: true },
-		});
-		return room.id;
+		try {
+			const room = await this.txHost.tx.room.create({
+				data: { name: name },
+				select: { id: true },
+			});
+			return room.id;
+		} catch (e) {
+			// An upsert here used to revive someone else's room (and hand it to the new creator).
+			if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+				throw new ConflictException('A room with this name already exists');
+			}
+			throw e;
+		}
 	}
 
 	async removeRoom(roomId: string): Promise<void> {
+		// Free the unique name so it can be reused by a brand-new room.
 		await this.txHost.tx.room.update({
 			where: { id: roomId },
-			data: { isDeleted: true },
+			data: { isDeleted: true, name: `${roomId}:deleted` },
 		});
 	}
 
@@ -84,6 +90,11 @@ export class RoomPrismaRepositoryImpl implements IRoomRepository {
 		fromId: string,
 		message: string,
 	): Promise<{ id: string; createdAt: Date }> {
+		const room = await this.txHost.tx.room.findFirst({
+			where: { id: roomId, isDeleted: false },
+			select: { id: true },
+		});
+		if (!room) throw new NotFoundException('Room not found');
 		const log = await this.txHost.tx.log.create({
 			data: { roomId: roomId, fromId: fromId, message: message },
 			select: { id: true, createdAt: true },

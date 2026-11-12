@@ -24,7 +24,8 @@ export class OwnershipPrismaRepositoryImpl implements IOwnershipRepository {
 		try {
 			await this.txHost.tx.resourceOwnership.upsert({
 				where: { resourceType_resourceId: { resourceType: resourceType, resourceId: resourceId } },
-				update: { ownerId: ownerId },
+				// First owner wins: a replayed or forged "created" event must never transfer ownership.
+				update: {},
 				create: { resourceType: resourceType, resourceId: resourceId, ownerId: ownerId },
 			});
 		} catch (e) {

@@ -1,3 +1,4 @@
+import { type IEnvVars } from '../../configs/config';
 import {
 	type IRoomRepository,
 	IRoomRepositoryToken,
@@ -11,6 +12,7 @@ import {
 	UseGuards,
 	UsePipes,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
 	ConnectedSocket,
 	MessageBody,
@@ -22,6 +24,8 @@ import {
 } from '@nestjs/websockets';
 import { AppLoggerService } from '@server/logger';
 import { GlobalValidationPipe, GlobalWsExceptionFilter } from '@server/utils';
+import { isUUID } from 'class-validator';
+import jwt from 'jsonwebtoken';
 import { ClsGuard } from 'nestjs-cls';
 import { Server, Socket } from 'socket.io';
 
@@ -37,18 +41,45 @@ type ModifiedSocket = Omit<Socket, 'data'> & { data: { uid: string } };
 	},
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+	private readonly jwtPublicKey?: string;
+
 	constructor(
 		private logger: AppLoggerService,
 		@Inject(IRoomRepositoryToken) private readonly roomRepository: IRoomRepository,
-	) {}
+		configService: ConfigService<IEnvVars>,
+	) {
+		this.jwtPublicKey = configService.get('jwtPublicKey', { infer: true });
+		if (!this.jwtPublicKey) {
+			this.logger.warn('JWT_PUBLIC_KEY is not set: every socket connection will be rejected');
+		}
+	}
+
+	/** Token from socket.io `auth`, `?token=`, or `Authorization: Bearer`. */
+	private extractToken(socket: ModifiedSocket): string | undefined {
+		const auth = socket.handshake.auth as { token?: unknown } | undefined;
+		if (typeof auth?.token === 'string') return auth.token;
+		const query = socket.handshake.query.token;
+		if (typeof query === 'string') return query;
+		const header = socket.handshake.headers.authorization;
+		return header?.startsWith('Bearer ') ? header.slice('Bearer '.length) : undefined;
+	}
 
 	@WebSocketServer()
 	server!: Server;
 
+	/**
+	 * The user id must come from a verified access token. This service is reachable directly (Envoy),
+	 * so it can't trust anything the gateway or client puts in headers.
+	 */
 	async handleConnection(socket: ModifiedSocket) {
 		try {
-			if (!socket.handshake.headers.authorization) throw new Error('Missing authorization header');
-			socket.data.uid = socket.handshake.headers.authorization;
+			const token = this.extractToken(socket);
+			if (!token || !this.jwtPublicKey) throw new Error('Missing token');
+			const payload = jwt.verify(token, this.jwtPublicKey, { algorithms: ['RS256'] });
+			if (typeof payload === 'string' || typeof payload.sub !== 'string') {
+				throw new Error('Invalid token payload');
+			}
+			socket.data.uid = payload.sub;
 			await socket.join(socket.data.uid);
 		} catch {
 			socket.disconnect(true);
@@ -64,18 +95,23 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 	}
 
 	@SubscribeMessage('join-room')
-	async handleJoin(@MessageBody() roomId: string, @ConnectedSocket() socket: ModifiedSocket) {
+	async handleJoin(@MessageBody() roomId: unknown, @ConnectedSocket() socket: ModifiedSocket) {
+		// Room ids are UUIDs; anything else (e.g. another user's private uid room) is refused.
+		if (typeof roomId !== 'string' || !isUUID(roomId)) {
+			throw new UnauthorizedException('User is not allowed to join this room');
+		}
+		let allowed = false;
 		try {
-			if (!(await this.roomRepository.canJoinRoom(roomId, socket.data.uid)))
-				throw new UnauthorizedException('User is not allowed to join this room');
+			allowed = await this.roomRepository.canJoinRoom(roomId, socket.data.uid);
 		} catch (e) {
-			if (e instanceof UnauthorizedException) throw e;
+			// Fail closed: an error must never let a banned user in.
 			this.logger.error(
 				`[ChatGateway] canJoinRoom failed for room=${roomId} uid=${socket.data.uid}`,
 				'',
-				(e as Error).stack,
+				e instanceof Error ? e.stack : String(e),
 			);
 		}
+		if (!allowed) throw new UnauthorizedException('User is not allowed to join this room');
 		await socket.join(roomId);
 	}
 
@@ -102,5 +138,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
 	disconnectUser(uid: string, roomId: string) {
 		this.server.in(uid).socketsLeave(roomId);
+	}
+
+	/** Removes every socket from a room (e.g. after it is deleted). */
+	closeRoom(roomId: string) {
+		this.server.in(roomId).socketsLeave(roomId);
 	}
 }

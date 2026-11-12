@@ -25,6 +25,8 @@ export const envFileSchema = z.object({
 	env: z.union([z.literal('development'), z.literal('production')]),
 	/** Signs pagination cursors (see CursorPaginationFactory). */
 	cursorSecret: z.string().min(32).optional(),
+	/** RS256 public key matching auth's JWT_PRIVATE_KEY; sockets are rejected without it. */
+	jwtPublicKey: z.string().optional(),
 	database: dbVarsSchema,
 	redis: redisVarsSchema,
 	messageQueue: mqSchema,
@@ -36,6 +38,7 @@ export type IEnvVars = z.infer<typeof envFileSchema>;
 const loadEnv = (): DeepStringify<IEnvVars> => ({
 	env: process.env.NODE_ENV,
 	cursorSecret: process.env.CURSOR_SECRET || undefined,
+	jwtPublicKey: process.env.JWT_PUBLIC_KEY || undefined,
 	database: {
 		host: process.env.POSTGRES_HOST,
 		port: process.env.POSTGRES_PORT,

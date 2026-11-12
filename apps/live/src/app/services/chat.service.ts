@@ -176,6 +176,7 @@ export class ChatService {
 
 	async removeRoom(roomId: string): Promise<void> {
 		await this.roomRepository.removeRoom(roomId);
+		this.chatGateway.closeRoom(roomId);
 
 		try {
 			await this.amqpConnection.publish(

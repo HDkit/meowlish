@@ -1,13 +1,11 @@
 import { IsPublic } from '../auth/decorators/public.decorator';
-import { type AuthenticatedRequest } from '../types/authenticated-request';
 import { All, Controller, Next, Req, Res } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { NextFunction, Response } from 'express';
-import { ClientRequest } from 'http';
+import { NextFunction, Request, Response } from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import jwt from 'jsonwebtoken';
-import { ExtractJwt } from 'passport-jwt';
 
+// The live service verifies the access token itself (socket.io `auth.token`, `?token=` or
+// `Authorization: Bearer`), so this proxy forwards the handshake untouched.
 @IsPublic()
 @ApiBearerAuth()
 @ApiTags('Live Service Websocket')
@@ -22,28 +20,6 @@ export class LiveWsGatewayController {
 		pathRewrite: {
 			'^.*\\/socket\\.io': '/socket.io',
 		},
-		on: {
-			proxyReqWs: function (proxyReq: ClientRequest, req: AuthenticatedRequest) {
-				try {
-					let token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
-					if (!token) {
-						const query = req.url?.split('?')[1];
-						if (query) {
-							token = new URLSearchParams(query).get('token');
-						}
-					}
-					if (!token) throw Error('No token found');
-					const publicKey = process.env.JWT_PUBLIC_KEY;
-					if (!publicKey) throw Error('JWT_PUBLIC_KEY not configured');
-					const payload = jwt.verify(token, publicKey, {
-						algorithms: ['RS256'],
-					}) as { sub: string };
-					proxyReq.setHeader('Authorization', payload.sub);
-				} catch (e) {
-					console.error(e);
-				}
-			},
-		},
 	});
 
 	@All()
@@ -51,7 +27,7 @@ export class LiveWsGatewayController {
 		summary: 'Proxy to Live service',
 		description: 'Handles WebSocket upgrade and proxies requests to Live service Socket.IO server.',
 	})
-	async get(@Req() req: AuthenticatedRequest, @Res() res: Response, @Next() next: NextFunction) {
+	async get(@Req() req: Request, @Res() res: Response, @Next() next: NextFunction) {
 		await this.proxy(req, res, next);
 	}
 }
