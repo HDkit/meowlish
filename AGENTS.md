@@ -13,6 +13,10 @@ Backend for an English-learning app: an Nx + pnpm monorepo of NestJS 11 microser
 - `libs/utils` (`@server/utils`) — shared pipes, filters, interceptors, DTOs, CQRS base classes, RMQ config.
 - `libs/database`, `libs/logger`, `libs/typing` — Prisma helpers, Winston logger, utility types and shared enums (e.g. `Role`).
 
+## Known issues
+
+Check `docs/backlog.md` before working on a service: it lists open security and correctness issues. When you fix one, delete its entry in the same commit.
+
 ## Tooling rules
 
 - **pnpm only** (`preinstall` enforces it). The version comes from `package.json` `packageManager`. Don't pin pnpm anywhere else: CI's `pnpm/action-setup` reads `packageManager` and fails if a second version is set.
