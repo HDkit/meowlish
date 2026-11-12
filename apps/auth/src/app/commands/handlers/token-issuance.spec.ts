@@ -119,7 +119,7 @@ describe('TokenService revocation', () => {
 			{ getOrThrow: () => redis } as never,
 			{ getOrThrow: () => ({ refreshTokenExpiration: 100 }) } as never,
 		);
-		return service;
+		return Object.assign(service, { store: store });
 	};
 
 	afterEach(() => jest.useRealTimers());
@@ -142,5 +142,15 @@ describe('TokenService revocation', () => {
 		jest.setSystemTime(new Date('2026-01-01T00:00:10.900Z'));
 		const iatMs = Date.now();
 		expect(await service.isTokenRevoked('u', Math.floor(iatMs / 1000), iatMs)).toBe(false);
+	});
+
+	it('a legacy seconds-valued revocation still revokes earlier tokens', async () => {
+		const service = make();
+		const revokedSec = 1_767_225_610; // 2026-01-01T00:00:10Z, as written by the old code
+		service.store.set('jwt:blacklist:user:u', String(revokedSec));
+		const before = revokedSec * 1000 - 5000;
+		const after = revokedSec * 1000 + 5000;
+		expect(await service.isTokenRevoked('u', Math.floor(before / 1000), before)).toBe(true);
+		expect(await service.isTokenRevoked('u', Math.floor(after / 1000), after)).toBe(false);
 	});
 });

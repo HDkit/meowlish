@@ -72,6 +72,10 @@ export class TokenService {
 	async isTokenRevoked(userId: string, tokenIat: number, tokenIatMs?: number): Promise<boolean> {
 		const revokedAt = await this.redis.get(this.key(userId));
 		if (!revokedAt) return false;
-		return (tokenIatMs ?? tokenIat * 1000) <= Number(revokedAt);
+		// Revocations written before the ms switch hold epoch seconds (~1.7e9); values below 1e11
+		// can only be seconds, so normalise them to ms.
+		let revokedAtMs = Number(revokedAt);
+		if (revokedAtMs < 1e11) revokedAtMs *= 1000;
+		return (tokenIatMs ?? tokenIat * 1000) <= revokedAtMs;
 	}
 }
