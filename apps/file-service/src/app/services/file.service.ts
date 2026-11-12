@@ -13,6 +13,8 @@ import { MINIO_CONNECTION } from 'nestjs-minio';
 export class FileService implements OnModuleInit {
 	private readonly MINIO_PUBLIC_BUCKET_NAME = 'public';
 	private readonly MINIO_PRIVATE_BUCKET_NAME = 'private';
+	/** Upload URLs are short-lived: long enough to start a transfer, too short to hoard. */
+	static readonly UPLOAD_URL_EXPIRY_SECONDS = 15 * 60;
 	private readonly MAX_FILE_SIZE = 10 * 1024 * 1024;
 	private readonly ALLOWED_MIME_TYPES = [
 		'image/jpeg',
@@ -120,8 +122,6 @@ export class FileService implements OnModuleInit {
 		formData: Record<string, string>;
 		fileName: string;
 	}> {
-		const id = await this.fileRepository.create(fileMetadata, isPublic, uploadedBy);
-
 		if (fileMetadata.fileSize > this.MAX_FILE_SIZE) {
 			throw new Error(`File is too large. Maximum allowed size is 10MB.`);
 		}
@@ -130,10 +130,15 @@ export class FileService implements OnModuleInit {
 			throw new Error(`Invalid file type. Allowed types: ${this.ALLOWED_MIME_TYPES.join(', ')}`);
 		}
 
+		// The object key is the id of a brand-new row (server-generated uuid), so a presign can
+		// never target an existing, possibly already reviewed, object.
+		const id = await this.fileRepository.create(fileMetadata, isPublic, uploadedBy);
+
 		// Create POST policy
 		const policy = new PostPolicy();
 		policy.setBucket(isPublic ? this.MINIO_PUBLIC_BUCKET_NAME : this.MINIO_PRIVATE_BUCKET_NAME);
 		policy.setKey(id);
+		policy.setExpires(new Date(Date.now() + FileService.UPLOAD_URL_EXPIRY_SECONDS * 1000));
 		policy.setContentLengthRange(1, fileMetadata.fileSize);
 		// TODO: Find a way to actually enforce contentType with signed url
 		// DOES NOT ACTUALLY VALIDATE THE OBJECT CONTENT TYPE, JUST THE HEADER. CLIENT MUST PARSE CAREFULLY IG CUZ I DO NOT HAVE TIME FOR THIS YET

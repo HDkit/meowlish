@@ -46,10 +46,7 @@ export class FilePrismaRepositoryImpl implements IFileRepository {
 
 	async getOrphanedFiles(): Promise<{ id: string; isPublic: boolean; updatedAt: Date }[]> {
 		return await this.txHost.tx.file.findMany({
-			where: {
-				refCount: { lte: 0 },
-				NOT: { name: { startsWith: 'SYSTEM_', mode: 'insensitive' } },
-			},
+			where: { refCount: { lte: 0 }, isSystem: false },
 			select: { id: true, isPublic: true, updatedAt: true },
 		});
 	}

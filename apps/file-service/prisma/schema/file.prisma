@@ -8,6 +8,8 @@ model File {
   isPublic  Boolean
   // Identity that requested the upload URL; null for legacy, seeded and system files.
   uploadedBy String? @map("uploaded_by")
+  // Platform-owned media (seeded content). Only these rows are exempt from orphan cleanup.
+  isSystem  Boolean  @default(false) @map("is_system")
 
   @@index([uploadedBy])
   @@map("files")

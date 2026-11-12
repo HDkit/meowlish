@@ -43,3 +43,28 @@ describe('FilePrismaRepositoryImpl.decrementRef', () => {
 		await expect(repo.decrementRef([{ id: 'a' }])).rejects.toThrow('connection lost');
 	});
 });
+
+describe('FilePrismaRepositoryImpl.getOrphanedFiles', () => {
+	const rows = [
+		{ id: 'sys', name: 'SYSTEM_a.mp3', refCount: 0, isSystem: true },
+		{ id: 'user-lookalike', name: 'SYSTEM_x', refCount: 0, isSystem: false },
+		{ id: 'plain', name: 'b.png', refCount: 0, isSystem: false },
+		{ id: 'used', name: 'c.png', refCount: 1, isSystem: false },
+	];
+	// Minimal in-memory evaluation of the where clause the repository builds.
+	const findMany = jest.fn(
+		({ where }: { where: { refCount: { lte: number }; isSystem?: boolean } }) =>
+			Promise.resolve(
+				rows
+					.filter(r => r.refCount <= where.refCount.lte)
+					.filter(r => where.isSystem === undefined || r.isSystem === where.isSystem),
+			),
+	);
+	const repo = new FilePrismaRepositoryImpl({ tx: { file: { findMany: findMany } } } as never);
+
+	it('skips isSystem rows by flag, and cleans a user file named SYSTEM_x', async () => {
+		const ids = (await repo.getOrphanedFiles()).map(f => f.id);
+		expect(ids).toEqual(['user-lookalike', 'plain']);
+		expect(JSON.stringify(findMany.mock.calls[0][0])).not.toContain('startsWith');
+	});
+});
