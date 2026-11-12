@@ -1,8 +1,11 @@
 import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from './auth-gateway/auth-cookies';
-import { type ExecutionContext } from '@nestjs/common';
+import { type ExecutionContext, SetMetadata, applyDecorators } from '@nestjs/common';
 import {
+	SkipThrottle,
+	Throttle,
 	type ThrottlerGetTrackerFunction,
 	type ThrottlerModuleOptions,
+	type ThrottlerOptions,
 	normalizeIp,
 } from '@nestjs/throttler';
 import { readCookie } from '@server/utils';
@@ -11,6 +14,7 @@ import jwt from 'jsonwebtoken';
 
 const MINUTE = 60_000;
 const STRICT_LIMIT = 10;
+const IP_LIMIT = 100;
 
 /** Health probes (`/health/*`, outside the `/api` prefix) must never be throttled. */
 export const isHealthRoute = (context: ExecutionContext): boolean => {
@@ -18,20 +22,44 @@ export const isHealthRoute = (context: ExecutionContext): boolean => {
 	return (req.path ?? req.url ?? '').startsWith('/health/');
 };
 
-/** Default: 100 requests per minute per IP. */
+const STRICT_THROTTLE = 'gateway:strict-throttle';
+
+const isStrictRoute = (context: ExecutionContext): boolean =>
+	Reflect.getMetadata(STRICT_THROTTLE, context.getHandler()) === true;
+
+/**
+ * Two named throttlers, both keyed by client IP and per route:
+ * - `default`: 100/min on every route. Strict routes override it with a per-account 10/min.
+ * - `ip`: 100/min, active ONLY on strict routes (which never override it), so one IP naming many
+ *   accounts still hits a per-IP ceiling there. Skipped elsewhere: normal routes count once.
+ */
+const throttlers: ThrottlerOptions[] = [
+	{ name: 'default', ttl: MINUTE, limit: IP_LIMIT },
+	{
+		name: 'ip',
+		ttl: MINUTE,
+		limit: IP_LIMIT,
+		// a named throttler's skipIf replaces the common one, so repeat the health check
+		skipIf: context => isHealthRoute(context) || !isStrictRoute(context),
+	},
+];
+
 export const throttlerOptions: ThrottlerModuleOptions = {
-	throttlers: [{ ttl: MINUTE, limit: 100 }],
+	throttlers: throttlers,
 	skipIf: isHealthRoute,
 	errorMessage: 'Rate limit reached',
 };
+
+/** Skips every named throttler (`@SkipThrottle()` alone only skips `default`). */
+export const SkipAllThrottlers = () =>
+	SkipThrottle(Object.fromEntries(throttlers.map(t => [t.name ?? 'default', true])));
 
 type AccountKey = (req: Request) => string | undefined;
 
 /**
  * Tracker `<ip>:<account>`, so pupils behind one classroom NAT each get their own budget while
  * one account is still limited per IP. Falls back to the IP when the request names no account.
- * `@Throttle` replaces the default throttler on these routes, so there is no separate per-IP cap
- * on them: one IP gets 10/min for each account it names.
+ * This replaces the `default` throttler on strict routes; the `ip` throttler still caps the IP.
  */
 const accountTracker =
 	(accountKey: AccountKey): ThrottlerGetTrackerFunction =>
@@ -65,15 +93,23 @@ const tokenSubject =
 		return typeof sub === 'string' && sub ? `sub:${sub}` : undefined;
 	};
 
-const strict = (accountKey: AccountKey) => ({
-	default: { limit: STRICT_LIMIT, ttl: MINUTE, getTracker: accountTracker(accountKey) },
-});
+/** Per-account 10/min (`default` overridden) plus the per-IP 100/min `ip` throttler. */
+const strict = (accountKey: AccountKey) =>
+	applyDecorators(
+		Throttle({
+			default: { limit: STRICT_LIMIT, ttl: MINUTE, getTracker: accountTracker(accountKey) },
+		}),
+		SetMetadata(STRICT_THROTTLE, true),
+	);
 
-/** 10/min per IP and e-mail (`body.mail`): login, register, add mail credential. */
-export const strictThrottleByMail = strict(mailOf);
+/** 10/min per IP and e-mail (`body.mail`), 100/min per IP: login, register. */
+export const StrictThrottleByMail = () => strict(mailOf);
 
-/** 10/min per IP and refresh-token subject: `/auth/refresh`. */
-export const strictThrottleByRefreshToken = strict(tokenSubject(REFRESH_TOKEN_COOKIE));
+/** 10/min per IP and refresh-token subject, 100/min per IP: `/auth/refresh`. */
+export const StrictThrottleByRefreshToken = () => strict(tokenSubject(REFRESH_TOKEN_COOKIE));
 
-/** 10/min per IP and access-token subject: password change and other signed-in strict routes. */
-export const strictThrottleBySession = strict(tokenSubject(ACCESS_TOKEN_COOKIE));
+/**
+ * 10/min per IP and access-token subject, 100/min per IP: add mail credential, password change and
+ * other signed-in strict routes.
+ */
+export const StrictThrottleBySession = () => strict(tokenSubject(ACCESS_TOKEN_COOKIE));

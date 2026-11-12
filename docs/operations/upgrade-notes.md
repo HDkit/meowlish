@@ -26,7 +26,7 @@ The supported setup: the frontend calls the API on **its own origin** and proxie
 - `/api/*` -> gateway `/api/*` (this also carries `GET /api/v1/auth/google/callback`, so set `BASE_URL` to the **frontend's** public origin: Google must redirect back through the proxy, where the `oauth2_state` cookie of the linking flow lives);
 - `/socket.io/*` -> gateway `/api/v1/chat/ws/socket.io/*`. WebSocket upgrades need a reverse proxy that forwards them (nginx/Envoy, or `next start` itself); without one socket.io falls back to long-polling.
 
-The frontend's Next.js config does both rewrites (target: `NEXT_PUBLIC_API_URL`). In production, prefer a reverse proxy in front of both that routes these paths straight to the gateway: Next's built-in proxy does not add `X-Forwarded-For`, so the gateway sees the Next server as every client's address (shared rate-limit buckets) unless a proxy in front sets it and `TRUST_PROXY` counts both hops.
+The frontend's Next.js config does both rewrites (target: `NEXT_PUBLIC_API_URL`). In production, prefer a reverse proxy in front of both that routes these paths straight to the gateway: Next's built-in proxy does not add `X-Forwarded-For`, so the gateway sees the Next server as every client's address (shared rate-limit buckets) unless a proxy in front sets it and `TRUST_PROXY` counts both hops. That matters more on the strict auth routes (login, register, refresh, add mail credential, change password): besides 10/min per IP and account, each is capped at 100/min per client IP, so with one shared address all users together get 100 logins a minute.
 
 Alternatively serve frontend and API on hosts of one registrable domain (`app.example.com` + `api.example.com`) and let the frontend call the API directly.
 

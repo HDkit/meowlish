@@ -8,6 +8,7 @@ import { RedisService } from '@liaoliaots/nestjs-redis';
 import { Controller, type ExecutionContext, Get, type INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { type NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { type Server as HttpServer } from 'node:http';
@@ -60,7 +61,8 @@ describe('gateway throttling and CORS', () => {
 				},
 			})
 			.compile();
-		app = moduleRef.createNestApplication();
+		app = moduleRef.createNestApplication<NestExpressApplication>();
+		(app as NestExpressApplication).set('trust proxy', true);
 		app.enableCors(corsOptions(['https://app.example.com']));
 		await app.listen(0, '127.0.0.1');
 		base = `http://127.0.0.1:${((app.getHttpServer() as HttpServer).address() as AddressInfo).port}`;
@@ -68,12 +70,14 @@ describe('gateway throttling and CORS', () => {
 
 	afterAll(() => app.close());
 
-	const post = (path: string, init: { mail?: string; cookie?: string } = {}) =>
+	const post = (path: string, init: { mail?: string; cookie?: string; ip?: string } = {}) =>
 		fetch(`${base}${path}`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
 				...(init.cookie ? { Cookie: init.cookie } : {}),
+				// `trust proxy` is on below, so a test can pose as its own client IP
+				...(init.ip ? { 'X-Forwarded-For': init.ip } : {}),
 			},
 			body: JSON.stringify(init.mail ? { mail: init.mail, password: 'x' } : {}),
 		});
@@ -103,6 +107,27 @@ describe('gateway throttling and CORS', () => {
 			expect((await post('/login', { mail: 'pupil-b@example.com' })).status).toBe(201);
 		}
 		expect((await post('/register', { mail: 'pupil-a@example.com' })).status).toBe(201);
+	});
+
+	it('cuts one IP off at 100 strict requests per minute, whatever accounts it names', async () => {
+		const ip = '198.51.100.1';
+		for (let i = 0; i < 100; i++) {
+			expect((await post('/login', { ip: ip, mail: `victim-${i}@example.com` })).status).toBe(201);
+		}
+		expect((await post('/login', { ip: ip, mail: 'fresh@example.com' })).status).toBe(429);
+		// another IP is not affected
+		expect((await post('/login', { ip: '198.51.100.2', mail: 'fresh@example.com' })).status).toBe(
+			201,
+		);
+	});
+
+	it('keeps the per-account limit for every account under the per-IP ceiling', async () => {
+		const ip = '198.51.100.3';
+		for (const mail of ['pupil-c@example.com', 'pupil-d@example.com']) {
+			for (let i = 0; i < 10; i++)
+				expect((await post('/login', { ip: ip, mail: mail })).status).toBe(201);
+			expect((await post('/login', { ip: ip, mail: mail })).status).toBe(429);
+		}
 	});
 
 	it('falls back to the IP when the login names no account', async () => {

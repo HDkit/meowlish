@@ -1,4 +1,5 @@
 import { HasRoles } from '../auth/decorators/roles.decorator';
+import { SkipAllThrottlers } from '../throttle';
 import { type AuthenticatedRequest } from '../types/authenticated-request';
 import { NOTIFICATION_CLIENT } from './constants/notification';
 import { CreateNotificationDto } from './dtos/req/create-notification.req.dto';
@@ -26,7 +27,6 @@ import {
 } from '@nestjs/common';
 import { type ClientGrpc } from '@nestjs/microservices';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { SkipThrottle } from '@nestjs/throttler';
 import { notification } from '@server/generated';
 import { Role } from '@server/typing';
 import { ApiEmptyResponseEntity, ApiResponseEntity } from '@server/utils';
@@ -65,7 +65,7 @@ export class NotificationGatewayController implements OnModuleInit {
 
 	@All('stream/:recipientId')
 	@ApiOperation({ summary: 'SSE stream for notifications' })
-	@SkipThrottle()
+	@SkipAllThrottlers()
 	async streamNotifications(
 		@Param('recipientId') recipientId: string,
 		@Req() req: AuthenticatedRequest,
