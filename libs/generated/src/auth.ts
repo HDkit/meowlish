@@ -34,6 +34,7 @@ export interface UpdateMailPasswordDto {
   identityId: string | undefined;
   id: string | undefined;
   password: string | undefined;
+  currentPassword: string | undefined;
 }
 
 export interface RegisterOrLoginGoogleDto {
@@ -446,7 +447,7 @@ export const AddMailCredDto: MessageFns<AddMailCredDto> = {
 };
 
 function createBaseUpdateMailPasswordDto(): UpdateMailPasswordDto {
-  return { identityId: undefined, id: undefined, password: undefined };
+  return { identityId: undefined, id: undefined, password: undefined, currentPassword: undefined };
 }
 
 export const UpdateMailPasswordDto: MessageFns<UpdateMailPasswordDto> = {
@@ -459,6 +460,9 @@ export const UpdateMailPasswordDto: MessageFns<UpdateMailPasswordDto> = {
     }
     if (message.password !== undefined) {
       StringValue.encode({ value: message.password! }, writer.uint32(26).fork()).join();
+    }
+    if (message.currentPassword !== undefined) {
+      StringValue.encode({ value: message.currentPassword! }, writer.uint32(34).fork()).join();
     }
     return writer;
   },
@@ -498,6 +502,14 @@ export const UpdateMailPasswordDto: MessageFns<UpdateMailPasswordDto> = {
             }
 
             message.password = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.currentPassword = StringValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }

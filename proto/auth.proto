@@ -67,6 +67,7 @@ message UpdateMailPasswordDto {
 	google.protobuf.StringValue identity_id = 1;
 	google.protobuf.StringValue id          = 2;
 	google.protobuf.StringValue password    = 3;
+	google.protobuf.StringValue current_password = 4;
 }
 
 message RegisterOrLoginGoogleDto {
