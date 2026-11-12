@@ -1,5 +1,5 @@
 import { live } from '@server/generated';
-import { IsString } from 'class-validator';
+import { IsBoolean, IsString } from 'class-validator';
 
 export class BanUserDto implements live.BanUserFromRoomRequest {
 	@IsString()
@@ -10,4 +10,10 @@ export class BanUserDto implements live.BanUserFromRoomRequest {
 
 	@IsString()
 	uid!: string;
+
+	@IsString()
+	requesterId!: string;
+
+	@IsBoolean()
+	privileged!: boolean;
 }

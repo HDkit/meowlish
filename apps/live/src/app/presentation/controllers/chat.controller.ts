@@ -49,11 +49,11 @@ export class ChatController implements live.ChatServiceController {
 	}
 
 	async banUserFromRoom(@Payload() request: BanUserDto): Promise<void> {
-		return this.chatService.banUserFrom(request.roomId, request.uid, request.reason);
+		return this.chatService.banUserFrom(request.roomId, request.uid, request.reason, request);
 	}
 
 	async unbanUserFromRoom(@Payload() request: UnbanUserDto): Promise<void> {
-		return this.chatService.unbanUserFrom(request.roomId, request.uid);
+		return this.chatService.unbanUserFrom(request.roomId, request.uid, request);
 	}
 
 	async updateRoomSchedule(@Payload() request: UpdateRoomDto): Promise<void> {

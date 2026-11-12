@@ -76,9 +76,25 @@ async function seed() {
 		}
 		console.warn(`Seeded ${flashCardLists.length} flashcard list ownership records`);
 
-		// Note: rooms don't currently track who created them in the DB,
-		// so we can't seed room ownership from existing data.
-		// New rooms will be tracked going forward.
+		// Backfill live rooms' createdBy from ownership rows registered via live.room.created.
+		// Idempotent: only rooms with no recorded owner are touched.
+		const unownedRooms = await liveDb.room.findMany({
+			where: { createdBy: null },
+			select: { id: true },
+		});
+		const roomOwnerships = await authorizationDb.resourceOwnership.findMany({
+			where: { resourceType: 'room', resourceId: { in: unownedRooms.map(r => r.id) } },
+			select: { resourceId: true, ownerId: true },
+		});
+		for (const ownership of roomOwnerships) {
+			await liveDb.room.update({
+				where: { id: ownership.resourceId },
+				data: { createdBy: ownership.ownerId },
+			});
+		}
+		console.warn(
+			`Backfilled createdBy on ${roomOwnerships.length}/${unownedRooms.length} rooms without an owner`,
+		);
 
 		const totalCount = await authorizationDb.resourceOwnership.count();
 		console.warn(`\nSeeding complete. Total ownership records: ${totalCount}`);

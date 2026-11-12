@@ -1,5 +1,6 @@
 import { ResourceAccess } from '../auth/decorators/resource-access.decorator';
 import { HasRoles } from '../auth/decorators/roles.decorator';
+import { requesterOf } from '../auth/functions/requester';
 import { type AuthenticatedRequest } from '../types/authenticated-request';
 import { LIVE_CLIENT } from './constants/live';
 import { BanUserFromRoomDto } from './dtos/req/ban-user-from-room.req.dto';
@@ -109,15 +110,31 @@ export class LiveGatewayController implements OnModuleInit {
 	@HasRoles(Role.Mod, Role.Admin)
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Ban a user from a room' })
-	banUserFromRoom(@Param('roomId') roomId: string, @Body() body: BanUserFromRoomDto) {
-		return this.chatService.banUserFromRoom({ ...body, roomId: roomId });
+	banUserFromRoom(
+		@Req() req: AuthenticatedRequest,
+		@Param('roomId') roomId: string,
+		@Body() body: BanUserFromRoomDto,
+	) {
+		return this.chatService.banUserFromRoom({
+			...body,
+			roomId: roomId,
+			...requesterOf(req.user, [Role.Admin]),
+		});
 	}
 
 	@Delete(':roomId/ban/:uid')
 	@HasRoles(Role.Mod, Role.Admin)
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Unban a user from a room' })
-	unbanUserFromRoom(@Param('roomId') roomId: string, @Param('uid') uid: string) {
-		return this.chatService.unbanUserFromRoom({ uid: uid, roomId: roomId });
+	unbanUserFromRoom(
+		@Req() req: AuthenticatedRequest,
+		@Param('roomId') roomId: string,
+		@Param('uid') uid: string,
+	) {
+		return this.chatService.unbanUserFromRoom({
+			uid: uid,
+			roomId: roomId,
+			...requesterOf(req.user, [Role.Admin]),
+		});
 	}
 }

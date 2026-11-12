@@ -85,9 +85,15 @@ message BanUserFromRoomRequest {
 	google.protobuf.StringValue          uid     = 1;
 	google.protobuf.StringValue          room_id = 2;
 	optional google.protobuf.StringValue reason  = 3;
+	// Set by the gateway from the JWT; only the room owner or a privileged requester may moderate.
+	google.protobuf.StringValue requester_id = 4;
+	google.protobuf.BoolValue   privileged   = 5;
 }
 
 message UnbanUserFromRoomRequest {
 	google.protobuf.StringValue uid     = 1;
 	google.protobuf.StringValue room_id = 2;
+	// Set by the gateway from the JWT; only the room owner or a privileged requester may moderate.
+	google.protobuf.StringValue requester_id = 3;
+	google.protobuf.BoolValue   privileged   = 4;
 }

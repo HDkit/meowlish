@@ -82,12 +82,22 @@ export interface UpdateRoomScheduleRequest {
 export interface BanUserFromRoomRequest {
   uid: string | undefined;
   roomId: string | undefined;
-  reason?: string | undefined;
+  reason?:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; only the room owner or a privileged requester may moderate. */
+  requesterId: string | undefined;
+  privileged: boolean | undefined;
 }
 
 export interface UnbanUserFromRoomRequest {
   uid: string | undefined;
-  roomId: string | undefined;
+  roomId:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; only the room owner or a privileged requester may moderate. */
+  requesterId: string | undefined;
+  privileged: boolean | undefined;
 }
 
 wrappers[".google.protobuf.Timestamp"] = {
@@ -837,7 +847,7 @@ export const UpdateRoomScheduleRequest: MessageFns<UpdateRoomScheduleRequest> = 
 };
 
 function createBaseBanUserFromRoomRequest(): BanUserFromRoomRequest {
-  return { uid: undefined, roomId: undefined };
+  return { uid: undefined, roomId: undefined, requesterId: undefined, privileged: undefined };
 }
 
 export const BanUserFromRoomRequest: MessageFns<BanUserFromRoomRequest> = {
@@ -850,6 +860,12 @@ export const BanUserFromRoomRequest: MessageFns<BanUserFromRoomRequest> = {
     }
     if (message.reason !== undefined) {
       StringValue.encode({ value: message.reason! }, writer.uint32(26).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(34).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(42).fork()).join();
     }
     return writer;
   },
@@ -891,6 +907,22 @@ export const BanUserFromRoomRequest: MessageFns<BanUserFromRoomRequest> = {
             message.reason = StringValue.decode(reader, reader.uint32()).value;
             continue;
           }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -905,7 +937,7 @@ export const BanUserFromRoomRequest: MessageFns<BanUserFromRoomRequest> = {
 };
 
 function createBaseUnbanUserFromRoomRequest(): UnbanUserFromRoomRequest {
-  return { uid: undefined, roomId: undefined };
+  return { uid: undefined, roomId: undefined, requesterId: undefined, privileged: undefined };
 }
 
 export const UnbanUserFromRoomRequest: MessageFns<UnbanUserFromRoomRequest> = {
@@ -915,6 +947,12 @@ export const UnbanUserFromRoomRequest: MessageFns<UnbanUserFromRoomRequest> = {
     }
     if (message.roomId !== undefined) {
       StringValue.encode({ value: message.roomId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(26).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(34).fork()).join();
     }
     return writer;
   },
@@ -946,6 +984,22 @@ export const UnbanUserFromRoomRequest: MessageFns<UnbanUserFromRoomRequest> = {
             }
 
             message.roomId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }

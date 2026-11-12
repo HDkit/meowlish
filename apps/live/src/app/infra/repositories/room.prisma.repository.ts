@@ -30,10 +30,10 @@ export class RoomPrismaRepositoryImpl implements IRoomRepository {
 		return !!room && room.banneds.length === 0;
 	}
 
-	async createRoom(name: string): Promise<string> {
+	async createRoom(name: string, createdBy?: string): Promise<string> {
 		try {
 			const room = await this.txHost.tx.room.create({
-				data: { name: name },
+				data: { name: name, createdBy: createdBy },
 				select: { id: true },
 			});
 			return room.id;
@@ -44,6 +44,14 @@ export class RoomPrismaRepositoryImpl implements IRoomRepository {
 			}
 			throw e;
 		}
+	}
+
+	async getRoomOwner(roomId: string): Promise<string | null | undefined> {
+		const room = await this.txHost.tx.room.findFirst({
+			where: { id: roomId, isDeleted: false },
+			select: { createdBy: true },
+		});
+		return room?.createdBy;
 	}
 
 	async removeRoom(roomId: string): Promise<void> {

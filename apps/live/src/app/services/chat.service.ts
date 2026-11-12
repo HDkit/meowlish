@@ -14,7 +14,7 @@ import {
 } from '../../domain/repositories/room.repository';
 import { ChatGateway } from './chat.gateway';
 import { Transactional } from '@nestjs-cls/transactional';
-import { Inject, Injectable } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { OutboxPublisher } from '@server/messaging';
 import { CursorPaginationFactory, CursorPaginationHelper } from '@server/utils';
 
@@ -155,7 +155,7 @@ export class ChatService {
 
 	@Transactional()
 	async createRoom(name: string, createdBy?: string): Promise<string> {
-		const roomId = await this.roomRepository.createRoom(name);
+		const roomId = await this.roomRepository.createRoom(name, createdBy);
 
 		if (createdBy) {
 			await this.outbox.add('live.room.created', {
@@ -175,12 +175,34 @@ export class ChatService {
 		await this.outbox.add('live.room.deleted', { resourceId: roomId });
 	}
 
-	async banUserFrom(roomId: string, uid: string, reason: string): Promise<void> {
+	/** 404 when the room is missing; 403 unless the requester owns it or is privileged (rooms with no owner: privileged only). */
+	private async assertCanModerate(
+		roomId: string,
+		who: { requesterId: string; privileged: boolean },
+	): Promise<void> {
+		const owner = await this.roomRepository.getRoomOwner(roomId);
+		if (owner === undefined) throw new NotFoundException('Room not found');
+		if (!who.privileged && owner !== who.requesterId)
+			throw new ForbiddenException('Only the room owner or an admin can moderate this room');
+	}
+
+	async banUserFrom(
+		roomId: string,
+		uid: string,
+		reason: string,
+		who: { requesterId: string; privileged: boolean },
+	): Promise<void> {
+		await this.assertCanModerate(roomId, who);
 		this.chatGateway.disconnectUser(uid, roomId);
 		await this.roomRepository.banUserFrom(roomId, uid, reason);
 	}
 
-	async unbanUserFrom(roomId: string, uid: string): Promise<void> {
+	async unbanUserFrom(
+		roomId: string,
+		uid: string,
+		who: { requesterId: string; privileged: boolean },
+	): Promise<void> {
+		await this.assertCanModerate(roomId, who);
 		await this.roomRepository.unbanUserFrom(roomId, uid);
 	}
 }
