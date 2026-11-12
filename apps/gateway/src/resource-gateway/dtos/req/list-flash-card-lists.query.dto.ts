@@ -1,6 +1,6 @@
-import { PageQueryDto, ToStringArray } from './page.query.dto';
+import { PageQueryDto } from './page.query.dto';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { str2bool } from '@server/utils';
+import { ToStringArray, str2bool } from '@server/utils';
 import { Transform } from 'class-transformer';
 import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
 

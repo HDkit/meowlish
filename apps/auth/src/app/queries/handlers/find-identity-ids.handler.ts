@@ -31,11 +31,14 @@ export class FindIdentityIdsQueryHandler implements IQueryHandler<FindIdentityId
 			:	undefined;
 
 		const inUseIdentifier = decodedCursor?.usernameOrCredential ?? payload.usernameOrCredential;
+		// A request may narrow a cursor to usernames, never widen it.
+		const usernameOnly = !!(payload.usernameOnly || decodedCursor?.usernameOnly);
 		const inUseLimit = payload.limit ?? decodedCursor?.limit ?? 10;
 		const direction = decodedCursor?.direction ?? 1;
 
 		const identities = await this.identityReadRepository.findIdentityIds({
 			usernameOrCredentialIdentifier: inUseIdentifier,
+			usernameOnly: usernameOnly,
 			lastId: decodedCursor?.lastId,
 			limit: inUseLimit,
 			direction: direction,
@@ -43,12 +46,14 @@ export class FindIdentityIdsQueryHandler implements IQueryHandler<FindIdentityId
 
 		const encodedNextCursor = this.cursorPaginationHelper.encodeCursor<FindIdentityIdsCursor>({
 			usernameOrCredential: inUseIdentifier,
+			usernameOnly: usernameOnly,
 			lastId: identities.at(-1),
 			direction: 1,
 			limit: inUseLimit,
 		});
 		const encodedPrevCursor = this.cursorPaginationHelper.encodeCursor<FindIdentityIdsCursor>({
 			usernameOrCredential: inUseIdentifier,
+			usernameOnly: usernameOnly,
 			lastId: identities.at(0),
 			direction: -1,
 			limit: inUseLimit,

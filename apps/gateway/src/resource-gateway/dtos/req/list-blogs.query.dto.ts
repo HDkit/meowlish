@@ -1,5 +1,6 @@
-import { PageQueryDto, ToStringArray } from './page.query.dto';
+import { PageQueryDto } from './page.query.dto';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ToStringArray } from '@server/utils';
 import { IsArray, IsOptional, IsString } from 'class-validator';
 
 export class ListBlogsQueryDto extends PageQueryDto {

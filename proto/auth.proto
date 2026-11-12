@@ -133,6 +133,8 @@ message FindIdentityIdsDto {
 	optional google.protobuf.StringValue username_or_cred_identifier = 1;
 	optional google.protobuf.StringValue cursor                      = 2;
 	optional google.protobuf.Int32Value  limit                       = 3;
+	// Match usernames only (no credential identifiers such as emails); set for public searches.
+	optional google.protobuf.BoolValue   username_only               = 4;
 }
 
 message FindIdentitiesDto {
@@ -141,6 +143,8 @@ message FindIdentitiesDto {
 	repeated google.protobuf.StringValue has_perms                         = 3;
 	optional google.protobuf.StringValue cursor                            = 4;
 	optional google.protobuf.Int32Value  limit                             = 5;
+	// Match usernames only (no credential identifiers/ids); set for public searches.
+	optional google.protobuf.BoolValue   username_only                     = 6;
 }
 
 message HydrateIdentitiesDto {

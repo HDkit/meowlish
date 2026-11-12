@@ -14,6 +14,7 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 
 	async findIdentityIds(options?: {
 		usernameOrCredentialIdentifier?: string;
+		usernameOnly?: boolean;
 		lastId?: string;
 		limit?: number;
 		direction?: number;
@@ -27,11 +28,15 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 				...(options?.usernameOrCredentialIdentifier && {
 					OR: [
 						{ username: { contains: options.usernameOrCredentialIdentifier } },
-						{
-							credentials: {
-								some: { identifier: { contains: options.usernameOrCredentialIdentifier } },
-							},
-						},
+						...(options.usernameOnly ?
+							[]
+						:	[
+								{
+									credentials: {
+										some: { identifier: { contains: options.usernameOrCredentialIdentifier } },
+									},
+								},
+							]),
 					],
 				}),
 			},
@@ -46,6 +51,7 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 	// raw SQL join might be better without processing in-app but time is of the essence
 	async findIdentities(options?: {
 		usernameOrCredentialIdentifierOrId?: string;
+		usernameOnly?: boolean;
 		hasRoles?: string[];
 		hasPerms?: string[];
 		lastId?: string;
@@ -89,20 +95,30 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 
 		const foundIdentities = await this.txHost.tx.identity.findMany({
 			where: {
-				...(options?.usernameOrCredentialIdentifierOrId && {
-					OR: [
-						{ username: { contains: options.usernameOrCredentialIdentifierOrId } },
+				// Two independent OR groups: spreading both as `OR` let the role filter overwrite the
+				// identifier filter.
+				AND: [
+					options?.usernameOrCredentialIdentifierOrId ?
 						{
-							credentials: {
-								some: { identifier: { contains: options.usernameOrCredentialIdentifierOrId } },
-							},
-						},
-						{ id: { contains: options.usernameOrCredentialIdentifierOrId } },
-					],
-				}),
-				...(roleOr.length && {
-					OR: roleOr,
-				}),
+							OR: [
+								{ username: { contains: options.usernameOrCredentialIdentifierOrId } },
+								...(options.usernameOnly ?
+									[]
+								:	[
+										{
+											credentials: {
+												some: {
+													identifier: { contains: options.usernameOrCredentialIdentifierOrId },
+												},
+											},
+										},
+										{ id: { contains: options.usernameOrCredentialIdentifierOrId } },
+									]),
+							],
+						}
+					:	{},
+					roleOr.length ? { OR: roleOr } : {},
+				],
 			},
 			orderBy: { id: 'asc' },
 			select: {

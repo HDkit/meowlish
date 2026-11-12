@@ -13,6 +13,7 @@ import { ExchangeGoogleCalendarCodeDto } from './dtos/req/exchange-google-calend
 import { FindIdentitiesLimitedDto } from './dtos/req/find-identities-limited.req.dto';
 import { FindIdentitiesDto } from './dtos/req/find-identities.req.dto';
 import { FindIdentityIdsDto } from './dtos/req/find-identity-ids.req.dto';
+import { HydrateIdentitiesQueryDto } from './dtos/req/hydrate-identities.query.dto';
 import { LoginMailDto } from './dtos/req/login-mail.req.dto';
 import { RegisterMailDto } from './dtos/req/register-mail.req.dto';
 import { RemoveRoleFromDto } from './dtos/req/remove-role-from.req.dto';
@@ -20,7 +21,11 @@ import { UpdateIdentityDto } from './dtos/req/update-identity.req.dto';
 import { UpdateMailPasswordDto } from './dtos/req/update-password.req.dto';
 import { ResponseTokensDto } from './dtos/res/auth.res.dto';
 import { CredentialsDto } from './dtos/res/credentials.res.dto';
-import { HydratedIdentitiesDto, HydratedIdentityDto } from './dtos/res/hydrated-identities.dto';
+import {
+	HydratedIdentityDto,
+	PublicIdentitiesDto,
+	PublicIdentityDto,
+} from './dtos/res/hydrated-identities.dto';
 import { IdentitiesDto } from './dtos/res/identities.res.dto';
 import { IdentityIdsDto } from './dtos/res/identity-ids.res.dto';
 import { LimitedIdentitiesDto } from './dtos/res/limited-identities.res.dto';
@@ -193,7 +198,15 @@ export class AuthGatewayController implements OnModuleInit {
 	@ApiResponseEntity(LimitedIdentitiesDto)
 	@SerializeOptions({ type: LimitedIdentitiesDto })
 	findIdentitiesLimited(@Query() query: FindIdentitiesLimitedDto) {
-		const res = this.authService.findIdentities({ ...query, hasPerms: [], hasRoles: [] });
+		const res = this.authService.findIdentities({
+			usernameOrCredIdentifierOrId: query.usernameOrCredIdentifier,
+			// Public search: never match emails/ids, or anyone could probe who is registered.
+			usernameOnly: true,
+			cursor: query.cursor,
+			limit: query.limit,
+			hasPerms: [],
+			hasRoles: [],
+		});
 		return res;
 	}
 
@@ -203,7 +216,7 @@ export class AuthGatewayController implements OnModuleInit {
 	@ApiResponseEntity(IdentityIdsDto)
 	@SerializeOptions({ type: IdentityIdsDto })
 	findIdentityIds(@Query() query: FindIdentityIdsDto) {
-		const res = this.authService.findIdentityIds(query);
+		const res = this.authService.findIdentityIds({ ...query, usernameOnly: true });
 		return res;
 	}
 
@@ -261,17 +274,17 @@ export class AuthGatewayController implements OnModuleInit {
 	@Get('hydrate-many')
 	@IsPublic()
 	@ApiOperation({ summary: 'Hydrate ids to identities' })
-	@ApiResponseEntity(HydratedIdentitiesDto)
-	@SerializeOptions({ type: HydratedIdentitiesDto })
-	hydrateIdentities(@Query('ids') ids: string[]) {
-		return this.authService.hydrateIdentities({ identityIds: ids ?? [] });
+	@ApiResponseEntity(PublicIdentitiesDto)
+	@SerializeOptions({ type: PublicIdentitiesDto })
+	hydrateIdentities(@Query() query: HydrateIdentitiesQueryDto) {
+		return this.authService.hydrateIdentities({ identityIds: query.ids });
 	}
 
 	@Get('hydrate')
 	@IsPublic()
 	@ApiOperation({ summary: 'Hydrate an id to an identity' })
-	@ApiResponseEntity(HydratedIdentityDto)
-	@SerializeOptions({ type: HydratedIdentityDto })
+	@ApiResponseEntity(PublicIdentityDto)
+	@SerializeOptions({ type: PublicIdentityDto })
 	hydrateIdentity(@Query('id') id: string) {
 		return this.authService.hydrateIdentity({ identityId: id });
 	}
@@ -293,7 +306,8 @@ export class AuthGatewayController implements OnModuleInit {
 	}
 
 	@Get('identity/search/phone')
-	@ApiOperation({ summary: 'Search identities by phone number' })
+	@HasRoles(Role.Admin)
+	@ApiOperation({ summary: 'Search identities by phone number (admins)' })
 	@ApiResponseEntity(IdentitiesDto)
 	@SerializeOptions({ type: IdentitiesDto })
 	findIdentitiesByPhone(

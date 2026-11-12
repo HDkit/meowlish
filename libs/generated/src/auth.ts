@@ -99,7 +99,11 @@ export interface RemoveRoleFromDto {
 export interface FindIdentityIdsDto {
   usernameOrCredIdentifier?: string | undefined;
   cursor?: string | undefined;
-  limit?: number | undefined;
+  limit?:
+    | number
+    | undefined;
+  /** Match usernames only (no credential identifiers such as emails); set for public searches. */
+  usernameOnly?: boolean | undefined;
 }
 
 export interface FindIdentitiesDto {
@@ -107,7 +111,11 @@ export interface FindIdentitiesDto {
   hasRoles: string[];
   hasPerms: string[];
   cursor?: string | undefined;
-  limit?: number | undefined;
+  limit?:
+    | number
+    | undefined;
+  /** Match usernames only (no credential identifiers/ids); set for public searches. */
+  usernameOnly?: boolean | undefined;
 }
 
 export interface HydrateIdentitiesDto {
@@ -1202,6 +1210,9 @@ export const FindIdentityIdsDto: MessageFns<FindIdentityIdsDto> = {
     if (message.limit !== undefined) {
       Int32Value.encode({ value: message.limit! }, writer.uint32(26).fork()).join();
     }
+    if (message.usernameOnly !== undefined) {
+      BoolValue.encode({ value: message.usernameOnly! }, writer.uint32(34).fork()).join();
+    }
     return writer;
   },
 
@@ -1242,6 +1253,14 @@ export const FindIdentityIdsDto: MessageFns<FindIdentityIdsDto> = {
             message.limit = Int32Value.decode(reader, reader.uint32()).value;
             continue;
           }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.usernameOnly = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -1275,6 +1294,9 @@ export const FindIdentitiesDto: MessageFns<FindIdentitiesDto> = {
     }
     if (message.limit !== undefined) {
       Int32Value.encode({ value: message.limit! }, writer.uint32(42).fork()).join();
+    }
+    if (message.usernameOnly !== undefined) {
+      BoolValue.encode({ value: message.usernameOnly! }, writer.uint32(50).fork()).join();
     }
     return writer;
   },
@@ -1330,6 +1352,14 @@ export const FindIdentitiesDto: MessageFns<FindIdentitiesDto> = {
             }
 
             message.limit = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
+
+            message.usernameOnly = BoolValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }

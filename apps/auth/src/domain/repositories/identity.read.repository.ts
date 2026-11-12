@@ -3,12 +3,16 @@ import { HydratedIdentityReadModel, IdentityReadModel } from '../read-models/ide
 export interface IIdentityReadRepository {
 	findIdentityIds(options?: {
 		usernameOrCredentialIdentifier?: string;
+		/** Only match usernames (public searches must not probe credential identifiers). */
+		usernameOnly?: boolean;
 		lastId?: string;
 		limit?: number;
 		direction?: number;
 	}): Promise<string[]>;
 	findIdentities(options?: {
 		usernameOrCredentialIdentifierOrId?: string;
+		/** Only match usernames (public searches must not probe credential identifiers or ids). */
+		usernameOnly?: boolean;
 		hasRoles?: string[];
 		hasPerms?: string[];
 		lastId?: string;

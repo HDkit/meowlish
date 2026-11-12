@@ -13,6 +13,7 @@ export type FindIdentityIdsQueryPayload = {
 export type FindIdentityIdsCursor = {
 	// high prec
 	usernameOrCredential?: string;
+	usernameOnly?: boolean;
 	lastId?: string;
 	direction?: number;
 	// low prec

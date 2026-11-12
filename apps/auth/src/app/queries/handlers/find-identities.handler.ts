@@ -46,6 +46,8 @@ export class FindIdentitiesQueryHandler
 			decodedCursor?.usernameOrCredentialOrId ?? payload.usernameOrCredentialOrId;
 		const inUseHasRoles = decodedCursor?.hasRoles ?? payload.hasRoles;
 		const inUseHasPerms = decodedCursor?.hasPerms ?? payload.hasPerms;
+		// A request may narrow a cursor to usernames, never widen it.
+		const usernameOnly = !!(payload.usernameOnly || decodedCursor?.usernameOnly);
 		const inUseLimit = payload.limit ?? decodedCursor?.limit ?? 10;
 		const direction = decodedCursor?.direction ?? 1;
 
@@ -53,6 +55,7 @@ export class FindIdentitiesQueryHandler
 			usernameOrCredentialIdentifierOrId: inUseIdentifier,
 			hasRoles: inUseHasRoles,
 			hasPerms: inUseHasPerms,
+			usernameOnly: usernameOnly,
 			lastId: decodedCursor?.lastId,
 			limit: inUseLimit,
 			direction: direction,
@@ -70,6 +73,7 @@ export class FindIdentitiesQueryHandler
 
 		const encodedNextCursor = this.cursorPaginationHelper.encodeCursor<FindIdentitiesCursor>({
 			usernameOrCredentialOrId: inUseIdentifier,
+			usernameOnly: usernameOnly,
 			hasRoles: inUseHasRoles,
 			hasPerms: inUseHasPerms,
 			lastId: identities.at(-1)?.id,
@@ -78,6 +82,7 @@ export class FindIdentitiesQueryHandler
 		});
 		const encodedPrevCursor = this.cursorPaginationHelper.encodeCursor<FindIdentitiesCursor>({
 			usernameOrCredentialOrId: inUseIdentifier,
+			usernameOnly: usernameOnly,
 			hasRoles: inUseHasRoles,
 			hasPerms: inUseHasPerms,
 			lastId: identities.at(0)?.id,

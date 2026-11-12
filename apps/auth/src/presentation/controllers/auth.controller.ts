@@ -174,12 +174,28 @@ export class AuthController implements auth.AuthServiceController {
 
 	@SerializeOptions({ type: IdentitiesDto })
 	async findIdentities(@Payload() request: FindIdentitiesDto): Promise<IdentitiesDto> {
-		return await this.queryBus.execute(new FindIdentitiesQuery(request));
+		return await this.queryBus.execute(
+			new FindIdentitiesQuery({
+				usernameOrCredentialOrId: request.usernameOrCredIdentifierOrId,
+				usernameOnly: request.usernameOnly,
+				hasRoles: request.hasRoles,
+				hasPerms: request.hasPerms,
+				cursor: request.cursor,
+				limit: request.limit,
+			}),
+		);
 	}
 
 	@SerializeOptions({ type: IdentityIdsDto })
 	async findIdentityIds(@Payload() request: FindIdentityIdsDto): Promise<IdentityIdsDto> {
-		return await this.queryBus.execute(new FindIdentityIdsQuery(request));
+		return await this.queryBus.execute(
+			new FindIdentityIdsQuery({
+				usernameOrCredential: request.usernameOrCredIdentifier,
+				usernameOnly: request.usernameOnly,
+				cursor: request.cursor,
+				limit: request.limit,
+			}),
+		);
 	}
 
 	@SerializeOptions({ type: RolesDto })
