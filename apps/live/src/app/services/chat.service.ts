@@ -101,6 +101,7 @@ export class ChatService {
 	): Promise<{ chats: ChatLog[]; nextCursor: string; prevCursor: string }> {
 		type DecodedCursor = {
 			id?: string;
+			uid?: string;
 			direction: number;
 			limit: number;
 			dateRange?: { from: Date; to: Date };
@@ -112,11 +113,13 @@ export class ChatService {
 
 		const inUseId = decodedCursor?.id;
 		const inUseDateRange = decodedCursor?.dateRange ?? options?.dateRange;
+		const inUseUid = decodedCursor?.uid ?? options?.uid;
 		const inUseLimit = options?.limit ?? decodedCursor?.limit ?? 10;
 		const direction = decodedCursor?.direction ?? 1;
 
 		const chats = await this.chatLogReadRepository.getChatLogsOf(roomId, {
 			id: inUseId,
+			uid: inUseUid,
 			direction: direction,
 			limit: inUseLimit,
 			dateRange: inUseDateRange,
@@ -128,6 +131,7 @@ export class ChatService {
 			direction: 1,
 			limit: inUseLimit,
 			dateRange: inUseDateRange,
+			uid: inUseUid,
 		});
 		const encodedPrevCursor = this.cursorPaginationHelpers[
 			'getChatLogsOf'
@@ -136,6 +140,7 @@ export class ChatService {
 			direction: -1,
 			limit: inUseLimit,
 			dateRange: inUseDateRange,
+			uid: inUseUid,
 		});
 
 		return {

@@ -6,7 +6,12 @@ import {
 	type IAttemptRepository,
 	IAttemptRepositoryToken,
 } from '../../../domain/repositories/attempt.repository';
-import { AmqpConnectionManager, RabbitPayload, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
+import {
+	AmqpConnectionManager,
+	RabbitPayload,
+	RabbitRequest,
+	RabbitSubscribe,
+} from '@golevelup/nestjs-rabbitmq';
 import { Inject, Injectable, InternalServerErrorException, UseFilters } from '@nestjs/common';
 import { AppLoggerService } from '@server/logger';
 import { GlobalRmqExceptionFilter, RETRY_COUNT_HEADER, getRetryRoutingKey } from '@server/utils';
@@ -103,7 +108,11 @@ export class WritingScoredHandler {
 			deadLetterRoutingKey: 'writing.result.dlq',
 		},
 	})
-	async handle(@RabbitPayload() payload: WritingScoredEvent, amqpMsg?: ConsumeMessage) {
+	async handle(
+		@RabbitPayload() payload: WritingScoredEvent,
+		// Without the decorator this was always undefined, so the retry count never advanced.
+		@RabbitRequest() amqpMsg?: ConsumeMessage,
+	) {
 		const retryCount: number = (amqpMsg?.properties?.headers?.[RETRY_COUNT_HEADER] as number) ?? 0;
 
 		try {
