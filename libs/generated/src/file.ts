@@ -15,7 +15,11 @@ export interface GetPresignedUrlDto {
   fileName: string | undefined;
   fileSize: number | undefined;
   contentType: string | undefined;
-  isPublicFile: boolean | undefined;
+  isPublicFile:
+    | boolean
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  uploadedBy: string | undefined;
 }
 
 export interface PresignedUrlResponse {
@@ -43,8 +47,24 @@ export interface UrlsDto_UrlsEntry {
   value: string;
 }
 
+export interface CheckFilesOwnedByDto {
+  fileIds: string[];
+  userId: string | undefined;
+}
+
+export interface CheckFilesOwnedByResponse {
+  ok: boolean;
+  foreignIds: string[];
+}
+
 function createBaseGetPresignedUrlDto(): GetPresignedUrlDto {
-  return { fileName: undefined, fileSize: undefined, contentType: undefined, isPublicFile: undefined };
+  return {
+    fileName: undefined,
+    fileSize: undefined,
+    contentType: undefined,
+    isPublicFile: undefined,
+    uploadedBy: undefined,
+  };
 }
 
 export const GetPresignedUrlDto: MessageFns<GetPresignedUrlDto> = {
@@ -60,6 +80,9 @@ export const GetPresignedUrlDto: MessageFns<GetPresignedUrlDto> = {
     }
     if (message.isPublicFile !== undefined) {
       BoolValue.encode({ value: message.isPublicFile! }, writer.uint32(34).fork()).join();
+    }
+    if (message.uploadedBy !== undefined) {
+      StringValue.encode({ value: message.uploadedBy! }, writer.uint32(42).fork()).join();
     }
     return writer;
   },
@@ -107,6 +130,14 @@ export const GetPresignedUrlDto: MessageFns<GetPresignedUrlDto> = {
             }
 
             message.isPublicFile = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.uploadedBy = StringValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }
@@ -413,10 +444,128 @@ export const UrlsDto_UrlsEntry: MessageFns<UrlsDto_UrlsEntry> = {
   },
 };
 
+function createBaseCheckFilesOwnedByDto(): CheckFilesOwnedByDto {
+  return { fileIds: [], userId: undefined };
+}
+
+export const CheckFilesOwnedByDto: MessageFns<CheckFilesOwnedByDto> = {
+  encode(message: CheckFilesOwnedByDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.fileIds) {
+      StringValue.encode({ value: v!! }, writer.uint32(10).fork()).join();
+    }
+    if (message.userId !== undefined) {
+      StringValue.encode({ value: message.userId! }, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CheckFilesOwnedByDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseCheckFilesOwnedByDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.fileIds.push(StringValue.decode(reader, reader.uint32()).value);
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.userId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseCheckFilesOwnedByResponse(): CheckFilesOwnedByResponse {
+  return { ok: false, foreignIds: [] };
+}
+
+export const CheckFilesOwnedByResponse: MessageFns<CheckFilesOwnedByResponse> = {
+  encode(message: CheckFilesOwnedByResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.ok !== false) {
+      writer.uint32(8).bool(message.ok);
+    }
+    for (const v of message.foreignIds) {
+      writer.uint32(18).string(v!);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CheckFilesOwnedByResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseCheckFilesOwnedByResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 8) {
+              break;
+            }
+
+            message.ok = reader.bool();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.foreignIds.push(reader.string());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
 export interface FileServiceClient {
   getPresignedUrl(request: GetPresignedUrlDto, metadata?: Metadata): Observable<PresignedUrlResponse>;
 
   getUrls(request: GetUrlsDto, metadata?: Metadata): Observable<UrlsDto>;
+
+  /** Which of the given files were NOT uploaded by user_id (unknown and legacy/system files count as foreign). */
+
+  checkFilesOwnedBy(request: CheckFilesOwnedByDto, metadata?: Metadata): Observable<CheckFilesOwnedByResponse>;
 }
 
 export interface FileServiceController {
@@ -426,11 +575,18 @@ export interface FileServiceController {
   ): Promise<PresignedUrlResponse> | Observable<PresignedUrlResponse> | PresignedUrlResponse;
 
   getUrls(request: GetUrlsDto, metadata?: Metadata): Promise<UrlsDto> | Observable<UrlsDto> | UrlsDto;
+
+  /** Which of the given files were NOT uploaded by user_id (unknown and legacy/system files count as foreign). */
+
+  checkFilesOwnedBy(
+    request: CheckFilesOwnedByDto,
+    metadata?: Metadata,
+  ): Promise<CheckFilesOwnedByResponse> | Observable<CheckFilesOwnedByResponse> | CheckFilesOwnedByResponse;
 }
 
 export function FileServiceControllerMethods() {
   return function (constructor: Function) {
-    const grpcMethods: string[] = ["getPresignedUrl", "getUrls"];
+    const grpcMethods: string[] = ["getPresignedUrl", "getUrls", "checkFilesOwnedBy"];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
       GrpcMethod("FileService", method)(constructor.prototype[method], method, descriptor);
@@ -468,11 +624,24 @@ export const FileServiceService = {
     responseSerialize: (value: UrlsDto): Buffer => Buffer.from(UrlsDto.encode(value).finish()),
     responseDeserialize: (value: Buffer): UrlsDto => UrlsDto.decode(value),
   },
+  /** Which of the given files were NOT uploaded by user_id (unknown and legacy/system files count as foreign). */
+  checkFilesOwnedBy: {
+    path: "/file.FileService/CheckFilesOwnedBy" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: CheckFilesOwnedByDto): Buffer => Buffer.from(CheckFilesOwnedByDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): CheckFilesOwnedByDto => CheckFilesOwnedByDto.decode(value),
+    responseSerialize: (value: CheckFilesOwnedByResponse): Buffer =>
+      Buffer.from(CheckFilesOwnedByResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): CheckFilesOwnedByResponse => CheckFilesOwnedByResponse.decode(value),
+  },
 } as const;
 
 export interface FileServiceServer extends UntypedServiceImplementation {
   getPresignedUrl: handleUnaryCall<GetPresignedUrlDto, PresignedUrlResponse>;
   getUrls: handleUnaryCall<GetUrlsDto, UrlsDto>;
+  /** Which of the given files were NOT uploaded by user_id (unknown and legacy/system files count as foreign). */
+  checkFilesOwnedBy: handleUnaryCall<CheckFilesOwnedByDto, CheckFilesOwnedByResponse>;
 }
 
 interface MessageFns<T> {

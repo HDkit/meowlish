@@ -6,6 +6,9 @@ model File {
   refCount  Int      @default(0) @map("ref_count")
   updatedAt DateTime @default(now()) @updatedAt
   isPublic  Boolean
+  // Identity that requested the upload URL; null for legacy, seeded and system files.
+  uploadedBy String? @map("uploaded_by")
 
+  @@index([uploadedBy])
   @@map("files")
 }

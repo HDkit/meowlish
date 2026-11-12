@@ -113,13 +113,14 @@ export class FileService implements OnModuleInit {
 	async getPresignedUrl(
 		fileMetadata: FileMetadata,
 		isPublic: boolean,
+		uploadedBy: string,
 	): Promise<{
 		id: string;
 		uploadUrl: string;
 		formData: Record<string, string>;
 		fileName: string;
 	}> {
-		const id = await this.fileRepository.create(fileMetadata, isPublic);
+		const id = await this.fileRepository.create(fileMetadata, isPublic, uploadedBy);
 
 		if (fileMetadata.fileSize > this.MAX_FILE_SIZE) {
 			throw new Error(`File is too large. Maximum allowed size is 10MB.`);
@@ -191,5 +192,20 @@ export class FileService implements OnModuleInit {
 			}),
 		);
 		return idMap;
+	}
+
+	/**
+	 * Files not uploaded by `userId` are foreign: someone else's uploads, legacy/seeded/system
+	 * files with no recorded uploader, and unknown ids. Callers refuse to attach foreign files.
+	 */
+	async checkFilesOwnedBy(
+		fileIds: string[],
+		userId: string,
+	): Promise<{ ok: boolean; foreignIds: string[] }> {
+		const ids = [...new Set(fileIds)];
+		if (ids.length === 0) return { ok: true, foreignIds: [] };
+		const owned = new Set(await this.fileRepository.findIdsUploadedBy(ids, userId));
+		const foreignIds = ids.filter(id => !owned.has(id));
+		return { ok: foreignIds.length === 0, foreignIds: foreignIds };
 	}
 }

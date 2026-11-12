@@ -1,5 +1,5 @@
 import { file } from '@server/generated';
-import { IsBoolean, IsMimeType, IsNumber, IsString } from 'class-validator';
+import { IsBoolean, IsMimeType, IsNotEmpty, IsNumber, IsString } from 'class-validator';
 
 export class GetPresignedUrlDto implements file.GetPresignedUrlDto {
 	@IsBoolean()
@@ -13,4 +13,8 @@ export class GetPresignedUrlDto implements file.GetPresignedUrlDto {
 
 	@IsMimeType()
 	contentType!: string;
+
+	@IsNotEmpty()
+	@IsString()
+	uploadedBy!: string;
 }
