@@ -5,7 +5,11 @@ import { CookieIssuanceGuard } from '../auth/guards/cookie-issuance.guard';
 import { GoogleOAuth2Guard } from '../auth/guards/google-oauth2.guard';
 import { JwtRefreshAuthGuard } from '../auth/guards/jwt-refresh-auth.guard';
 import { IEnvVars } from '../configs/config';
-import { strictThrottle } from '../throttle';
+import {
+	strictThrottleByMail,
+	strictThrottleByRefreshToken,
+	strictThrottleBySession,
+} from '../throttle';
 import { type AuthenticatedRequest } from '../types/authenticated-request';
 import { clearAuthCookies, setAuthCookies } from './auth-cookies';
 import { AUTH_CLIENT } from './constants/auth';
@@ -105,7 +109,7 @@ export class AuthGatewayController implements OnModuleInit {
 		summary: 'Register with email and password',
 		description: SETS_COOKIES,
 	})
-	@Throttle(strictThrottle)
+	@Throttle(strictThrottleByMail)
 	registerMail(
 		@Body() body: RegisterMailDto,
 		@Req() req: Request,
@@ -119,7 +123,7 @@ export class AuthGatewayController implements OnModuleInit {
 	@IsPublic()
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Log in with email and password', description: SETS_COOKIES })
-	@Throttle(strictThrottle)
+	@Throttle(strictThrottleByMail)
 	loginMail(
 		@Body() body: LoginMailDto,
 		@Req() req: Request,
@@ -136,7 +140,7 @@ export class AuthGatewayController implements OnModuleInit {
 		summary: 'Refresh access tokens using a refresh token',
 		description: `Reads the refresh token from the \`refresh_token\` cookie, else \`Authorization: Bearer\`. ${SETS_COOKIES}`,
 	})
-	@Throttle(strictThrottle)
+	@Throttle(strictThrottleByRefreshToken)
 	refresh(@Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
 		return this.issueCookies(req, res, this.authService.refresh({ identityId: req.user.sub }));
 	}
@@ -234,7 +238,7 @@ export class AuthGatewayController implements OnModuleInit {
 	@Post('credentials/mail')
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Add mail credential to existing account' })
-	@Throttle(strictThrottle)
+	@Throttle(strictThrottleBySession)
 	addMailCredential(@Body() body: AddMailCredDto, @Req() request: AuthenticatedRequest) {
 		return this.authService.addMailCredential({ ...body, identityId: request.user.sub });
 	}
@@ -331,7 +335,7 @@ export class AuthGatewayController implements OnModuleInit {
 	@Post('credentials/mail/password')
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Change password' })
-	@Throttle(strictThrottle)
+	@Throttle(strictThrottleBySession)
 	updateMailPassword(@Body() body: UpdateMailPasswordDto, @Req() request: AuthenticatedRequest) {
 		return this.authService.updateMailPassword({ ...body, identityId: request.user.sub });
 	}
