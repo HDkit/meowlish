@@ -21,13 +21,20 @@ export function deadLetterQueue(queue: string) {
 	};
 }
 
+type Counter = ReturnType<ReturnType<typeof getMeter>['createCounter']>;
+
+let failureCounter: Counter | undefined;
+
+function consumerFailureCounter(): Counter {
+	failureCounter ??= getMeter().createCounter('consumer_failures_total', {
+		description: 'Messages whose consumer handler threw and were dead-lettered',
+	});
+	return failureCounter;
+}
+
 function consumerFailureHandler(queue: string): MessageErrorHandler {
 	return (channel, msg) => {
-		getMeter()
-			.createCounter('consumer_failures_total', {
-				description: 'Messages whose consumer handler threw and were dead-lettered',
-			})
-			.add(1, { consumer: queue });
+		consumerFailureCounter().add(1, { consumer: queue });
 		channel.nack(msg, false, false);
 	};
 }

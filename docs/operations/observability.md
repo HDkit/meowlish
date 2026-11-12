@@ -129,6 +129,17 @@ To replay it after fixing the cause: on the same page open "Move messages", ente
 
 ## One-time upgrade: recreate consumer queues
 
+Do these steps in order.
+
+1. Apply the schema first: `pnpm db:setup` (or, per service, `prisma migrate deploy` / `prisma db push`) so the `outbox_events` and `inbox_events` tables exist. Without them, logins fail (the outbox insert throws) and consumed messages dead-letter (the inbox table is missing).
+2. Delete the queues listed below (see "Delete the queues").
+3. Start the consumer services first: achievement, notification, file-service and authorization. This creates their queues and bindings.
+4. Then start the publishers: auth, exam, live and resource. The relay publishes without `mandatory`, so an event published to an exchange with no bound queue is confirmed and silently dropped. Example: `exam.exam.created` published before authorization is up leaves the creator locked out.
+
+This ordering (consumers before publishers) also applies to any fresh broker.
+
+### Delete the queues
+
 Consumer queues now carry the arguments `x-dead-letter-exchange=eventbus.dlx` and `x-dead-letter-routing-key=<queue>`. RabbitMQ refuses to redeclare an existing queue with different arguments (`PRECONDITION_FAILED`), so the queues that existed before this change must be deleted once. The services recreate them with the new arguments on startup. These were all empty when checked:
 
 - `achievement.events.user.login`

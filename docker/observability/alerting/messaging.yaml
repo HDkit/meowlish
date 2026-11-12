@@ -8,7 +8,7 @@ groups:
       - uid: meowlish-outbox-stuck
         title: OutboxStuck
         condition: C
-        for: 1m
+        for: 0s
         noDataState: OK
         execErrState: Error
         data:

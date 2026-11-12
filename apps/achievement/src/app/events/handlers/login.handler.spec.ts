@@ -11,6 +11,16 @@ import { AppLoggerService } from '@server/logger';
 import { InboxService, createEnvelope } from '@server/messaging';
 import { ClsModule } from 'nestjs-cls';
 
+class PrismaClientKnownRequestError extends Error {
+	constructor(
+		message: string,
+		readonly code: string,
+	) {
+		super(message);
+		this.name = 'PrismaClientKnownRequestError';
+	}
+}
+
 // Exercises the real @UseCls/@Transactional decorators: golevelup calls handlers outside any
 // CLS context, so this calls `handle` directly, like the RabbitMQ module does.
 describe('LoginHandler', () => {
@@ -112,5 +122,45 @@ describe('LoginHandler', () => {
 	it('propagates repository errors instead of swallowing them', async () => {
 		repo.saveLoginBadgeManager.mockRejectedValueOnce(new Error('P2025'));
 		await expect(handler.handle(envelope)).rejects.toThrow('P2025');
+	});
+
+	const conflict = () => new PrismaClientKnownRequestError('stale version', 'P2025');
+
+	// The NoOp adapter can't roll back, so a failing save also discards the claim, as the DB would.
+	const failWithConflict = () => () => {
+		claimed.clear();
+		return Promise.reject(conflict());
+	};
+
+	it('retries in a fresh transaction after a version conflict, then succeeds', async () => {
+		repo.saveLoginBadgeManager.mockImplementationOnce(failWithConflict());
+		await expect(handler.handle(envelope)).resolves.toBeUndefined();
+
+		// The failed attempt rolled back its inbox claim, so the retry claims again and reruns the work.
+		expect(inbox.claim).toHaveBeenCalledTimes(2);
+		expect(repo.getLoginBadgeManager).toHaveBeenCalledTimes(2);
+		expect(repo.saveLoginBadgeManager).toHaveBeenCalledTimes(2);
+	});
+
+	it('throws after 3 consecutive version conflicts', async () => {
+		repo.saveLoginBadgeManager.mockImplementation(failWithConflict());
+		await expect(handler.handle(envelope)).rejects.toBeInstanceOf(PrismaClientKnownRequestError);
+		expect(repo.saveLoginBadgeManager).toHaveBeenCalledTimes(3);
+		repo.saveLoginBadgeManager.mockResolvedValue(undefined);
+	});
+
+	it('does not retry other Prisma errors', async () => {
+		repo.saveLoginBadgeManager.mockRejectedValueOnce(
+			new PrismaClientKnownRequestError('unique', 'P2002'),
+		);
+		await expect(handler.handle(envelope)).rejects.toBeInstanceOf(PrismaClientKnownRequestError);
+		expect(repo.saveLoginBadgeManager).toHaveBeenCalledTimes(1);
+	});
+
+	it('still processes a duplicate envelope once after a conflict retry', async () => {
+		repo.saveLoginBadgeManager.mockImplementationOnce(failWithConflict());
+		await handler.handle(envelope);
+		await handler.handle(envelope);
+		expect(repo.saveLoginBadgeManager).toHaveBeenCalledTimes(2); // 1 failed + 1 succeeded, not 3
 	});
 });

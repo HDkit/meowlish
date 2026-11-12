@@ -30,7 +30,7 @@ describe('dead-letter helpers', () => {
 		metrics.disable();
 		metrics.setGlobalMeterProvider(new MeterProvider({ readers: [reader] }));
 		const nack = jest.fn();
-		const channel = { nack } as unknown as Channel;
+		const channel = { nack: nack } as unknown as Channel;
 		const msg = {} as ConsumeMessage;
 
 		const { errorHandler } = deadLetterQueue('file.events.file.added');
