@@ -30,7 +30,7 @@ Client ──access token (access_token cookie, else Bearer)──► Gateway
                               404 (not visible) / 403 (visible, not allowed) / result
 ```
 
-Browsers send the token as the HttpOnly `access_token` cookie; API clients may still use `Authorization: Bearer`. Step 3 must forward the token the strategy extracted (cookie or header), not just the incoming `Authorization` header, or cookie sessions arrive at services without a token.
+Browsers send the token as the HttpOnly `access_token` cookie (`SameSite=Lax`); API clients may still use `Authorization: Bearer`. **Deployment constraint: the frontend and the API must be same-site** (different origin or port on the same registrable domain is fine), because a cross-site frontend can't store Lax cookies from fetch. Google account linking therefore works across origins on the same site when the frontend opens `/auth/credentials/google` with a top-level navigation. Cookie-issuing routes refuse cross-site requests (`CookieIssuanceGuard`) to stop login CSRF. Step 3 must forward the token the strategy extracted (cookie or header), not just the incoming `Authorization` header, or cookie sessions arrive at services without a token.
 
 Why the service verifies the token again instead of trusting the gateway:
 

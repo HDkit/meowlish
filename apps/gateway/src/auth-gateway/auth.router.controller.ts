@@ -1,6 +1,7 @@
 import { HasPermissions } from '../auth/decorators/permissions.decorator';
 import { IsPublic } from '../auth/decorators/public.decorator';
 import { HasRoles } from '../auth/decorators/roles.decorator';
+import { CookieIssuanceGuard } from '../auth/guards/cookie-issuance.guard';
 import { GoogleOAuth2Guard } from '../auth/guards/google-oauth2.guard';
 import { JwtRefreshAuthGuard } from '../auth/guards/jwt-refresh-auth.guard';
 import { IEnvVars } from '../configs/config';
@@ -97,6 +98,7 @@ export class AuthGatewayController implements OnModuleInit {
 	}
 
 	@Post('register')
+	@UseGuards(CookieIssuanceGuard)
 	@IsPublic()
 	@ApiEmptyResponseEntity()
 	@ApiOperation({
@@ -113,6 +115,7 @@ export class AuthGatewayController implements OnModuleInit {
 	}
 
 	@Post('login')
+	@UseGuards(CookieIssuanceGuard)
 	@IsPublic()
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Log in with email and password', description: SETS_COOKIES })
@@ -126,7 +129,7 @@ export class AuthGatewayController implements OnModuleInit {
 	}
 
 	@Post('refresh')
-	@UseGuards(JwtRefreshAuthGuard)
+	@UseGuards(CookieIssuanceGuard, JwtRefreshAuthGuard)
 	@IsPublic()
 	@ApiEmptyResponseEntity()
 	@ApiOperation({
@@ -139,6 +142,7 @@ export class AuthGatewayController implements OnModuleInit {
 	}
 
 	@Post('logout')
+	@UseGuards(CookieIssuanceGuard)
 	@IsPublic()
 	@ApiEmptyResponseEntity()
 	@ApiOperation({
@@ -190,6 +194,7 @@ export class AuthGatewayController implements OnModuleInit {
 	}
 
 	@Get('google/tokens')
+	@UseGuards(CookieIssuanceGuard)
 	@IsPublic()
 	@ApiEmptyResponseEntity()
 	@ApiOperation({

@@ -1,7 +1,7 @@
 import { RedisIoAdapter } from './redis-io.adapter';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { type Server as Server2 } from 'node:http';
+import { type Server as Server2, request } from 'node:http';
 import { type AddressInfo } from 'node:net';
 import { Server } from 'socket.io';
 
@@ -39,5 +39,46 @@ describe('RedisIoAdapter CORS', () => {
 	it('gives no allow header to other origins', async () => {
 		const res = await poll('https://evil.example');
 		expect(res.headers.get('access-control-allow-origin')).toBeNull();
+	});
+
+	it('refuses a polling handshake from a foreign origin', async () => {
+		expect((await poll('https://evil.example')).status).toBe(403);
+	});
+
+	it('allows a handshake without an Origin (non-browser client)', async () => {
+		const res = await fetch(`${base}/socket.io/?EIO=4&transport=polling`);
+		expect(res.status).toBe(200);
+	});
+
+	/** Raw WebSocket upgrade: resolves 101 on success, else the HTTP status of the refusal. */
+	const upgrade = (origin: string) =>
+		new Promise<number>((resolve, reject) => {
+			const req = request(`${base}/socket.io/?EIO=4&transport=websocket`, {
+				headers: {
+					Connection: 'Upgrade',
+					Upgrade: 'websocket',
+					'Sec-WebSocket-Version': '13',
+					'Sec-WebSocket-Key': 'dGhlIHNhbXBsZSBub25jZQ==',
+					Origin: origin,
+				},
+			});
+			req.on('upgrade', (_res, socket) => {
+				socket.destroy();
+				resolve(101);
+			});
+			req.on('response', res => {
+				res.resume();
+				resolve(res.statusCode ?? 0);
+			});
+			req.on('error', reject);
+			req.end();
+		});
+
+	it('refuses a websocket upgrade from a foreign origin', async () => {
+		expect(await upgrade('https://evil.example')).not.toBe(101);
+	});
+
+	it('accepts a websocket upgrade from a listed origin', async () => {
+		expect(await upgrade('https://app.example.com')).toBe(101);
 	});
 });

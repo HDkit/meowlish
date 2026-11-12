@@ -54,7 +54,11 @@ describe('auth cookies', () => {
 		logOutAll: jest.fn(() => of({})),
 	};
 	const redis = { get: jest.fn(), del: jest.fn() };
-	const config: Record<string, unknown> = { jwt: { publicKey: publicKey }, env: 'development' };
+	const config: Record<string, unknown> = {
+		jwt: { publicKey: publicKey },
+		env: 'development',
+		corsOrigins: ['https://app.example.com'],
+	};
 
 	beforeAll(async () => {
 		const moduleRef = await Test.createTestingModule({
@@ -163,6 +167,53 @@ describe('auth cookies', () => {
 		const res = await fetch(`${base}/google/tokens?loginToken=link`);
 		expect(res.status).toBe(200);
 		expect(res.headers.getSetCookie()).toEqual([]);
+	});
+
+	describe('cookie-issuing routes refuse cross-site requests (login CSRF)', () => {
+		const login = (headers: Record<string, string>) =>
+			fetch(`${base}/login`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', ...headers },
+				body: '{}',
+			});
+
+		it('rejects Sec-Fetch-Site: cross-site with 403 and sets no cookie', async () => {
+			const res = await login({ 'Sec-Fetch-Site': 'cross-site' });
+			expect(res.status).toBe(403);
+			expect(res.headers.getSetCookie()).toEqual([]);
+		});
+
+		it('rejects a foreign Origin with 403', async () => {
+			expect((await login({ Origin: 'https://evil.example' })).status).toBe(403);
+		});
+
+		it('accepts an allowed Origin', async () => {
+			const res = await login({ Origin: 'https://app.example.com', 'Sec-Fetch-Site': 'same-site' });
+			expect(res.status).toBe(201);
+			expect(setCookies(res)['access_token']).toBeDefined();
+		});
+
+		it("accepts the gateway's own origin (Swagger UI)", async () => {
+			expect((await login({ Origin: base, 'Sec-Fetch-Site': 'same-origin' })).status).toBe(201);
+		});
+
+		it('accepts a request with neither header (curl, mobile)', async () => {
+			expect((await login({})).status).toBe(201);
+		});
+
+		it.each([
+			['GET', '/google/tokens?loginToken=x'],
+			['POST', '/register'],
+			['POST', '/refresh'],
+			['POST', '/logout'],
+		])('also guards %s %s', async (method, path) => {
+			const res = await fetch(`${base}${path}`, {
+				method: method,
+				headers: { 'Sec-Fetch-Site': 'cross-site', Cookie: `refresh_token=${refreshToken}` },
+			});
+			expect(res.status).toBe(403);
+			expect(res.headers.getSetCookie()).toEqual([]);
+		});
 	});
 
 	it('logout clears cookies', async () => {

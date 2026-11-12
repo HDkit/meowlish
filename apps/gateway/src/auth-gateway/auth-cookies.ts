@@ -19,7 +19,7 @@ const baseOptions = (req: Request, env: string): CookieOptions => ({
 	secure: req.secure || req.headers['x-forwarded-proto'] === 'https' || env === 'production',
 });
 
-/** Seconds until the token's own `exp`, so cookie lifetimes always follow the auth service's TTLs. */
+/** Milliseconds until the token's own `exp`, so cookie lifetimes always follow the auth service's TTLs. */
 const maxAgeMs = (token: string): number | undefined => {
 	const exp = (jwt.decode(token) as { exp?: unknown } | null)?.exp;
 	if (typeof exp !== 'number') return undefined; // no exp -> session cookie
