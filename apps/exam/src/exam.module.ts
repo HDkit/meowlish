@@ -6,6 +6,7 @@ import { ExamEventHandlers, IntegrationEventHandlers } from './app/events/handle
 import { IntegrationEventPublishers } from './app/events/publishers';
 import { ExamManagementQueryHandlers } from './app/queries/handlers/management';
 import { ExamPracticeQueryHandler } from './app/queries/handlers/practice';
+import { FileOwnershipService } from './app/services/file-ownership.service';
 import { GoalService } from './app/services/goal.service';
 import { TagService } from './app/services/tag.service';
 import { bullConfig } from './configs/bullmq.config';
@@ -123,6 +124,7 @@ const rmqPubModule = RabbitMQModule.forRootAsync({
 		...IntegrationEventHandlers,
 		TagService,
 		GoalService,
+		FileOwnershipService,
 		{
 			provide: FILE_CLIENT,
 			useFactory: () =>

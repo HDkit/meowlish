@@ -4,8 +4,14 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 const setup = (creator: string | null = 'mod-a') => {
 	const commandBus = { execute: jest.fn().mockResolvedValue(undefined) };
 	const repo = { getExamCreator: jest.fn().mockResolvedValue(creator) };
-	const controller = new ExamManagementController(commandBus as never, {} as never, repo as never);
-	return { commandBus: commandBus, repo: repo, controller: controller };
+	const files = { assertOwnedBy: jest.fn().mockResolvedValue(undefined) };
+	const controller = new ExamManagementController(
+		commandBus as never,
+		{} as never,
+		repo as never,
+		files as never,
+	);
+	return { commandBus: commandBus, repo: repo, files: files, controller: controller };
 };
 
 const creator = { requesterId: 'mod-a', privileged: false };
@@ -61,5 +67,34 @@ describe('ExamManagementController ownership', () => {
 			controller.moveSection({ id: 's1', parentId: 's9', ...otherMod }),
 		).rejects.toBeInstanceOf(ForbiddenException);
 		expect(commandBus.execute).not.toHaveBeenCalled();
+	});
+});
+
+describe('ExamManagementController file attachment', () => {
+	it.each(['updateSection', 'updateQuestion'] as const)(
+		'exam addFiles rejects foreign files (%s, 403)',
+		async method => {
+			const { controller, commandBus, files } = setup();
+			files.assertOwnedBy.mockRejectedValue(new ForbiddenException('foreign'));
+			await expect(
+				controller[method]({ id: 'x1', addFiles: ['theirs'], ...creator } as never),
+			).rejects.toBeInstanceOf(ForbiddenException);
+			expect(files.assertOwnedBy).toHaveBeenCalledWith(['theirs'], 'mod-a');
+			expect(commandBus.execute).not.toHaveBeenCalled();
+		},
+	);
+
+	it('checks added files against the requester and then applies the update', async () => {
+		const { controller, commandBus, files } = setup();
+		await controller.updateSection({ id: 's1', addFiles: ['mine'], ...creator } as never);
+		expect(files.assertOwnedBy).toHaveBeenCalledWith(['mine'], 'mod-a');
+		expect(commandBus.execute).toHaveBeenCalledTimes(1);
+	});
+
+	it('lets an admin attach any file', async () => {
+		const { controller, commandBus, files } = setup();
+		await controller.updateQuestion({ id: 'q1', addFiles: ['theirs'], ...admin } as never);
+		expect(files.assertOwnedBy).not.toHaveBeenCalled();
+		expect(commandBus.execute).toHaveBeenCalledTimes(1);
 	});
 });

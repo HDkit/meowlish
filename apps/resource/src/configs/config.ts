@@ -16,10 +16,19 @@ const mqSchema = z.object({
 	port: z.coerce.number(),
 });
 
+const servicesSchema = z.object({
+	file: z.object({
+		url: z.string().optional(),
+		port: z.coerce.number(),
+		host: z.string(),
+	}),
+});
+
 export const envFileSchema = z.object({
 	env: z.union([z.literal('development'), z.literal('production')]),
 	database: dbVarsSchema,
 	messageQueue: mqSchema,
+	microservicesConnection: servicesSchema,
 });
 
 export type IEnvVars = z.infer<typeof envFileSchema>;
@@ -39,6 +48,13 @@ const loadEnv = (): DeepStringify<IEnvVars> => ({
 		port: process.env.RMQ_PORT,
 		user: process.env.RMQ_USER,
 		password: process.env.RMQ_PASS,
+	},
+	microservicesConnection: {
+		file: {
+			url: process.env.FILE_SERVICE_URL || undefined,
+			port: process.env.FILE_SERVICE_PORT,
+			host: process.env.FILE_SERVICE_HOST,
+		},
 	},
 });
 

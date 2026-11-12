@@ -1,15 +1,18 @@
 import { ResourceEventsPublisher } from './app/events/resource-events.publisher';
 import { BlogService } from './app/services/blog.service';
+import { FileOwnershipService } from './app/services/file-ownership.service';
 import { FlashcardListService } from './app/services/flashcard-list.service';
 import { FlashcardService } from './app/services/flashcard.service';
 import { ReportService } from './app/services/report.service';
-import { config } from './configs/config';
+import { IEnvVars, config } from './configs/config';
 import { rmqPubConfig } from './configs/rmq.pub.config';
+import { FILE_CLIENT } from './constants/file';
 import { BlogController } from './presentation/controllers/blog.controller';
 import { FlashcardListController } from './presentation/controllers/flashcard-list.controller';
 import { FlashcardController } from './presentation/controllers/flashcard.controller';
 import { ReportController } from './presentation/controllers/report.controller';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
+import { PackageDefinition } from '@grpc/grpc-js/build/src/make-client';
 import { ClsPluginTransactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { Module } from '@nestjs/common';
@@ -18,10 +21,15 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { CqrsModule } from '@nestjs/cqrs';
 import { PrismaClient } from '@prisma-client/resource';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
+import { file } from '@server/generated';
 import { LoggerModule } from '@server/logger';
 import { MessagingModule } from '@server/messaging';
 import { HealthModule } from '@server/telemetry';
-import { GlobalClassSerializerInterceptor, GlobalRpcExceptionFilter } from '@server/utils';
+import {
+	ErrorHandlingGrpcProxy,
+	GlobalClassSerializerInterceptor,
+	GlobalRpcExceptionFilter,
+} from '@server/utils';
 import { gRPC2HttpExceptionFilter } from '@server/utils';
 import { GlobalValidationPipe } from '@server/utils';
 import { ClsGuard, ClsModule } from 'nestjs-cls';
@@ -78,6 +86,21 @@ const rmqPubModule = RabbitMQModule.forRootAsync({
 		FlashcardListService,
 		ReportService,
 		ResourceEventsPublisher,
+		FileOwnershipService,
+		{
+			provide: FILE_CLIENT,
+			inject: [ConfigService],
+			useFactory: (configService: ConfigService<IEnvVars>) => {
+				const fileConn = configService.getOrThrow('microservicesConnection.file', { infer: true });
+				return new ErrorHandlingGrpcProxy({
+					url: fileConn.url ?? `${fileConn.host}:${fileConn.port}`,
+					package: 'file',
+					packageDefinition: {
+						[`file.${file.FILE_SERVICE_NAME}`]: file.FileServiceService,
+					} satisfies PackageDefinition,
+				});
+			},
+		},
 		{
 			provide: APP_GUARD,
 			useClass: ClsGuard,

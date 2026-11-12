@@ -1,7 +1,7 @@
 import { type ResourceEventsPublisher } from '../events/resource-events.publisher';
 import { ReportService } from './report.service';
 import { NoOpTransactionalAdapter, TransactionHost } from '@nestjs-cls/transactional';
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 
 const report = (overrides: Record<string, unknown> = {}) => ({
 	id: 'r1',
@@ -38,17 +38,20 @@ const setup = () => {
 			findUnique: jest.fn(),
 			findMany: jest.fn().mockResolvedValue([]),
 			count: jest.fn().mockResolvedValue(0),
+			create: jest.fn().mockResolvedValue(report()),
 			update: jest.fn(),
 			deleteMany: jest.fn(),
 		},
 		reportFile: { upsert: jest.fn(), deleteMany: jest.fn() },
 	};
 	const events = { reportStatusChanged: jest.fn() };
+	const files = { assertOwnedBy: jest.fn().mockResolvedValue(undefined) };
 	const service = new ReportService(
 		{ tx: tx } as never,
 		events as unknown as ResourceEventsPublisher,
+		files as never,
 	);
-	return { tx: tx, events: events, service: service };
+	return { tx: tx, events: events, files: files, service: service };
 };
 
 describe('ReportService access rules', () => {
@@ -121,5 +124,49 @@ describe('ReportService access rules', () => {
 		await expect(
 			service.removeFileFromReport('r1', 'f1', { id: 'owner', privileged: false }),
 		).rejects.toBeInstanceOf(NotFoundException);
+	});
+});
+
+describe('ReportService file ownership', () => {
+	const newReport = { reportedBy: 'owner', type: 'bug', title: 't', description: 'd' };
+
+	it('report files reject foreign files on create (403)', async () => {
+		const { tx, files, service } = setup();
+		files.assertOwnedBy.mockRejectedValue(new ForbiddenException('foreign'));
+		await expect(
+			service.createReport({ ...newReport, fileIds: ['theirs'] }),
+		).rejects.toBeInstanceOf(ForbiddenException);
+		expect(files.assertOwnedBy).toHaveBeenCalledWith(['theirs'], 'owner');
+		expect(tx.report.create).not.toHaveBeenCalled();
+	});
+
+	it('creates a report with the reporter own files', async () => {
+		const { tx, files, service } = setup();
+		await service.createReport({ ...newReport, fileIds: ['mine', 'mine'] });
+		expect(files.assertOwnedBy).toHaveBeenCalledWith(['mine'], 'owner');
+		expect(tx.report.create).toHaveBeenCalledTimes(1);
+	});
+
+	it('report files reject attaching a foreign file (403)', async () => {
+		const { tx, files, service } = setup();
+		tx.report.findUnique.mockResolvedValue(report());
+		files.assertOwnedBy.mockRejectedValue(new ForbiddenException('foreign'));
+		await expect(
+			service.addFileToReport('r1', 'theirs', { id: 'owner', privileged: false }),
+		).rejects.toBeInstanceOf(ForbiddenException);
+		expect(files.assertOwnedBy).toHaveBeenCalledWith(['theirs'], 'owner');
+		expect(tx.reportFile.upsert).not.toHaveBeenCalled();
+	});
+
+	it('still checks ownership for privileged staff unless they may attach any file', async () => {
+		const { tx, files, service } = setup();
+		tx.report.findUnique.mockResolvedValue(report());
+		await service.addFileToReport('r1', 'theirs', { id: 'mod', privileged: true });
+		expect(files.assertOwnedBy).toHaveBeenCalledWith(['theirs'], 'mod');
+
+		files.assertOwnedBy.mockClear();
+		await service.addFileToReport('r1', 'theirs', { id: 'admin', privileged: true }, true);
+		expect(files.assertOwnedBy).not.toHaveBeenCalled();
+		expect(tx.reportFile.upsert).toHaveBeenCalledTimes(2);
 	});
 });

@@ -44,7 +44,12 @@ export class ReportController implements resource.ReportServiceController {
 	}
 
 	async addFileToReport(@Payload() data: AddFileToReportReqDto): Promise<void> {
-		await this.reportService.addFileToReport(data.reportId, data.fileId, toRequester(data));
+		await this.reportService.addFileToReport(
+			data.reportId,
+			data.fileId,
+			toRequester(data),
+			data.mayAttachAnyFile ?? false,
+		);
 	}
 
 	async removeFileFromReport(@Payload() data: RemoveFileFromReportReqDto): Promise<void> {

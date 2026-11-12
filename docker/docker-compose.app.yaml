@@ -149,6 +149,8 @@ services:
       - HOST=0.0.0.0
       - HEALTH_PORT=9104
       - PORT=50050
+      - FILE_SERVICE_HOST=file-service
+      - FILE_SERVICE_PORT=50050
     env_file: .env.services
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9104/health/ready"]

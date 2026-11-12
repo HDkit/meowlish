@@ -1,6 +1,6 @@
 import { ResourceAccess } from '../auth/decorators/resource-access.decorator';
 import { HasRoles } from '../auth/decorators/roles.decorator';
-import { requesterOf } from '../auth/functions/requester';
+import { hasAnyRole, requesterOf } from '../auth/functions/requester';
 import { type AuthenticatedRequest } from '../types/authenticated-request';
 import { RESOURCE_CLIENT } from './constants/resource';
 import { AddCardToListDto } from './dtos/req/add-card-to-list.req.dto';
@@ -394,6 +394,8 @@ export class ResourceGatewayController implements OnModuleInit {
 			...body,
 			reportId: id,
 			...requesterOf(req.user, REPORT_STAFF_ROLES),
+			// Only admins may attach a file someone else uploaded.
+			mayAttachAnyFile: hasAnyRole(req.user, [Role.Admin]),
 		});
 	}
 

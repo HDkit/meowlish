@@ -333,6 +333,8 @@ message AddFileToReportRequest {
 	google.protobuf.StringValue          requester_id   = 3;
 	// Requester may bypass ownership/visibility (role decided by the gateway).
 	optional google.protobuf.BoolValue   privileged     = 4;
+	// Requester may attach files uploaded by someone else (admins only; decided by the gateway).
+	optional google.protobuf.BoolValue   may_attach_any_file = 5;
 }
 
 message RemoveFileFromReportRequest {

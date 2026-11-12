@@ -346,7 +346,11 @@ export interface AddFileToReportRequest {
     | string
     | undefined;
   /** Requester may bypass ownership/visibility (role decided by the gateway). */
-  privileged?: boolean | undefined;
+  privileged?:
+    | boolean
+    | undefined;
+  /** Requester may attach files uploaded by someone else (admins only; decided by the gateway). */
+  mayAttachAnyFile?: boolean | undefined;
 }
 
 export interface RemoveFileFromReportRequest {
@@ -3325,6 +3329,9 @@ export const AddFileToReportRequest: MessageFns<AddFileToReportRequest> = {
     if (message.privileged !== undefined) {
       BoolValue.encode({ value: message.privileged! }, writer.uint32(34).fork()).join();
     }
+    if (message.mayAttachAnyFile !== undefined) {
+      BoolValue.encode({ value: message.mayAttachAnyFile! }, writer.uint32(42).fork()).join();
+    }
     return writer;
   },
 
@@ -3371,6 +3378,14 @@ export const AddFileToReportRequest: MessageFns<AddFileToReportRequest> = {
             }
 
             message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.mayAttachAnyFile = BoolValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }

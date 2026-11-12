@@ -51,6 +51,7 @@ import { GetExamCountsQuery } from '../../app/queries/management/exam.get-counts
 import { GetExamManagementDetailsQuery } from '../../app/queries/management/exam.get-exam-details.query';
 import { GetQuestionManagementDetailsQuery } from '../../app/queries/management/exam.get-question-details.query';
 import { GetSectionManagementDetailsQuery } from '../../app/queries/management/exam.get-section-details.query';
+import { FileOwnershipService } from '../../app/services/file-ownership.service';
 import {
 	ExamTarget,
 	IManagementReadRepository,
@@ -102,7 +103,17 @@ export class ExamManagementController implements exam.ExamManagementServiceContr
 		private readonly queryBus: QueryBus,
 		@Inject(IManagementReadRepositoryToken)
 		private readonly managementReadRepository: IManagementReadRepository,
+		private readonly fileOwnership: FileOwnershipService,
 	) {}
+
+	/** 403 when a non-privileged requester attaches a file they did not upload. */
+	private async assertCanAttach(
+		fileIds: string[] | undefined,
+		who: { requesterId: string; privileged: boolean },
+	): Promise<void> {
+		if (who.privileged) return;
+		await this.fileOwnership.assertOwnedBy(fileIds ?? [], who.requesterId);
+	}
 
 	/** 404 when the target (or its exam) is missing; 403 unless the requester created the exam or is privileged. */
 	private async assertCanModify(
@@ -148,6 +159,7 @@ export class ExamManagementController implements exam.ExamManagementServiceContr
 
 	async updateSection(@Payload() request: UpdateSectionDto): Promise<void> {
 		await this.assertCanModify({ sectionId: request.id }, request);
+		await this.assertCanAttach(request.addFiles, request);
 		await this.commandBus.execute(
 			new UpdateSectionCommand(new UpdateSectionCommandPayload(request)),
 		);
@@ -155,6 +167,7 @@ export class ExamManagementController implements exam.ExamManagementServiceContr
 
 	async updateQuestion(@Payload() request: UpdateQuestionDto): Promise<void> {
 		await this.assertCanModify({ questionId: request.id }, request);
+		await this.assertCanAttach(request.addFiles, request);
 		await this.commandBus.execute(
 			new UpdateQuestionCommand(new UpdateQuestionCommandPayload(request)),
 		);

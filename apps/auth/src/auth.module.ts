@@ -1,6 +1,7 @@
 import { AuthCommandHandlers } from './app/commands/handlers';
 import { IntegrationEventPublishers } from './app/events/publisher';
 import { AuthQueryHandlers } from './app/queries/handlers';
+import { FileOwnershipService } from './app/services/file-ownership.service';
 import { TokenService } from './app/services/token.service';
 import { bullConfig } from './configs/bullmq.config';
 import { IEnvVars, config } from './configs/config';
@@ -106,6 +107,7 @@ const rmqPubModule = RabbitMQModule.forRootAsync({
 	providers: [
 		CursorPaginationFactory,
 		TokenService,
+		FileOwnershipService,
 		...AuthCommandHandlers,
 		...AuthQueryHandlers,
 		...IntegrationEventPublishers,

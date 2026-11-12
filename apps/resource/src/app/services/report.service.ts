@@ -10,6 +10,7 @@ import {
 	type UpdateReportInput,
 } from '../types/report.input';
 import { type Requester } from '../types/requester';
+import { FileOwnershipService } from './file-ownership.service';
 import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { Injectable, NotFoundException } from '@nestjs/common';
@@ -24,6 +25,7 @@ export class ReportService {
 	constructor(
 		private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>,
 		private readonly events: ResourceEventsPublisher,
+		private readonly fileOwnership: FileOwnershipService,
 	) {}
 
 	private toReadModel(report: ReportWithFiles): ReportReadModel {
@@ -57,6 +59,8 @@ export class ReportService {
 	}
 
 	async createReport(data: CreateReportInput): Promise<ReportReadModel> {
+		const fileIds = [...new Set(data.fileIds)];
+		await this.fileOwnership.assertOwnedBy(fileIds, data.reportedBy);
 		const report = await this.txHost.tx.report.create({
 			data: {
 				reportedBy: data.reportedBy,
@@ -66,9 +70,7 @@ export class ReportService {
 				targetType: data.targetType ?? null,
 				targetId: data.targetId ?? null,
 				files:
-					data.fileIds.length > 0 ?
-						{ create: [...new Set(data.fileIds)].map(fileId => ({ fileId: fileId })) }
-					:	undefined,
+					fileIds.length > 0 ? { create: fileIds.map(fileId => ({ fileId: fileId })) } : undefined,
 			},
 			include: withFiles,
 		});
@@ -133,8 +135,15 @@ export class ReportService {
 		return { reports: reports.map(r => this.toReadModel(r)), totalCount: totalCount };
 	}
 
-	async addFileToReport(reportId: string, fileId: string, requester: Requester): Promise<void> {
+	/** `mayAttachAnyFile` (admins) skips the uploader check; everyone else attaches only their own uploads. */
+	async addFileToReport(
+		reportId: string,
+		fileId: string,
+		requester: Requester,
+		mayAttachAnyFile = false,
+	): Promise<void> {
 		await this.findVisibleReport(reportId, requester);
+		if (!mayAttachAnyFile) await this.fileOwnership.assertOwnedBy([fileId], requester.id);
 		await this.txHost.tx.reportFile.upsert({
 			where: { reportId_fileId: { reportId: reportId, fileId: fileId } },
 			update: {},
