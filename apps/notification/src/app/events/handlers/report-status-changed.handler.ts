@@ -3,12 +3,14 @@ import { NotificationService } from '../../services/notification.service';
 import { RabbitPayload, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import { Transactional } from '@nestjs-cls/transactional';
 import { Injectable } from '@nestjs/common';
-import { InboxService, deadLetterQueue, unwrapEvent } from '@server/messaging';
+import { InboxService, defineConsumerQueue, unwrapEvent } from '@server/messaging';
 import { validatePayload } from '@server/utils';
 import { IsString } from 'class-validator';
 import { UseCls } from 'nestjs-cls';
 
-export const REPORT_STATUS_CHANGED_QUEUE = 'notification.events.report.status-changed';
+export const REPORT_STATUS_CHANGED_QUEUE = defineConsumerQueue(
+	'notification.events.report.status-changed',
+);
 
 class ReportStatusChangedEvent {
 	@IsString() reportId!: string;
@@ -30,12 +32,12 @@ export class ReportStatusChangedHandler {
 		connection: 'sub',
 		exchange: 'eventbus',
 		routingKey: 'resource.report.status-changed',
-		...deadLetterQueue(REPORT_STATUS_CHANGED_QUEUE),
+		...REPORT_STATUS_CHANGED_QUEUE.subscribe,
 	})
 	@Transactional()
 	async handle(@RabbitPayload() message: unknown): Promise<void> {
 		const { id, payload } = unwrapEvent<unknown>(message);
-		if (!(await this.inbox.claim(id, REPORT_STATUS_CHANGED_QUEUE))) return;
+		if (!(await this.inbox.claim(id, REPORT_STATUS_CHANGED_QUEUE.name))) return;
 		const event = await validatePayload(ReportStatusChangedEvent, payload);
 		if (!(await this.preferencesService.isEnabled(event.reportedBy, 'report'))) return;
 		await this.notificationService.createNotification({

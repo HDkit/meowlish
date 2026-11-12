@@ -17,7 +17,7 @@ describe('rmqSubConfig', () => {
 
 	it('declares the retry and dead-letter queues of every consumer', () => {
 		const names = (config.queues ?? []).map(q => q.name);
-		for (const queue of [LOGIN_QUEUE, ATTEMPT_SUBMITTED_QUEUE, ATTEMPT_SCORED_QUEUE]) {
+		for (const { name: queue } of [LOGIN_QUEUE, ATTEMPT_SUBMITTED_QUEUE, ATTEMPT_SCORED_QUEUE]) {
 			expect(names).toContain(`${queue}.dlq`);
 			expect(names).toContain(`${queue}.retry.5`);
 		}

@@ -3,7 +3,6 @@ import { FILES_REMOVED_QUEUE } from '../app/events/handlers/files-removed.handle
 import { IEnvVars } from './config';
 import { MessageHandlerErrorBehavior, RabbitMQConfig } from '@golevelup/nestjs-rabbitmq';
 import { ConfigService } from '@nestjs/config';
-import { consumerQueueConfigs } from '@server/messaging';
 import { defaultRmqExchanges } from '@server/utils';
 
 export const rmqSubConfig = (configService: ConfigService<IEnvVars>): RabbitMQConfig => {
@@ -12,8 +11,8 @@ export const rmqSubConfig = (configService: ConfigService<IEnvVars>): RabbitMQCo
 		name: 'sub',
 		exchanges: [...defaultRmqExchanges],
 		queues: [
-			...consumerQueueConfigs(FILE_ADDED_QUEUE),
-			...consumerQueueConfigs(FILES_REMOVED_QUEUE),
+			...FILE_ADDED_QUEUE.queues,
+			...FILES_REMOVED_QUEUE.queues,
 		],
 		uri: `amqp://${rmqConfig.user}:${rmqConfig.password}@${rmqConfig.host}:${rmqConfig.port}`,
 		connectionInitOptions: { wait: true },

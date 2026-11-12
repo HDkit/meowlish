@@ -4,7 +4,6 @@ import { LOGIN_QUEUE } from '../app/events/handlers/login.handler';
 import { IEnvVars } from './config';
 import { MessageHandlerErrorBehavior, RabbitMQConfig } from '@golevelup/nestjs-rabbitmq';
 import { ConfigService } from '@nestjs/config';
-import { consumerQueueConfigs } from '@server/messaging';
 import { defaultRmqExchanges } from '@server/utils';
 
 export const rmqSubConfig = (configService: ConfigService<IEnvVars>): RabbitMQConfig => {
@@ -13,9 +12,9 @@ export const rmqSubConfig = (configService: ConfigService<IEnvVars>): RabbitMQCo
 		name: 'sub',
 		exchanges: [...defaultRmqExchanges],
 		queues: [
-			...consumerQueueConfigs(LOGIN_QUEUE),
-			...consumerQueueConfigs(ATTEMPT_SUBMITTED_QUEUE),
-			...consumerQueueConfigs(ATTEMPT_SCORED_QUEUE),
+			...LOGIN_QUEUE.queues,
+			...ATTEMPT_SUBMITTED_QUEUE.queues,
+			...ATTEMPT_SCORED_QUEUE.queues,
 		],
 		// One unacked message per consumer (basic.qos is per consumer): an instance works through
 		// each queue serially, so the only version races left are across queues or instances, and

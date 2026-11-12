@@ -8,7 +8,7 @@ import { RabbitPayload, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import { Transactional } from '@nestjs-cls/transactional';
 import { Inject, Injectable, UseFilters } from '@nestjs/common';
 import { AppLoggerService } from '@server/logger';
-import { InboxService, deadLetterQueue, unwrapEvent } from '@server/messaging';
+import { InboxService, unwrapEvent } from '@server/messaging';
 import { GlobalRmqExceptionFilter } from '@server/utils';
 import { UseCls } from 'nestjs-cls';
 
@@ -26,12 +26,12 @@ export class ExamCreatedHandler {
 		connection: 'sub',
 		exchange: 'eventbus',
 		routingKey: 'exam.exam.created',
-		...deadLetterQueue(OWNERSHIP_QUEUES.examCreated),
+		...OWNERSHIP_QUEUES.examCreated.subscribe,
 	})
 	@Transactional()
 	async handle(@RabbitPayload() message: unknown): Promise<void> {
 		const { id, payload } = unwrapEvent<ResourceCreatedEvent>(message);
-		if (!(await this.inbox.claim(id, OWNERSHIP_QUEUES.examCreated))) return;
+		if (!(await this.inbox.claim(id, OWNERSHIP_QUEUES.examCreated.name))) return;
 		this.logger.debug(`Registering ownership: exam ${payload.resourceId} -> ${payload.ownerId}`);
 		await this.ownershipRepository.registerOwnership('exam', payload.resourceId, payload.ownerId);
 	}
@@ -51,12 +51,12 @@ export class ExamDeletedHandler {
 		connection: 'sub',
 		exchange: 'eventbus',
 		routingKey: 'exam.exam.deleted',
-		...deadLetterQueue(OWNERSHIP_QUEUES.examDeleted),
+		...OWNERSHIP_QUEUES.examDeleted.subscribe,
 	})
 	@Transactional()
 	async handle(@RabbitPayload() message: unknown): Promise<void> {
 		const { id, payload } = unwrapEvent<{ resourceId: string }>(message);
-		if (!(await this.inbox.claim(id, OWNERSHIP_QUEUES.examDeleted))) return;
+		if (!(await this.inbox.claim(id, OWNERSHIP_QUEUES.examDeleted.name))) return;
 		this.logger.debug(`Removing ownership: exam ${payload.resourceId}`);
 		await this.ownershipRepository.removeOwnership('exam', payload.resourceId);
 	}

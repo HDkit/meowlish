@@ -7,7 +7,6 @@ import { retryAttemptConflicts } from '../../services/attempt-conflict-retry';
 import { RabbitPayload, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import { Transactional } from '@nestjs-cls/transactional';
 import { Inject, Injectable, NotFoundException, UseFilters } from '@nestjs/common';
-import { deadLetterQueue } from '@server/messaging';
 import { GlobalRmqExceptionFilter } from '@server/utils';
 import { Type } from 'class-transformer';
 import { IsArray, IsNumber, IsObject, IsOptional, IsString, ValidateNested } from 'class-validator';
@@ -90,7 +89,7 @@ export class WritingScoredHandler {
 		routingKey: 'exam.writing.scored',
 		// A throw is retried with backoff through exam.events.writing.scored.retry.N, then
 		// dead-lettered to exam.events.writing.scored.dlq.
-		...deadLetterQueue(WRITING_SCORED_QUEUE),
+		...WRITING_SCORED_QUEUE.subscribe,
 	})
 	async handle(@RabbitPayload() payload: WritingScoredEvent): Promise<void> {
 		if (payload.status === 'error' || payload.error_code || payload.error_message)

@@ -8,7 +8,7 @@ import { RabbitPayload, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import { Transactional } from '@nestjs-cls/transactional';
 import { Inject, Injectable, UseFilters } from '@nestjs/common';
 import { AppLoggerService } from '@server/logger';
-import { InboxService, deadLetterQueue, unwrapEvent } from '@server/messaging';
+import { InboxService, unwrapEvent } from '@server/messaging';
 import { GlobalRmqExceptionFilter } from '@server/utils';
 import { UseCls } from 'nestjs-cls';
 
@@ -26,12 +26,12 @@ export class RoomCreatedHandler {
 		connection: 'sub',
 		exchange: 'eventbus',
 		routingKey: 'live.room.created',
-		...deadLetterQueue(OWNERSHIP_QUEUES.roomCreated),
+		...OWNERSHIP_QUEUES.roomCreated.subscribe,
 	})
 	@Transactional()
 	async handle(@RabbitPayload() message: unknown): Promise<void> {
 		const { id, payload } = unwrapEvent<ResourceCreatedEvent>(message);
-		if (!(await this.inbox.claim(id, OWNERSHIP_QUEUES.roomCreated))) return;
+		if (!(await this.inbox.claim(id, OWNERSHIP_QUEUES.roomCreated.name))) return;
 		this.logger.debug(`Registering ownership: room ${payload.resourceId} -> ${payload.ownerId}`);
 		await this.ownershipRepository.registerOwnership('room', payload.resourceId, payload.ownerId);
 	}
@@ -51,12 +51,12 @@ export class RoomDeletedHandler {
 		connection: 'sub',
 		exchange: 'eventbus',
 		routingKey: 'live.room.deleted',
-		...deadLetterQueue(OWNERSHIP_QUEUES.roomDeleted),
+		...OWNERSHIP_QUEUES.roomDeleted.subscribe,
 	})
 	@Transactional()
 	async handle(@RabbitPayload() message: unknown): Promise<void> {
 		const { id, payload } = unwrapEvent<{ resourceId: string }>(message);
-		if (!(await this.inbox.claim(id, OWNERSHIP_QUEUES.roomDeleted))) return;
+		if (!(await this.inbox.claim(id, OWNERSHIP_QUEUES.roomDeleted.name))) return;
 		this.logger.debug(`Removing ownership: room ${payload.resourceId}`);
 		await this.ownershipRepository.removeOwnership('room', payload.resourceId);
 	}

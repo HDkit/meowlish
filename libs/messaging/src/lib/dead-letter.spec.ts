@@ -1,9 +1,4 @@
-import {
-	consumerQueueConfigs,
-	deadLetterQueue,
-	dlqQueueConfig,
-	retryQueueConfigs,
-} from './dead-letter';
+import { type ConsumerQueue, defineConsumerQueue, dlqQueueConfig } from './dead-letter';
 import { metrics } from '@opentelemetry/api';
 import { MeterProvider, MetricReader } from '@opentelemetry/sdk-metrics';
 import type { ConfirmChannel, ConsumeMessage } from 'amqplib';
@@ -72,6 +67,8 @@ function message(retryCount?: number): ConsumeMessage {
 }
 
 const Q = 'achievement.events.user.login';
+const handler = (queue = Q) => defineConsumerQueue(queue).subscribe.errorHandler;
+const retryQueues = (q: ConsumerQueue) => q.queues.filter(c => c.name?.includes('.retry.'));
 
 describe('dead-letter helpers', () => {
 	// The failure counter is created once, on first use, so the provider must be set before any test.
@@ -82,8 +79,8 @@ describe('dead-letter helpers', () => {
 	});
 	afterAll(() => metrics.disable());
 
-	it('deadLetterQueue returns options binding <q>.dlq', () => {
-		expect(deadLetterQueue('notification.events.badge.earned')).toEqual({
+	it('subscribe options bind <q>.dlq', () => {
+		expect(defineConsumerQueue('notification.events.badge.earned').subscribe).toEqual({
 			queue: 'notification.events.badge.earned',
 			queueOptions: {
 				durable: true,
@@ -98,7 +95,7 @@ describe('dead-letter helpers', () => {
 		const { channel, ack, nack, publish } = fakeChannel();
 		const msg = message();
 
-		await deadLetterQueue(Q).errorHandler(channel, msg, new Error('boom'));
+		await handler()(channel, msg, new Error('boom'));
 
 		expect(publish).toHaveBeenCalledTimes(1);
 		const [exchange, routingKey, content, options] = publish.mock.calls[0];
@@ -119,7 +116,7 @@ describe('dead-letter helpers', () => {
 		expect(nack).not.toHaveBeenCalled();
 
 		// Each retry queue dead-letters back through the default exchange to <q> only.
-		for (const retry of retryQueueConfigs(Q)) {
+		for (const retry of retryQueues(defineConsumerQueue(Q))) {
 			expect(retry.exchange).toBeUndefined();
 			expect(retry.options).toMatchObject({
 				durable: true,
@@ -132,7 +129,7 @@ describe('dead-letter helpers', () => {
 	it('routes retry n to <q>.retry.(n+1)', async () => {
 		for (let n = 0; n < 5; n++) {
 			const { channel, publish } = fakeChannel();
-			await deadLetterQueue(Q).errorHandler(channel, message(n), new Error('boom'));
+			await handler()(channel, message(n), new Error('boom'));
 			expect(publish.mock.calls[0][1]).toBe(`${Q}.retry.${n + 1}`);
 			expect((publish.mock.calls[0][3] as { headers: object }).headers).toMatchObject({
 				'x-retry-count': n + 1,
@@ -141,17 +138,16 @@ describe('dead-letter helpers', () => {
 	});
 
 	it('delays grow 1,2,4,8,16 s capped at 60 s', () => {
-		const ttl = (queues: ReturnType<typeof retryQueueConfigs>) =>
-			queues.map(q => [q.name, q.options?.messageTtl]);
+		const ttl = (q: ConsumerQueue) => retryQueues(q).map(c => [c.name, c.options?.messageTtl]);
 
-		expect(ttl(retryQueueConfigs(Q))).toEqual([
+		expect(ttl(defineConsumerQueue(Q))).toEqual([
 			[`${Q}.retry.1`, 1000],
 			[`${Q}.retry.2`, 2000],
 			[`${Q}.retry.3`, 4000],
 			[`${Q}.retry.4`, 8000],
 			[`${Q}.retry.5`, 16000],
 		]);
-		expect(ttl(retryQueueConfigs(Q, { maxAttempts: 8 })).map(([, t]) => t)).toEqual([
+		expect(ttl(defineConsumerQueue(Q, { maxAttempts: 8 })).map(([, t]) => t)).toEqual([
 			1000, 2000, 4000, 8000, 16000, 32000, 60000, 60000,
 		]);
 	});
@@ -160,21 +156,43 @@ describe('dead-letter helpers', () => {
 		const { channel, ack, nack, publish } = fakeChannel();
 		const msg = message(5);
 
-		await deadLetterQueue(Q).errorHandler(channel, msg, new Error('boom'));
+		await handler()(channel, msg, new Error('boom'));
 
 		expect(publish).not.toHaveBeenCalled();
 		expect(ack).not.toHaveBeenCalled();
 		expect(nack).toHaveBeenCalledWith(msg, false, false);
 	});
 
-	it('republish failure nacks with requeue', async () => {
-		const { channel, ack, nack } = fakeChannel(new Error('channel closed'));
-		const msg = message(2);
+	describe('when the retry publish fails', () => {
+		beforeEach(() => jest.useFakeTimers());
+		afterEach(() => jest.useRealTimers());
 
-		await deadLetterQueue(Q).errorHandler(channel, msg, new Error('boom'));
+		it('waits at least 1 s, then nacks with requeue', async () => {
+			const { channel, ack, nack } = fakeChannel(new Error('channel closed'));
+			const msg = message(2);
 
-		expect(ack).not.toHaveBeenCalled();
-		expect(nack).toHaveBeenCalledWith(msg, false, true);
+			const done = handler()(channel, msg, new Error('boom'));
+			await jest.advanceTimersByTimeAsync(999);
+			expect(nack).not.toHaveBeenCalled(); // no hot redeliver loop
+
+			await jest.advanceTimersByTimeAsync(1001);
+			await done;
+			expect(ack).not.toHaveBeenCalled();
+			expect(nack).toHaveBeenCalledWith(msg, false, true);
+		});
+
+		it('adds jitter to the wait (1-2 s)', async () => {
+			const random = jest.spyOn(Math, 'random').mockReturnValue(0.5);
+			const { channel, nack } = fakeChannel(new Error('channel closed'));
+
+			const done = handler()(channel, message(0), new Error('boom'));
+			await jest.advanceTimersByTimeAsync(1499);
+			expect(nack).not.toHaveBeenCalled();
+			await jest.advanceTimersByTimeAsync(1);
+			await done;
+			expect(nack).toHaveBeenCalledTimes(1);
+			random.mockRestore();
+		});
 	});
 
 	it('republish not confirmed by the broker nacks with requeue', async () => {
@@ -185,14 +203,18 @@ describe('dead-letter helpers', () => {
 		});
 		const msg = message(0);
 
-		await deadLetterQueue(Q).errorHandler(channel, msg, new Error('boom'));
+		jest.useFakeTimers();
+		const done = handler()(channel, msg, new Error('boom'));
+		await jest.advanceTimersByTimeAsync(2000);
+		await done;
+		jest.useRealTimers();
 
 		expect(ack).not.toHaveBeenCalled();
 		expect(nack).toHaveBeenCalledWith(msg, false, true);
 	});
 
 	it('counts consumer_failures_total on every failure', async () => {
-		const { errorHandler } = deadLetterQueue('file.events.file.added');
+		const errorHandler = handler('file.events.file.added');
 		await errorHandler(fakeChannel().channel, message(0), new Error('boom'));
 		await errorHandler(fakeChannel().channel, message(5), new Error('boom'));
 
@@ -217,8 +239,8 @@ describe('dead-letter helpers', () => {
 		});
 	});
 
-	it('consumerQueueConfigs declares <q>.dlq and <q>.retry.1..5', () => {
-		expect(consumerQueueConfigs(Q).map(q => q.name)).toEqual([
+	it('queues declares <q>.dlq and <q>.retry.1..5', () => {
+		expect(defineConsumerQueue(Q).queues.map(q => q.name)).toEqual([
 			`${Q}.dlq`,
 			`${Q}.retry.1`,
 			`${Q}.retry.2`,
@@ -226,5 +248,22 @@ describe('dead-letter helpers', () => {
 			`${Q}.retry.4`,
 			`${Q}.retry.5`,
 		]);
+	});
+
+	it('declares exactly the retry queues its handler publishes to, whatever the options', async () => {
+		for (const maxAttempts of [1, 3, 5, 8]) {
+			const q = defineConsumerQueue(Q, { maxAttempts: maxAttempts });
+			const declared = new Set(q.queues.map(c => c.name));
+			for (let n = 0; n < maxAttempts; n++) {
+				const { channel, publish } = fakeChannel();
+				await q.subscribe.errorHandler(channel, message(n), new Error('boom'));
+				expect(declared.has(publish.mock.calls[0][1])).toBe(true);
+			}
+			const { channel, nack, publish } = fakeChannel();
+			const last = message(maxAttempts);
+			await q.subscribe.errorHandler(channel, last, new Error('boom'));
+			expect(publish).not.toHaveBeenCalled();
+			expect(nack).toHaveBeenCalledWith(last, false, false);
+		}
 	});
 });

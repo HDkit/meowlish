@@ -8,13 +8,13 @@ import { TransactionHost } from '@nestjs-cls/transactional';
 import type { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { Inject, Injectable, UseFilters } from '@nestjs/common';
 import type { PrismaClient } from '@prisma-client/achievement';
-import { InboxService, deadLetterQueue, unwrapEvent } from '@server/messaging';
+import { InboxService, defineConsumerQueue, unwrapEvent } from '@server/messaging';
 import { GlobalRmqExceptionFilter, validatePayload } from '@server/utils';
 import { Type } from 'class-transformer';
 import { IsDate, IsString } from 'class-validator';
 import { UseCls } from 'nestjs-cls';
 
-export const LOGIN_QUEUE = 'achievement.events.user.login';
+export const LOGIN_QUEUE = defineConsumerQueue('achievement.events.user.login');
 
 class LoginEvent {
 	@IsString()
@@ -40,12 +40,12 @@ export class LoginHandler {
 		connection: 'sub',
 		exchange: 'eventbus',
 		routingKey: 'auth.user.login',
-		...deadLetterQueue(LOGIN_QUEUE),
+		...LOGIN_QUEUE.subscribe,
 	})
 	async handle(@RabbitPayload() message: unknown): Promise<void> {
 		const { id, payload } = unwrapEvent<unknown>(message);
 		await inTransactionRetryingConflicts(this.txHost, async () => {
-			if (!(await this.inbox.claim(id, LOGIN_QUEUE))) return;
+			if (!(await this.inbox.claim(id, LOGIN_QUEUE.name))) return;
 			const event = await validatePayload(LoginEvent, payload);
 			const loginBadgeManager = await this.badgeManagerRepository.getLoginBadgeManager(event.uid);
 			loginBadgeManager.updateProgress(event.date);

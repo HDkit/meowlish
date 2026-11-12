@@ -8,12 +8,12 @@ import { TransactionHost } from '@nestjs-cls/transactional';
 import type { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { Inject, Injectable, UseFilters } from '@nestjs/common';
 import type { PrismaClient } from '@prisma-client/achievement';
-import { InboxService, deadLetterQueue, unwrapEvent } from '@server/messaging';
+import { InboxService, defineConsumerQueue, unwrapEvent } from '@server/messaging';
 import { GlobalRmqExceptionFilter, validatePayload } from '@server/utils';
 import { IsNumber, IsString } from 'class-validator';
 import { UseCls } from 'nestjs-cls';
 
-export const ATTEMPT_SCORED_QUEUE = 'achievement.events.attempt.scored';
+export const ATTEMPT_SCORED_QUEUE = defineConsumerQueue('achievement.events.attempt.scored');
 
 class AttemptScoredEvent {
 	@IsString()
@@ -41,12 +41,12 @@ export class AttemptScoredHandler {
 		connection: 'sub',
 		exchange: 'eventbus',
 		routingKey: 'exam.attempt.scored',
-		...deadLetterQueue(ATTEMPT_SCORED_QUEUE),
+		...ATTEMPT_SCORED_QUEUE.subscribe,
 	})
 	async handle(@RabbitPayload() message: unknown): Promise<void> {
 		const { id, payload } = unwrapEvent<unknown>(message);
 		await inTransactionRetryingConflicts(this.txHost, async () => {
-			if (!(await this.inbox.claim(id, ATTEMPT_SCORED_QUEUE))) return;
+			if (!(await this.inbox.claim(id, ATTEMPT_SCORED_QUEUE.name))) return;
 			const event = await validatePayload(AttemptScoredEvent, payload);
 			const attemptScoreBadgeManager =
 				await this.badgeManagerRepository.getAttemptScoreBadgeManager(event.attemptedBy);

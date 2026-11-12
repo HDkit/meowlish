@@ -50,12 +50,11 @@ export function retryQueueName(queue: string, attempt: number): string {
 }
 
 /**
- * Spread into `@RabbitSubscribe({...})`. A throwing handler is retried with exponential backoff
+ * `@RabbitSubscribe` options. A throwing handler is retried with exponential backoff
  * (1, 2, 4, 8, 16 s by default, capped at 60 s) through `<queue>.retry.N`, which dead-letter
  * back to `<queue>` only. Once the retries are used up the message is nacked to `<queue>.dlq`.
- * The app's sub config must declare the matching queues with `consumerQueueConfigs(queue, opts)`.
  */
-export function deadLetterQueue(queue: string, opts?: RetryOptions) {
+function deadLetterQueue(queue: string, policy: Required<RetryOptions>) {
 	return {
 		queue: queue,
 		queueOptions: {
@@ -64,7 +63,7 @@ export function deadLetterQueue(queue: string, opts?: RetryOptions) {
 			deadLetterRoutingKey: queue,
 		},
 		// Overrides `errorBehavior`.
-		errorHandler: consumerFailureHandler(queue, retryPolicy(opts)),
+		errorHandler: consumerFailureHandler(queue, policy),
 	};
 }
 
@@ -133,6 +132,17 @@ function publishToQueue(
 	});
 }
 
+/** Pause before requeueing after a failed retry publish: 1-2 s (1 s plus up to 1 s of jitter). */
+export const RETRY_PUBLISH_FAILURE_DELAY_MS = 1000;
+
+function retryPublishFailureDelayMs(): number {
+	return (
+		RETRY_PUBLISH_FAILURE_DELAY_MS + Math.floor(Math.random() * RETRY_PUBLISH_FAILURE_DELAY_MS)
+	);
+}
+
+const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+
 function retryCountOf(msg: ConsumeMessage): number {
 	const raw: unknown = msg.properties.headers?.[RETRY_COUNT_HEADER];
 	const n = typeof raw === 'number' ? raw : Number(raw);
@@ -161,7 +171,9 @@ function consumerFailureHandler(
 				retryPublishOptions(msg, attempt),
 			);
 		} catch {
-			// The retry copy may not exist; keep the original rather than lose it.
+			// The retry copy may not exist; keep the original rather than lose it. Wait first: an
+			// immediate requeue would redeliver, fail and republish again in a hot loop.
+			await sleep(retryPublishFailureDelayMs());
 			channel.nack(msg, false, true);
 			return;
 		}
@@ -189,8 +201,8 @@ export function dlqQueueConfig(queue: string): QueueConfig {
  * default exchange back to `<queue>` only. One queue per attempt avoids head-of-line blocking
  * between short and long delays.
  */
-export function retryQueueConfigs(queue: string, opts?: RetryOptions): QueueConfig[] {
-	const { maxAttempts, baseDelayMs, maxDelayMs } = retryPolicy(opts);
+function retryQueueConfigs(queue: string, policy: Required<RetryOptions>): QueueConfig[] {
+	const { maxAttempts, baseDelayMs, maxDelayMs } = policy;
 	return Array.from({ length: maxAttempts }, (_, n) => ({
 		name: retryQueueName(queue, n + 1),
 		options: {
@@ -202,7 +214,26 @@ export function retryQueueConfigs(queue: string, opts?: RetryOptions): QueueConf
 	}));
 }
 
-/** Every queue a `deadLetterQueue(queue, opts)` consumer needs: `<queue>.dlq` and its retry queues. */
-export function consumerQueueConfigs(queue: string, opts?: RetryOptions): QueueConfig[] {
-	return [dlqQueueConfig(queue), ...retryQueueConfigs(queue, opts)];
+export interface ConsumerQueue {
+	/** Queue name; also the consumer's inbox name. */
+	readonly name: string;
+	/** Spread into `@RabbitSubscribe({...})`. */
+	readonly subscribe: ReturnType<typeof deadLetterQueue>;
+	/** Spread into the app's sub config `queues`: `<queue>.dlq` and `<queue>.retry.1..maxAttempts`. */
+	readonly queues: QueueConfig[];
+}
+
+/**
+ * The single definition of a retrying consumer queue. The subscribe options and the declared
+ * retry queues come from the same retry policy, so they can't drift apart: a handler retrying
+ * into a `<queue>.retry.N` that was never declared would publish to nowhere on the default
+ * exchange, get confirmed, and be acked, losing the message.
+ */
+export function defineConsumerQueue(name: string, opts?: RetryOptions): ConsumerQueue {
+	const policy = retryPolicy(opts);
+	return {
+		name: name,
+		subscribe: deadLetterQueue(name, policy),
+		queues: [dlqQueueConfig(name), ...retryQueueConfigs(name, policy)],
+	};
 }
