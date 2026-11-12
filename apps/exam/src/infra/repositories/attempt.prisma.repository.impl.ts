@@ -9,7 +9,10 @@ import {
 	AttemptResponseCreatedEvent,
 	AttemptResponseUpdatedEvent,
 } from '../../domain/events/attempt.event';
-import { IAttemptRepository } from '../../domain/repositories/attempt.repository';
+import {
+	AttemptVersionConflictException,
+	IAttemptRepository,
+} from '../../domain/repositories/attempt.repository';
 import { QuestionType } from '../../enums/question-type.enum';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
@@ -29,7 +32,6 @@ class AttemptPrismaMapper {
 
 	static toAttemptOrm(from: Attempt): RepoAttempt {
 		return {
-			id: from.id,
 			attemptedBy: from.attemptedBy,
 			examId: from.examId,
 			durationLimit: from.durationLimit,
@@ -50,8 +52,27 @@ class AttemptPrismaMapper {
 		};
 	}
 
+	/**
+	 * The AI feedback is stored as the JSON-encoded `WritingScoreDataDto` (a JSON string value);
+	 * returns its `overall_score`, or null when there is no usable feedback.
+	 */
+	static toWritingBand(scorerDatas: { comment: Prisma.JsonValue }[]): number | null {
+		let comment: unknown = scorerDatas[0]?.comment;
+		if (typeof comment === 'string') {
+			try {
+				comment = JSON.parse(comment);
+			} catch {
+				return null;
+			}
+		}
+		if (typeof comment !== 'object' || comment === null || !('overall_score' in comment))
+			return null;
+		const band = comment.overall_score;
+		return typeof band === 'number' && Number.isFinite(band) ? band : null;
+	}
+
 	static toScoredAttemptOrm(from: AttemptEvaluator): RepoScoredAttempt {
-		return { id: from.id, score: from.score, totalPoints: from.totalPoints };
+		return { score: from.score, totalPoints: from.totalPoints };
 	}
 
 	static toAttemptResponseOrm(from: AttemptResponse, attemptId: string): RepoAttemptResponse {
@@ -80,11 +101,19 @@ class AttemptPrismaMapper {
 		);
 
 		const responses = from.attemptResponses.map(
-			r => new AttemptResponseResult(r.id, r.questionId, r.answers, r.isCorrect),
+			r =>
+				new AttemptResponseResult(
+					r.id,
+					r.questionId,
+					r.answers,
+					r.isCorrect,
+					this.toWritingBand(r.scorerDatas),
+				),
 		);
 
 		return new AttemptEvaluator({
 			id: from.id,
+			version: from.version,
 			responses: responses,
 			questions: attemptQuestions,
 		});
@@ -109,6 +138,7 @@ class AttemptPrismaMapper {
 
 		return new Attempt({
 			id: from.id,
+			version: from.version,
 			attemptedBy: from.attemptedBy,
 			durationLimit: from.durationLimit,
 			examId: from.examId,
@@ -183,11 +213,27 @@ export class AttemptPrismaRepositoryImpl implements IAttemptRepository {
 		return AttemptPrismaMapper.toAttemptEvaluatorAggregate(foundAttempt, attemptQuestions);
 	}
 
+	/**
+	 * Rewrites the attempt row only if it is still at the version the aggregate was loaded with,
+	 * so a stale aggregate (e.g. an answer racing EndAttempt) can't clobber a newer save.
+	 */
+	private async updateAtVersion(
+		id: string,
+		version: number,
+		data: Prisma.AttemptUpdateManyMutationInput,
+	): Promise<void> {
+		const { count } = await this.txHost.tx.attempt.updateMany({
+			where: { id: id, version: version },
+			data: { ...data, version: { increment: 1 } },
+		});
+		if (count === 0) throw new AttemptVersionConflictException();
+	}
+
 	async save(attempt: Attempt | AttemptConfig | AttemptEvaluator): Promise<void> {
 		if (attempt instanceof Attempt) {
 			const data = AttemptPrismaMapper.toAttemptOrm(attempt);
 			await this.txHost.withTransaction(async () => {
-				await this.txHost.tx.attempt.update({ where: { id: data.id }, data: data });
+				await this.updateAtVersion(attempt.id, attempt.version, data);
 
 				for (const event of attempt.getUncommittedEvents()) {
 					await this.handle(event);
@@ -197,7 +243,7 @@ export class AttemptPrismaRepositoryImpl implements IAttemptRepository {
 		if (attempt instanceof AttemptEvaluator) {
 			const data = AttemptPrismaMapper.toScoredAttemptOrm(attempt);
 			await this.txHost.withTransaction(async () => {
-				await this.txHost.tx.attempt.update({ where: { id: data.id }, data: data });
+				await this.updateAtVersion(attempt.id, attempt.version, data);
 
 				for (const [, response] of attempt.responses.entries()) {
 					await this.txHost.tx.attemptResponse.update({
@@ -289,12 +335,14 @@ export class AttemptPrismaRepositoryImpl implements IAttemptRepository {
 			:	null;
 	}
 
-	async saveComment(responseId: string, comment: unknown): Promise<void> {
-		await this.txHost.tx.scorerData.upsert({
+	async saveComment(responseId: string, comment: unknown): Promise<string> {
+		const saved = await this.txHost.tx.scorerData.upsert({
 			where: { responseId: responseId },
 			create: { responseId: responseId, comment: comment as object },
 			update: { comment: comment as object },
+			select: { response: { select: { attemptId: true } } },
 		});
+		return saved.response.attemptId;
 	}
 
 	private async handle(event: Event<any>): Promise<void> {
@@ -351,7 +399,13 @@ const attemptEvalPrismaIncludeObject = {
 	...attemptPrismaIncludeObject,
 	attemptResponses: {
 		where: { answers: { isEmpty: false } },
-		select: { id: true, answers: true, questionId: true, isCorrect: true },
+		select: {
+			id: true,
+			answers: true,
+			questionId: true,
+			isCorrect: true,
+			scorerDatas: { select: { comment: true } },
+		},
 	},
 } satisfies Prisma.AttemptInclude;
 
@@ -367,7 +421,7 @@ const attemptQuestionsForEvalPrismaSelectObject = {
 	points: true,
 } satisfies Prisma.QuestionSelect;
 
-type RepoAttempt = Omit<PrismaAttempt, 'score' | 'totalPoints' | 'order'>;
-type RepoAttemptConfig = Omit<RepoAttempt, 'endedAt'>;
-type RepoScoredAttempt = Pick<PrismaAttempt, 'id' | 'score' | 'totalPoints'>;
+type RepoAttempt = Omit<PrismaAttempt, 'id' | 'score' | 'totalPoints' | 'order' | 'version'>;
+type RepoAttemptConfig = Omit<RepoAttempt, 'endedAt'> & Pick<PrismaAttempt, 'id'>;
+type RepoScoredAttempt = Pick<PrismaAttempt, 'score' | 'totalPoints'>;
 type RepoAttemptResponse = Omit<PrismaAttemptResponse, 'isCorrect'>;

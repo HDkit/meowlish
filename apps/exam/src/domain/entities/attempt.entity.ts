@@ -68,6 +68,8 @@ export class Attempt extends AggregateRoot<Event<any>> implements IEntity<Attemp
 	private static maximumNetworkDelayInSeconds = 30; //seconds
 
 	public readonly id: string;
+	/** Optimistic-lock version as loaded; the repository saves only if it is still current. */
+	public readonly version: number;
 	public attemptedBy: string;
 	public examId: string;
 	public startedAt: Date;
@@ -79,6 +81,7 @@ export class Attempt extends AggregateRoot<Event<any>> implements IEntity<Attemp
 
 	public constructor(constructorOptions: {
 		id?: string;
+		version?: number;
 		attemptedBy: string;
 		examId: string;
 		startedAt: Date;
@@ -90,6 +93,7 @@ export class Attempt extends AggregateRoot<Event<any>> implements IEntity<Attemp
 	}) {
 		super();
 		this.id = constructorOptions.id ?? Attempt.newId();
+		this.version = constructorOptions.version ?? 0;
 		this.attemptedBy = constructorOptions.attemptedBy;
 		this.examId = constructorOptions.examId;
 		this.questions = new Map(constructorOptions.questions?.map(q => [q.id, q.type]));
@@ -208,14 +212,19 @@ export class Attempt extends AggregateRoot<Event<any>> implements IEntity<Attemp
 		}
 	}
 
-	public endAttempt(): void {
+	/**
+	 * Idempotent: ending an attempt that has already ended is a no-op (no event, nothing to save).
+	 * @returns whether this call ended the attempt
+	 */
+	public endAttempt(): boolean {
 		const timeStamp = new Date();
-		if (this.endedAt) throw new ConflictException('Exam result has already been submitted');
+		if (this.endedAt) return false;
 		if (!this.responses.length && this.questions.size) {
 			if (this.isWithinAllowedTime(timeStamp))
 				throw new ForbiddenException('Must at least answer one question before submitting');
 		}
 		this.endedAt = timeStamp;
 		this.apply(new AttemptSubmittedEvent({ attemptId: this.id }));
+		return true;
 	}
 }

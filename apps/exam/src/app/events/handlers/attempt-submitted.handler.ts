@@ -2,6 +2,7 @@ import { AttemptSubmittedEvent } from '../../../domain/events/attempt.event';
 import {
 	type IAttemptRepository,
 	IAttemptRepositoryToken,
+	isAttemptVersionConflict,
 } from '../../../domain/repositories/attempt.repository';
 import { AttemptScoredPublisher } from '../publishers/attempt-scored.publisher';
 import { WritingSubmittedPublisher } from '../publishers/writing-submitted';
@@ -9,6 +10,9 @@ import { Transactional } from '@nestjs-cls/transactional';
 import { Inject, NotFoundException } from '@nestjs/common';
 import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
 import { AppLoggerService } from '@server/logger';
+import { retryOnConflict } from '@server/messaging';
+
+const MAX_SCORE_TRIES = 3;
 
 @EventsHandler(AttemptSubmittedEvent)
 export class AttemptSubmittedHandler implements IEventHandler<AttemptSubmittedEvent> {
@@ -21,7 +25,11 @@ export class AttemptSubmittedHandler implements IEventHandler<AttemptSubmittedEv
 
 	async handle(event: AttemptSubmittedEvent): Promise<void> {
 		try {
-			await this.score(event.payload.attemptId);
+			// A post-submit save (note, flag) can bump the version under us: reload and re-score.
+			await retryOnConflict(() => this.score(event.payload.attemptId), {
+				attempts: MAX_SCORE_TRIES,
+				isConflict: isAttemptVersionConflict,
+			});
 		} catch (e) {
 			this.logger.error(e as string);
 		}

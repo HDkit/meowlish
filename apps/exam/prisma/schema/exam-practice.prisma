@@ -8,6 +8,8 @@ model Attempt {
   score         Int?
   totalPoints   Int?      @map("total_points")
   isStrict      Boolean   @map("is_strict")
+  // Optimistic lock: every save is conditional on the version it loaded (see AttemptPrismaRepositoryImpl.save)
+  version       Int       @default(0)
   order         Int // To ensure no 2 active attempts can co-exist (with same examId and userId), assign order = count(endedAt !== null)
 
   exam             Exam              @relation(fields: [examId], references: [id], onDelete: Cascade)
@@ -59,7 +61,7 @@ model ScorerData {
   responseId String @id @map("response_id")
   comment    Json
 
-  response AttemptResponse @relation(fields: [responseId], references: [id])
+  response AttemptResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
 
   @@map("scorer_data")
 }
