@@ -199,9 +199,13 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 		if (options?.limit && options.limit < 0)
 			throw new BadRequestException('Limit must be positive');
 		const dir = Math.sign(options?.direction || 1);
-		const idOrder = dir === -1 ? 'DESC' : 'ASC';
+		const isForward = dir === 1;
+		// A backward page is the `limit` rows just before the cursor: query them in reverse order,
+		// then flip the rows back (below), so the id tie-breaker and the sort key both reverse.
+		const idOrder = isForward ? 'ASC' : 'DESC';
 		// Never interpolate the caller's value into raw SQL: it can come from a decoded cursor.
-		const sortOrder = options?.sortBy?.direction === SortDirection.ASC ? 'ASC' : 'DESC';
+		const isAscending = options?.sortBy?.direction === SortDirection.ASC;
+		const sortOrder = isAscending === isForward ? 'ASC' : 'DESC';
 
 		// sort by attemptsCount or by update time
 		// fallback to sort by ID
@@ -282,8 +286,6 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
       `
 				// fallback take all
 			:	Prisma.sql`TRUE`;
-
-		const isForward = dir === 1;
 
 		const cursorWhereSql =
 			options?.sortBy?.key === 'updatedAt' && options?.lastCursor?.updatedAt ?

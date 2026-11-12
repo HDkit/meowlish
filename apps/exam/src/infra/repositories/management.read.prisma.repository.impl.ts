@@ -48,7 +48,7 @@ export class ManagementPrismaRepositoryImpl implements IManagementReadRepository
 					createdAt: { gt: filter.createdTimeRange.from, lt: filter.createdTimeRange.to },
 				}),
 				...(filter?.updatedTimeRange && {
-					createdAt: { gt: filter.updatedTimeRange.from, lt: filter.updatedTimeRange.to },
+					updatedAt: { gt: filter.updatedTimeRange.from, lt: filter.updatedTimeRange.to },
 				}),
 			},
 			select: {
@@ -63,7 +63,9 @@ export class ManagementPrismaRepositoryImpl implements IManagementReadRepository
 				...(options?.sortBy ?
 					[{ [options.sortBy.key]: options.sortBy.direction.toLowerCase() }]
 				:	[]),
-				{ id: dir === -1 ? 'desc' : 'asc' },
+				// Same order both ways: Prisma reverses it itself for a negative `take` and returns
+				// the rows just before the cursor in this order.
+				{ id: 'asc' },
 			],
 			...(options?.lastId && {
 				cursor: { id: options.lastId },
