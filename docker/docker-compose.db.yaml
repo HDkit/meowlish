@@ -21,7 +21,10 @@ services:
     networks:
       - api-network
     volumes:
-      - postgresql-data:/var/lib/postgresql/data
+      # postgres 18+ images keep data under /var/lib/postgresql/<major>; mounting
+      # .../data (pre-18 layout) makes the container crash-loop.
+      - postgresql-data:/var/lib/postgresql
+      - ./postgres/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
 
   redis:
     image: redis/redis-stack:7.4.0-v8
@@ -38,12 +41,14 @@ services:
     image: adminer:5.4.2
     restart: unless-stopped
     ports:
-      - ${ADMINER_PORT:-8080}:8080
+      - ${ADMINER_PORT:-8090}:8080
     networks:
       - api-network
 
   min-io:
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z-cpuv1
+    # upstream minio/minio images are no longer published; pgsty/minio is a
+    # maintained drop-in build of the same server.
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:

@@ -12,6 +12,8 @@ services:
       - PORT=3000
       - AUTH_SERVICE_HOST=auth
       - AUTH_SERVICE_PORT=50050
+      - AUTHORIZATION_SERVICE_HOST=authorization
+      - AUTHORIZATION_SERVICE_PORT=50050
       - EXAM_SERVICE_HOST=exam
       - EXAM_SERVICE_PORT=50050
       - FILE_SERVICE_HOST=file-service
@@ -28,7 +30,7 @@ services:
       - RESOURCE_SERVICE_HOST=resource
       - RESOURCE_SERVICE_PORT=50050
     env_file: .env.services
-    depends_on: [auth, exam, file-service, achievement, notification, resource]
+    depends_on: [auth, authorization, exam, file-service, achievement, notification, resource, live]
     networks:
       - api-network
 
@@ -39,12 +41,28 @@ services:
       args:
         APP: auth
     environment:
+      - POSTGRES_DB=auth_db
       - HOST=0.0.0.0
       - PORT=50050
       - FILE_SERVICE_HOST=file-service
       - FILE_SERVICE_PORT=50050
     env_file: .env.services
     depends_on: [db, redis, rabbit-mq]
+    networks:
+      - api-network
+
+  authorization:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        APP: authorization
+    environment:
+      - POSTGRES_DB=authorization_db
+      - HOST=0.0.0.0
+      - PORT=50050
+    env_file: .env.services
+    depends_on: [db, rabbit-mq]
     networks:
       - api-network
 
@@ -55,6 +73,7 @@ services:
       args:
         APP: exam
     environment:
+      - POSTGRES_DB=exam_db
       - HOST=0.0.0.0
       - PORT=50050
       - FILE_SERVICE_HOST=file-service
@@ -71,6 +90,7 @@ services:
       args:
         APP: achievement
     environment:
+      - POSTGRES_DB=achievement_db
       - HOST=0.0.0.0
       - PORT=50050
     env_file: .env.services
@@ -85,6 +105,7 @@ services:
       args:
         APP: resource
     environment:
+      - POSTGRES_DB=resource_db
       - HOST=0.0.0.0
       - PORT=50050
     env_file: .env.services
@@ -99,6 +120,7 @@ services:
       args:
         APP: notification
     environment:
+      - POSTGRES_DB=notification_db
       - GRPC_HOST=0.0.0.0
       - GRPC_PORT=50060
       - HTTP_HOST=0.0.0.0
@@ -115,6 +137,10 @@ services:
       args:
         APP: file-service
     environment:
+      - POSTGRES_DB=file_db
+      - MINIO_USE_SSL=false
+      # min-io is only resolvable inside the compose network; browsers use the published port
+      - MINIO_PUBLIC_URL=http://localhost:${MINIO_PORT:-9000}
       - HOST=0.0.0.0
       - PORT=50050
     env_file: .env.services
@@ -129,6 +155,7 @@ services:
       args:
         APP: live
     environment:
+      - POSTGRES_DB=live_db
       - HTTP_HOST=0.0.0.0
       - HTTP_PORT=1511
       - GRPC_HOST=0.0.0.0

@@ -41,6 +41,7 @@ lerna-debug.log*
 **/*.env.development.local
 **/*.env.test.local
 **/*.env.local
+**/.env.services
 
 # temp directory
 .temp
