@@ -51,10 +51,10 @@ Authentication uses **asymmetric RS256** JWTs:
 
 This means the private key must only exist in the auth service environment, while the public key is shared with the gateway (and anywhere else that needs to validate a token).
 
-| Env var | Used by | Purpose |
-| --- | --- | --- |
-| `JWT_PRIVATE_KEY` | auth service | Private key used to **sign** access & refresh tokens (RS256) |
-| `JWT_PUBLIC_KEY` | gateway | Public key used to **verify** access & refresh tokens (RS256) |
+| Env var           | Used by      | Purpose                                                       |
+| ----------------- | ------------ | ------------------------------------------------------------- |
+| `JWT_PRIVATE_KEY` | auth service | Private key used to **sign** access & refresh tokens (RS256)  |
+| `JWT_PUBLIC_KEY`  | gateway      | Public key used to **verify** access & refresh tokens (RS256) |
 
 ## Tech Stack
 
@@ -96,27 +96,27 @@ This means the private key must only exist in the auth service environment, whil
 
 ### Services (apps)
 
-| App | gRPC services | Responsibility |
-| --- | --- | --- |
-| `gateway` | — (HTTP) | API routing, JWT verification, role/permission guards, docs |
-| `auth` | `AuthService` | Registration/login (mail & Google), token issuance & refresh, roles/permissions, identity management, Google Calendar linking |
-| `authorization` | `AuthorizationService` | Ownership registration/checking (`is owner?`) for resources |
-| `exam` | `ExamManagementService`, `ExamPracticeService`, `TagService`, `GoalService` | Create/manage exams, sections & questions; answer attempts, stats, tags, user goals |
-| `achievement` | `AchievementService` | Badges catalog, user badges, login/submission progress |
-| `resource` | `BlogService`, `FlashCardService`, `FlashCardListService`, `ReportService` | Blogs, flash cards (and lists), moderation reports |
-| `file-service` | `FileService` | Presigned upload/download URLs, file metadata (MinIO) |
-| `live` | `ChatService` | Chat rooms, chat logs, room scheduling, bans; Socket.IO real-time |
-| `notification` | `NotificationService`, `NotificationPreferencesService` | Create/list notifications, mark read, preferences; SSE streaming |
+| App             | gRPC services                                                               | Responsibility                                                                                                                |
+| --------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `gateway`       | — (HTTP)                                                                    | API routing, JWT verification, role/permission guards, docs                                                                   |
+| `auth`          | `AuthService`                                                               | Registration/login (mail & Google), token issuance & refresh, roles/permissions, identity management, Google Calendar linking |
+| `authorization` | `AuthorizationService`                                                      | Ownership registration/checking (`is owner?`) for resources                                                                   |
+| `exam`          | `ExamManagementService`, `ExamPracticeService`, `TagService`, `GoalService` | Create/manage exams, sections & questions; answer attempts, stats, tags, user goals                                           |
+| `achievement`   | `AchievementService`                                                        | Badges catalog, user badges, login/submission progress                                                                        |
+| `resource`      | `BlogService`, `FlashCardService`, `FlashCardListService`, `ReportService`  | Blogs, flash cards (and lists), moderation reports                                                                            |
+| `file-service`  | `FileService`                                                               | Presigned upload/download URLs, file metadata (MinIO)                                                                         |
+| `live`          | `ChatService`                                                               | Chat rooms, chat logs, room scheduling, bans; Socket.IO real-time                                                             |
+| `notification`  | `NotificationService`, `NotificationPreferencesService`                     | Create/list notifications, mark read, preferences; SSE streaming                                                              |
 
 ### Libraries (libs)
 
-| Lib | Purpose |
-| --- | --- |
-| `@server/generated` | Auto-generated gRPC types/clients from `proto/*.proto` |
-| `@server/database` | Prisma/PostgreSQL module utilities |
-| `@server/logger` | Shared Winston logger integration |
-| `@server/utils` | Validation pipes, exception filters, interceptors, shared types & schemas |
-| `@server/typing` | Reusable TypeScript utility types |
+| Lib                 | Purpose                                                                   |
+| ------------------- | ------------------------------------------------------------------------- |
+| `@server/generated` | Auto-generated gRPC types/clients from `proto/*.proto`                    |
+| `@server/database`  | Prisma/PostgreSQL module utilities                                        |
+| `@server/logger`    | Shared Winston logger integration                                         |
+| `@server/utils`     | Validation pipes, exception filters, interceptors, shared types & schemas |
+| `@server/typing`    | Reusable TypeScript utility types                                         |
 
 ## Prerequisites
 
@@ -244,6 +244,7 @@ Keep the double quotes so the multi-line value survives `.env` parsing.
 The Docker setup builds each app separately and adds **Envoy** sidecars so each gRPC service is reachable over HTTP.
 
 1. Configure infrastructure + service env:
+
    ```
    cp docker/.env.example docker/.env
    cp docker/.env.services.example docker/.env.services   # fill in, incl. JWT_PRIVATE_KEY & JWT_PUBLIC_KEY
@@ -258,6 +259,16 @@ The Docker setup builds each app separately and adds **Envoy** sidecars so each 
 
 This brings up the database infrastructure, all application services, and the Envoy sidecars (ports defined in `docker/.env.example`, e.g. gateway `8080`, auth `8081`, exam `8082`, achievement `8083`, resource `8084`, notification `8085`/`8095`, file `8086`, live `8087`/`8088`).
 
+## Observability
+
+Every app exports traces, metrics, and logs over OTLP and serves `/health/live` and `/health/ready`. A local Grafana stack with a platform status dashboard and alerts runs separately from the app stack:
+
+```
+docker compose -f docker/docker-compose.observability.yaml up -d
+```
+
+Grafana is at http://localhost:3001 (`admin` / `admin`). Set `OTEL_SDK_DISABLED=true` to turn telemetry off. See [docs/operations/observability.md](docs/operations/observability.md) for ports, health endpoints, metrics, and alert runbooks.
+
 ## Regenerating gRPC Code
 
 Protobuf contracts live in `proto/`. After editing them, regenerate the client/server code:
@@ -270,21 +281,21 @@ The generated code is written to `libs/generated/src`.
 
 ## Common Commands
 
-| Command | Description |
-| --- | --- |
-| `pnpm install` | Install workspace dependencies |
-| `pnpm db:setup` | Migrate + seed every service database (and upload dev media) |
-| `nx run-many -t serve` | Run all services in dev mode |
-| `nx serve <app>` | Run a single app in dev mode (e.g. `nx serve gateway`) |
-| `nx run <app>:build` | Build an app (e.g. `nx run auth:build`) |
-| `nx run <app>:test` | Run tests for an app |
-| `nx run <app>:lint` | Lint an app |
-| `nx run <app>:prisma:generate` | Generate the Prisma client |
-| `nx run <app>:prisma:push` | Push the Prisma schema to the DB |
-| `nx run <app>:prisma:migrate` | Run Prisma migrations |
-| `nx run <app>:prisma:seed` | Seed the database |
-| `nx run generated:generate` | Regenerate gRPC code from `proto/` |
-| `nx graph` | Visualize the project dependency graph |
+| Command                        | Description                                                  |
+| ------------------------------ | ------------------------------------------------------------ |
+| `pnpm install`                 | Install workspace dependencies                               |
+| `pnpm db:setup`                | Migrate + seed every service database (and upload dev media) |
+| `nx run-many -t serve`         | Run all services in dev mode                                 |
+| `nx serve <app>`               | Run a single app in dev mode (e.g. `nx serve gateway`)       |
+| `nx run <app>:build`           | Build an app (e.g. `nx run auth:build`)                      |
+| `nx run <app>:test`            | Run tests for an app                                         |
+| `nx run <app>:lint`            | Lint an app                                                  |
+| `nx run <app>:prisma:generate` | Generate the Prisma client                                   |
+| `nx run <app>:prisma:push`     | Push the Prisma schema to the DB                             |
+| `nx run <app>:prisma:migrate`  | Run Prisma migrations                                        |
+| `nx run <app>:prisma:seed`     | Seed the database                                            |
+| `nx run generated:generate`    | Regenerate gRPC code from `proto/`                           |
+| `nx graph`                     | Visualize the project dependency graph                       |
 
 Use `nx show project <name>` to see every available target for a given project.
 

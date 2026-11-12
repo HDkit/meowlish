@@ -133,6 +133,8 @@ Root:
 | `.husky/pre-commit`                                   | Runs affected format, lint, and test                                                                             |
 | `.github/workflows/*.yml`                             | CI: install → prisma generate → lint → test → build                                                              |
 | `docker/`                                             | Compose stacks, Dockerfile, Envoy configs, `.env*.example`                                                       |
+| `docker/docker-compose.observability.yaml`            | Grafana LGTM stack (OTLP ingest on 4317/4318); see `docs/operations/observability.md`                            |
+| `docker/observability/`                               | Provisioned Grafana dashboards (`dashboards/`) and alert rules (`alerting/`)                                     |
 
 Per app (`apps/<svc>/`):
 
@@ -182,6 +184,7 @@ configs/        config.ts (zod env schema), rmq/bullmq configs
 - **gRPC controllers** use `@UseFilters(GlobalRpcExceptionFilter)`, the generated `@<pkg>.XServiceControllerMethods()` decorator, and `@Controller()`, and they `implements <pkg>.XServiceController`. Shape responses with `@SerializeOptions({ type: ResDto })`.
 - **Errors:** throw Nest exceptions (`NotFoundException`, …). The shared RPC/HTTP filters translate them across gRPC.
 - **Config:** each service validates env with a zod schema in `configs/config.ts`. Add new env vars there and to that app's `.env.example`.
+- **Entry point and health:** new apps must use the `main.ts` → `bootstrap.ts` split (`main.ts` calls `startTelemetry({ serviceName })` from `@server/telemetry`, then `void import('./bootstrap.js')`) and import `HealthModule.forRoot({ serviceName, ... })` in the app module. Also add a healthcheck in `docker/docker-compose.app.yaml` and a `ServiceMissing` rule in `docker/observability/alerting/platform.yaml`.
 
 ### Gateway conventions
 
