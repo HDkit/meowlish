@@ -155,17 +155,25 @@ export class FileService implements OnModuleInit {
 		};
 	}
 
-	async deleteFiles(files: { id: string; isPublic: boolean }[]): Promise<void> {
+	/**
+	 * Deletes the files' objects from their buckets. Returns the ids whose object is gone; ids
+	 * the storage refused to delete are left out so their rows are kept and retried later.
+	 */
+	async removeObjects(files: { id: string; isPublic: boolean }[]): Promise<string[]> {
+		const failed = new Set<string>();
 		const grouped = Object.groupBy(files, f => (f.isPublic ? 'public' : 'private'));
-		await this.fileRepository.remove(files.map(f => f.id));
-		await this.minioClient.removeObjects(
-			this.MINIO_PUBLIC_BUCKET_NAME,
-			grouped.public?.map(f => f.id) ?? [],
-		);
-		await this.minioClient.removeObjects(
-			this.MINIO_PRIVATE_BUCKET_NAME,
-			grouped.private?.map(f => f.id) ?? [],
-		);
+		for (const [bucket, group] of [
+			[this.MINIO_PUBLIC_BUCKET_NAME, grouped.public],
+			[this.MINIO_PRIVATE_BUCKET_NAME, grouped.private],
+		] as const) {
+			if (!group?.length) continue;
+			const results = await this.minioClient.removeObjects(
+				bucket,
+				group.map(f => f.id),
+			);
+			for (const key of failedObjectKeys(results)) failed.add(key);
+		}
+		return files.map(f => f.id).filter(id => !failed.has(id));
 	}
 
 	/**
@@ -213,4 +221,17 @@ export class FileService implements OnModuleInit {
 		const foreignIds = ids.filter(id => !owned.has(id));
 		return { ok: foreignIds.length === 0, foreignIds: foreignIds };
 	}
+}
+
+/**
+ * Keys of the `<Error>` entries of a DeleteObjects response. minio-js types each entry as
+ * `{ Error }` but returns the error elements themselves, so accept both shapes.
+ */
+function failedObjectKeys(results: unknown[]): string[] {
+	return results.flatMap(entry => {
+		if (typeof entry !== 'object' || entry === null) return [];
+		const error: unknown = 'Error' in entry ? entry.Error : entry;
+		if (typeof error !== 'object' || error === null || !('Key' in error)) return [];
+		return typeof error.Key === 'string' ? [error.Key] : [];
+	});
 }

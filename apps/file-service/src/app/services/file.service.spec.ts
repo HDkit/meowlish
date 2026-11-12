@@ -92,3 +92,63 @@ describe('FileService presigned upload', () => {
 		expect(res.id).toBe('fresh-id');
 	});
 });
+
+describe('FileService.removeObjects', () => {
+	const setup = (results: Record<string, unknown[]> = {}) => {
+		const minio = {
+			removeObjects: jest.fn((bucket: string) => Promise.resolve(results[bucket] ?? [])),
+		};
+		const config = { getOrThrow: jest.fn().mockReturnValue({}) };
+		const service = new FileService(minio as never, {} as never, config as never);
+		return { minio: minio, service: service };
+	};
+	const files = [
+		{ id: 'pub', isPublic: true },
+		{ id: 'priv', isPublic: false },
+		{ id: 'priv2', isPublic: false },
+	];
+
+	it('deletes each object from its bucket and reports every id as removed', async () => {
+		const { minio, service } = setup();
+		await expect(service.removeObjects(files)).resolves.toEqual(['pub', 'priv', 'priv2']);
+		expect(minio.removeObjects).toHaveBeenCalledWith('public', ['pub']);
+		expect(minio.removeObjects).toHaveBeenCalledWith('private', ['priv', 'priv2']);
+	});
+
+	it('leaves out the ids whose delete the storage rejected', async () => {
+		// minio-js returns the per-key <Error> entries of the DeleteObjects response.
+		const { service } = setup({
+			private: [
+				{ Code: 'AccessDenied', Key: 'priv' },
+				{ Error: { Code: 'InternalError', Key: 'priv2' } },
+			],
+		});
+		await expect(service.removeObjects(files)).resolves.toEqual(['pub']);
+	});
+
+	it('skips a bucket with nothing to delete', async () => {
+		const { minio, service } = setup();
+		await service.removeObjects([{ id: 'pub', isPublic: true }]);
+		expect(minio.removeObjects).toHaveBeenCalledTimes(1);
+	});
+
+	it('propagates a failed storage request', async () => {
+		const { minio, service } = setup();
+		minio.removeObjects.mockRejectedValueOnce(new Error('minio down'));
+		await expect(service.removeObjects(files)).rejects.toThrow('minio down');
+	});
+});
+
+describe('FileService.getPresignedUrl validation', () => {
+	it.each([
+		['too large', { fileName: 'a.png', fileSize: 11 * 1024 * 1024, contentType: 'image/png' }],
+		[
+			'disallowed type',
+			{ fileName: 'a.exe', fileSize: 10, contentType: 'application/x-msdownload' },
+		],
+	])('rejects a %s file before inserting a row', async (_name, metadata) => {
+		const { repo, service } = setup();
+		await expect(service.getPresignedUrl(metadata, true, 'user-1')).rejects.toThrow();
+		expect(repo.create).not.toHaveBeenCalled();
+	});
+});

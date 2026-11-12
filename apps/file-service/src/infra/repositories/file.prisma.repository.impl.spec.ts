@@ -44,27 +44,51 @@ describe('FilePrismaRepositoryImpl.decrementRef', () => {
 	});
 });
 
-describe('FilePrismaRepositoryImpl.getOrphanedFiles', () => {
-	const rows = [
-		{ id: 'sys', name: 'SYSTEM_a.mp3', refCount: 0, isSystem: true },
-		{ id: 'user-lookalike', name: 'SYSTEM_x', refCount: 0, isSystem: false },
-		{ id: 'plain', name: 'b.png', refCount: 0, isSystem: false },
-		{ id: 'used', name: 'c.png', refCount: 1, isSystem: false },
-	];
-	// Minimal in-memory evaluation of the where clause the repository builds.
-	const findMany = jest.fn(
-		({ where }: { where: { refCount: { lte: number }; isSystem?: boolean } }) =>
-			Promise.resolve(
-				rows
-					.filter(r => r.refCount <= where.refCount.lte)
-					.filter(r => where.isSystem === undefined || r.isSystem === where.isSystem),
-			),
-	);
-	const repo = new FilePrismaRepositoryImpl({ tx: { file: { findMany: findMany } } } as never);
+describe('FilePrismaRepositoryImpl.lockOrphanedFiles', () => {
+	const setup = () => {
+		const queryRaw = jest.fn().mockResolvedValue([{ id: 'a', isPublic: true }]);
+		const repo = new FilePrismaRepositoryImpl({ tx: { $queryRaw: queryRaw } } as never);
+		const sql = () => {
+			const [strings] = queryRaw.mock.calls[0] as [TemplateStringsArray, ...unknown[]];
+			return strings.join('?').replace(/\s+/g, ' ');
+		};
+		const params = () => (queryRaw.mock.calls[0] as unknown[]).slice(1);
+		return { repo: repo, sql: sql, params: params };
+	};
 
-	it('skips isSystem rows by flag, and cleans a user file named SYSTEM_x', async () => {
-		const ids = (await repo.getOrphanedFiles()).map(f => f.id);
-		expect(ids).toEqual(['user-lookalike', 'plain']);
-		expect(JSON.stringify(findMany.mock.calls[0][0])).not.toContain('startsWith');
+	it('locks unreferenced, non-system rows untouched since the cutoff, skipping locked ones', async () => {
+		const { repo, sql, params } = setup();
+		const cutoff = new Date('2026-11-12T11:00:00Z');
+		await expect(repo.lockOrphanedFiles(cutoff, 100)).resolves.toEqual([
+			{ id: 'a', isPublic: true },
+		]);
+		expect(sql()).toContain('"ref_count" <= 0');
+		expect(sql()).toContain('"is_system" = false');
+		expect(sql()).toContain('"updatedAt" < ?::timestamp');
+		expect(sql()).toContain('LIMIT ? FOR UPDATE SKIP LOCKED');
+		expect(sql()).not.toContain('startsWith');
+		expect(params()).toEqual(['2026-11-12T11:00:00.000Z', 100]);
+	});
+});
+
+describe('FilePrismaRepositoryImpl.removeOrphaned', () => {
+	it('re-checks that the rows are still unreferenced and not system files', async () => {
+		const deleteMany = jest.fn().mockResolvedValue({ count: 1 });
+		const repo = new FilePrismaRepositoryImpl({
+			tx: { file: { deleteMany: deleteMany } },
+		} as never);
+		await repo.removeOrphaned(['a', 'b']);
+		expect(deleteMany).toHaveBeenCalledWith({
+			where: { id: { in: ['a', 'b'] }, refCount: { lte: 0 }, isSystem: false },
+		});
+	});
+
+	it('skips the query for an empty list', async () => {
+		const deleteMany = jest.fn();
+		const repo = new FilePrismaRepositoryImpl({
+			tx: { file: { deleteMany: deleteMany } },
+		} as never);
+		await repo.removeOrphaned([]);
+		expect(deleteMany).not.toHaveBeenCalled();
 	});
 });

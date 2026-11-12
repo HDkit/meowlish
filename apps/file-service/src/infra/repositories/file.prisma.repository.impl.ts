@@ -40,14 +40,23 @@ export class FilePrismaRepositoryImpl implements IFileRepository {
 		}
 	}
 
-	async remove(ids: string[]): Promise<void> {
-		await this.txHost.tx.file.deleteMany({ where: { id: { in: ids } } });
+	async lockOrphanedFiles(
+		untouchedSince: Date,
+		limit: number,
+	): Promise<{ id: string; isPublic: boolean }[]> {
+		// `updatedAt` is a UTC timestamp without time zone, so compare against the UTC wall time.
+		return await this.txHost.tx.$queryRaw<{ id: string; isPublic: boolean }[]>`
+			SELECT "id", "isPublic" FROM "files"
+			WHERE "ref_count" <= 0 AND "is_system" = false
+				AND "updatedAt" < ${untouchedSince.toISOString()}::timestamp
+			ORDER BY "updatedAt"
+			LIMIT ${limit} FOR UPDATE SKIP LOCKED`;
 	}
 
-	async getOrphanedFiles(): Promise<{ id: string; isPublic: boolean; updatedAt: Date }[]> {
-		return await this.txHost.tx.file.findMany({
-			where: { refCount: { lte: 0 }, isSystem: false },
-			select: { id: true, isPublic: true, updatedAt: true },
+	async removeOrphaned(ids: string[]): Promise<void> {
+		if (ids.length === 0) return;
+		await this.txHost.tx.file.deleteMany({
+			where: { id: { in: ids }, refCount: { lte: 0 }, isSystem: false },
 		});
 	}
 
