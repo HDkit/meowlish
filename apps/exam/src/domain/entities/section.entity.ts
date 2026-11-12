@@ -14,6 +14,7 @@ import {
 	SectionUpdatedEvent,
 } from '../events/exam-management.event';
 import { ExamId } from './exam.entity';
+import { clampIndex, orderAt } from './order-position';
 import { Question } from './question.entity';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { AggregateRoot } from '@nestjs/cqrs';
@@ -205,71 +206,36 @@ export class Section extends AggregateRoot<Event<any>> implements IAggregate<Sec
 	}
 
 	/**
-	 * Index below 0 is automatically added to tail (default behavior)
-	 * @param id the id of the new section
-	 * @param idx the new index (0-based) of the new section
+	 * Index below 0 or past the end is automatically added to tail (default behavior)
+	 * @param id the id of the new child
+	 * @param idx the new index (0-based) of the new child
 	 */
 	private insertChild(id: string, idx = -1): SectionChild {
 		if (this.children.find(c => c.id === id)) throw new ConflictException('Child already exists.');
-		const length = this.children.length;
-		if (idx < 0 || idx >= length) idx = length - 1;
-		let newOrder: number;
-		// add tail
-		if (idx === length - 1) {
-			const lastSection = this.children.at(-1);
-			newOrder = lastSection ? lastSection.order + Section.orderRange : 0;
-		}
-		// add head
-		else if (idx === 0) {
-			const firstSection = this.children.at(0);
-			newOrder = firstSection ? firstSection.order - Section.orderRange : 0;
-		} else {
-			const prev = this.children[idx];
-			const next = this.children[idx + 1];
-			if (next.order - prev.order <= 1) this.rebalance();
-			newOrder = Math.floor((prev.order + next.order) / 2);
-		}
-		const child = new SectionChild(id, newOrder);
-		this.children.splice(idx, 0);
+		const target = clampIndex(idx, this.children.length);
+		const child = new SectionChild(id, this.orderAt(target));
+		this.children.splice(target, 0, child);
 		return child;
+	}
+
+	private orderAt(idx: number): number {
+		return orderAt(this.children, idx, Section.orderRange, () => this.rebalance());
 	}
 
 	/**
 	 * Move an existing child from one index to another
 	 * @param id child id to move
-	 * @param toIdx target index (0-based), < 0 means move to tail
+	 * @param toIdx target index (0-based), < 0 or past the end means move to tail
 	 */
 	public moveChild(id: string, toIdx = -1): void {
 		this.assertModifiable();
 		const fromIdx = this.children.findIndex(c => c.id === id);
 		if (fromIdx === -1) throw new NotFoundException('Child not found');
-		const length = this.children.length;
-		if (toIdx < 0 || toIdx >= length) toIdx = length - 1;
-		if (fromIdx === toIdx) return;
-		let newOrder: number;
-		// move to tail
-		if (toIdx === length - 1) {
-			const last = this.children.at(-1);
-			newOrder = last ? last.order + Section.orderRange : 0;
-		}
-		// move to head
-		else if (toIdx === 0) {
-			const first = this.children.at(0);
-			newOrder = first ? first.order - Section.orderRange : 0;
-		}
-		// move in middle
-		else {
-			const prev = this.children[toIdx];
-			const next = this.children[toIdx + 1];
-			if (next.order - prev.order <= 1) this.rebalance();
-			newOrder = Math.floor((prev.order + next.order) / 2);
-		}
-		const child = this.children[fromIdx];
-		child.order = newOrder;
-		// add to new index
-		this.children.splice(toIdx, 0, child);
-		// remove from list
-		this.children.splice(fromIdx, 1);
+		const [child] = this.children.splice(fromIdx, 1);
+		const target = clampIndex(toIdx, this.children.length);
+		if (target !== fromIdx) child.order = this.orderAt(target);
+		this.children.splice(target, 0, child);
+		if (target === fromIdx) return;
 		this.apply(
 			this.contentType === SectionType.Question ?
 				new QuestionMovedEvent({

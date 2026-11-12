@@ -9,6 +9,7 @@ import {
 	SectionMovedEvent,
 } from '../events/exam-management.event';
 import { AttemptConfig } from './attempt-config.entity';
+import { clampIndex, orderAt } from './order-position';
 import { Section } from './section.entity';
 import {
 	BadRequestException,
@@ -149,36 +150,21 @@ export class Exam extends AggregateRoot<Event<any>> implements IAggregate<Exam, 
 	/**
 	 * Private function to avoid duplicate code between createSection and addSection
 	 *
-	 * Index below 0 is automatically added to tail (default behavior)
+	 * Index below 0 or past the end is automatically added to tail (default behavior)
 	 * @param id the id of the new section
 	 * @param idx the new index (0-based) of the new section
 	 */
 	private insertSection(id: string, idx = -1): ExamSection {
 		if (this.sections.findIndex(s => s.id === id) !== -1)
 			throw new ConflictException('Section already exists.');
-		const length = this.sections.length;
-		if (idx < 0 || idx >= length) idx = length - 1;
-		let newOrder: number;
-		// add tail
-		if (idx === length - 1) {
-			const lastSection = this.sections.at(-1);
-			newOrder = lastSection ? lastSection.order + Exam.orderRange : 0;
-		}
-		// add head
-		else if (idx === 0) {
-			const firstSection = this.sections.at(0);
-			newOrder = firstSection ? firstSection.order - Exam.orderRange : 0;
-		}
-		// add in middle
-		else {
-			const prev = this.sections[idx];
-			const next = this.sections[idx + 1];
-			if (next.order - prev.order <= 1) this.rebalance();
-			newOrder = Math.floor((prev.order + next.order) / 2);
-		}
-		const section = new ExamSection(id, newOrder);
-		this.sections.splice(idx, 0, section);
+		const target = clampIndex(idx, this.sections.length);
+		const section = new ExamSection(id, this.orderAt(target));
+		this.sections.splice(target, 0, section);
 		return section;
+	}
+
+	private orderAt(idx: number): number {
+		return orderAt(this.sections, idx, Exam.orderRange, () => this.rebalance());
 	}
 
 	public removeSection(id: string): void {
@@ -190,41 +176,19 @@ export class Exam extends AggregateRoot<Event<any>> implements IAggregate<Exam, 
 	}
 
 	/**
-	 * Index below 0 is automatically added to tail (default behavior)
-	 * @param id the id of the new section
+	 * Index below 0 or past the end is automatically moved to tail (default behavior)
+	 * @param id the id of the section
 	 * @param toIdx the new index (0-based) of the new section
 	 */
 	public moveSection(id: string, toIdx = -1): void {
 		this.assertModifiable();
 		const fromIdx = this.sections.findIndex(s => s.id === id);
 		if (fromIdx === -1) throw new NotFoundException(`Section not found`);
-		const length = this.sections.length;
-		if (toIdx < 0 || toIdx >= length) toIdx = length - 1;
-		if (fromIdx === toIdx) return;
-		let newOrder: number;
-		// move tail
-		if (toIdx === length - 1) {
-			const lastSection = this.sections.at(-1);
-			newOrder = lastSection ? lastSection.order + Exam.orderRange : 0;
-		}
-		// move head
-		else if (toIdx === 0) {
-			const firstSection = this.sections.at(0);
-			newOrder = firstSection ? firstSection.order - Exam.orderRange : 0;
-		}
-		// move middle
-		else {
-			const prev = this.sections[toIdx];
-			const next = this.sections[toIdx + 1];
-			if (next.order - prev.order <= 1) this.rebalance();
-			newOrder = Math.floor((prev.order + next.order) / 2);
-		}
-		const section = this.sections[fromIdx];
-		section.order = newOrder;
-		// add to new index
-		this.sections.splice(toIdx, 0, section);
-		// remove from list
-		this.sections.splice(fromIdx, 1);
+		const [section] = this.sections.splice(fromIdx, 1);
+		const target = clampIndex(toIdx, this.sections.length);
+		if (target !== fromIdx) section.order = this.orderAt(target);
+		this.sections.splice(target, 0, section);
+		if (target === fromIdx) return;
 		this.apply(
 			new SectionMovedEvent({
 				examId: this.id,
