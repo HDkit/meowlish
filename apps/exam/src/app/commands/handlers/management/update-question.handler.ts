@@ -34,6 +34,7 @@ export class UpdateQuestionHandler implements ICommandHandler<UpdateQuestionComm
 		if (payload.removeTags) payload.removeTags.forEach(t => question.removeTag(t));
 		if (payload.addFiles) payload.addFiles.forEach(t => question.addFile(t));
 		if (payload.removeFiles) payload.removeFiles.forEach(t => question.removeFile(t));
+		question.assertChoicesConsistent();
 		await this.questionRepository.save(question);
 		await this.fileAddedPublisher.publish(question.getUncommittedEvents());
 	}

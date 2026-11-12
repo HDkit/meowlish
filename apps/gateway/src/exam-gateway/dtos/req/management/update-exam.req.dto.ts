@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ArrayUnique, IsArray, IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
+import {
+	ArrayUnique,
+	IsArray,
+	IsBoolean,
+	IsInt,
+	IsOptional,
+	IsPositive,
+	IsString,
+} from 'class-validator';
 
 export class UpdateExamDto {
 	@IsOptional()
@@ -7,8 +15,9 @@ export class UpdateExamDto {
 	@ApiPropertyOptional()
 	description?: string;
 
-	@IsNumber()
+	@IsInt()
 	@IsOptional()
+	@IsPositive()
 	@ApiPropertyOptional({ type: Number })
 	duration?: number;
 

@@ -69,14 +69,18 @@ export class Exam extends AggregateRoot<Event<any>> implements IAggregate<Exam, 
 		super();
 		this.id = constructorOptions.id ?? Exam.newId();
 		this.title = constructorOptions.title;
-		if (constructorOptions.duration <= 0)
-			throw new BadRequestException('Duration must be positive');
+		Exam.assertValidDuration(constructorOptions.duration);
 		this.duration = constructorOptions.duration;
 		this.createdBy = constructorOptions.createdBy;
 		this.status = constructorOptions.status;
 		this.description = constructorOptions.description ?? null;
 		this.sections = constructorOptions.sections.toSorted((a, b) => a.order - b.order);
 		this.tags = new Set(constructorOptions.tags);
+	}
+
+	private static assertValidDuration(duration: number): void {
+		if (!Number.isInteger(duration) || duration <= 0)
+			throw new BadRequestException('Duration must be a positive whole number of seconds');
 	}
 
 	private assertModifiable(): void {
@@ -87,7 +91,10 @@ export class Exam extends AggregateRoot<Event<any>> implements IAggregate<Exam, 
 	public updateDetails(options: ExamUpdatableProperties): void {
 		this.assertModifiable();
 		if (options.title) this.title = options.title;
-		if (options.duration) this.duration = options.duration;
+		if (options.duration !== undefined) {
+			Exam.assertValidDuration(options.duration);
+			this.duration = options.duration;
+		}
 		if (options.description || options.description === null) this.description = options.description;
 		this.apply(new ExamDetailsUpdatedEvent({ examId: this.id, data: structuredClone(this) }));
 	}

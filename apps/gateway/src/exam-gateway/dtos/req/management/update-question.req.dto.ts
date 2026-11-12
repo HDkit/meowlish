@@ -6,8 +6,8 @@ import {
 	IsBoolean,
 	IsInt,
 	IsOptional,
-	IsPositive,
 	IsString,
+	Min,
 	ValidateNested,
 } from 'class-validator';
 
@@ -82,7 +82,7 @@ export class UpdateQuestionDto {
 
 	@IsInt()
 	@IsOptional()
-	@IsPositive()
+	@Min(0)
 	@ApiPropertyOptional({ type: Number })
 	points?: number;
 
