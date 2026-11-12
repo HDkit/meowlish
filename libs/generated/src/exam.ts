@@ -3,8871 +3,8547 @@
 //   protoc-gen-ts_proto  v2.18.4
 //   protoc               v7.34.0
 // source: exam.proto
+
 /* eslint-disable */
-import { Empty } from './google/protobuf/empty';
-import { Timestamp } from './google/protobuf/timestamp';
-import { BoolValue, Int32Value, StringValue } from './google/protobuf/wrappers';
-import { BinaryReader, BinaryWriter } from '@bufbuild/protobuf/wire';
-import type { Metadata, UntypedServiceImplementation, handleUnaryCall } from '@grpc/grpc-js';
-import { GrpcMethod, GrpcStreamMethod } from '@nestjs/microservices';
-import { wrappers } from 'protobufjs';
-import { Observable } from 'rxjs';
+import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
+import type { handleUnaryCall, Metadata, UntypedServiceImplementation } from "@grpc/grpc-js";
+import { GrpcMethod, GrpcStreamMethod } from "@nestjs/microservices";
+import { wrappers } from "protobufjs";
+import { Observable } from "rxjs";
+import { Empty } from "./google/protobuf/empty";
+import { Timestamp } from "./google/protobuf/timestamp";
+import { BoolValue, Int32Value, StringValue } from "./google/protobuf/wrappers";
 
 /** Request */
 export interface CreateExamDto {
-	createdBy: string | undefined;
-	title: string | undefined;
-	description: string | undefined;
-	duration: number | undefined;
+  createdBy: string | undefined;
+  title: string | undefined;
+  description: string | undefined;
+  duration: number | undefined;
 }
 
 export interface CreatedExamDto {
-	id: string | undefined;
+  id: string | undefined;
 }
 
 export interface CreateSectionDto {
-	sectionId?: string | undefined;
-	examId?: string | undefined;
-	index?: number | undefined;
-	/** Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it. */
-	requesterId: string | undefined;
-	privileged: boolean | undefined;
+  sectionId?: string | undefined;
+  examId?: string | undefined;
+  index?:
+    | number
+    | undefined;
+  /** Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it. */
+  requesterId: string | undefined;
+  privileged: boolean | undefined;
 }
 
 export interface CreatedSectionDto {
-	id: string | undefined;
+  id: string | undefined;
 }
 
 export interface CreateQuestionDto {
-	sectionId: string | undefined;
-	index?: number | undefined;
-	/** Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it. */
-	requesterId: string | undefined;
-	privileged: boolean | undefined;
+  sectionId: string | undefined;
+  index?:
+    | number
+    | undefined;
+  /** Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it. */
+  requesterId: string | undefined;
+  privileged: boolean | undefined;
 }
 
 export interface CreatedQuestionDto {
-	id: string | undefined;
+  id: string | undefined;
 }
 
 export interface UpdateExamDto {
-	id: string | undefined;
-	title?: string | undefined;
-	setDescriptionNull?: boolean | undefined;
-	description?: string | undefined;
-	duration?: number | undefined;
-	addTags: string[];
-	removeTags: string[];
-	/** Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it. */
-	requesterId: string | undefined;
-	privileged: boolean | undefined;
+  id: string | undefined;
+  title?: string | undefined;
+  setDescriptionNull?: boolean | undefined;
+  description?: string | undefined;
+  duration?: number | undefined;
+  addTags: string[];
+  removeTags: string[];
+  /** Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it. */
+  requesterId: string | undefined;
+  privileged: boolean | undefined;
 }
 
 export interface UpdateSectionDto {
-	id: string | undefined;
-	setNameNull?: boolean | undefined;
-	name?: string | undefined;
-	directive?: string | undefined;
-	contentType?: string | undefined;
-	addTags: string[];
-	removeTags: string[];
-	addFiles: string[];
-	removeFiles: string[];
-	/** Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it. */
-	requesterId: string | undefined;
-	privileged: boolean | undefined;
+  id: string | undefined;
+  setNameNull?: boolean | undefined;
+  name?: string | undefined;
+  directive?: string | undefined;
+  contentType?: string | undefined;
+  addTags: string[];
+  removeTags: string[];
+  addFiles: string[];
+  removeFiles: string[];
+  /** Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it. */
+  requesterId: string | undefined;
+  privileged: boolean | undefined;
 }
 
 export interface UpdateQuestionDto {
-	id: string | undefined;
-	content?: string | undefined;
-	explanation?: string | undefined;
-	points?: number | undefined;
-	type?: string | undefined;
-	addChoices: UpdateQuestionDto_AddChoice[];
-	deleteChoicesIds: string[];
-	updateChoices: UpdateQuestionDto_UpdateChoice[];
-	addTags: string[];
-	removeTags: string[];
-	addFiles: string[];
-	removeFiles: string[];
-	/** Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it. */
-	requesterId: string | undefined;
-	privileged: boolean | undefined;
+  id: string | undefined;
+  content?: string | undefined;
+  explanation?: string | undefined;
+  points?: number | undefined;
+  type?: string | undefined;
+  addChoices: UpdateQuestionDto_AddChoice[];
+  deleteChoicesIds: string[];
+  updateChoices: UpdateQuestionDto_UpdateChoice[];
+  addTags: string[];
+  removeTags: string[];
+  addFiles: string[];
+  removeFiles: string[];
+  /** Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it. */
+  requesterId: string | undefined;
+  privileged: boolean | undefined;
 }
 
 export interface UpdateQuestionDto_AddChoice {
-	key: string | undefined;
-	content?: string | undefined;
-	isCorrect: boolean | undefined;
+  key: string | undefined;
+  content?: string | undefined;
+  isCorrect: boolean | undefined;
 }
 
 export interface UpdateQuestionDto_UpdateChoice {
-	id: string | undefined;
-	key?: string | undefined;
-	content?: string | undefined;
-	isCorrect?: boolean | undefined;
-	setContentNull?: boolean | undefined;
+  id: string | undefined;
+  key?: string | undefined;
+  content?: string | undefined;
+  isCorrect?: boolean | undefined;
+  setContentNull?: boolean | undefined;
 }
 
 export interface DeleteExamDto {
-	id: string | undefined;
-	/** Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it. */
-	requesterId: string | undefined;
-	privileged: boolean | undefined;
+  id:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it. */
+  requesterId: string | undefined;
+  privileged: boolean | undefined;
 }
 
 export interface DeleteSectionDto {
-	id: string | undefined;
-	/** Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it. */
-	requesterId: string | undefined;
-	privileged: boolean | undefined;
+  id:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it. */
+  requesterId: string | undefined;
+  privileged: boolean | undefined;
 }
 
 export interface DeleteQuestionDto {
-	id: string | undefined;
-	/** Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it. */
-	requesterId: string | undefined;
-	privileged: boolean | undefined;
+  id:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it. */
+  requesterId: string | undefined;
+  privileged: boolean | undefined;
 }
 
 export interface MoveSectionDto {
-	id: string | undefined;
-	index?: number | undefined;
-	parentId?: string | undefined;
-	toRoot?: boolean | undefined;
-	/** Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it. */
-	requesterId: string | undefined;
-	privileged: boolean | undefined;
+  id: string | undefined;
+  index?: number | undefined;
+  parentId?: string | undefined;
+  toRoot?:
+    | boolean
+    | undefined;
+  /** Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it. */
+  requesterId: string | undefined;
+  privileged: boolean | undefined;
 }
 
 export interface MoveQuestionDto {
-	id: string | undefined;
-	index?: number | undefined;
-	sectionId?: string | undefined;
-	/** Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it. */
-	requesterId: string | undefined;
-	privileged: boolean | undefined;
+  id: string | undefined;
+  index?: number | undefined;
+  sectionId?:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it. */
+  requesterId: string | undefined;
+  privileged: boolean | undefined;
 }
 
 export interface ReviewExamDto {
-	id: string | undefined;
-	status: string | undefined;
+  id: string | undefined;
+  status: string | undefined;
 }
 
 export interface AttemptDto {
-	userId: string | undefined;
-	examId: string | undefined;
-	options?: AttemptDto_Options | undefined;
+  userId: string | undefined;
+  examId: string | undefined;
+  options?: AttemptDto_Options | undefined;
 }
 
 export interface AttemptDto_Options {
-	duration?: number | undefined;
-	sectionIds: string[];
+  duration?: number | undefined;
+  sectionIds: string[];
 }
 
 export interface CreatedAttemptDto {
-	id: string | undefined;
+  id: string | undefined;
 }
 
 export interface EndAttemptDto {
-	attemptId: string | undefined;
-	/** Set by the gateway from the JWT; the attempt must belong to this user. */
-	userId: string | undefined;
+  attemptId:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; the attempt must belong to this user. */
+  userId: string | undefined;
 }
 
 export interface AnswerDto {
-	attemptId: string | undefined;
-	questionId: string | undefined;
-	answer: string | undefined;
-	/** Set by the gateway from the JWT; the attempt must belong to this user. */
-	userId: string | undefined;
+  attemptId: string | undefined;
+  questionId: string | undefined;
+  answer:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; the attempt must belong to this user. */
+  userId: string | undefined;
 }
 
 export interface RemoveAnswerDto {
-	attemptId: string | undefined;
-	questionId: string | undefined;
-	answer?: string | undefined;
-	/** Set by the gateway from the JWT; the attempt must belong to this user. */
-	userId: string | undefined;
+  attemptId: string | undefined;
+  questionId: string | undefined;
+  answer?:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; the attempt must belong to this user. */
+  userId: string | undefined;
 }
 
 export interface AddNoteDto {
-	attemptId: string | undefined;
-	questionId: string | undefined;
-	note: string | undefined;
-	/** Set by the gateway from the JWT; the attempt must belong to this user. */
-	userId: string | undefined;
+  attemptId: string | undefined;
+  questionId: string | undefined;
+  note:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; the attempt must belong to this user. */
+  userId: string | undefined;
 }
 
 export interface ToggleFlagDto {
-	attemptId: string | undefined;
-	questionId: string | undefined;
-	/** Set by the gateway from the JWT; the attempt must belong to this user. */
-	userId: string | undefined;
+  attemptId: string | undefined;
+  questionId:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; the attempt must belong to this user. */
+  userId: string | undefined;
 }
 
 export interface FlagStateDto {
-	state: boolean | undefined;
+  state: boolean | undefined;
 }
 
 export interface AddTagDto {
-	name: string | undefined;
-	parentId?: string | undefined;
+  name: string | undefined;
+  parentId?: string | undefined;
 }
 
 export interface AddedTagDto {
-	id: string | undefined;
+  id: string | undefined;
 }
 
 export interface DeleteTagDto {
-	id: string | undefined;
+  id: string | undefined;
 }
 
 export interface UpdateTagDto {
-	id: string | undefined;
-	name: string | undefined;
+  id: string | undefined;
+  name: string | undefined;
 }
 
 export interface MoveTagDto {
-	id: string | undefined;
-	parentId?: string | undefined;
+  id: string | undefined;
+  parentId?: string | undefined;
 }
 
 export interface GetUsersAttemptSummaryDto {
-	uid: string | undefined;
-	range: GetUsersAttemptSummaryDto_Range | undefined;
+  uid: string | undefined;
+  range: GetUsersAttemptSummaryDto_Range | undefined;
 }
 
 export interface GetUsersAttemptSummaryDto_Range {
-	from: Date | undefined;
-	to: Date | undefined;
+  from: Date | undefined;
+  to: Date | undefined;
 }
 
 export interface AttemptHistorySummary {
-	history: { [key: number]: number };
+  history: { [key: number]: number };
 }
 
 export interface AttemptHistorySummary_HistoryEntry {
-	key: number;
-	value: number;
+  key: number;
+  value: number;
 }
 
 export interface GetAttemptReviewDto {
-	attemptId: string | undefined;
-	/** Set by the gateway from the JWT; the attempt must belong to this user. */
-	userId: string | undefined;
+  attemptId:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; the attempt must belong to this user. */
+  userId: string | undefined;
 }
 
 export interface DetailedAttemptReviewData {
-	responses: DetailedAttemptReviewData_AttemptReviewResponse[];
-	sections: DetailedAttemptReviewData_SectionReviewData[];
-	startedAt: Date | undefined;
-	endedAt: Date | undefined;
-	durationLimit: number;
-	totalPoints?: number | undefined;
+  responses: DetailedAttemptReviewData_AttemptReviewResponse[];
+  sections: DetailedAttemptReviewData_SectionReviewData[];
+  startedAt: Date | undefined;
+  endedAt: Date | undefined;
+  durationLimit: number;
+  totalPoints?: number | undefined;
 }
 
 export interface DetailedAttemptReviewData_AttemptReviewResponse {
-	questionId: string;
-	note?: string | undefined;
-	isFlagged?: boolean | undefined;
-	answers: string[];
-	isCorrect?: boolean | undefined;
-	additionalData?: string | undefined;
+  questionId: string;
+  note?: string | undefined;
+  isFlagged?: boolean | undefined;
+  answers: string[];
+  isCorrect?: boolean | undefined;
+  additionalData?: string | undefined;
 }
 
 export interface DetailedAttemptReviewData_SectionReviewData {
-	id: string;
-	name?: string | undefined;
-	directive: string;
-	order: number;
-	fileUrls: string[];
-	type: string;
-	sections: DetailedAttemptReviewData_SectionReviewData[];
-	questions: DetailedAttemptReviewData_SectionReviewData_QuestionReviewData[];
+  id: string;
+  name?: string | undefined;
+  directive: string;
+  order: number;
+  fileUrls: string[];
+  type: string;
+  sections: DetailedAttemptReviewData_SectionReviewData[];
+  questions: DetailedAttemptReviewData_SectionReviewData_QuestionReviewData[];
 }
 
 export interface DetailedAttemptReviewData_SectionReviewData_QuestionReviewData {
-	id: string;
-	content: string;
-	type: string;
-	order: number;
-	fileUrls: string[];
-	choices: DetailedAttemptReviewData_SectionReviewData_QuestionReviewData_ChoiceReviewData[];
-	tags: string[];
-	points: number;
+  id: string;
+  content: string;
+  type: string;
+  order: number;
+  fileUrls: string[];
+  choices: DetailedAttemptReviewData_SectionReviewData_QuestionReviewData_ChoiceReviewData[];
+  tags: string[];
+  points: number;
 }
 
 export interface DetailedAttemptReviewData_SectionReviewData_QuestionReviewData_ChoiceReviewData {
-	key: string;
-	content?: string | undefined;
-	isCorrect: boolean;
+  key: string;
+  content?: string | undefined;
+  isCorrect: boolean;
 }
 
 export interface GetAttemptSavedDataDto {
-	attemptId: string | undefined;
-	/** Set by the gateway from the JWT; the attempt must belong to this user. */
-	userId: string | undefined;
+  attemptId:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; the attempt must belong to this user. */
+  userId: string | undefined;
 }
 
 export interface AttemptSavedData {
-	responses: AttemptSavedData_AttemptSavedResponse[];
-	sections: AttemptSavedData_AttemptSectionData[];
-	startedAt: Date | undefined;
-	durationLimit: number;
+  responses: AttemptSavedData_AttemptSavedResponse[];
+  sections: AttemptSavedData_AttemptSectionData[];
+  startedAt: Date | undefined;
+  durationLimit: number;
 }
 
 export interface AttemptSavedData_AttemptSavedResponse {
-	questionId: string;
-	note?: string | undefined;
-	isFlagged?: boolean | undefined;
-	answers: string[];
+  questionId: string;
+  note?: string | undefined;
+  isFlagged?: boolean | undefined;
+  answers: string[];
 }
 
 export interface AttemptSavedData_AttemptSectionData {
-	id: string;
-	name?: string | undefined;
-	directive: string;
-	order: number;
-	fileUrls: string[];
-	type: string;
-	sections: AttemptSavedData_AttemptSectionData[];
-	questions: AttemptSavedData_AttemptSectionData_AttemptQuestionData[];
+  id: string;
+  name?: string | undefined;
+  directive: string;
+  order: number;
+  fileUrls: string[];
+  type: string;
+  sections: AttemptSavedData_AttemptSectionData[];
+  questions: AttemptSavedData_AttemptSectionData_AttemptQuestionData[];
 }
 
 export interface AttemptSavedData_AttemptSectionData_AttemptQuestionData {
-	id: string;
-	content: string;
-	type: string;
-	order: number;
-	fileUrls: string[];
-	choices: AttemptSavedData_AttemptSectionData_AttemptQuestionData_AttemptChoiceData[];
+  id: string;
+  content: string;
+  type: string;
+  order: number;
+  fileUrls: string[];
+  choices: AttemptSavedData_AttemptSectionData_AttemptQuestionData_AttemptChoiceData[];
 }
 
 export interface AttemptSavedData_AttemptSectionData_AttemptQuestionData_AttemptChoiceData {
-	key: string;
-	content?: string | undefined;
+  key: string;
+  content?: string | undefined;
 }
 
 export interface GetExamDetailsDto {
-	examId: string | undefined;
+  examId: string | undefined;
 }
 
 export interface DetailedExamInfo {
-	id: string;
-	name: string;
-	description?: string | undefined;
-	attemptsCount: number;
-	duration: number;
-	tags: string[];
-	sections: DetailedExamInfo_DetailedExamSection[];
-	updatedAt: Date | undefined;
+  id: string;
+  name: string;
+  description?: string | undefined;
+  attemptsCount: number;
+  duration: number;
+  tags: string[];
+  sections: DetailedExamInfo_DetailedExamSection[];
+  updatedAt: Date | undefined;
 }
 
 export interface DetailedExamInfo_DetailedExamSection {
-	id: string;
-	name?: string | undefined;
-	questionsCount: number;
-	tags: string[];
+  id: string;
+  name?: string | undefined;
+  questionsCount: number;
+  tags: string[];
 }
 
 export interface FindExamsDto {
-	filter?: FindExamsDto_FilterOption | undefined;
-	sortBy?: FindExamsDto_SortOption | undefined;
-	cursor?: string | undefined;
-	limit?: number | undefined;
+  filter?: FindExamsDto_FilterOption | undefined;
+  sortBy?: FindExamsDto_SortOption | undefined;
+  cursor?: string | undefined;
+  limit?: number | undefined;
 }
 
 export interface FindExamsDto_FilterOption {
-	name?: string | undefined;
-	tags: string[];
+  name?: string | undefined;
+  tags: string[];
 }
 
 export interface FindExamsDto_SortOption {
-	key: string | undefined;
-	direction: string | undefined;
+  key: string | undefined;
+  direction: string | undefined;
 }
 
 export interface Exams {
-	exams: Exams_MinimalExamInfo[];
-	nextCursor: string;
-	prevCursor: string;
+  exams: Exams_MinimalExamInfo[];
+  nextCursor: string;
+  prevCursor: string;
 }
 
 export interface Exams_MinimalExamInfo {
-	id: string;
-	name: string;
-	description?: string | undefined;
-	attemptsCount: number;
-	duration: number;
-	tags: string[];
-	updatedAt: Date | undefined;
+  id: string;
+  name: string;
+  description?: string | undefined;
+  attemptsCount: number;
+  duration: number;
+  tags: string[];
+  updatedAt: Date | undefined;
 }
 
 export interface GetDetailedQuestionDto {
-	questionId: string | undefined;
+  questionId: string | undefined;
 }
 
 export interface DetailedQuestionInfo {
-	id: string;
-	sectionContext: DetailedQuestionInfo_SectionContext[];
-	content: string;
-	type: string;
-	explanation: string;
-	points: number;
-	fileUrls: string[];
+  id: string;
+  sectionContext: DetailedQuestionInfo_SectionContext[];
+  content: string;
+  type: string;
+  explanation: string;
+  points: number;
+  fileUrls: string[];
 }
 
 export interface DetailedQuestionInfo_SectionContext {
-	content?: string | undefined;
-	fileUrls: string[];
+  content?: string | undefined;
+  fileUrls: string[];
 }
 
 export interface GetExamStatsDto {
-	examId: string | undefined;
+  examId: string | undefined;
 }
 
 export interface ExamStatistics {
-	averageDuration: number;
-	averageScoreInPercentage: number;
-	questions: ExamStatistics_QuestionStatistics[];
+  averageDuration: number;
+  averageScoreInPercentage: number;
+  questions: ExamStatistics_QuestionStatistics[];
 }
 
 export interface ExamStatistics_QuestionStatistics {
-	correctCount: number;
-	totalCount: number;
-	tags: string[];
+  correctCount: number;
+  totalCount: number;
+  tags: string[];
 }
 
 export interface GetUsersAttemptHistoryDto {
-	uid: string | undefined;
-	examId?: string | undefined;
-	cursor?: string | undefined;
-	limit?: number | undefined;
-	sortBy?: GetUsersAttemptHistoryDto_SortOption | undefined;
+  uid: string | undefined;
+  examId?: string | undefined;
+  cursor?: string | undefined;
+  limit?: number | undefined;
+  sortBy?: GetUsersAttemptHistoryDto_SortOption | undefined;
 }
 
 export interface GetUsersAttemptHistoryDto_SortOption {
-	key: string | undefined;
-	direction: string | undefined;
+  key: string | undefined;
+  direction: string | undefined;
 }
 
 export interface UsersAttemptHistory {
-	attempts: UsersAttemptHistory_MinimalAttemptInfo[];
-	nextCursor: string;
-	prevCursor: string;
+  attempts: UsersAttemptHistory_MinimalAttemptInfo[];
+  nextCursor: string;
+  prevCursor: string;
 }
 
 export interface UsersAttemptHistory_MinimalAttemptInfo {
-	id: string;
-	examId: string;
-	examName: string;
-	startedAt: Date | undefined;
-	endedAt?: Date | undefined;
-	durationLimit: number;
-	score?: number | undefined;
-	totalPoints?: number | undefined;
-	isStrict: boolean;
+  id: string;
+  examId: string;
+  examName: string;
+  startedAt: Date | undefined;
+  endedAt?: Date | undefined;
+  durationLimit: number;
+  score?: number | undefined;
+  totalPoints?: number | undefined;
+  isStrict: boolean;
 }
 
 export interface GetUserStatsDto {
-	uid: string | undefined;
+  uid: string | undefined;
 }
 
 export interface UserStats {
-	attemptCounts: number;
-	averageScoreInPercentage: number;
-	tagInfos: UserStats_TagInfo[];
+  attemptCounts: number;
+  averageScoreInPercentage: number;
+  tagInfos: UserStats_TagInfo[];
 }
 
 export interface UserStats_TagInfo {
-	name: string;
-	correctPercentage: number;
+  name: string;
+  correctPercentage: number;
 }
 
 export interface FindExamsManagementDto {
-	filter?: FindExamsManagementDto_FilterOption | undefined;
-	sortBy?: FindExamsManagementDto_SortOption | undefined;
-	cursor?: string | undefined;
-	limit?: number | undefined;
+  filter?: FindExamsManagementDto_FilterOption | undefined;
+  sortBy?: FindExamsManagementDto_SortOption | undefined;
+  cursor?: string | undefined;
+  limit?: number | undefined;
 }
 
 export interface FindExamsManagementDto_FilterOption {
-	title?: string | undefined;
-	createdBy?: string | undefined;
-	status?: string | undefined;
-	createdTimeRange?: FindExamsManagementDto_TimeRange | undefined;
-	updatedTimeRange?: FindExamsManagementDto_TimeRange | undefined;
+  title?: string | undefined;
+  createdBy?: string | undefined;
+  status?: string | undefined;
+  createdTimeRange?: FindExamsManagementDto_TimeRange | undefined;
+  updatedTimeRange?: FindExamsManagementDto_TimeRange | undefined;
 }
 
 export interface FindExamsManagementDto_TimeRange {
-	from: Date | undefined;
-	to: Date | undefined;
+  from: Date | undefined;
+  to: Date | undefined;
 }
 
 export interface FindExamsManagementDto_SortOption {
-	key: string | undefined;
-	direction: string | undefined;
+  key: string | undefined;
+  direction: string | undefined;
 }
 
 export interface GetExamManagementDetailsDto {
-	examId: string | undefined;
+  examId: string | undefined;
 }
 
 export interface GetSectionManagementDetailsDto {
-	sectionId: string | undefined;
+  sectionId: string | undefined;
 }
 
 export interface GetQuestionManagementDetailsDto {
-	questionId: string | undefined;
+  questionId: string | undefined;
 }
 
 export interface FilePreviewInfo {
-	id: string;
-	url?: string | undefined;
+  id: string;
+  url?: string | undefined;
 }
 
 export interface QuestionManagementInfo {
-	id: string;
-	sectionId: string;
-	content: string;
-	type: string;
-	points: number;
-	explanation: string;
-	choices: QuestionManagementInfo_ChoiceManagementInfo[];
-	files: FilePreviewInfo[];
-	tags: string[];
+  id: string;
+  sectionId: string;
+  content: string;
+  type: string;
+  points: number;
+  explanation: string;
+  choices: QuestionManagementInfo_ChoiceManagementInfo[];
+  files: FilePreviewInfo[];
+  tags: string[];
 }
 
 export interface QuestionManagementInfo_ChoiceManagementInfo {
-	id: string;
-	key: string;
-	content?: string | undefined;
-	isCorrect: boolean;
-	questionId: string;
+  id: string;
+  key: string;
+  content?: string | undefined;
+  isCorrect: boolean;
+  questionId: string;
 }
 
 export interface SectionManagementInfo {
-	id: string;
-	examId: string;
-	parentId?: string | undefined;
-	name?: string | undefined;
-	directive: string;
-	contentType: string;
-	childrenIds: string[];
-	files: FilePreviewInfo[];
-	tags: string[];
+  id: string;
+  examId: string;
+  parentId?: string | undefined;
+  name?: string | undefined;
+  directive: string;
+  contentType: string;
+  childrenIds: string[];
+  files: FilePreviewInfo[];
+  tags: string[];
 }
 
 export interface FoundExamsForManagement {
-	exams: FoundExamsForManagement_ExamManagementMinimalInfo[];
-	nextCursor: string;
-	prevCursor: string;
+  exams: FoundExamsForManagement_ExamManagementMinimalInfo[];
+  nextCursor: string;
+  prevCursor: string;
 }
 
 export interface FoundExamsForManagement_ExamManagementMinimalInfo {
-	id: string;
-	createdBy: string;
-	createdAt: Date | undefined;
-	updatedAt: Date | undefined;
-	title: string;
-	status: string;
+  id: string;
+  createdBy: string;
+  createdAt: Date | undefined;
+  updatedAt: Date | undefined;
+  title: string;
+  status: string;
 }
 
 export interface ExamManagementDetailedInfo {
-	id: string;
-	createdBy: string;
-	createdAt: Date | undefined;
-	updatedAt: Date | undefined;
-	title: string;
-	status: string;
-	description?: string | undefined;
-	duration: number;
-	sectionIds: string[];
-	tags: string[];
+  id: string;
+  createdBy: string;
+  createdAt: Date | undefined;
+  updatedAt: Date | undefined;
+  title: string;
+  status: string;
+  description?: string | undefined;
+  duration: number;
+  sectionIds: string[];
+  tags: string[];
 }
 
 export interface TagList {
-	list: TagList_TagNode[];
+  list: TagList_TagNode[];
 }
 
 export interface TagList_TagNode {
-	id: string;
-	name: string;
-	parentId?: string | undefined;
+  id: string;
+  name: string;
+  parentId?: string | undefined;
 }
 
 export interface TagTrees {
-	trees: TagTrees_TagTree[];
+  trees: TagTrees_TagTree[];
 }
 
 export interface TagTrees_TagTree {
-	id: string;
-	name: string;
-	children: TagTrees_TagTree[];
+  id: string;
+  name: string;
+  children: TagTrees_TagTree[];
 }
 
 export interface SetGoalDto {
-	uid: string | undefined;
-	date: Date | undefined;
-	target: number | undefined;
-	type: string | undefined;
+  uid: string | undefined;
+  date: Date | undefined;
+  target: number | undefined;
+  type: string | undefined;
 }
 
 export interface UpdateGoalDto {
-	uid: string | undefined;
-	date: Date | undefined;
-	target: number | undefined;
-	type: string | undefined;
+  uid: string | undefined;
+  date: Date | undefined;
+  target: number | undefined;
+  type: string | undefined;
 }
 
 export interface DeleteGoalDto {
-	uid: string | undefined;
+  uid: string | undefined;
 }
 
 export interface GetGoalDto {
-	uid: string | undefined;
+  uid: string | undefined;
 }
 
 export interface GoalResponse {
-	uid: string;
-	date: Date | undefined;
-	target: number;
-	type: string;
+  uid: string;
+  date: Date | undefined;
+  target: number;
+  type: string;
 }
 
 export interface ExamCountsResponse {
-	total: number;
-	approved: number;
-	pending: number;
-	rejected: number;
+  total: number;
+  approved: number;
+  pending: number;
+  rejected: number;
 }
 
-wrappers['.google.protobuf.Timestamp'] = {
-	fromObject(value: Date) {
-		return { seconds: value.getTime() / 1000, nanos: (value.getTime() % 1000) * 1e6 };
-	},
-	toObject(message: { seconds: number; nanos: number }) {
-		return new Date(message.seconds * 1000 + message.nanos / 1e6);
-	},
+wrappers[".google.protobuf.Timestamp"] = {
+  fromObject(value: Date) {
+    return { seconds: value.getTime() / 1000, nanos: (value.getTime() % 1000) * 1e6 };
+  },
+  toObject(message: { seconds: number; nanos: number }) {
+    return new Date(message.seconds * 1000 + message.nanos / 1e6);
+  },
 } as any;
 
 function createBaseCreateExamDto(): CreateExamDto {
-	return { createdBy: undefined, title: undefined, description: undefined, duration: undefined };
+  return { createdBy: undefined, title: undefined, description: undefined, duration: undefined };
 }
 
 export const CreateExamDto: MessageFns<CreateExamDto> = {
-	encode(message: CreateExamDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.createdBy !== undefined) {
-			StringValue.encode({ value: message.createdBy! }, writer.uint32(10).fork()).join();
-		}
-		if (message.title !== undefined) {
-			StringValue.encode({ value: message.title! }, writer.uint32(18).fork()).join();
-		}
-		if (message.description !== undefined) {
-			StringValue.encode({ value: message.description! }, writer.uint32(26).fork()).join();
-		}
-		if (message.duration !== undefined) {
-			Int32Value.encode({ value: message.duration! }, writer.uint32(34).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: CreateExamDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.createdBy !== undefined) {
+      StringValue.encode({ value: message.createdBy! }, writer.uint32(10).fork()).join();
+    }
+    if (message.title !== undefined) {
+      StringValue.encode({ value: message.title! }, writer.uint32(18).fork()).join();
+    }
+    if (message.description !== undefined) {
+      StringValue.encode({ value: message.description! }, writer.uint32(26).fork()).join();
+    }
+    if (message.duration !== undefined) {
+      Int32Value.encode({ value: message.duration! }, writer.uint32(34).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): CreateExamDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseCreateExamDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): CreateExamDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseCreateExamDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.createdBy = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.createdBy = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.title = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.title = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.description = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 4: {
-						if (tag !== 34) {
-							break;
-						}
+            message.description = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-						message.duration = Int32Value.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.duration = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseCreatedExamDto(): CreatedExamDto {
-	return { id: undefined };
+  return { id: undefined };
 }
 
 export const CreatedExamDto: MessageFns<CreatedExamDto> = {
-	encode(message: CreatedExamDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.id !== undefined) {
-			StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: CreatedExamDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): CreatedExamDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseCreatedExamDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): CreatedExamDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseCreatedExamDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseCreateSectionDto(): CreateSectionDto {
-	return { requesterId: undefined, privileged: undefined };
+  return { requesterId: undefined, privileged: undefined };
 }
 
 export const CreateSectionDto: MessageFns<CreateSectionDto> = {
-	encode(message: CreateSectionDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.sectionId !== undefined) {
-			StringValue.encode({ value: message.sectionId! }, writer.uint32(10).fork()).join();
-		}
-		if (message.examId !== undefined) {
-			StringValue.encode({ value: message.examId! }, writer.uint32(18).fork()).join();
-		}
-		if (message.index !== undefined) {
-			Int32Value.encode({ value: message.index! }, writer.uint32(26).fork()).join();
-		}
-		if (message.requesterId !== undefined) {
-			StringValue.encode({ value: message.requesterId! }, writer.uint32(34).fork()).join();
-		}
-		if (message.privileged !== undefined) {
-			BoolValue.encode({ value: message.privileged! }, writer.uint32(42).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: CreateSectionDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.sectionId !== undefined) {
+      StringValue.encode({ value: message.sectionId! }, writer.uint32(10).fork()).join();
+    }
+    if (message.examId !== undefined) {
+      StringValue.encode({ value: message.examId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.index !== undefined) {
+      Int32Value.encode({ value: message.index! }, writer.uint32(26).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(34).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(42).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): CreateSectionDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseCreateSectionDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): CreateSectionDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseCreateSectionDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.sectionId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.sectionId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.examId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.examId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.index = Int32Value.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 4: {
-						if (tag !== 34) {
-							break;
-						}
+            message.index = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-						message.requesterId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 5: {
-						if (tag !== 42) {
-							break;
-						}
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
 
-						message.privileged = BoolValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseCreatedSectionDto(): CreatedSectionDto {
-	return { id: undefined };
+  return { id: undefined };
 }
 
 export const CreatedSectionDto: MessageFns<CreatedSectionDto> = {
-	encode(message: CreatedSectionDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.id !== undefined) {
-			StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: CreatedSectionDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): CreatedSectionDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseCreatedSectionDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): CreatedSectionDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseCreatedSectionDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseCreateQuestionDto(): CreateQuestionDto {
-	return { sectionId: undefined, requesterId: undefined, privileged: undefined };
+  return { sectionId: undefined, requesterId: undefined, privileged: undefined };
 }
 
 export const CreateQuestionDto: MessageFns<CreateQuestionDto> = {
-	encode(message: CreateQuestionDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.sectionId !== undefined) {
-			StringValue.encode({ value: message.sectionId! }, writer.uint32(10).fork()).join();
-		}
-		if (message.index !== undefined) {
-			Int32Value.encode({ value: message.index! }, writer.uint32(18).fork()).join();
-		}
-		if (message.requesterId !== undefined) {
-			StringValue.encode({ value: message.requesterId! }, writer.uint32(26).fork()).join();
-		}
-		if (message.privileged !== undefined) {
-			BoolValue.encode({ value: message.privileged! }, writer.uint32(34).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: CreateQuestionDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.sectionId !== undefined) {
+      StringValue.encode({ value: message.sectionId! }, writer.uint32(10).fork()).join();
+    }
+    if (message.index !== undefined) {
+      Int32Value.encode({ value: message.index! }, writer.uint32(18).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(26).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(34).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): CreateQuestionDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseCreateQuestionDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): CreateQuestionDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseCreateQuestionDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.sectionId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.sectionId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.index = Int32Value.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.index = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.requesterId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 4: {
-						if (tag !== 34) {
-							break;
-						}
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-						message.privileged = BoolValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseCreatedQuestionDto(): CreatedQuestionDto {
-	return { id: undefined };
+  return { id: undefined };
 }
 
 export const CreatedQuestionDto: MessageFns<CreatedQuestionDto> = {
-	encode(message: CreatedQuestionDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.id !== undefined) {
-			StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: CreatedQuestionDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): CreatedQuestionDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseCreatedQuestionDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): CreatedQuestionDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseCreatedQuestionDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseUpdateExamDto(): UpdateExamDto {
-	return {
-		id: undefined,
-		addTags: [],
-		removeTags: [],
-		requesterId: undefined,
-		privileged: undefined,
-	};
+  return { id: undefined, addTags: [], removeTags: [], requesterId: undefined, privileged: undefined };
 }
 
 export const UpdateExamDto: MessageFns<UpdateExamDto> = {
-	encode(message: UpdateExamDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.id !== undefined) {
-			StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
-		}
-		if (message.title !== undefined) {
-			StringValue.encode({ value: message.title! }, writer.uint32(18).fork()).join();
-		}
-		if (message.setDescriptionNull !== undefined) {
-			BoolValue.encode({ value: message.setDescriptionNull! }, writer.uint32(26).fork()).join();
-		}
-		if (message.description !== undefined) {
-			StringValue.encode({ value: message.description! }, writer.uint32(34).fork()).join();
-		}
-		if (message.duration !== undefined) {
-			Int32Value.encode({ value: message.duration! }, writer.uint32(42).fork()).join();
-		}
-		for (const v of message.addTags) {
-			StringValue.encode({ value: v!! }, writer.uint32(50).fork()).join();
-		}
-		for (const v of message.removeTags) {
-			StringValue.encode({ value: v!! }, writer.uint32(58).fork()).join();
-		}
-		if (message.requesterId !== undefined) {
-			StringValue.encode({ value: message.requesterId! }, writer.uint32(66).fork()).join();
-		}
-		if (message.privileged !== undefined) {
-			BoolValue.encode({ value: message.privileged! }, writer.uint32(74).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: UpdateExamDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.title !== undefined) {
+      StringValue.encode({ value: message.title! }, writer.uint32(18).fork()).join();
+    }
+    if (message.setDescriptionNull !== undefined) {
+      BoolValue.encode({ value: message.setDescriptionNull! }, writer.uint32(26).fork()).join();
+    }
+    if (message.description !== undefined) {
+      StringValue.encode({ value: message.description! }, writer.uint32(34).fork()).join();
+    }
+    if (message.duration !== undefined) {
+      Int32Value.encode({ value: message.duration! }, writer.uint32(42).fork()).join();
+    }
+    for (const v of message.addTags) {
+      StringValue.encode({ value: v!! }, writer.uint32(50).fork()).join();
+    }
+    for (const v of message.removeTags) {
+      StringValue.encode({ value: v!! }, writer.uint32(58).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(66).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(74).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): UpdateExamDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseUpdateExamDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): UpdateExamDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseUpdateExamDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.title = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.title = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.setDescriptionNull = BoolValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 4: {
-						if (tag !== 34) {
-							break;
-						}
+            message.setDescriptionNull = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-						message.description = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 5: {
-						if (tag !== 42) {
-							break;
-						}
+            message.description = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
 
-						message.duration = Int32Value.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 6: {
-						if (tag !== 50) {
-							break;
-						}
+            message.duration = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
 
-						message.addTags.push(StringValue.decode(reader, reader.uint32()).value);
-						continue;
-					}
-					case 7: {
-						if (tag !== 58) {
-							break;
-						}
+            message.addTags.push(StringValue.decode(reader, reader.uint32()).value);
+            continue;
+          }
+          case 7: {
+            if (tag !== 58) {
+              break;
+            }
 
-						message.removeTags.push(StringValue.decode(reader, reader.uint32()).value);
-						continue;
-					}
-					case 8: {
-						if (tag !== 66) {
-							break;
-						}
+            message.removeTags.push(StringValue.decode(reader, reader.uint32()).value);
+            continue;
+          }
+          case 8: {
+            if (tag !== 66) {
+              break;
+            }
 
-						message.requesterId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 9: {
-						if (tag !== 74) {
-							break;
-						}
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 9: {
+            if (tag !== 74) {
+              break;
+            }
 
-						message.privileged = BoolValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseUpdateSectionDto(): UpdateSectionDto {
-	return {
-		id: undefined,
-		addTags: [],
-		removeTags: [],
-		addFiles: [],
-		removeFiles: [],
-		requesterId: undefined,
-		privileged: undefined,
-	};
+  return {
+    id: undefined,
+    addTags: [],
+    removeTags: [],
+    addFiles: [],
+    removeFiles: [],
+    requesterId: undefined,
+    privileged: undefined,
+  };
 }
 
 export const UpdateSectionDto: MessageFns<UpdateSectionDto> = {
-	encode(message: UpdateSectionDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.id !== undefined) {
-			StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
-		}
-		if (message.setNameNull !== undefined) {
-			BoolValue.encode({ value: message.setNameNull! }, writer.uint32(18).fork()).join();
-		}
-		if (message.name !== undefined) {
-			StringValue.encode({ value: message.name! }, writer.uint32(26).fork()).join();
-		}
-		if (message.directive !== undefined) {
-			StringValue.encode({ value: message.directive! }, writer.uint32(34).fork()).join();
-		}
-		if (message.contentType !== undefined) {
-			StringValue.encode({ value: message.contentType! }, writer.uint32(42).fork()).join();
-		}
-		for (const v of message.addTags) {
-			StringValue.encode({ value: v!! }, writer.uint32(50).fork()).join();
-		}
-		for (const v of message.removeTags) {
-			StringValue.encode({ value: v!! }, writer.uint32(58).fork()).join();
-		}
-		for (const v of message.addFiles) {
-			StringValue.encode({ value: v!! }, writer.uint32(66).fork()).join();
-		}
-		for (const v of message.removeFiles) {
-			StringValue.encode({ value: v!! }, writer.uint32(74).fork()).join();
-		}
-		if (message.requesterId !== undefined) {
-			StringValue.encode({ value: message.requesterId! }, writer.uint32(82).fork()).join();
-		}
-		if (message.privileged !== undefined) {
-			BoolValue.encode({ value: message.privileged! }, writer.uint32(90).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: UpdateSectionDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.setNameNull !== undefined) {
+      BoolValue.encode({ value: message.setNameNull! }, writer.uint32(18).fork()).join();
+    }
+    if (message.name !== undefined) {
+      StringValue.encode({ value: message.name! }, writer.uint32(26).fork()).join();
+    }
+    if (message.directive !== undefined) {
+      StringValue.encode({ value: message.directive! }, writer.uint32(34).fork()).join();
+    }
+    if (message.contentType !== undefined) {
+      StringValue.encode({ value: message.contentType! }, writer.uint32(42).fork()).join();
+    }
+    for (const v of message.addTags) {
+      StringValue.encode({ value: v!! }, writer.uint32(50).fork()).join();
+    }
+    for (const v of message.removeTags) {
+      StringValue.encode({ value: v!! }, writer.uint32(58).fork()).join();
+    }
+    for (const v of message.addFiles) {
+      StringValue.encode({ value: v!! }, writer.uint32(66).fork()).join();
+    }
+    for (const v of message.removeFiles) {
+      StringValue.encode({ value: v!! }, writer.uint32(74).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(82).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(90).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): UpdateSectionDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseUpdateSectionDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): UpdateSectionDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseUpdateSectionDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.setNameNull = BoolValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.setNameNull = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.name = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 4: {
-						if (tag !== 34) {
-							break;
-						}
+            message.name = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-						message.directive = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 5: {
-						if (tag !== 42) {
-							break;
-						}
+            message.directive = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
 
-						message.contentType = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 6: {
-						if (tag !== 50) {
-							break;
-						}
+            message.contentType = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
 
-						message.addTags.push(StringValue.decode(reader, reader.uint32()).value);
-						continue;
-					}
-					case 7: {
-						if (tag !== 58) {
-							break;
-						}
+            message.addTags.push(StringValue.decode(reader, reader.uint32()).value);
+            continue;
+          }
+          case 7: {
+            if (tag !== 58) {
+              break;
+            }
 
-						message.removeTags.push(StringValue.decode(reader, reader.uint32()).value);
-						continue;
-					}
-					case 8: {
-						if (tag !== 66) {
-							break;
-						}
+            message.removeTags.push(StringValue.decode(reader, reader.uint32()).value);
+            continue;
+          }
+          case 8: {
+            if (tag !== 66) {
+              break;
+            }
 
-						message.addFiles.push(StringValue.decode(reader, reader.uint32()).value);
-						continue;
-					}
-					case 9: {
-						if (tag !== 74) {
-							break;
-						}
+            message.addFiles.push(StringValue.decode(reader, reader.uint32()).value);
+            continue;
+          }
+          case 9: {
+            if (tag !== 74) {
+              break;
+            }
 
-						message.removeFiles.push(StringValue.decode(reader, reader.uint32()).value);
-						continue;
-					}
-					case 10: {
-						if (tag !== 82) {
-							break;
-						}
+            message.removeFiles.push(StringValue.decode(reader, reader.uint32()).value);
+            continue;
+          }
+          case 10: {
+            if (tag !== 82) {
+              break;
+            }
 
-						message.requesterId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 11: {
-						if (tag !== 90) {
-							break;
-						}
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 11: {
+            if (tag !== 90) {
+              break;
+            }
 
-						message.privileged = BoolValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseUpdateQuestionDto(): UpdateQuestionDto {
-	return {
-		id: undefined,
-		addChoices: [],
-		deleteChoicesIds: [],
-		updateChoices: [],
-		addTags: [],
-		removeTags: [],
-		addFiles: [],
-		removeFiles: [],
-		requesterId: undefined,
-		privileged: undefined,
-	};
+  return {
+    id: undefined,
+    addChoices: [],
+    deleteChoicesIds: [],
+    updateChoices: [],
+    addTags: [],
+    removeTags: [],
+    addFiles: [],
+    removeFiles: [],
+    requesterId: undefined,
+    privileged: undefined,
+  };
 }
 
 export const UpdateQuestionDto: MessageFns<UpdateQuestionDto> = {
-	encode(message: UpdateQuestionDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.id !== undefined) {
-			StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
-		}
-		if (message.content !== undefined) {
-			StringValue.encode({ value: message.content! }, writer.uint32(18).fork()).join();
-		}
-		if (message.explanation !== undefined) {
-			StringValue.encode({ value: message.explanation! }, writer.uint32(26).fork()).join();
-		}
-		if (message.points !== undefined) {
-			Int32Value.encode({ value: message.points! }, writer.uint32(34).fork()).join();
-		}
-		if (message.type !== undefined) {
-			StringValue.encode({ value: message.type! }, writer.uint32(42).fork()).join();
-		}
-		for (const v of message.addChoices) {
-			UpdateQuestionDto_AddChoice.encode(v!, writer.uint32(50).fork()).join();
-		}
-		for (const v of message.deleteChoicesIds) {
-			StringValue.encode({ value: v!! }, writer.uint32(58).fork()).join();
-		}
-		for (const v of message.updateChoices) {
-			UpdateQuestionDto_UpdateChoice.encode(v!, writer.uint32(66).fork()).join();
-		}
-		for (const v of message.addTags) {
-			StringValue.encode({ value: v!! }, writer.uint32(74).fork()).join();
-		}
-		for (const v of message.removeTags) {
-			StringValue.encode({ value: v!! }, writer.uint32(82).fork()).join();
-		}
-		for (const v of message.addFiles) {
-			StringValue.encode({ value: v!! }, writer.uint32(90).fork()).join();
-		}
-		for (const v of message.removeFiles) {
-			StringValue.encode({ value: v!! }, writer.uint32(98).fork()).join();
-		}
-		if (message.requesterId !== undefined) {
-			StringValue.encode({ value: message.requesterId! }, writer.uint32(106).fork()).join();
-		}
-		if (message.privileged !== undefined) {
-			BoolValue.encode({ value: message.privileged! }, writer.uint32(114).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: UpdateQuestionDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.content !== undefined) {
+      StringValue.encode({ value: message.content! }, writer.uint32(18).fork()).join();
+    }
+    if (message.explanation !== undefined) {
+      StringValue.encode({ value: message.explanation! }, writer.uint32(26).fork()).join();
+    }
+    if (message.points !== undefined) {
+      Int32Value.encode({ value: message.points! }, writer.uint32(34).fork()).join();
+    }
+    if (message.type !== undefined) {
+      StringValue.encode({ value: message.type! }, writer.uint32(42).fork()).join();
+    }
+    for (const v of message.addChoices) {
+      UpdateQuestionDto_AddChoice.encode(v!, writer.uint32(50).fork()).join();
+    }
+    for (const v of message.deleteChoicesIds) {
+      StringValue.encode({ value: v!! }, writer.uint32(58).fork()).join();
+    }
+    for (const v of message.updateChoices) {
+      UpdateQuestionDto_UpdateChoice.encode(v!, writer.uint32(66).fork()).join();
+    }
+    for (const v of message.addTags) {
+      StringValue.encode({ value: v!! }, writer.uint32(74).fork()).join();
+    }
+    for (const v of message.removeTags) {
+      StringValue.encode({ value: v!! }, writer.uint32(82).fork()).join();
+    }
+    for (const v of message.addFiles) {
+      StringValue.encode({ value: v!! }, writer.uint32(90).fork()).join();
+    }
+    for (const v of message.removeFiles) {
+      StringValue.encode({ value: v!! }, writer.uint32(98).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(106).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(114).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): UpdateQuestionDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseUpdateQuestionDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): UpdateQuestionDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseUpdateQuestionDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.content = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.content = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.explanation = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 4: {
-						if (tag !== 34) {
-							break;
-						}
+            message.explanation = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-						message.points = Int32Value.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 5: {
-						if (tag !== 42) {
-							break;
-						}
+            message.points = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
 
-						message.type = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 6: {
-						if (tag !== 50) {
-							break;
-						}
+            message.type = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
 
-						message.addChoices.push(UpdateQuestionDto_AddChoice.decode(reader, reader.uint32()));
-						continue;
-					}
-					case 7: {
-						if (tag !== 58) {
-							break;
-						}
+            message.addChoices.push(UpdateQuestionDto_AddChoice.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 7: {
+            if (tag !== 58) {
+              break;
+            }
 
-						message.deleteChoicesIds.push(StringValue.decode(reader, reader.uint32()).value);
-						continue;
-					}
-					case 8: {
-						if (tag !== 66) {
-							break;
-						}
+            message.deleteChoicesIds.push(StringValue.decode(reader, reader.uint32()).value);
+            continue;
+          }
+          case 8: {
+            if (tag !== 66) {
+              break;
+            }
 
-						message.updateChoices.push(
-							UpdateQuestionDto_UpdateChoice.decode(reader, reader.uint32()),
-						);
-						continue;
-					}
-					case 9: {
-						if (tag !== 74) {
-							break;
-						}
+            message.updateChoices.push(UpdateQuestionDto_UpdateChoice.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 9: {
+            if (tag !== 74) {
+              break;
+            }
 
-						message.addTags.push(StringValue.decode(reader, reader.uint32()).value);
-						continue;
-					}
-					case 10: {
-						if (tag !== 82) {
-							break;
-						}
+            message.addTags.push(StringValue.decode(reader, reader.uint32()).value);
+            continue;
+          }
+          case 10: {
+            if (tag !== 82) {
+              break;
+            }
 
-						message.removeTags.push(StringValue.decode(reader, reader.uint32()).value);
-						continue;
-					}
-					case 11: {
-						if (tag !== 90) {
-							break;
-						}
+            message.removeTags.push(StringValue.decode(reader, reader.uint32()).value);
+            continue;
+          }
+          case 11: {
+            if (tag !== 90) {
+              break;
+            }
 
-						message.addFiles.push(StringValue.decode(reader, reader.uint32()).value);
-						continue;
-					}
-					case 12: {
-						if (tag !== 98) {
-							break;
-						}
+            message.addFiles.push(StringValue.decode(reader, reader.uint32()).value);
+            continue;
+          }
+          case 12: {
+            if (tag !== 98) {
+              break;
+            }
 
-						message.removeFiles.push(StringValue.decode(reader, reader.uint32()).value);
-						continue;
-					}
-					case 13: {
-						if (tag !== 106) {
-							break;
-						}
+            message.removeFiles.push(StringValue.decode(reader, reader.uint32()).value);
+            continue;
+          }
+          case 13: {
+            if (tag !== 106) {
+              break;
+            }
 
-						message.requesterId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 14: {
-						if (tag !== 114) {
-							break;
-						}
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 14: {
+            if (tag !== 114) {
+              break;
+            }
 
-						message.privileged = BoolValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseUpdateQuestionDto_AddChoice(): UpdateQuestionDto_AddChoice {
-	return { key: undefined, isCorrect: undefined };
+  return { key: undefined, isCorrect: undefined };
 }
 
 export const UpdateQuestionDto_AddChoice: MessageFns<UpdateQuestionDto_AddChoice> = {
-	encode(
-		message: UpdateQuestionDto_AddChoice,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.key !== undefined) {
-			StringValue.encode({ value: message.key! }, writer.uint32(10).fork()).join();
-		}
-		if (message.content !== undefined) {
-			StringValue.encode({ value: message.content! }, writer.uint32(18).fork()).join();
-		}
-		if (message.isCorrect !== undefined) {
-			BoolValue.encode({ value: message.isCorrect! }, writer.uint32(26).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: UpdateQuestionDto_AddChoice, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== undefined) {
+      StringValue.encode({ value: message.key! }, writer.uint32(10).fork()).join();
+    }
+    if (message.content !== undefined) {
+      StringValue.encode({ value: message.content! }, writer.uint32(18).fork()).join();
+    }
+    if (message.isCorrect !== undefined) {
+      BoolValue.encode({ value: message.isCorrect! }, writer.uint32(26).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): UpdateQuestionDto_AddChoice {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseUpdateQuestionDto_AddChoice();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): UpdateQuestionDto_AddChoice {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseUpdateQuestionDto_AddChoice();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.key = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.key = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.content = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.content = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.isCorrect = BoolValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.isCorrect = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseUpdateQuestionDto_UpdateChoice(): UpdateQuestionDto_UpdateChoice {
-	return { id: undefined };
+  return { id: undefined };
 }
 
 export const UpdateQuestionDto_UpdateChoice: MessageFns<UpdateQuestionDto_UpdateChoice> = {
-	encode(
-		message: UpdateQuestionDto_UpdateChoice,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.id !== undefined) {
-			StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
-		}
-		if (message.key !== undefined) {
-			StringValue.encode({ value: message.key! }, writer.uint32(18).fork()).join();
-		}
-		if (message.content !== undefined) {
-			StringValue.encode({ value: message.content! }, writer.uint32(26).fork()).join();
-		}
-		if (message.isCorrect !== undefined) {
-			BoolValue.encode({ value: message.isCorrect! }, writer.uint32(34).fork()).join();
-		}
-		if (message.setContentNull !== undefined) {
-			BoolValue.encode({ value: message.setContentNull! }, writer.uint32(42).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: UpdateQuestionDto_UpdateChoice, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.key !== undefined) {
+      StringValue.encode({ value: message.key! }, writer.uint32(18).fork()).join();
+    }
+    if (message.content !== undefined) {
+      StringValue.encode({ value: message.content! }, writer.uint32(26).fork()).join();
+    }
+    if (message.isCorrect !== undefined) {
+      BoolValue.encode({ value: message.isCorrect! }, writer.uint32(34).fork()).join();
+    }
+    if (message.setContentNull !== undefined) {
+      BoolValue.encode({ value: message.setContentNull! }, writer.uint32(42).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): UpdateQuestionDto_UpdateChoice {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseUpdateQuestionDto_UpdateChoice();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): UpdateQuestionDto_UpdateChoice {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseUpdateQuestionDto_UpdateChoice();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.key = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.key = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.content = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 4: {
-						if (tag !== 34) {
-							break;
-						}
+            message.content = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-						message.isCorrect = BoolValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 5: {
-						if (tag !== 42) {
-							break;
-						}
+            message.isCorrect = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
 
-						message.setContentNull = BoolValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.setContentNull = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseDeleteExamDto(): DeleteExamDto {
-	return { id: undefined, requesterId: undefined, privileged: undefined };
+  return { id: undefined, requesterId: undefined, privileged: undefined };
 }
 
 export const DeleteExamDto: MessageFns<DeleteExamDto> = {
-	encode(message: DeleteExamDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.id !== undefined) {
-			StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
-		}
-		if (message.requesterId !== undefined) {
-			StringValue.encode({ value: message.requesterId! }, writer.uint32(18).fork()).join();
-		}
-		if (message.privileged !== undefined) {
-			BoolValue.encode({ value: message.privileged! }, writer.uint32(26).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: DeleteExamDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(26).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): DeleteExamDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseDeleteExamDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): DeleteExamDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseDeleteExamDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.requesterId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.privileged = BoolValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseDeleteSectionDto(): DeleteSectionDto {
-	return { id: undefined, requesterId: undefined, privileged: undefined };
+  return { id: undefined, requesterId: undefined, privileged: undefined };
 }
 
 export const DeleteSectionDto: MessageFns<DeleteSectionDto> = {
-	encode(message: DeleteSectionDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.id !== undefined) {
-			StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
-		}
-		if (message.requesterId !== undefined) {
-			StringValue.encode({ value: message.requesterId! }, writer.uint32(18).fork()).join();
-		}
-		if (message.privileged !== undefined) {
-			BoolValue.encode({ value: message.privileged! }, writer.uint32(26).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: DeleteSectionDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(26).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): DeleteSectionDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseDeleteSectionDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): DeleteSectionDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseDeleteSectionDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.requesterId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.privileged = BoolValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseDeleteQuestionDto(): DeleteQuestionDto {
-	return { id: undefined, requesterId: undefined, privileged: undefined };
+  return { id: undefined, requesterId: undefined, privileged: undefined };
 }
 
 export const DeleteQuestionDto: MessageFns<DeleteQuestionDto> = {
-	encode(message: DeleteQuestionDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.id !== undefined) {
-			StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
-		}
-		if (message.requesterId !== undefined) {
-			StringValue.encode({ value: message.requesterId! }, writer.uint32(18).fork()).join();
-		}
-		if (message.privileged !== undefined) {
-			BoolValue.encode({ value: message.privileged! }, writer.uint32(26).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: DeleteQuestionDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(26).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): DeleteQuestionDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseDeleteQuestionDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): DeleteQuestionDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseDeleteQuestionDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.requesterId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.privileged = BoolValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseMoveSectionDto(): MoveSectionDto {
-	return { id: undefined, requesterId: undefined, privileged: undefined };
+  return { id: undefined, requesterId: undefined, privileged: undefined };
 }
 
 export const MoveSectionDto: MessageFns<MoveSectionDto> = {
-	encode(message: MoveSectionDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.id !== undefined) {
-			StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
-		}
-		if (message.index !== undefined) {
-			Int32Value.encode({ value: message.index! }, writer.uint32(18).fork()).join();
-		}
-		if (message.parentId !== undefined) {
-			StringValue.encode({ value: message.parentId! }, writer.uint32(26).fork()).join();
-		}
-		if (message.toRoot !== undefined) {
-			BoolValue.encode({ value: message.toRoot! }, writer.uint32(34).fork()).join();
-		}
-		if (message.requesterId !== undefined) {
-			StringValue.encode({ value: message.requesterId! }, writer.uint32(42).fork()).join();
-		}
-		if (message.privileged !== undefined) {
-			BoolValue.encode({ value: message.privileged! }, writer.uint32(50).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: MoveSectionDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.index !== undefined) {
+      Int32Value.encode({ value: message.index! }, writer.uint32(18).fork()).join();
+    }
+    if (message.parentId !== undefined) {
+      StringValue.encode({ value: message.parentId! }, writer.uint32(26).fork()).join();
+    }
+    if (message.toRoot !== undefined) {
+      BoolValue.encode({ value: message.toRoot! }, writer.uint32(34).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(42).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(50).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): MoveSectionDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseMoveSectionDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): MoveSectionDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseMoveSectionDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.index = Int32Value.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.index = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.parentId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 4: {
-						if (tag !== 34) {
-							break;
-						}
+            message.parentId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-						message.toRoot = BoolValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 5: {
-						if (tag !== 42) {
-							break;
-						}
+            message.toRoot = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
 
-						message.requesterId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 6: {
-						if (tag !== 50) {
-							break;
-						}
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
 
-						message.privileged = BoolValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseMoveQuestionDto(): MoveQuestionDto {
-	return { id: undefined, requesterId: undefined, privileged: undefined };
+  return { id: undefined, requesterId: undefined, privileged: undefined };
 }
 
 export const MoveQuestionDto: MessageFns<MoveQuestionDto> = {
-	encode(message: MoveQuestionDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.id !== undefined) {
-			StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
-		}
-		if (message.index !== undefined) {
-			Int32Value.encode({ value: message.index! }, writer.uint32(18).fork()).join();
-		}
-		if (message.sectionId !== undefined) {
-			StringValue.encode({ value: message.sectionId! }, writer.uint32(26).fork()).join();
-		}
-		if (message.requesterId !== undefined) {
-			StringValue.encode({ value: message.requesterId! }, writer.uint32(34).fork()).join();
-		}
-		if (message.privileged !== undefined) {
-			BoolValue.encode({ value: message.privileged! }, writer.uint32(42).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: MoveQuestionDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.index !== undefined) {
+      Int32Value.encode({ value: message.index! }, writer.uint32(18).fork()).join();
+    }
+    if (message.sectionId !== undefined) {
+      StringValue.encode({ value: message.sectionId! }, writer.uint32(26).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(34).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(42).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): MoveQuestionDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseMoveQuestionDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): MoveQuestionDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseMoveQuestionDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.index = Int32Value.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.index = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.sectionId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 4: {
-						if (tag !== 34) {
-							break;
-						}
+            message.sectionId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-						message.requesterId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 5: {
-						if (tag !== 42) {
-							break;
-						}
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
 
-						message.privileged = BoolValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseReviewExamDto(): ReviewExamDto {
-	return { id: undefined, status: undefined };
+  return { id: undefined, status: undefined };
 }
 
 export const ReviewExamDto: MessageFns<ReviewExamDto> = {
-	encode(message: ReviewExamDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.id !== undefined) {
-			StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
-		}
-		if (message.status !== undefined) {
-			StringValue.encode({ value: message.status! }, writer.uint32(18).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: ReviewExamDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.status !== undefined) {
+      StringValue.encode({ value: message.status! }, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): ReviewExamDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseReviewExamDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): ReviewExamDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseReviewExamDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.status = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.status = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseAttemptDto(): AttemptDto {
-	return { userId: undefined, examId: undefined };
+  return { userId: undefined, examId: undefined };
 }
 
 export const AttemptDto: MessageFns<AttemptDto> = {
-	encode(message: AttemptDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.userId !== undefined) {
-			StringValue.encode({ value: message.userId! }, writer.uint32(10).fork()).join();
-		}
-		if (message.examId !== undefined) {
-			StringValue.encode({ value: message.examId! }, writer.uint32(18).fork()).join();
-		}
-		if (message.options !== undefined) {
-			AttemptDto_Options.encode(message.options, writer.uint32(26).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: AttemptDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== undefined) {
+      StringValue.encode({ value: message.userId! }, writer.uint32(10).fork()).join();
+    }
+    if (message.examId !== undefined) {
+      StringValue.encode({ value: message.examId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.options !== undefined) {
+      AttemptDto_Options.encode(message.options, writer.uint32(26).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): AttemptDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseAttemptDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): AttemptDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseAttemptDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.userId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.userId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.examId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.examId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.options = AttemptDto_Options.decode(reader, reader.uint32());
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.options = AttemptDto_Options.decode(reader, reader.uint32());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseAttemptDto_Options(): AttemptDto_Options {
-	return { sectionIds: [] };
+  return { sectionIds: [] };
 }
 
 export const AttemptDto_Options: MessageFns<AttemptDto_Options> = {
-	encode(message: AttemptDto_Options, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.duration !== undefined) {
-			Int32Value.encode({ value: message.duration! }, writer.uint32(10).fork()).join();
-		}
-		for (const v of message.sectionIds) {
-			StringValue.encode({ value: v!! }, writer.uint32(18).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: AttemptDto_Options, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.duration !== undefined) {
+      Int32Value.encode({ value: message.duration! }, writer.uint32(10).fork()).join();
+    }
+    for (const v of message.sectionIds) {
+      StringValue.encode({ value: v!! }, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): AttemptDto_Options {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseAttemptDto_Options();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): AttemptDto_Options {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseAttemptDto_Options();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.duration = Int32Value.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.duration = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.sectionIds.push(StringValue.decode(reader, reader.uint32()).value);
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.sectionIds.push(StringValue.decode(reader, reader.uint32()).value);
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseCreatedAttemptDto(): CreatedAttemptDto {
-	return { id: undefined };
+  return { id: undefined };
 }
 
 export const CreatedAttemptDto: MessageFns<CreatedAttemptDto> = {
-	encode(message: CreatedAttemptDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.id !== undefined) {
-			StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: CreatedAttemptDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): CreatedAttemptDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseCreatedAttemptDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): CreatedAttemptDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseCreatedAttemptDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseEndAttemptDto(): EndAttemptDto {
-	return { attemptId: undefined, userId: undefined };
+  return { attemptId: undefined, userId: undefined };
 }
 
 export const EndAttemptDto: MessageFns<EndAttemptDto> = {
-	encode(message: EndAttemptDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.attemptId !== undefined) {
-			StringValue.encode({ value: message.attemptId! }, writer.uint32(10).fork()).join();
-		}
-		if (message.userId !== undefined) {
-			StringValue.encode({ value: message.userId! }, writer.uint32(18).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: EndAttemptDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.attemptId !== undefined) {
+      StringValue.encode({ value: message.attemptId! }, writer.uint32(10).fork()).join();
+    }
+    if (message.userId !== undefined) {
+      StringValue.encode({ value: message.userId! }, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): EndAttemptDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseEndAttemptDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): EndAttemptDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseEndAttemptDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.attemptId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.attemptId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.userId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.userId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseAnswerDto(): AnswerDto {
-	return { attemptId: undefined, questionId: undefined, answer: undefined, userId: undefined };
+  return { attemptId: undefined, questionId: undefined, answer: undefined, userId: undefined };
 }
 
 export const AnswerDto: MessageFns<AnswerDto> = {
-	encode(message: AnswerDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.attemptId !== undefined) {
-			StringValue.encode({ value: message.attemptId! }, writer.uint32(10).fork()).join();
-		}
-		if (message.questionId !== undefined) {
-			StringValue.encode({ value: message.questionId! }, writer.uint32(18).fork()).join();
-		}
-		if (message.answer !== undefined) {
-			StringValue.encode({ value: message.answer! }, writer.uint32(26).fork()).join();
-		}
-		if (message.userId !== undefined) {
-			StringValue.encode({ value: message.userId! }, writer.uint32(34).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: AnswerDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.attemptId !== undefined) {
+      StringValue.encode({ value: message.attemptId! }, writer.uint32(10).fork()).join();
+    }
+    if (message.questionId !== undefined) {
+      StringValue.encode({ value: message.questionId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.answer !== undefined) {
+      StringValue.encode({ value: message.answer! }, writer.uint32(26).fork()).join();
+    }
+    if (message.userId !== undefined) {
+      StringValue.encode({ value: message.userId! }, writer.uint32(34).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): AnswerDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseAnswerDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): AnswerDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseAnswerDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.attemptId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.attemptId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.questionId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.questionId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.answer = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 4: {
-						if (tag !== 34) {
-							break;
-						}
+            message.answer = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-						message.userId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.userId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseRemoveAnswerDto(): RemoveAnswerDto {
-	return { attemptId: undefined, questionId: undefined, userId: undefined };
+  return { attemptId: undefined, questionId: undefined, userId: undefined };
 }
 
 export const RemoveAnswerDto: MessageFns<RemoveAnswerDto> = {
-	encode(message: RemoveAnswerDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.attemptId !== undefined) {
-			StringValue.encode({ value: message.attemptId! }, writer.uint32(10).fork()).join();
-		}
-		if (message.questionId !== undefined) {
-			StringValue.encode({ value: message.questionId! }, writer.uint32(18).fork()).join();
-		}
-		if (message.answer !== undefined) {
-			StringValue.encode({ value: message.answer! }, writer.uint32(26).fork()).join();
-		}
-		if (message.userId !== undefined) {
-			StringValue.encode({ value: message.userId! }, writer.uint32(34).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: RemoveAnswerDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.attemptId !== undefined) {
+      StringValue.encode({ value: message.attemptId! }, writer.uint32(10).fork()).join();
+    }
+    if (message.questionId !== undefined) {
+      StringValue.encode({ value: message.questionId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.answer !== undefined) {
+      StringValue.encode({ value: message.answer! }, writer.uint32(26).fork()).join();
+    }
+    if (message.userId !== undefined) {
+      StringValue.encode({ value: message.userId! }, writer.uint32(34).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): RemoveAnswerDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseRemoveAnswerDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): RemoveAnswerDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseRemoveAnswerDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.attemptId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.attemptId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.questionId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.questionId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.answer = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 4: {
-						if (tag !== 34) {
-							break;
-						}
+            message.answer = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-						message.userId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.userId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseAddNoteDto(): AddNoteDto {
-	return { attemptId: undefined, questionId: undefined, note: undefined, userId: undefined };
+  return { attemptId: undefined, questionId: undefined, note: undefined, userId: undefined };
 }
 
 export const AddNoteDto: MessageFns<AddNoteDto> = {
-	encode(message: AddNoteDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.attemptId !== undefined) {
-			StringValue.encode({ value: message.attemptId! }, writer.uint32(10).fork()).join();
-		}
-		if (message.questionId !== undefined) {
-			StringValue.encode({ value: message.questionId! }, writer.uint32(18).fork()).join();
-		}
-		if (message.note !== undefined) {
-			StringValue.encode({ value: message.note! }, writer.uint32(26).fork()).join();
-		}
-		if (message.userId !== undefined) {
-			StringValue.encode({ value: message.userId! }, writer.uint32(34).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: AddNoteDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.attemptId !== undefined) {
+      StringValue.encode({ value: message.attemptId! }, writer.uint32(10).fork()).join();
+    }
+    if (message.questionId !== undefined) {
+      StringValue.encode({ value: message.questionId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.note !== undefined) {
+      StringValue.encode({ value: message.note! }, writer.uint32(26).fork()).join();
+    }
+    if (message.userId !== undefined) {
+      StringValue.encode({ value: message.userId! }, writer.uint32(34).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): AddNoteDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseAddNoteDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): AddNoteDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseAddNoteDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.attemptId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.attemptId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.questionId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.questionId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.note = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 4: {
-						if (tag !== 34) {
-							break;
-						}
+            message.note = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-						message.userId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.userId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseToggleFlagDto(): ToggleFlagDto {
-	return { attemptId: undefined, questionId: undefined, userId: undefined };
+  return { attemptId: undefined, questionId: undefined, userId: undefined };
 }
 
 export const ToggleFlagDto: MessageFns<ToggleFlagDto> = {
-	encode(message: ToggleFlagDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.attemptId !== undefined) {
-			StringValue.encode({ value: message.attemptId! }, writer.uint32(10).fork()).join();
-		}
-		if (message.questionId !== undefined) {
-			StringValue.encode({ value: message.questionId! }, writer.uint32(18).fork()).join();
-		}
-		if (message.userId !== undefined) {
-			StringValue.encode({ value: message.userId! }, writer.uint32(26).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: ToggleFlagDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.attemptId !== undefined) {
+      StringValue.encode({ value: message.attemptId! }, writer.uint32(10).fork()).join();
+    }
+    if (message.questionId !== undefined) {
+      StringValue.encode({ value: message.questionId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.userId !== undefined) {
+      StringValue.encode({ value: message.userId! }, writer.uint32(26).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): ToggleFlagDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseToggleFlagDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): ToggleFlagDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseToggleFlagDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.attemptId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.attemptId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.questionId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.questionId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.userId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.userId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseFlagStateDto(): FlagStateDto {
-	return { state: undefined };
+  return { state: undefined };
 }
 
 export const FlagStateDto: MessageFns<FlagStateDto> = {
-	encode(message: FlagStateDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.state !== undefined) {
-			BoolValue.encode({ value: message.state! }, writer.uint32(10).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: FlagStateDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.state !== undefined) {
+      BoolValue.encode({ value: message.state! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): FlagStateDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseFlagStateDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): FlagStateDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseFlagStateDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.state = BoolValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.state = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseAddTagDto(): AddTagDto {
-	return { name: undefined };
+  return { name: undefined };
 }
 
 export const AddTagDto: MessageFns<AddTagDto> = {
-	encode(message: AddTagDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.name !== undefined) {
-			StringValue.encode({ value: message.name! }, writer.uint32(10).fork()).join();
-		}
-		if (message.parentId !== undefined) {
-			StringValue.encode({ value: message.parentId! }, writer.uint32(18).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: AddTagDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.name !== undefined) {
+      StringValue.encode({ value: message.name! }, writer.uint32(10).fork()).join();
+    }
+    if (message.parentId !== undefined) {
+      StringValue.encode({ value: message.parentId! }, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): AddTagDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseAddTagDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): AddTagDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseAddTagDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.name = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.name = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.parentId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.parentId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseAddedTagDto(): AddedTagDto {
-	return { id: undefined };
+  return { id: undefined };
 }
 
 export const AddedTagDto: MessageFns<AddedTagDto> = {
-	encode(message: AddedTagDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.id !== undefined) {
-			StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: AddedTagDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): AddedTagDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseAddedTagDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): AddedTagDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseAddedTagDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseDeleteTagDto(): DeleteTagDto {
-	return { id: undefined };
+  return { id: undefined };
 }
 
 export const DeleteTagDto: MessageFns<DeleteTagDto> = {
-	encode(message: DeleteTagDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.id !== undefined) {
-			StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: DeleteTagDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): DeleteTagDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseDeleteTagDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): DeleteTagDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseDeleteTagDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseUpdateTagDto(): UpdateTagDto {
-	return { id: undefined, name: undefined };
+  return { id: undefined, name: undefined };
 }
 
 export const UpdateTagDto: MessageFns<UpdateTagDto> = {
-	encode(message: UpdateTagDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.id !== undefined) {
-			StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
-		}
-		if (message.name !== undefined) {
-			StringValue.encode({ value: message.name! }, writer.uint32(18).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: UpdateTagDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.name !== undefined) {
+      StringValue.encode({ value: message.name! }, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): UpdateTagDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseUpdateTagDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): UpdateTagDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseUpdateTagDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.name = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.name = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseMoveTagDto(): MoveTagDto {
-	return { id: undefined };
+  return { id: undefined };
 }
 
 export const MoveTagDto: MessageFns<MoveTagDto> = {
-	encode(message: MoveTagDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.id !== undefined) {
-			StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
-		}
-		if (message.parentId !== undefined) {
-			StringValue.encode({ value: message.parentId! }, writer.uint32(18).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: MoveTagDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.parentId !== undefined) {
+      StringValue.encode({ value: message.parentId! }, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): MoveTagDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseMoveTagDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): MoveTagDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseMoveTagDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.parentId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.parentId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseGetUsersAttemptSummaryDto(): GetUsersAttemptSummaryDto {
-	return { uid: undefined, range: undefined };
+  return { uid: undefined, range: undefined };
 }
 
 export const GetUsersAttemptSummaryDto: MessageFns<GetUsersAttemptSummaryDto> = {
-	encode(
-		message: GetUsersAttemptSummaryDto,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.uid !== undefined) {
-			StringValue.encode({ value: message.uid! }, writer.uint32(10).fork()).join();
-		}
-		if (message.range !== undefined) {
-			GetUsersAttemptSummaryDto_Range.encode(message.range, writer.uint32(18).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: GetUsersAttemptSummaryDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.uid !== undefined) {
+      StringValue.encode({ value: message.uid! }, writer.uint32(10).fork()).join();
+    }
+    if (message.range !== undefined) {
+      GetUsersAttemptSummaryDto_Range.encode(message.range, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): GetUsersAttemptSummaryDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseGetUsersAttemptSummaryDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): GetUsersAttemptSummaryDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGetUsersAttemptSummaryDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.uid = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.uid = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.range = GetUsersAttemptSummaryDto_Range.decode(reader, reader.uint32());
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.range = GetUsersAttemptSummaryDto_Range.decode(reader, reader.uint32());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseGetUsersAttemptSummaryDto_Range(): GetUsersAttemptSummaryDto_Range {
-	return { from: undefined, to: undefined };
+  return { from: undefined, to: undefined };
 }
 
 export const GetUsersAttemptSummaryDto_Range: MessageFns<GetUsersAttemptSummaryDto_Range> = {
-	encode(
-		message: GetUsersAttemptSummaryDto_Range,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.from !== undefined) {
-			Timestamp.encode(toTimestamp(message.from), writer.uint32(10).fork()).join();
-		}
-		if (message.to !== undefined) {
-			Timestamp.encode(toTimestamp(message.to), writer.uint32(18).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: GetUsersAttemptSummaryDto_Range, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.from !== undefined) {
+      Timestamp.encode(toTimestamp(message.from), writer.uint32(10).fork()).join();
+    }
+    if (message.to !== undefined) {
+      Timestamp.encode(toTimestamp(message.to), writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): GetUsersAttemptSummaryDto_Range {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseGetUsersAttemptSummaryDto_Range();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): GetUsersAttemptSummaryDto_Range {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGetUsersAttemptSummaryDto_Range();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.from = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.from = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.to = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.to = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseAttemptHistorySummary(): AttemptHistorySummary {
-	return { history: {} };
+  return { history: {} };
 }
 
 export const AttemptHistorySummary: MessageFns<AttemptHistorySummary> = {
-	encode(message: AttemptHistorySummary, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		globalThis.Object.entries(message.history).forEach(([key, value]: [string, number]) => {
-			AttemptHistorySummary_HistoryEntry.encode(
-				{ key: key as any, value },
-				writer.uint32(10).fork(),
-			).join();
-		});
-		return writer;
-	},
+  encode(message: AttemptHistorySummary, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    globalThis.Object.entries(message.history).forEach(([key, value]: [string, number]) => {
+      AttemptHistorySummary_HistoryEntry.encode({ key: key as any, value }, writer.uint32(10).fork()).join();
+    });
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): AttemptHistorySummary {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseAttemptHistorySummary();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): AttemptHistorySummary {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseAttemptHistorySummary();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						const entry1 = AttemptHistorySummary_HistoryEntry.decode(reader, reader.uint32());
-						if (entry1.value !== undefined) {
-							message.history[entry1.key] = entry1.value;
-						}
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            const entry1 = AttemptHistorySummary_HistoryEntry.decode(reader, reader.uint32());
+            if (entry1.value !== undefined) {
+              message.history[entry1.key] = entry1.value;
+            }
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseAttemptHistorySummary_HistoryEntry(): AttemptHistorySummary_HistoryEntry {
-	return { key: 0, value: 0 };
+  return { key: 0, value: 0 };
 }
 
 export const AttemptHistorySummary_HistoryEntry: MessageFns<AttemptHistorySummary_HistoryEntry> = {
-	encode(
-		message: AttemptHistorySummary_HistoryEntry,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.key !== 0) {
-			writer.uint32(8).int32(message.key);
-		}
-		if (message.value !== 0) {
-			writer.uint32(16).int32(message.value);
-		}
-		return writer;
-	},
+  encode(message: AttemptHistorySummary_HistoryEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== 0) {
+      writer.uint32(8).int32(message.key);
+    }
+    if (message.value !== 0) {
+      writer.uint32(16).int32(message.value);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): AttemptHistorySummary_HistoryEntry {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseAttemptHistorySummary_HistoryEntry();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 8) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): AttemptHistorySummary_HistoryEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseAttemptHistorySummary_HistoryEntry();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 8) {
+              break;
+            }
 
-						message.key = reader.int32();
-						continue;
-					}
-					case 2: {
-						if (tag !== 16) {
-							break;
-						}
+            message.key = reader.int32();
+            continue;
+          }
+          case 2: {
+            if (tag !== 16) {
+              break;
+            }
 
-						message.value = reader.int32();
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.value = reader.int32();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseGetAttemptReviewDto(): GetAttemptReviewDto {
-	return { attemptId: undefined, userId: undefined };
+  return { attemptId: undefined, userId: undefined };
 }
 
 export const GetAttemptReviewDto: MessageFns<GetAttemptReviewDto> = {
-	encode(message: GetAttemptReviewDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.attemptId !== undefined) {
-			StringValue.encode({ value: message.attemptId! }, writer.uint32(10).fork()).join();
-		}
-		if (message.userId !== undefined) {
-			StringValue.encode({ value: message.userId! }, writer.uint32(18).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: GetAttemptReviewDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.attemptId !== undefined) {
+      StringValue.encode({ value: message.attemptId! }, writer.uint32(10).fork()).join();
+    }
+    if (message.userId !== undefined) {
+      StringValue.encode({ value: message.userId! }, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): GetAttemptReviewDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseGetAttemptReviewDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): GetAttemptReviewDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGetAttemptReviewDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.attemptId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.attemptId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.userId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.userId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseDetailedAttemptReviewData(): DetailedAttemptReviewData {
-	return {
-		responses: [],
-		sections: [],
-		startedAt: undefined,
-		endedAt: undefined,
-		durationLimit: 0,
-	};
+  return { responses: [], sections: [], startedAt: undefined, endedAt: undefined, durationLimit: 0 };
 }
 
 export const DetailedAttemptReviewData: MessageFns<DetailedAttemptReviewData> = {
-	encode(
-		message: DetailedAttemptReviewData,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		for (const v of message.responses) {
-			DetailedAttemptReviewData_AttemptReviewResponse.encode(v!, writer.uint32(10).fork()).join();
-		}
-		for (const v of message.sections) {
-			DetailedAttemptReviewData_SectionReviewData.encode(v!, writer.uint32(18).fork()).join();
-		}
-		if (message.startedAt !== undefined) {
-			Timestamp.encode(toTimestamp(message.startedAt), writer.uint32(26).fork()).join();
-		}
-		if (message.endedAt !== undefined) {
-			Timestamp.encode(toTimestamp(message.endedAt), writer.uint32(34).fork()).join();
-		}
-		if (message.durationLimit !== 0) {
-			writer.uint32(40).int32(message.durationLimit);
-		}
-		if (message.totalPoints !== undefined) {
-			writer.uint32(48).int32(message.totalPoints);
-		}
-		return writer;
-	},
+  encode(message: DetailedAttemptReviewData, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.responses) {
+      DetailedAttemptReviewData_AttemptReviewResponse.encode(v!, writer.uint32(10).fork()).join();
+    }
+    for (const v of message.sections) {
+      DetailedAttemptReviewData_SectionReviewData.encode(v!, writer.uint32(18).fork()).join();
+    }
+    if (message.startedAt !== undefined) {
+      Timestamp.encode(toTimestamp(message.startedAt), writer.uint32(26).fork()).join();
+    }
+    if (message.endedAt !== undefined) {
+      Timestamp.encode(toTimestamp(message.endedAt), writer.uint32(34).fork()).join();
+    }
+    if (message.durationLimit !== 0) {
+      writer.uint32(40).int32(message.durationLimit);
+    }
+    if (message.totalPoints !== undefined) {
+      writer.uint32(48).int32(message.totalPoints);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): DetailedAttemptReviewData {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseDetailedAttemptReviewData();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): DetailedAttemptReviewData {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseDetailedAttemptReviewData();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.responses.push(
-							DetailedAttemptReviewData_AttemptReviewResponse.decode(reader, reader.uint32()),
-						);
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.responses.push(DetailedAttemptReviewData_AttemptReviewResponse.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.sections.push(
-							DetailedAttemptReviewData_SectionReviewData.decode(reader, reader.uint32()),
-						);
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.sections.push(DetailedAttemptReviewData_SectionReviewData.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.startedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
-						continue;
-					}
-					case 4: {
-						if (tag !== 34) {
-							break;
-						}
+            message.startedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-						message.endedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
-						continue;
-					}
-					case 5: {
-						if (tag !== 40) {
-							break;
-						}
+            message.endedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 5: {
+            if (tag !== 40) {
+              break;
+            }
 
-						message.durationLimit = reader.int32();
-						continue;
-					}
-					case 6: {
-						if (tag !== 48) {
-							break;
-						}
+            message.durationLimit = reader.int32();
+            continue;
+          }
+          case 6: {
+            if (tag !== 48) {
+              break;
+            }
 
-						message.totalPoints = reader.int32();
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.totalPoints = reader.int32();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseDetailedAttemptReviewData_AttemptReviewResponse(): DetailedAttemptReviewData_AttemptReviewResponse {
-	return { questionId: '', answers: [] };
+  return { questionId: "", answers: [] };
 }
 
-export const DetailedAttemptReviewData_AttemptReviewResponse: MessageFns<DetailedAttemptReviewData_AttemptReviewResponse> =
-	{
-		encode(
-			message: DetailedAttemptReviewData_AttemptReviewResponse,
-			writer: BinaryWriter = new BinaryWriter(),
-		): BinaryWriter {
-			if (message.questionId !== '') {
-				writer.uint32(10).string(message.questionId);
-			}
-			if (message.note !== undefined) {
-				writer.uint32(18).string(message.note);
-			}
-			if (message.isFlagged !== undefined) {
-				writer.uint32(24).bool(message.isFlagged);
-			}
-			for (const v of message.answers) {
-				writer.uint32(34).string(v!);
-			}
-			if (message.isCorrect !== undefined) {
-				writer.uint32(40).bool(message.isCorrect);
-			}
-			if (message.additionalData !== undefined) {
-				writer.uint32(50).string(message.additionalData);
-			}
-			return writer;
-		},
+export const DetailedAttemptReviewData_AttemptReviewResponse: MessageFns<
+  DetailedAttemptReviewData_AttemptReviewResponse
+> = {
+  encode(
+    message: DetailedAttemptReviewData_AttemptReviewResponse,
+    writer: BinaryWriter = new BinaryWriter(),
+  ): BinaryWriter {
+    if (message.questionId !== "") {
+      writer.uint32(10).string(message.questionId);
+    }
+    if (message.note !== undefined) {
+      writer.uint32(18).string(message.note);
+    }
+    if (message.isFlagged !== undefined) {
+      writer.uint32(24).bool(message.isFlagged);
+    }
+    for (const v of message.answers) {
+      writer.uint32(34).string(v!);
+    }
+    if (message.isCorrect !== undefined) {
+      writer.uint32(40).bool(message.isCorrect);
+    }
+    if (message.additionalData !== undefined) {
+      writer.uint32(50).string(message.additionalData);
+    }
+    return writer;
+  },
 
-		decode(
-			input: BinaryReader | Uint8Array,
-			length?: number,
-		): DetailedAttemptReviewData_AttemptReviewResponse {
-			const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-			const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-			if (previousRecursionDepth >= 100) {
-				throw new globalThis.Error('protobuf decode recursion limit exceeded');
-			}
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-			try {
-				const end = length === undefined ? reader.len : reader.pos + length;
-				const message = createBaseDetailedAttemptReviewData_AttemptReviewResponse();
-				while (reader.pos < end) {
-					const tag = reader.uint32();
-					switch (tag >>> 3) {
-						case 1: {
-							if (tag !== 10) {
-								break;
-							}
+  decode(input: BinaryReader | Uint8Array, length?: number): DetailedAttemptReviewData_AttemptReviewResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseDetailedAttemptReviewData_AttemptReviewResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-							message.questionId = reader.string();
-							continue;
-						}
-						case 2: {
-							if (tag !== 18) {
-								break;
-							}
+            message.questionId = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-							message.note = reader.string();
-							continue;
-						}
-						case 3: {
-							if (tag !== 24) {
-								break;
-							}
+            message.note = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 24) {
+              break;
+            }
 
-							message.isFlagged = reader.bool();
-							continue;
-						}
-						case 4: {
-							if (tag !== 34) {
-								break;
-							}
+            message.isFlagged = reader.bool();
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-							message.answers.push(reader.string());
-							continue;
-						}
-						case 5: {
-							if (tag !== 40) {
-								break;
-							}
+            message.answers.push(reader.string());
+            continue;
+          }
+          case 5: {
+            if (tag !== 40) {
+              break;
+            }
 
-							message.isCorrect = reader.bool();
-							continue;
-						}
-						case 6: {
-							if (tag !== 50) {
-								break;
-							}
+            message.isCorrect = reader.bool();
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
 
-							message.additionalData = reader.string();
-							continue;
-						}
-					}
-					if ((tag & 7) === 4 || tag === 0) {
-						break;
-					}
-					reader.skip(tag & 7);
-				}
-				return message;
-			} finally {
-				(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-			}
-		},
-	};
+            message.additionalData = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
 
 function createBaseDetailedAttemptReviewData_SectionReviewData(): DetailedAttemptReviewData_SectionReviewData {
-	return { id: '', directive: '', order: 0, fileUrls: [], type: '', sections: [], questions: [] };
+  return { id: "", directive: "", order: 0, fileUrls: [], type: "", sections: [], questions: [] };
 }
 
-export const DetailedAttemptReviewData_SectionReviewData: MessageFns<DetailedAttemptReviewData_SectionReviewData> =
-	{
-		encode(
-			message: DetailedAttemptReviewData_SectionReviewData,
-			writer: BinaryWriter = new BinaryWriter(),
-		): BinaryWriter {
-			if (message.id !== '') {
-				writer.uint32(10).string(message.id);
-			}
-			if (message.name !== undefined) {
-				writer.uint32(18).string(message.name);
-			}
-			if (message.directive !== '') {
-				writer.uint32(26).string(message.directive);
-			}
-			if (message.order !== 0) {
-				writer.uint32(32).int32(message.order);
-			}
-			for (const v of message.fileUrls) {
-				writer.uint32(42).string(v!);
-			}
-			if (message.type !== '') {
-				writer.uint32(50).string(message.type);
-			}
-			for (const v of message.sections) {
-				DetailedAttemptReviewData_SectionReviewData.encode(v!, writer.uint32(58).fork()).join();
-			}
-			for (const v of message.questions) {
-				DetailedAttemptReviewData_SectionReviewData_QuestionReviewData.encode(
-					v!,
-					writer.uint32(66).fork(),
-				).join();
-			}
-			return writer;
-		},
+export const DetailedAttemptReviewData_SectionReviewData: MessageFns<DetailedAttemptReviewData_SectionReviewData> = {
+  encode(
+    message: DetailedAttemptReviewData_SectionReviewData,
+    writer: BinaryWriter = new BinaryWriter(),
+  ): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.name !== undefined) {
+      writer.uint32(18).string(message.name);
+    }
+    if (message.directive !== "") {
+      writer.uint32(26).string(message.directive);
+    }
+    if (message.order !== 0) {
+      writer.uint32(32).int32(message.order);
+    }
+    for (const v of message.fileUrls) {
+      writer.uint32(42).string(v!);
+    }
+    if (message.type !== "") {
+      writer.uint32(50).string(message.type);
+    }
+    for (const v of message.sections) {
+      DetailedAttemptReviewData_SectionReviewData.encode(v!, writer.uint32(58).fork()).join();
+    }
+    for (const v of message.questions) {
+      DetailedAttemptReviewData_SectionReviewData_QuestionReviewData.encode(v!, writer.uint32(66).fork()).join();
+    }
+    return writer;
+  },
 
-		decode(
-			input: BinaryReader | Uint8Array,
-			length?: number,
-		): DetailedAttemptReviewData_SectionReviewData {
-			const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-			const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-			if (previousRecursionDepth >= 100) {
-				throw new globalThis.Error('protobuf decode recursion limit exceeded');
-			}
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-			try {
-				const end = length === undefined ? reader.len : reader.pos + length;
-				const message = createBaseDetailedAttemptReviewData_SectionReviewData();
-				while (reader.pos < end) {
-					const tag = reader.uint32();
-					switch (tag >>> 3) {
-						case 1: {
-							if (tag !== 10) {
-								break;
-							}
+  decode(input: BinaryReader | Uint8Array, length?: number): DetailedAttemptReviewData_SectionReviewData {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseDetailedAttemptReviewData_SectionReviewData();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-							message.id = reader.string();
-							continue;
-						}
-						case 2: {
-							if (tag !== 18) {
-								break;
-							}
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-							message.name = reader.string();
-							continue;
-						}
-						case 3: {
-							if (tag !== 26) {
-								break;
-							}
+            message.name = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-							message.directive = reader.string();
-							continue;
-						}
-						case 4: {
-							if (tag !== 32) {
-								break;
-							}
+            message.directive = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 32) {
+              break;
+            }
 
-							message.order = reader.int32();
-							continue;
-						}
-						case 5: {
-							if (tag !== 42) {
-								break;
-							}
+            message.order = reader.int32();
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
 
-							message.fileUrls.push(reader.string());
-							continue;
-						}
-						case 6: {
-							if (tag !== 50) {
-								break;
-							}
+            message.fileUrls.push(reader.string());
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
 
-							message.type = reader.string();
-							continue;
-						}
-						case 7: {
-							if (tag !== 58) {
-								break;
-							}
+            message.type = reader.string();
+            continue;
+          }
+          case 7: {
+            if (tag !== 58) {
+              break;
+            }
 
-							message.sections.push(
-								DetailedAttemptReviewData_SectionReviewData.decode(reader, reader.uint32()),
-							);
-							continue;
-						}
-						case 8: {
-							if (tag !== 66) {
-								break;
-							}
+            message.sections.push(DetailedAttemptReviewData_SectionReviewData.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 8: {
+            if (tag !== 66) {
+              break;
+            }
 
-							message.questions.push(
-								DetailedAttemptReviewData_SectionReviewData_QuestionReviewData.decode(
-									reader,
-									reader.uint32(),
-								),
-							);
-							continue;
-						}
-					}
-					if ((tag & 7) === 4 || tag === 0) {
-						break;
-					}
-					reader.skip(tag & 7);
-				}
-				return message;
-			} finally {
-				(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-			}
-		},
-	};
+            message.questions.push(
+              DetailedAttemptReviewData_SectionReviewData_QuestionReviewData.decode(reader, reader.uint32()),
+            );
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
 
 function createBaseDetailedAttemptReviewData_SectionReviewData_QuestionReviewData(): DetailedAttemptReviewData_SectionReviewData_QuestionReviewData {
-	return {
-		id: '',
-		content: '',
-		type: '',
-		order: 0,
-		fileUrls: [],
-		choices: [],
-		tags: [],
-		points: 0,
-	};
+  return { id: "", content: "", type: "", order: 0, fileUrls: [], choices: [], tags: [], points: 0 };
 }
 
-export const DetailedAttemptReviewData_SectionReviewData_QuestionReviewData: MessageFns<DetailedAttemptReviewData_SectionReviewData_QuestionReviewData> =
-	{
-		encode(
-			message: DetailedAttemptReviewData_SectionReviewData_QuestionReviewData,
-			writer: BinaryWriter = new BinaryWriter(),
-		): BinaryWriter {
-			if (message.id !== '') {
-				writer.uint32(10).string(message.id);
-			}
-			if (message.content !== '') {
-				writer.uint32(18).string(message.content);
-			}
-			if (message.type !== '') {
-				writer.uint32(26).string(message.type);
-			}
-			if (message.order !== 0) {
-				writer.uint32(32).int32(message.order);
-			}
-			for (const v of message.fileUrls) {
-				writer.uint32(42).string(v!);
-			}
-			for (const v of message.choices) {
-				DetailedAttemptReviewData_SectionReviewData_QuestionReviewData_ChoiceReviewData.encode(
-					v!,
-					writer.uint32(50).fork(),
-				).join();
-			}
-			for (const v of message.tags) {
-				writer.uint32(58).string(v!);
-			}
-			if (message.points !== 0) {
-				writer.uint32(64).int32(message.points);
-			}
-			return writer;
-		},
+export const DetailedAttemptReviewData_SectionReviewData_QuestionReviewData: MessageFns<
+  DetailedAttemptReviewData_SectionReviewData_QuestionReviewData
+> = {
+  encode(
+    message: DetailedAttemptReviewData_SectionReviewData_QuestionReviewData,
+    writer: BinaryWriter = new BinaryWriter(),
+  ): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.content !== "") {
+      writer.uint32(18).string(message.content);
+    }
+    if (message.type !== "") {
+      writer.uint32(26).string(message.type);
+    }
+    if (message.order !== 0) {
+      writer.uint32(32).int32(message.order);
+    }
+    for (const v of message.fileUrls) {
+      writer.uint32(42).string(v!);
+    }
+    for (const v of message.choices) {
+      DetailedAttemptReviewData_SectionReviewData_QuestionReviewData_ChoiceReviewData.encode(
+        v!,
+        writer.uint32(50).fork(),
+      ).join();
+    }
+    for (const v of message.tags) {
+      writer.uint32(58).string(v!);
+    }
+    if (message.points !== 0) {
+      writer.uint32(64).int32(message.points);
+    }
+    return writer;
+  },
 
-		decode(
-			input: BinaryReader | Uint8Array,
-			length?: number,
-		): DetailedAttemptReviewData_SectionReviewData_QuestionReviewData {
-			const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-			const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-			if (previousRecursionDepth >= 100) {
-				throw new globalThis.Error('protobuf decode recursion limit exceeded');
-			}
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-			try {
-				const end = length === undefined ? reader.len : reader.pos + length;
-				const message = createBaseDetailedAttemptReviewData_SectionReviewData_QuestionReviewData();
-				while (reader.pos < end) {
-					const tag = reader.uint32();
-					switch (tag >>> 3) {
-						case 1: {
-							if (tag !== 10) {
-								break;
-							}
+  decode(
+    input: BinaryReader | Uint8Array,
+    length?: number,
+  ): DetailedAttemptReviewData_SectionReviewData_QuestionReviewData {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseDetailedAttemptReviewData_SectionReviewData_QuestionReviewData();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-							message.id = reader.string();
-							continue;
-						}
-						case 2: {
-							if (tag !== 18) {
-								break;
-							}
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-							message.content = reader.string();
-							continue;
-						}
-						case 3: {
-							if (tag !== 26) {
-								break;
-							}
+            message.content = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-							message.type = reader.string();
-							continue;
-						}
-						case 4: {
-							if (tag !== 32) {
-								break;
-							}
+            message.type = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 32) {
+              break;
+            }
 
-							message.order = reader.int32();
-							continue;
-						}
-						case 5: {
-							if (tag !== 42) {
-								break;
-							}
+            message.order = reader.int32();
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
 
-							message.fileUrls.push(reader.string());
-							continue;
-						}
-						case 6: {
-							if (tag !== 50) {
-								break;
-							}
+            message.fileUrls.push(reader.string());
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
 
-							message.choices.push(
-								DetailedAttemptReviewData_SectionReviewData_QuestionReviewData_ChoiceReviewData.decode(
-									reader,
-									reader.uint32(),
-								),
-							);
-							continue;
-						}
-						case 7: {
-							if (tag !== 58) {
-								break;
-							}
+            message.choices.push(
+              DetailedAttemptReviewData_SectionReviewData_QuestionReviewData_ChoiceReviewData.decode(
+                reader,
+                reader.uint32(),
+              ),
+            );
+            continue;
+          }
+          case 7: {
+            if (tag !== 58) {
+              break;
+            }
 
-							message.tags.push(reader.string());
-							continue;
-						}
-						case 8: {
-							if (tag !== 64) {
-								break;
-							}
+            message.tags.push(reader.string());
+            continue;
+          }
+          case 8: {
+            if (tag !== 64) {
+              break;
+            }
 
-							message.points = reader.int32();
-							continue;
-						}
-					}
-					if ((tag & 7) === 4 || tag === 0) {
-						break;
-					}
-					reader.skip(tag & 7);
-				}
-				return message;
-			} finally {
-				(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-			}
-		},
-	};
+            message.points = reader.int32();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
 
 function createBaseDetailedAttemptReviewData_SectionReviewData_QuestionReviewData_ChoiceReviewData(): DetailedAttemptReviewData_SectionReviewData_QuestionReviewData_ChoiceReviewData {
-	return { key: '', isCorrect: false };
+  return { key: "", isCorrect: false };
 }
 
-export const DetailedAttemptReviewData_SectionReviewData_QuestionReviewData_ChoiceReviewData: MessageFns<DetailedAttemptReviewData_SectionReviewData_QuestionReviewData_ChoiceReviewData> =
-	{
-		encode(
-			message: DetailedAttemptReviewData_SectionReviewData_QuestionReviewData_ChoiceReviewData,
-			writer: BinaryWriter = new BinaryWriter(),
-		): BinaryWriter {
-			if (message.key !== '') {
-				writer.uint32(10).string(message.key);
-			}
-			if (message.content !== undefined) {
-				writer.uint32(18).string(message.content);
-			}
-			if (message.isCorrect !== false) {
-				writer.uint32(24).bool(message.isCorrect);
-			}
-			return writer;
-		},
+export const DetailedAttemptReviewData_SectionReviewData_QuestionReviewData_ChoiceReviewData: MessageFns<
+  DetailedAttemptReviewData_SectionReviewData_QuestionReviewData_ChoiceReviewData
+> = {
+  encode(
+    message: DetailedAttemptReviewData_SectionReviewData_QuestionReviewData_ChoiceReviewData,
+    writer: BinaryWriter = new BinaryWriter(),
+  ): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.content !== undefined) {
+      writer.uint32(18).string(message.content);
+    }
+    if (message.isCorrect !== false) {
+      writer.uint32(24).bool(message.isCorrect);
+    }
+    return writer;
+  },
 
-		decode(
-			input: BinaryReader | Uint8Array,
-			length?: number,
-		): DetailedAttemptReviewData_SectionReviewData_QuestionReviewData_ChoiceReviewData {
-			const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-			const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-			if (previousRecursionDepth >= 100) {
-				throw new globalThis.Error('protobuf decode recursion limit exceeded');
-			}
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-			try {
-				const end = length === undefined ? reader.len : reader.pos + length;
-				const message =
-					createBaseDetailedAttemptReviewData_SectionReviewData_QuestionReviewData_ChoiceReviewData();
-				while (reader.pos < end) {
-					const tag = reader.uint32();
-					switch (tag >>> 3) {
-						case 1: {
-							if (tag !== 10) {
-								break;
-							}
+  decode(
+    input: BinaryReader | Uint8Array,
+    length?: number,
+  ): DetailedAttemptReviewData_SectionReviewData_QuestionReviewData_ChoiceReviewData {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseDetailedAttemptReviewData_SectionReviewData_QuestionReviewData_ChoiceReviewData();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-							message.key = reader.string();
-							continue;
-						}
-						case 2: {
-							if (tag !== 18) {
-								break;
-							}
+            message.key = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-							message.content = reader.string();
-							continue;
-						}
-						case 3: {
-							if (tag !== 24) {
-								break;
-							}
+            message.content = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 24) {
+              break;
+            }
 
-							message.isCorrect = reader.bool();
-							continue;
-						}
-					}
-					if ((tag & 7) === 4 || tag === 0) {
-						break;
-					}
-					reader.skip(tag & 7);
-				}
-				return message;
-			} finally {
-				(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-			}
-		},
-	};
+            message.isCorrect = reader.bool();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
 
 function createBaseGetAttemptSavedDataDto(): GetAttemptSavedDataDto {
-	return { attemptId: undefined, userId: undefined };
+  return { attemptId: undefined, userId: undefined };
 }
 
 export const GetAttemptSavedDataDto: MessageFns<GetAttemptSavedDataDto> = {
-	encode(message: GetAttemptSavedDataDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.attemptId !== undefined) {
-			StringValue.encode({ value: message.attemptId! }, writer.uint32(10).fork()).join();
-		}
-		if (message.userId !== undefined) {
-			StringValue.encode({ value: message.userId! }, writer.uint32(18).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: GetAttemptSavedDataDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.attemptId !== undefined) {
+      StringValue.encode({ value: message.attemptId! }, writer.uint32(10).fork()).join();
+    }
+    if (message.userId !== undefined) {
+      StringValue.encode({ value: message.userId! }, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): GetAttemptSavedDataDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseGetAttemptSavedDataDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): GetAttemptSavedDataDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGetAttemptSavedDataDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.attemptId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.attemptId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.userId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.userId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseAttemptSavedData(): AttemptSavedData {
-	return { responses: [], sections: [], startedAt: undefined, durationLimit: 0 };
+  return { responses: [], sections: [], startedAt: undefined, durationLimit: 0 };
 }
 
 export const AttemptSavedData: MessageFns<AttemptSavedData> = {
-	encode(message: AttemptSavedData, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		for (const v of message.responses) {
-			AttemptSavedData_AttemptSavedResponse.encode(v!, writer.uint32(10).fork()).join();
-		}
-		for (const v of message.sections) {
-			AttemptSavedData_AttemptSectionData.encode(v!, writer.uint32(18).fork()).join();
-		}
-		if (message.startedAt !== undefined) {
-			Timestamp.encode(toTimestamp(message.startedAt), writer.uint32(26).fork()).join();
-		}
-		if (message.durationLimit !== 0) {
-			writer.uint32(32).int32(message.durationLimit);
-		}
-		return writer;
-	},
+  encode(message: AttemptSavedData, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.responses) {
+      AttemptSavedData_AttemptSavedResponse.encode(v!, writer.uint32(10).fork()).join();
+    }
+    for (const v of message.sections) {
+      AttemptSavedData_AttemptSectionData.encode(v!, writer.uint32(18).fork()).join();
+    }
+    if (message.startedAt !== undefined) {
+      Timestamp.encode(toTimestamp(message.startedAt), writer.uint32(26).fork()).join();
+    }
+    if (message.durationLimit !== 0) {
+      writer.uint32(32).int32(message.durationLimit);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): AttemptSavedData {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseAttemptSavedData();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): AttemptSavedData {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseAttemptSavedData();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.responses.push(
-							AttemptSavedData_AttemptSavedResponse.decode(reader, reader.uint32()),
-						);
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.responses.push(AttemptSavedData_AttemptSavedResponse.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.sections.push(
-							AttemptSavedData_AttemptSectionData.decode(reader, reader.uint32()),
-						);
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.sections.push(AttemptSavedData_AttemptSectionData.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.startedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
-						continue;
-					}
-					case 4: {
-						if (tag !== 32) {
-							break;
-						}
+            message.startedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 4: {
+            if (tag !== 32) {
+              break;
+            }
 
-						message.durationLimit = reader.int32();
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.durationLimit = reader.int32();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseAttemptSavedData_AttemptSavedResponse(): AttemptSavedData_AttemptSavedResponse {
-	return { questionId: '', answers: [] };
+  return { questionId: "", answers: [] };
 }
 
-export const AttemptSavedData_AttemptSavedResponse: MessageFns<AttemptSavedData_AttemptSavedResponse> =
-	{
-		encode(
-			message: AttemptSavedData_AttemptSavedResponse,
-			writer: BinaryWriter = new BinaryWriter(),
-		): BinaryWriter {
-			if (message.questionId !== '') {
-				writer.uint32(10).string(message.questionId);
-			}
-			if (message.note !== undefined) {
-				writer.uint32(18).string(message.note);
-			}
-			if (message.isFlagged !== undefined) {
-				writer.uint32(24).bool(message.isFlagged);
-			}
-			for (const v of message.answers) {
-				writer.uint32(34).string(v!);
-			}
-			return writer;
-		},
+export const AttemptSavedData_AttemptSavedResponse: MessageFns<AttemptSavedData_AttemptSavedResponse> = {
+  encode(message: AttemptSavedData_AttemptSavedResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.questionId !== "") {
+      writer.uint32(10).string(message.questionId);
+    }
+    if (message.note !== undefined) {
+      writer.uint32(18).string(message.note);
+    }
+    if (message.isFlagged !== undefined) {
+      writer.uint32(24).bool(message.isFlagged);
+    }
+    for (const v of message.answers) {
+      writer.uint32(34).string(v!);
+    }
+    return writer;
+  },
 
-		decode(
-			input: BinaryReader | Uint8Array,
-			length?: number,
-		): AttemptSavedData_AttemptSavedResponse {
-			const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-			const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-			if (previousRecursionDepth >= 100) {
-				throw new globalThis.Error('protobuf decode recursion limit exceeded');
-			}
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-			try {
-				const end = length === undefined ? reader.len : reader.pos + length;
-				const message = createBaseAttemptSavedData_AttemptSavedResponse();
-				while (reader.pos < end) {
-					const tag = reader.uint32();
-					switch (tag >>> 3) {
-						case 1: {
-							if (tag !== 10) {
-								break;
-							}
+  decode(input: BinaryReader | Uint8Array, length?: number): AttemptSavedData_AttemptSavedResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseAttemptSavedData_AttemptSavedResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-							message.questionId = reader.string();
-							continue;
-						}
-						case 2: {
-							if (tag !== 18) {
-								break;
-							}
+            message.questionId = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-							message.note = reader.string();
-							continue;
-						}
-						case 3: {
-							if (tag !== 24) {
-								break;
-							}
+            message.note = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 24) {
+              break;
+            }
 
-							message.isFlagged = reader.bool();
-							continue;
-						}
-						case 4: {
-							if (tag !== 34) {
-								break;
-							}
+            message.isFlagged = reader.bool();
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-							message.answers.push(reader.string());
-							continue;
-						}
-					}
-					if ((tag & 7) === 4 || tag === 0) {
-						break;
-					}
-					reader.skip(tag & 7);
-				}
-				return message;
-			} finally {
-				(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-			}
-		},
-	};
+            message.answers.push(reader.string());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
 
 function createBaseAttemptSavedData_AttemptSectionData(): AttemptSavedData_AttemptSectionData {
-	return { id: '', directive: '', order: 0, fileUrls: [], type: '', sections: [], questions: [] };
+  return { id: "", directive: "", order: 0, fileUrls: [], type: "", sections: [], questions: [] };
 }
 
-export const AttemptSavedData_AttemptSectionData: MessageFns<AttemptSavedData_AttemptSectionData> =
-	{
-		encode(
-			message: AttemptSavedData_AttemptSectionData,
-			writer: BinaryWriter = new BinaryWriter(),
-		): BinaryWriter {
-			if (message.id !== '') {
-				writer.uint32(10).string(message.id);
-			}
-			if (message.name !== undefined) {
-				writer.uint32(18).string(message.name);
-			}
-			if (message.directive !== '') {
-				writer.uint32(26).string(message.directive);
-			}
-			if (message.order !== 0) {
-				writer.uint32(32).int32(message.order);
-			}
-			for (const v of message.fileUrls) {
-				writer.uint32(42).string(v!);
-			}
-			if (message.type !== '') {
-				writer.uint32(50).string(message.type);
-			}
-			for (const v of message.sections) {
-				AttemptSavedData_AttemptSectionData.encode(v!, writer.uint32(58).fork()).join();
-			}
-			for (const v of message.questions) {
-				AttemptSavedData_AttemptSectionData_AttemptQuestionData.encode(
-					v!,
-					writer.uint32(66).fork(),
-				).join();
-			}
-			return writer;
-		},
+export const AttemptSavedData_AttemptSectionData: MessageFns<AttemptSavedData_AttemptSectionData> = {
+  encode(message: AttemptSavedData_AttemptSectionData, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.name !== undefined) {
+      writer.uint32(18).string(message.name);
+    }
+    if (message.directive !== "") {
+      writer.uint32(26).string(message.directive);
+    }
+    if (message.order !== 0) {
+      writer.uint32(32).int32(message.order);
+    }
+    for (const v of message.fileUrls) {
+      writer.uint32(42).string(v!);
+    }
+    if (message.type !== "") {
+      writer.uint32(50).string(message.type);
+    }
+    for (const v of message.sections) {
+      AttemptSavedData_AttemptSectionData.encode(v!, writer.uint32(58).fork()).join();
+    }
+    for (const v of message.questions) {
+      AttemptSavedData_AttemptSectionData_AttemptQuestionData.encode(v!, writer.uint32(66).fork()).join();
+    }
+    return writer;
+  },
 
-		decode(input: BinaryReader | Uint8Array, length?: number): AttemptSavedData_AttemptSectionData {
-			const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-			const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-			if (previousRecursionDepth >= 100) {
-				throw new globalThis.Error('protobuf decode recursion limit exceeded');
-			}
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-			try {
-				const end = length === undefined ? reader.len : reader.pos + length;
-				const message = createBaseAttemptSavedData_AttemptSectionData();
-				while (reader.pos < end) {
-					const tag = reader.uint32();
-					switch (tag >>> 3) {
-						case 1: {
-							if (tag !== 10) {
-								break;
-							}
+  decode(input: BinaryReader | Uint8Array, length?: number): AttemptSavedData_AttemptSectionData {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseAttemptSavedData_AttemptSectionData();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-							message.id = reader.string();
-							continue;
-						}
-						case 2: {
-							if (tag !== 18) {
-								break;
-							}
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-							message.name = reader.string();
-							continue;
-						}
-						case 3: {
-							if (tag !== 26) {
-								break;
-							}
+            message.name = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-							message.directive = reader.string();
-							continue;
-						}
-						case 4: {
-							if (tag !== 32) {
-								break;
-							}
+            message.directive = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 32) {
+              break;
+            }
 
-							message.order = reader.int32();
-							continue;
-						}
-						case 5: {
-							if (tag !== 42) {
-								break;
-							}
+            message.order = reader.int32();
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
 
-							message.fileUrls.push(reader.string());
-							continue;
-						}
-						case 6: {
-							if (tag !== 50) {
-								break;
-							}
+            message.fileUrls.push(reader.string());
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
 
-							message.type = reader.string();
-							continue;
-						}
-						case 7: {
-							if (tag !== 58) {
-								break;
-							}
+            message.type = reader.string();
+            continue;
+          }
+          case 7: {
+            if (tag !== 58) {
+              break;
+            }
 
-							message.sections.push(
-								AttemptSavedData_AttemptSectionData.decode(reader, reader.uint32()),
-							);
-							continue;
-						}
-						case 8: {
-							if (tag !== 66) {
-								break;
-							}
+            message.sections.push(AttemptSavedData_AttemptSectionData.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 8: {
+            if (tag !== 66) {
+              break;
+            }
 
-							message.questions.push(
-								AttemptSavedData_AttemptSectionData_AttemptQuestionData.decode(
-									reader,
-									reader.uint32(),
-								),
-							);
-							continue;
-						}
-					}
-					if ((tag & 7) === 4 || tag === 0) {
-						break;
-					}
-					reader.skip(tag & 7);
-				}
-				return message;
-			} finally {
-				(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-			}
-		},
-	};
+            message.questions.push(
+              AttemptSavedData_AttemptSectionData_AttemptQuestionData.decode(reader, reader.uint32()),
+            );
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
 
 function createBaseAttemptSavedData_AttemptSectionData_AttemptQuestionData(): AttemptSavedData_AttemptSectionData_AttemptQuestionData {
-	return { id: '', content: '', type: '', order: 0, fileUrls: [], choices: [] };
+  return { id: "", content: "", type: "", order: 0, fileUrls: [], choices: [] };
 }
 
-export const AttemptSavedData_AttemptSectionData_AttemptQuestionData: MessageFns<AttemptSavedData_AttemptSectionData_AttemptQuestionData> =
-	{
-		encode(
-			message: AttemptSavedData_AttemptSectionData_AttemptQuestionData,
-			writer: BinaryWriter = new BinaryWriter(),
-		): BinaryWriter {
-			if (message.id !== '') {
-				writer.uint32(10).string(message.id);
-			}
-			if (message.content !== '') {
-				writer.uint32(18).string(message.content);
-			}
-			if (message.type !== '') {
-				writer.uint32(26).string(message.type);
-			}
-			if (message.order !== 0) {
-				writer.uint32(32).int32(message.order);
-			}
-			for (const v of message.fileUrls) {
-				writer.uint32(42).string(v!);
-			}
-			for (const v of message.choices) {
-				AttemptSavedData_AttemptSectionData_AttemptQuestionData_AttemptChoiceData.encode(
-					v!,
-					writer.uint32(50).fork(),
-				).join();
-			}
-			return writer;
-		},
+export const AttemptSavedData_AttemptSectionData_AttemptQuestionData: MessageFns<
+  AttemptSavedData_AttemptSectionData_AttemptQuestionData
+> = {
+  encode(
+    message: AttemptSavedData_AttemptSectionData_AttemptQuestionData,
+    writer: BinaryWriter = new BinaryWriter(),
+  ): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.content !== "") {
+      writer.uint32(18).string(message.content);
+    }
+    if (message.type !== "") {
+      writer.uint32(26).string(message.type);
+    }
+    if (message.order !== 0) {
+      writer.uint32(32).int32(message.order);
+    }
+    for (const v of message.fileUrls) {
+      writer.uint32(42).string(v!);
+    }
+    for (const v of message.choices) {
+      AttemptSavedData_AttemptSectionData_AttemptQuestionData_AttemptChoiceData.encode(v!, writer.uint32(50).fork())
+        .join();
+    }
+    return writer;
+  },
 
-		decode(
-			input: BinaryReader | Uint8Array,
-			length?: number,
-		): AttemptSavedData_AttemptSectionData_AttemptQuestionData {
-			const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-			const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-			if (previousRecursionDepth >= 100) {
-				throw new globalThis.Error('protobuf decode recursion limit exceeded');
-			}
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-			try {
-				const end = length === undefined ? reader.len : reader.pos + length;
-				const message = createBaseAttemptSavedData_AttemptSectionData_AttemptQuestionData();
-				while (reader.pos < end) {
-					const tag = reader.uint32();
-					switch (tag >>> 3) {
-						case 1: {
-							if (tag !== 10) {
-								break;
-							}
+  decode(input: BinaryReader | Uint8Array, length?: number): AttemptSavedData_AttemptSectionData_AttemptQuestionData {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseAttemptSavedData_AttemptSectionData_AttemptQuestionData();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-							message.id = reader.string();
-							continue;
-						}
-						case 2: {
-							if (tag !== 18) {
-								break;
-							}
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-							message.content = reader.string();
-							continue;
-						}
-						case 3: {
-							if (tag !== 26) {
-								break;
-							}
+            message.content = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-							message.type = reader.string();
-							continue;
-						}
-						case 4: {
-							if (tag !== 32) {
-								break;
-							}
+            message.type = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 32) {
+              break;
+            }
 
-							message.order = reader.int32();
-							continue;
-						}
-						case 5: {
-							if (tag !== 42) {
-								break;
-							}
+            message.order = reader.int32();
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
 
-							message.fileUrls.push(reader.string());
-							continue;
-						}
-						case 6: {
-							if (tag !== 50) {
-								break;
-							}
+            message.fileUrls.push(reader.string());
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
 
-							message.choices.push(
-								AttemptSavedData_AttemptSectionData_AttemptQuestionData_AttemptChoiceData.decode(
-									reader,
-									reader.uint32(),
-								),
-							);
-							continue;
-						}
-					}
-					if ((tag & 7) === 4 || tag === 0) {
-						break;
-					}
-					reader.skip(tag & 7);
-				}
-				return message;
-			} finally {
-				(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-			}
-		},
-	};
+            message.choices.push(
+              AttemptSavedData_AttemptSectionData_AttemptQuestionData_AttemptChoiceData.decode(reader, reader.uint32()),
+            );
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
 
 function createBaseAttemptSavedData_AttemptSectionData_AttemptQuestionData_AttemptChoiceData(): AttemptSavedData_AttemptSectionData_AttemptQuestionData_AttemptChoiceData {
-	return { key: '' };
+  return { key: "" };
 }
 
-export const AttemptSavedData_AttemptSectionData_AttemptQuestionData_AttemptChoiceData: MessageFns<AttemptSavedData_AttemptSectionData_AttemptQuestionData_AttemptChoiceData> =
-	{
-		encode(
-			message: AttemptSavedData_AttemptSectionData_AttemptQuestionData_AttemptChoiceData,
-			writer: BinaryWriter = new BinaryWriter(),
-		): BinaryWriter {
-			if (message.key !== '') {
-				writer.uint32(10).string(message.key);
-			}
-			if (message.content !== undefined) {
-				writer.uint32(18).string(message.content);
-			}
-			return writer;
-		},
+export const AttemptSavedData_AttemptSectionData_AttemptQuestionData_AttemptChoiceData: MessageFns<
+  AttemptSavedData_AttemptSectionData_AttemptQuestionData_AttemptChoiceData
+> = {
+  encode(
+    message: AttemptSavedData_AttemptSectionData_AttemptQuestionData_AttemptChoiceData,
+    writer: BinaryWriter = new BinaryWriter(),
+  ): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.content !== undefined) {
+      writer.uint32(18).string(message.content);
+    }
+    return writer;
+  },
 
-		decode(
-			input: BinaryReader | Uint8Array,
-			length?: number,
-		): AttemptSavedData_AttemptSectionData_AttemptQuestionData_AttemptChoiceData {
-			const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-			const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-			if (previousRecursionDepth >= 100) {
-				throw new globalThis.Error('protobuf decode recursion limit exceeded');
-			}
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-			try {
-				const end = length === undefined ? reader.len : reader.pos + length;
-				const message =
-					createBaseAttemptSavedData_AttemptSectionData_AttemptQuestionData_AttemptChoiceData();
-				while (reader.pos < end) {
-					const tag = reader.uint32();
-					switch (tag >>> 3) {
-						case 1: {
-							if (tag !== 10) {
-								break;
-							}
+  decode(
+    input: BinaryReader | Uint8Array,
+    length?: number,
+  ): AttemptSavedData_AttemptSectionData_AttemptQuestionData_AttemptChoiceData {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseAttemptSavedData_AttemptSectionData_AttemptQuestionData_AttemptChoiceData();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-							message.key = reader.string();
-							continue;
-						}
-						case 2: {
-							if (tag !== 18) {
-								break;
-							}
+            message.key = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-							message.content = reader.string();
-							continue;
-						}
-					}
-					if ((tag & 7) === 4 || tag === 0) {
-						break;
-					}
-					reader.skip(tag & 7);
-				}
-				return message;
-			} finally {
-				(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-			}
-		},
-	};
+            message.content = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
 
 function createBaseGetExamDetailsDto(): GetExamDetailsDto {
-	return { examId: undefined };
+  return { examId: undefined };
 }
 
 export const GetExamDetailsDto: MessageFns<GetExamDetailsDto> = {
-	encode(message: GetExamDetailsDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.examId !== undefined) {
-			StringValue.encode({ value: message.examId! }, writer.uint32(10).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: GetExamDetailsDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.examId !== undefined) {
+      StringValue.encode({ value: message.examId! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): GetExamDetailsDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseGetExamDetailsDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): GetExamDetailsDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGetExamDetailsDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.examId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.examId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseDetailedExamInfo(): DetailedExamInfo {
-	return {
-		id: '',
-		name: '',
-		attemptsCount: 0,
-		duration: 0,
-		tags: [],
-		sections: [],
-		updatedAt: undefined,
-	};
+  return { id: "", name: "", attemptsCount: 0, duration: 0, tags: [], sections: [], updatedAt: undefined };
 }
 
 export const DetailedExamInfo: MessageFns<DetailedExamInfo> = {
-	encode(message: DetailedExamInfo, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.id !== '') {
-			writer.uint32(10).string(message.id);
-		}
-		if (message.name !== '') {
-			writer.uint32(18).string(message.name);
-		}
-		if (message.description !== undefined) {
-			writer.uint32(26).string(message.description);
-		}
-		if (message.attemptsCount !== 0) {
-			writer.uint32(32).int32(message.attemptsCount);
-		}
-		if (message.duration !== 0) {
-			writer.uint32(40).int32(message.duration);
-		}
-		for (const v of message.tags) {
-			writer.uint32(50).string(v!);
-		}
-		for (const v of message.sections) {
-			DetailedExamInfo_DetailedExamSection.encode(v!, writer.uint32(58).fork()).join();
-		}
-		if (message.updatedAt !== undefined) {
-			Timestamp.encode(toTimestamp(message.updatedAt), writer.uint32(66).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: DetailedExamInfo, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.name !== "") {
+      writer.uint32(18).string(message.name);
+    }
+    if (message.description !== undefined) {
+      writer.uint32(26).string(message.description);
+    }
+    if (message.attemptsCount !== 0) {
+      writer.uint32(32).int32(message.attemptsCount);
+    }
+    if (message.duration !== 0) {
+      writer.uint32(40).int32(message.duration);
+    }
+    for (const v of message.tags) {
+      writer.uint32(50).string(v!);
+    }
+    for (const v of message.sections) {
+      DetailedExamInfo_DetailedExamSection.encode(v!, writer.uint32(58).fork()).join();
+    }
+    if (message.updatedAt !== undefined) {
+      Timestamp.encode(toTimestamp(message.updatedAt), writer.uint32(66).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): DetailedExamInfo {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseDetailedExamInfo();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): DetailedExamInfo {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseDetailedExamInfo();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = reader.string();
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.name = reader.string();
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.name = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.description = reader.string();
-						continue;
-					}
-					case 4: {
-						if (tag !== 32) {
-							break;
-						}
+            message.description = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 32) {
+              break;
+            }
 
-						message.attemptsCount = reader.int32();
-						continue;
-					}
-					case 5: {
-						if (tag !== 40) {
-							break;
-						}
+            message.attemptsCount = reader.int32();
+            continue;
+          }
+          case 5: {
+            if (tag !== 40) {
+              break;
+            }
 
-						message.duration = reader.int32();
-						continue;
-					}
-					case 6: {
-						if (tag !== 50) {
-							break;
-						}
+            message.duration = reader.int32();
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
 
-						message.tags.push(reader.string());
-						continue;
-					}
-					case 7: {
-						if (tag !== 58) {
-							break;
-						}
+            message.tags.push(reader.string());
+            continue;
+          }
+          case 7: {
+            if (tag !== 58) {
+              break;
+            }
 
-						message.sections.push(
-							DetailedExamInfo_DetailedExamSection.decode(reader, reader.uint32()),
-						);
-						continue;
-					}
-					case 8: {
-						if (tag !== 66) {
-							break;
-						}
+            message.sections.push(DetailedExamInfo_DetailedExamSection.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 8: {
+            if (tag !== 66) {
+              break;
+            }
 
-						message.updatedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.updatedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseDetailedExamInfo_DetailedExamSection(): DetailedExamInfo_DetailedExamSection {
-	return { id: '', questionsCount: 0, tags: [] };
+  return { id: "", questionsCount: 0, tags: [] };
 }
 
-export const DetailedExamInfo_DetailedExamSection: MessageFns<DetailedExamInfo_DetailedExamSection> =
-	{
-		encode(
-			message: DetailedExamInfo_DetailedExamSection,
-			writer: BinaryWriter = new BinaryWriter(),
-		): BinaryWriter {
-			if (message.id !== '') {
-				writer.uint32(10).string(message.id);
-			}
-			if (message.name !== undefined) {
-				writer.uint32(18).string(message.name);
-			}
-			if (message.questionsCount !== 0) {
-				writer.uint32(24).int32(message.questionsCount);
-			}
-			for (const v of message.tags) {
-				writer.uint32(34).string(v!);
-			}
-			return writer;
-		},
+export const DetailedExamInfo_DetailedExamSection: MessageFns<DetailedExamInfo_DetailedExamSection> = {
+  encode(message: DetailedExamInfo_DetailedExamSection, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.name !== undefined) {
+      writer.uint32(18).string(message.name);
+    }
+    if (message.questionsCount !== 0) {
+      writer.uint32(24).int32(message.questionsCount);
+    }
+    for (const v of message.tags) {
+      writer.uint32(34).string(v!);
+    }
+    return writer;
+  },
 
-		decode(
-			input: BinaryReader | Uint8Array,
-			length?: number,
-		): DetailedExamInfo_DetailedExamSection {
-			const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-			const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-			if (previousRecursionDepth >= 100) {
-				throw new globalThis.Error('protobuf decode recursion limit exceeded');
-			}
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-			try {
-				const end = length === undefined ? reader.len : reader.pos + length;
-				const message = createBaseDetailedExamInfo_DetailedExamSection();
-				while (reader.pos < end) {
-					const tag = reader.uint32();
-					switch (tag >>> 3) {
-						case 1: {
-							if (tag !== 10) {
-								break;
-							}
+  decode(input: BinaryReader | Uint8Array, length?: number): DetailedExamInfo_DetailedExamSection {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseDetailedExamInfo_DetailedExamSection();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-							message.id = reader.string();
-							continue;
-						}
-						case 2: {
-							if (tag !== 18) {
-								break;
-							}
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-							message.name = reader.string();
-							continue;
-						}
-						case 3: {
-							if (tag !== 24) {
-								break;
-							}
+            message.name = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 24) {
+              break;
+            }
 
-							message.questionsCount = reader.int32();
-							continue;
-						}
-						case 4: {
-							if (tag !== 34) {
-								break;
-							}
+            message.questionsCount = reader.int32();
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-							message.tags.push(reader.string());
-							continue;
-						}
-					}
-					if ((tag & 7) === 4 || tag === 0) {
-						break;
-					}
-					reader.skip(tag & 7);
-				}
-				return message;
-			} finally {
-				(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-			}
-		},
-	};
+            message.tags.push(reader.string());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
 
 function createBaseFindExamsDto(): FindExamsDto {
-	return {};
+  return {};
 }
 
 export const FindExamsDto: MessageFns<FindExamsDto> = {
-	encode(message: FindExamsDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.filter !== undefined) {
-			FindExamsDto_FilterOption.encode(message.filter, writer.uint32(10).fork()).join();
-		}
-		if (message.sortBy !== undefined) {
-			FindExamsDto_SortOption.encode(message.sortBy, writer.uint32(18).fork()).join();
-		}
-		if (message.cursor !== undefined) {
-			StringValue.encode({ value: message.cursor! }, writer.uint32(26).fork()).join();
-		}
-		if (message.limit !== undefined) {
-			Int32Value.encode({ value: message.limit! }, writer.uint32(34).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: FindExamsDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.filter !== undefined) {
+      FindExamsDto_FilterOption.encode(message.filter, writer.uint32(10).fork()).join();
+    }
+    if (message.sortBy !== undefined) {
+      FindExamsDto_SortOption.encode(message.sortBy, writer.uint32(18).fork()).join();
+    }
+    if (message.cursor !== undefined) {
+      StringValue.encode({ value: message.cursor! }, writer.uint32(26).fork()).join();
+    }
+    if (message.limit !== undefined) {
+      Int32Value.encode({ value: message.limit! }, writer.uint32(34).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): FindExamsDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseFindExamsDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): FindExamsDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseFindExamsDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.filter = FindExamsDto_FilterOption.decode(reader, reader.uint32());
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.filter = FindExamsDto_FilterOption.decode(reader, reader.uint32());
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.sortBy = FindExamsDto_SortOption.decode(reader, reader.uint32());
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.sortBy = FindExamsDto_SortOption.decode(reader, reader.uint32());
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.cursor = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 4: {
-						if (tag !== 34) {
-							break;
-						}
+            message.cursor = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-						message.limit = Int32Value.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.limit = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseFindExamsDto_FilterOption(): FindExamsDto_FilterOption {
-	return { tags: [] };
+  return { tags: [] };
 }
 
 export const FindExamsDto_FilterOption: MessageFns<FindExamsDto_FilterOption> = {
-	encode(
-		message: FindExamsDto_FilterOption,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.name !== undefined) {
-			StringValue.encode({ value: message.name! }, writer.uint32(10).fork()).join();
-		}
-		for (const v of message.tags) {
-			StringValue.encode({ value: v!! }, writer.uint32(18).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: FindExamsDto_FilterOption, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.name !== undefined) {
+      StringValue.encode({ value: message.name! }, writer.uint32(10).fork()).join();
+    }
+    for (const v of message.tags) {
+      StringValue.encode({ value: v!! }, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): FindExamsDto_FilterOption {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseFindExamsDto_FilterOption();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): FindExamsDto_FilterOption {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseFindExamsDto_FilterOption();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.name = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.name = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.tags.push(StringValue.decode(reader, reader.uint32()).value);
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.tags.push(StringValue.decode(reader, reader.uint32()).value);
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseFindExamsDto_SortOption(): FindExamsDto_SortOption {
-	return { key: undefined, direction: undefined };
+  return { key: undefined, direction: undefined };
 }
 
 export const FindExamsDto_SortOption: MessageFns<FindExamsDto_SortOption> = {
-	encode(
-		message: FindExamsDto_SortOption,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.key !== undefined) {
-			StringValue.encode({ value: message.key! }, writer.uint32(10).fork()).join();
-		}
-		if (message.direction !== undefined) {
-			StringValue.encode({ value: message.direction! }, writer.uint32(18).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: FindExamsDto_SortOption, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== undefined) {
+      StringValue.encode({ value: message.key! }, writer.uint32(10).fork()).join();
+    }
+    if (message.direction !== undefined) {
+      StringValue.encode({ value: message.direction! }, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): FindExamsDto_SortOption {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseFindExamsDto_SortOption();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): FindExamsDto_SortOption {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseFindExamsDto_SortOption();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.key = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.key = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.direction = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.direction = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseExams(): Exams {
-	return { exams: [], nextCursor: '', prevCursor: '' };
+  return { exams: [], nextCursor: "", prevCursor: "" };
 }
 
 export const Exams: MessageFns<Exams> = {
-	encode(message: Exams, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		for (const v of message.exams) {
-			Exams_MinimalExamInfo.encode(v!, writer.uint32(10).fork()).join();
-		}
-		if (message.nextCursor !== '') {
-			writer.uint32(18).string(message.nextCursor);
-		}
-		if (message.prevCursor !== '') {
-			writer.uint32(26).string(message.prevCursor);
-		}
-		return writer;
-	},
+  encode(message: Exams, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.exams) {
+      Exams_MinimalExamInfo.encode(v!, writer.uint32(10).fork()).join();
+    }
+    if (message.nextCursor !== "") {
+      writer.uint32(18).string(message.nextCursor);
+    }
+    if (message.prevCursor !== "") {
+      writer.uint32(26).string(message.prevCursor);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): Exams {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseExams();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): Exams {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseExams();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.exams.push(Exams_MinimalExamInfo.decode(reader, reader.uint32()));
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.exams.push(Exams_MinimalExamInfo.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.nextCursor = reader.string();
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.nextCursor = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.prevCursor = reader.string();
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.prevCursor = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseExams_MinimalExamInfo(): Exams_MinimalExamInfo {
-	return { id: '', name: '', attemptsCount: 0, duration: 0, tags: [], updatedAt: undefined };
+  return { id: "", name: "", attemptsCount: 0, duration: 0, tags: [], updatedAt: undefined };
 }
 
 export const Exams_MinimalExamInfo: MessageFns<Exams_MinimalExamInfo> = {
-	encode(message: Exams_MinimalExamInfo, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.id !== '') {
-			writer.uint32(10).string(message.id);
-		}
-		if (message.name !== '') {
-			writer.uint32(18).string(message.name);
-		}
-		if (message.description !== undefined) {
-			writer.uint32(26).string(message.description);
-		}
-		if (message.attemptsCount !== 0) {
-			writer.uint32(32).int32(message.attemptsCount);
-		}
-		if (message.duration !== 0) {
-			writer.uint32(40).int32(message.duration);
-		}
-		for (const v of message.tags) {
-			writer.uint32(50).string(v!);
-		}
-		if (message.updatedAt !== undefined) {
-			Timestamp.encode(toTimestamp(message.updatedAt), writer.uint32(58).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: Exams_MinimalExamInfo, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.name !== "") {
+      writer.uint32(18).string(message.name);
+    }
+    if (message.description !== undefined) {
+      writer.uint32(26).string(message.description);
+    }
+    if (message.attemptsCount !== 0) {
+      writer.uint32(32).int32(message.attemptsCount);
+    }
+    if (message.duration !== 0) {
+      writer.uint32(40).int32(message.duration);
+    }
+    for (const v of message.tags) {
+      writer.uint32(50).string(v!);
+    }
+    if (message.updatedAt !== undefined) {
+      Timestamp.encode(toTimestamp(message.updatedAt), writer.uint32(58).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): Exams_MinimalExamInfo {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseExams_MinimalExamInfo();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): Exams_MinimalExamInfo {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseExams_MinimalExamInfo();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = reader.string();
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.name = reader.string();
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.name = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.description = reader.string();
-						continue;
-					}
-					case 4: {
-						if (tag !== 32) {
-							break;
-						}
+            message.description = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 32) {
+              break;
+            }
 
-						message.attemptsCount = reader.int32();
-						continue;
-					}
-					case 5: {
-						if (tag !== 40) {
-							break;
-						}
+            message.attemptsCount = reader.int32();
+            continue;
+          }
+          case 5: {
+            if (tag !== 40) {
+              break;
+            }
 
-						message.duration = reader.int32();
-						continue;
-					}
-					case 6: {
-						if (tag !== 50) {
-							break;
-						}
+            message.duration = reader.int32();
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
 
-						message.tags.push(reader.string());
-						continue;
-					}
-					case 7: {
-						if (tag !== 58) {
-							break;
-						}
+            message.tags.push(reader.string());
+            continue;
+          }
+          case 7: {
+            if (tag !== 58) {
+              break;
+            }
 
-						message.updatedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.updatedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseGetDetailedQuestionDto(): GetDetailedQuestionDto {
-	return { questionId: undefined };
+  return { questionId: undefined };
 }
 
 export const GetDetailedQuestionDto: MessageFns<GetDetailedQuestionDto> = {
-	encode(message: GetDetailedQuestionDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.questionId !== undefined) {
-			StringValue.encode({ value: message.questionId! }, writer.uint32(10).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: GetDetailedQuestionDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.questionId !== undefined) {
+      StringValue.encode({ value: message.questionId! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): GetDetailedQuestionDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseGetDetailedQuestionDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): GetDetailedQuestionDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGetDetailedQuestionDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.questionId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.questionId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseDetailedQuestionInfo(): DetailedQuestionInfo {
-	return {
-		id: '',
-		sectionContext: [],
-		content: '',
-		type: '',
-		explanation: '',
-		points: 0,
-		fileUrls: [],
-	};
+  return { id: "", sectionContext: [], content: "", type: "", explanation: "", points: 0, fileUrls: [] };
 }
 
 export const DetailedQuestionInfo: MessageFns<DetailedQuestionInfo> = {
-	encode(message: DetailedQuestionInfo, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.id !== '') {
-			writer.uint32(10).string(message.id);
-		}
-		for (const v of message.sectionContext) {
-			DetailedQuestionInfo_SectionContext.encode(v!, writer.uint32(18).fork()).join();
-		}
-		if (message.content !== '') {
-			writer.uint32(26).string(message.content);
-		}
-		if (message.type !== '') {
-			writer.uint32(34).string(message.type);
-		}
-		if (message.explanation !== '') {
-			writer.uint32(42).string(message.explanation);
-		}
-		if (message.points !== 0) {
-			writer.uint32(48).int32(message.points);
-		}
-		for (const v of message.fileUrls) {
-			writer.uint32(58).string(v!);
-		}
-		return writer;
-	},
+  encode(message: DetailedQuestionInfo, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    for (const v of message.sectionContext) {
+      DetailedQuestionInfo_SectionContext.encode(v!, writer.uint32(18).fork()).join();
+    }
+    if (message.content !== "") {
+      writer.uint32(26).string(message.content);
+    }
+    if (message.type !== "") {
+      writer.uint32(34).string(message.type);
+    }
+    if (message.explanation !== "") {
+      writer.uint32(42).string(message.explanation);
+    }
+    if (message.points !== 0) {
+      writer.uint32(48).int32(message.points);
+    }
+    for (const v of message.fileUrls) {
+      writer.uint32(58).string(v!);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): DetailedQuestionInfo {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseDetailedQuestionInfo();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): DetailedQuestionInfo {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseDetailedQuestionInfo();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = reader.string();
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.sectionContext.push(
-							DetailedQuestionInfo_SectionContext.decode(reader, reader.uint32()),
-						);
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.sectionContext.push(DetailedQuestionInfo_SectionContext.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.content = reader.string();
-						continue;
-					}
-					case 4: {
-						if (tag !== 34) {
-							break;
-						}
+            message.content = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-						message.type = reader.string();
-						continue;
-					}
-					case 5: {
-						if (tag !== 42) {
-							break;
-						}
+            message.type = reader.string();
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
 
-						message.explanation = reader.string();
-						continue;
-					}
-					case 6: {
-						if (tag !== 48) {
-							break;
-						}
+            message.explanation = reader.string();
+            continue;
+          }
+          case 6: {
+            if (tag !== 48) {
+              break;
+            }
 
-						message.points = reader.int32();
-						continue;
-					}
-					case 7: {
-						if (tag !== 58) {
-							break;
-						}
+            message.points = reader.int32();
+            continue;
+          }
+          case 7: {
+            if (tag !== 58) {
+              break;
+            }
 
-						message.fileUrls.push(reader.string());
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.fileUrls.push(reader.string());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseDetailedQuestionInfo_SectionContext(): DetailedQuestionInfo_SectionContext {
-	return { fileUrls: [] };
+  return { fileUrls: [] };
 }
 
-export const DetailedQuestionInfo_SectionContext: MessageFns<DetailedQuestionInfo_SectionContext> =
-	{
-		encode(
-			message: DetailedQuestionInfo_SectionContext,
-			writer: BinaryWriter = new BinaryWriter(),
-		): BinaryWriter {
-			if (message.content !== undefined) {
-				writer.uint32(10).string(message.content);
-			}
-			for (const v of message.fileUrls) {
-				writer.uint32(18).string(v!);
-			}
-			return writer;
-		},
+export const DetailedQuestionInfo_SectionContext: MessageFns<DetailedQuestionInfo_SectionContext> = {
+  encode(message: DetailedQuestionInfo_SectionContext, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.content !== undefined) {
+      writer.uint32(10).string(message.content);
+    }
+    for (const v of message.fileUrls) {
+      writer.uint32(18).string(v!);
+    }
+    return writer;
+  },
 
-		decode(input: BinaryReader | Uint8Array, length?: number): DetailedQuestionInfo_SectionContext {
-			const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-			const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-			if (previousRecursionDepth >= 100) {
-				throw new globalThis.Error('protobuf decode recursion limit exceeded');
-			}
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-			try {
-				const end = length === undefined ? reader.len : reader.pos + length;
-				const message = createBaseDetailedQuestionInfo_SectionContext();
-				while (reader.pos < end) {
-					const tag = reader.uint32();
-					switch (tag >>> 3) {
-						case 1: {
-							if (tag !== 10) {
-								break;
-							}
+  decode(input: BinaryReader | Uint8Array, length?: number): DetailedQuestionInfo_SectionContext {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseDetailedQuestionInfo_SectionContext();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-							message.content = reader.string();
-							continue;
-						}
-						case 2: {
-							if (tag !== 18) {
-								break;
-							}
+            message.content = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-							message.fileUrls.push(reader.string());
-							continue;
-						}
-					}
-					if ((tag & 7) === 4 || tag === 0) {
-						break;
-					}
-					reader.skip(tag & 7);
-				}
-				return message;
-			} finally {
-				(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-			}
-		},
-	};
+            message.fileUrls.push(reader.string());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
 
 function createBaseGetExamStatsDto(): GetExamStatsDto {
-	return { examId: undefined };
+  return { examId: undefined };
 }
 
 export const GetExamStatsDto: MessageFns<GetExamStatsDto> = {
-	encode(message: GetExamStatsDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.examId !== undefined) {
-			StringValue.encode({ value: message.examId! }, writer.uint32(10).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: GetExamStatsDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.examId !== undefined) {
+      StringValue.encode({ value: message.examId! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): GetExamStatsDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseGetExamStatsDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): GetExamStatsDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGetExamStatsDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.examId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.examId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseExamStatistics(): ExamStatistics {
-	return { averageDuration: 0, averageScoreInPercentage: 0, questions: [] };
+  return { averageDuration: 0, averageScoreInPercentage: 0, questions: [] };
 }
 
 export const ExamStatistics: MessageFns<ExamStatistics> = {
-	encode(message: ExamStatistics, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.averageDuration !== 0) {
-			writer.uint32(9).double(message.averageDuration);
-		}
-		if (message.averageScoreInPercentage !== 0) {
-			writer.uint32(17).double(message.averageScoreInPercentage);
-		}
-		for (const v of message.questions) {
-			ExamStatistics_QuestionStatistics.encode(v!, writer.uint32(26).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: ExamStatistics, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.averageDuration !== 0) {
+      writer.uint32(9).double(message.averageDuration);
+    }
+    if (message.averageScoreInPercentage !== 0) {
+      writer.uint32(17).double(message.averageScoreInPercentage);
+    }
+    for (const v of message.questions) {
+      ExamStatistics_QuestionStatistics.encode(v!, writer.uint32(26).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): ExamStatistics {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseExamStatistics();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 9) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): ExamStatistics {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseExamStatistics();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 9) {
+              break;
+            }
 
-						message.averageDuration = reader.double();
-						continue;
-					}
-					case 2: {
-						if (tag !== 17) {
-							break;
-						}
+            message.averageDuration = reader.double();
+            continue;
+          }
+          case 2: {
+            if (tag !== 17) {
+              break;
+            }
 
-						message.averageScoreInPercentage = reader.double();
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.averageScoreInPercentage = reader.double();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.questions.push(
-							ExamStatistics_QuestionStatistics.decode(reader, reader.uint32()),
-						);
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.questions.push(ExamStatistics_QuestionStatistics.decode(reader, reader.uint32()));
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseExamStatistics_QuestionStatistics(): ExamStatistics_QuestionStatistics {
-	return { correctCount: 0, totalCount: 0, tags: [] };
+  return { correctCount: 0, totalCount: 0, tags: [] };
 }
 
 export const ExamStatistics_QuestionStatistics: MessageFns<ExamStatistics_QuestionStatistics> = {
-	encode(
-		message: ExamStatistics_QuestionStatistics,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.correctCount !== 0) {
-			writer.uint32(8).int32(message.correctCount);
-		}
-		if (message.totalCount !== 0) {
-			writer.uint32(16).int32(message.totalCount);
-		}
-		for (const v of message.tags) {
-			writer.uint32(26).string(v!);
-		}
-		return writer;
-	},
+  encode(message: ExamStatistics_QuestionStatistics, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.correctCount !== 0) {
+      writer.uint32(8).int32(message.correctCount);
+    }
+    if (message.totalCount !== 0) {
+      writer.uint32(16).int32(message.totalCount);
+    }
+    for (const v of message.tags) {
+      writer.uint32(26).string(v!);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): ExamStatistics_QuestionStatistics {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseExamStatistics_QuestionStatistics();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 8) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): ExamStatistics_QuestionStatistics {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseExamStatistics_QuestionStatistics();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 8) {
+              break;
+            }
 
-						message.correctCount = reader.int32();
-						continue;
-					}
-					case 2: {
-						if (tag !== 16) {
-							break;
-						}
+            message.correctCount = reader.int32();
+            continue;
+          }
+          case 2: {
+            if (tag !== 16) {
+              break;
+            }
 
-						message.totalCount = reader.int32();
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.totalCount = reader.int32();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.tags.push(reader.string());
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.tags.push(reader.string());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseGetUsersAttemptHistoryDto(): GetUsersAttemptHistoryDto {
-	return { uid: undefined };
+  return { uid: undefined };
 }
 
 export const GetUsersAttemptHistoryDto: MessageFns<GetUsersAttemptHistoryDto> = {
-	encode(
-		message: GetUsersAttemptHistoryDto,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.uid !== undefined) {
-			StringValue.encode({ value: message.uid! }, writer.uint32(10).fork()).join();
-		}
-		if (message.examId !== undefined) {
-			StringValue.encode({ value: message.examId! }, writer.uint32(18).fork()).join();
-		}
-		if (message.cursor !== undefined) {
-			StringValue.encode({ value: message.cursor! }, writer.uint32(26).fork()).join();
-		}
-		if (message.limit !== undefined) {
-			Int32Value.encode({ value: message.limit! }, writer.uint32(34).fork()).join();
-		}
-		if (message.sortBy !== undefined) {
-			GetUsersAttemptHistoryDto_SortOption.encode(message.sortBy, writer.uint32(42).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: GetUsersAttemptHistoryDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.uid !== undefined) {
+      StringValue.encode({ value: message.uid! }, writer.uint32(10).fork()).join();
+    }
+    if (message.examId !== undefined) {
+      StringValue.encode({ value: message.examId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.cursor !== undefined) {
+      StringValue.encode({ value: message.cursor! }, writer.uint32(26).fork()).join();
+    }
+    if (message.limit !== undefined) {
+      Int32Value.encode({ value: message.limit! }, writer.uint32(34).fork()).join();
+    }
+    if (message.sortBy !== undefined) {
+      GetUsersAttemptHistoryDto_SortOption.encode(message.sortBy, writer.uint32(42).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): GetUsersAttemptHistoryDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseGetUsersAttemptHistoryDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): GetUsersAttemptHistoryDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGetUsersAttemptHistoryDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.uid = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.uid = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.examId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.examId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.cursor = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 4: {
-						if (tag !== 34) {
-							break;
-						}
+            message.cursor = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-						message.limit = Int32Value.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 5: {
-						if (tag !== 42) {
-							break;
-						}
+            message.limit = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
 
-						message.sortBy = GetUsersAttemptHistoryDto_SortOption.decode(reader, reader.uint32());
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.sortBy = GetUsersAttemptHistoryDto_SortOption.decode(reader, reader.uint32());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseGetUsersAttemptHistoryDto_SortOption(): GetUsersAttemptHistoryDto_SortOption {
-	return { key: undefined, direction: undefined };
+  return { key: undefined, direction: undefined };
 }
 
-export const GetUsersAttemptHistoryDto_SortOption: MessageFns<GetUsersAttemptHistoryDto_SortOption> =
-	{
-		encode(
-			message: GetUsersAttemptHistoryDto_SortOption,
-			writer: BinaryWriter = new BinaryWriter(),
-		): BinaryWriter {
-			if (message.key !== undefined) {
-				StringValue.encode({ value: message.key! }, writer.uint32(10).fork()).join();
-			}
-			if (message.direction !== undefined) {
-				StringValue.encode({ value: message.direction! }, writer.uint32(18).fork()).join();
-			}
-			return writer;
-		},
+export const GetUsersAttemptHistoryDto_SortOption: MessageFns<GetUsersAttemptHistoryDto_SortOption> = {
+  encode(message: GetUsersAttemptHistoryDto_SortOption, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== undefined) {
+      StringValue.encode({ value: message.key! }, writer.uint32(10).fork()).join();
+    }
+    if (message.direction !== undefined) {
+      StringValue.encode({ value: message.direction! }, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
 
-		decode(
-			input: BinaryReader | Uint8Array,
-			length?: number,
-		): GetUsersAttemptHistoryDto_SortOption {
-			const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-			const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-			if (previousRecursionDepth >= 100) {
-				throw new globalThis.Error('protobuf decode recursion limit exceeded');
-			}
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-			try {
-				const end = length === undefined ? reader.len : reader.pos + length;
-				const message = createBaseGetUsersAttemptHistoryDto_SortOption();
-				while (reader.pos < end) {
-					const tag = reader.uint32();
-					switch (tag >>> 3) {
-						case 1: {
-							if (tag !== 10) {
-								break;
-							}
+  decode(input: BinaryReader | Uint8Array, length?: number): GetUsersAttemptHistoryDto_SortOption {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGetUsersAttemptHistoryDto_SortOption();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-							message.key = StringValue.decode(reader, reader.uint32()).value;
-							continue;
-						}
-						case 2: {
-							if (tag !== 18) {
-								break;
-							}
+            message.key = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-							message.direction = StringValue.decode(reader, reader.uint32()).value;
-							continue;
-						}
-					}
-					if ((tag & 7) === 4 || tag === 0) {
-						break;
-					}
-					reader.skip(tag & 7);
-				}
-				return message;
-			} finally {
-				(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-			}
-		},
-	};
+            message.direction = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
 
 function createBaseUsersAttemptHistory(): UsersAttemptHistory {
-	return { attempts: [], nextCursor: '', prevCursor: '' };
+  return { attempts: [], nextCursor: "", prevCursor: "" };
 }
 
 export const UsersAttemptHistory: MessageFns<UsersAttemptHistory> = {
-	encode(message: UsersAttemptHistory, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		for (const v of message.attempts) {
-			UsersAttemptHistory_MinimalAttemptInfo.encode(v!, writer.uint32(10).fork()).join();
-		}
-		if (message.nextCursor !== '') {
-			writer.uint32(18).string(message.nextCursor);
-		}
-		if (message.prevCursor !== '') {
-			writer.uint32(26).string(message.prevCursor);
-		}
-		return writer;
-	},
+  encode(message: UsersAttemptHistory, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.attempts) {
+      UsersAttemptHistory_MinimalAttemptInfo.encode(v!, writer.uint32(10).fork()).join();
+    }
+    if (message.nextCursor !== "") {
+      writer.uint32(18).string(message.nextCursor);
+    }
+    if (message.prevCursor !== "") {
+      writer.uint32(26).string(message.prevCursor);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): UsersAttemptHistory {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseUsersAttemptHistory();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): UsersAttemptHistory {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseUsersAttemptHistory();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.attempts.push(
-							UsersAttemptHistory_MinimalAttemptInfo.decode(reader, reader.uint32()),
-						);
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.attempts.push(UsersAttemptHistory_MinimalAttemptInfo.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.nextCursor = reader.string();
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.nextCursor = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.prevCursor = reader.string();
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.prevCursor = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseUsersAttemptHistory_MinimalAttemptInfo(): UsersAttemptHistory_MinimalAttemptInfo {
-	return {
-		id: '',
-		examId: '',
-		examName: '',
-		startedAt: undefined,
-		durationLimit: 0,
-		isStrict: false,
-	};
+  return { id: "", examId: "", examName: "", startedAt: undefined, durationLimit: 0, isStrict: false };
 }
 
-export const UsersAttemptHistory_MinimalAttemptInfo: MessageFns<UsersAttemptHistory_MinimalAttemptInfo> =
-	{
-		encode(
-			message: UsersAttemptHistory_MinimalAttemptInfo,
-			writer: BinaryWriter = new BinaryWriter(),
-		): BinaryWriter {
-			if (message.id !== '') {
-				writer.uint32(10).string(message.id);
-			}
-			if (message.examId !== '') {
-				writer.uint32(18).string(message.examId);
-			}
-			if (message.examName !== '') {
-				writer.uint32(26).string(message.examName);
-			}
-			if (message.startedAt !== undefined) {
-				Timestamp.encode(toTimestamp(message.startedAt), writer.uint32(34).fork()).join();
-			}
-			if (message.endedAt !== undefined) {
-				Timestamp.encode(toTimestamp(message.endedAt), writer.uint32(42).fork()).join();
-			}
-			if (message.durationLimit !== 0) {
-				writer.uint32(48).int32(message.durationLimit);
-			}
-			if (message.score !== undefined) {
-				writer.uint32(57).double(message.score);
-			}
-			if (message.totalPoints !== undefined) {
-				writer.uint32(65).double(message.totalPoints);
-			}
-			if (message.isStrict !== false) {
-				writer.uint32(72).bool(message.isStrict);
-			}
-			return writer;
-		},
+export const UsersAttemptHistory_MinimalAttemptInfo: MessageFns<UsersAttemptHistory_MinimalAttemptInfo> = {
+  encode(message: UsersAttemptHistory_MinimalAttemptInfo, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.examId !== "") {
+      writer.uint32(18).string(message.examId);
+    }
+    if (message.examName !== "") {
+      writer.uint32(26).string(message.examName);
+    }
+    if (message.startedAt !== undefined) {
+      Timestamp.encode(toTimestamp(message.startedAt), writer.uint32(34).fork()).join();
+    }
+    if (message.endedAt !== undefined) {
+      Timestamp.encode(toTimestamp(message.endedAt), writer.uint32(42).fork()).join();
+    }
+    if (message.durationLimit !== 0) {
+      writer.uint32(48).int32(message.durationLimit);
+    }
+    if (message.score !== undefined) {
+      writer.uint32(57).double(message.score);
+    }
+    if (message.totalPoints !== undefined) {
+      writer.uint32(65).double(message.totalPoints);
+    }
+    if (message.isStrict !== false) {
+      writer.uint32(72).bool(message.isStrict);
+    }
+    return writer;
+  },
 
-		decode(
-			input: BinaryReader | Uint8Array,
-			length?: number,
-		): UsersAttemptHistory_MinimalAttemptInfo {
-			const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-			const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-			if (previousRecursionDepth >= 100) {
-				throw new globalThis.Error('protobuf decode recursion limit exceeded');
-			}
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-			try {
-				const end = length === undefined ? reader.len : reader.pos + length;
-				const message = createBaseUsersAttemptHistory_MinimalAttemptInfo();
-				while (reader.pos < end) {
-					const tag = reader.uint32();
-					switch (tag >>> 3) {
-						case 1: {
-							if (tag !== 10) {
-								break;
-							}
+  decode(input: BinaryReader | Uint8Array, length?: number): UsersAttemptHistory_MinimalAttemptInfo {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseUsersAttemptHistory_MinimalAttemptInfo();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-							message.id = reader.string();
-							continue;
-						}
-						case 2: {
-							if (tag !== 18) {
-								break;
-							}
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-							message.examId = reader.string();
-							continue;
-						}
-						case 3: {
-							if (tag !== 26) {
-								break;
-							}
+            message.examId = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-							message.examName = reader.string();
-							continue;
-						}
-						case 4: {
-							if (tag !== 34) {
-								break;
-							}
+            message.examName = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-							message.startedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
-							continue;
-						}
-						case 5: {
-							if (tag !== 42) {
-								break;
-							}
+            message.startedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
 
-							message.endedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
-							continue;
-						}
-						case 6: {
-							if (tag !== 48) {
-								break;
-							}
+            message.endedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 6: {
+            if (tag !== 48) {
+              break;
+            }
 
-							message.durationLimit = reader.int32();
-							continue;
-						}
-						case 7: {
-							if (tag !== 57) {
-								break;
-							}
+            message.durationLimit = reader.int32();
+            continue;
+          }
+          case 7: {
+            if (tag !== 57) {
+              break;
+            }
 
-							message.score = reader.double();
-							continue;
-						}
-						case 8: {
-							if (tag !== 65) {
-								break;
-							}
+            message.score = reader.double();
+            continue;
+          }
+          case 8: {
+            if (tag !== 65) {
+              break;
+            }
 
-							message.totalPoints = reader.double();
-							continue;
-						}
-						case 9: {
-							if (tag !== 72) {
-								break;
-							}
+            message.totalPoints = reader.double();
+            continue;
+          }
+          case 9: {
+            if (tag !== 72) {
+              break;
+            }
 
-							message.isStrict = reader.bool();
-							continue;
-						}
-					}
-					if ((tag & 7) === 4 || tag === 0) {
-						break;
-					}
-					reader.skip(tag & 7);
-				}
-				return message;
-			} finally {
-				(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-			}
-		},
-	};
+            message.isStrict = reader.bool();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
 
 function createBaseGetUserStatsDto(): GetUserStatsDto {
-	return { uid: undefined };
+  return { uid: undefined };
 }
 
 export const GetUserStatsDto: MessageFns<GetUserStatsDto> = {
-	encode(message: GetUserStatsDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.uid !== undefined) {
-			StringValue.encode({ value: message.uid! }, writer.uint32(10).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: GetUserStatsDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.uid !== undefined) {
+      StringValue.encode({ value: message.uid! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): GetUserStatsDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseGetUserStatsDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): GetUserStatsDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGetUserStatsDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.uid = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.uid = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseUserStats(): UserStats {
-	return { attemptCounts: 0, averageScoreInPercentage: 0, tagInfos: [] };
+  return { attemptCounts: 0, averageScoreInPercentage: 0, tagInfos: [] };
 }
 
 export const UserStats: MessageFns<UserStats> = {
-	encode(message: UserStats, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.attemptCounts !== 0) {
-			writer.uint32(8).int32(message.attemptCounts);
-		}
-		if (message.averageScoreInPercentage !== 0) {
-			writer.uint32(17).double(message.averageScoreInPercentage);
-		}
-		for (const v of message.tagInfos) {
-			UserStats_TagInfo.encode(v!, writer.uint32(26).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: UserStats, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.attemptCounts !== 0) {
+      writer.uint32(8).int32(message.attemptCounts);
+    }
+    if (message.averageScoreInPercentage !== 0) {
+      writer.uint32(17).double(message.averageScoreInPercentage);
+    }
+    for (const v of message.tagInfos) {
+      UserStats_TagInfo.encode(v!, writer.uint32(26).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): UserStats {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseUserStats();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 8) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): UserStats {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseUserStats();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 8) {
+              break;
+            }
 
-						message.attemptCounts = reader.int32();
-						continue;
-					}
-					case 2: {
-						if (tag !== 17) {
-							break;
-						}
+            message.attemptCounts = reader.int32();
+            continue;
+          }
+          case 2: {
+            if (tag !== 17) {
+              break;
+            }
 
-						message.averageScoreInPercentage = reader.double();
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.averageScoreInPercentage = reader.double();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.tagInfos.push(UserStats_TagInfo.decode(reader, reader.uint32()));
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.tagInfos.push(UserStats_TagInfo.decode(reader, reader.uint32()));
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseUserStats_TagInfo(): UserStats_TagInfo {
-	return { name: '', correctPercentage: 0 };
+  return { name: "", correctPercentage: 0 };
 }
 
 export const UserStats_TagInfo: MessageFns<UserStats_TagInfo> = {
-	encode(message: UserStats_TagInfo, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.name !== '') {
-			writer.uint32(10).string(message.name);
-		}
-		if (message.correctPercentage !== 0) {
-			writer.uint32(17).double(message.correctPercentage);
-		}
-		return writer;
-	},
+  encode(message: UserStats_TagInfo, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.name !== "") {
+      writer.uint32(10).string(message.name);
+    }
+    if (message.correctPercentage !== 0) {
+      writer.uint32(17).double(message.correctPercentage);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): UserStats_TagInfo {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseUserStats_TagInfo();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): UserStats_TagInfo {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseUserStats_TagInfo();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.name = reader.string();
-						continue;
-					}
-					case 2: {
-						if (tag !== 17) {
-							break;
-						}
+            message.name = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 17) {
+              break;
+            }
 
-						message.correctPercentage = reader.double();
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.correctPercentage = reader.double();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseFindExamsManagementDto(): FindExamsManagementDto {
-	return {};
+  return {};
 }
 
 export const FindExamsManagementDto: MessageFns<FindExamsManagementDto> = {
-	encode(message: FindExamsManagementDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.filter !== undefined) {
-			FindExamsManagementDto_FilterOption.encode(message.filter, writer.uint32(10).fork()).join();
-		}
-		if (message.sortBy !== undefined) {
-			FindExamsManagementDto_SortOption.encode(message.sortBy, writer.uint32(18).fork()).join();
-		}
-		if (message.cursor !== undefined) {
-			StringValue.encode({ value: message.cursor! }, writer.uint32(26).fork()).join();
-		}
-		if (message.limit !== undefined) {
-			Int32Value.encode({ value: message.limit! }, writer.uint32(34).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: FindExamsManagementDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.filter !== undefined) {
+      FindExamsManagementDto_FilterOption.encode(message.filter, writer.uint32(10).fork()).join();
+    }
+    if (message.sortBy !== undefined) {
+      FindExamsManagementDto_SortOption.encode(message.sortBy, writer.uint32(18).fork()).join();
+    }
+    if (message.cursor !== undefined) {
+      StringValue.encode({ value: message.cursor! }, writer.uint32(26).fork()).join();
+    }
+    if (message.limit !== undefined) {
+      Int32Value.encode({ value: message.limit! }, writer.uint32(34).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): FindExamsManagementDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseFindExamsManagementDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): FindExamsManagementDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseFindExamsManagementDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.filter = FindExamsManagementDto_FilterOption.decode(reader, reader.uint32());
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.filter = FindExamsManagementDto_FilterOption.decode(reader, reader.uint32());
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.sortBy = FindExamsManagementDto_SortOption.decode(reader, reader.uint32());
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.sortBy = FindExamsManagementDto_SortOption.decode(reader, reader.uint32());
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.cursor = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 4: {
-						if (tag !== 34) {
-							break;
-						}
+            message.cursor = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-						message.limit = Int32Value.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.limit = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseFindExamsManagementDto_FilterOption(): FindExamsManagementDto_FilterOption {
-	return {};
+  return {};
 }
 
-export const FindExamsManagementDto_FilterOption: MessageFns<FindExamsManagementDto_FilterOption> =
-	{
-		encode(
-			message: FindExamsManagementDto_FilterOption,
-			writer: BinaryWriter = new BinaryWriter(),
-		): BinaryWriter {
-			if (message.title !== undefined) {
-				StringValue.encode({ value: message.title! }, writer.uint32(10).fork()).join();
-			}
-			if (message.createdBy !== undefined) {
-				StringValue.encode({ value: message.createdBy! }, writer.uint32(18).fork()).join();
-			}
-			if (message.status !== undefined) {
-				StringValue.encode({ value: message.status! }, writer.uint32(26).fork()).join();
-			}
-			if (message.createdTimeRange !== undefined) {
-				FindExamsManagementDto_TimeRange.encode(
-					message.createdTimeRange,
-					writer.uint32(34).fork(),
-				).join();
-			}
-			if (message.updatedTimeRange !== undefined) {
-				FindExamsManagementDto_TimeRange.encode(
-					message.updatedTimeRange,
-					writer.uint32(42).fork(),
-				).join();
-			}
-			return writer;
-		},
+export const FindExamsManagementDto_FilterOption: MessageFns<FindExamsManagementDto_FilterOption> = {
+  encode(message: FindExamsManagementDto_FilterOption, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.title !== undefined) {
+      StringValue.encode({ value: message.title! }, writer.uint32(10).fork()).join();
+    }
+    if (message.createdBy !== undefined) {
+      StringValue.encode({ value: message.createdBy! }, writer.uint32(18).fork()).join();
+    }
+    if (message.status !== undefined) {
+      StringValue.encode({ value: message.status! }, writer.uint32(26).fork()).join();
+    }
+    if (message.createdTimeRange !== undefined) {
+      FindExamsManagementDto_TimeRange.encode(message.createdTimeRange, writer.uint32(34).fork()).join();
+    }
+    if (message.updatedTimeRange !== undefined) {
+      FindExamsManagementDto_TimeRange.encode(message.updatedTimeRange, writer.uint32(42).fork()).join();
+    }
+    return writer;
+  },
 
-		decode(input: BinaryReader | Uint8Array, length?: number): FindExamsManagementDto_FilterOption {
-			const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-			const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-			if (previousRecursionDepth >= 100) {
-				throw new globalThis.Error('protobuf decode recursion limit exceeded');
-			}
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-			try {
-				const end = length === undefined ? reader.len : reader.pos + length;
-				const message = createBaseFindExamsManagementDto_FilterOption();
-				while (reader.pos < end) {
-					const tag = reader.uint32();
-					switch (tag >>> 3) {
-						case 1: {
-							if (tag !== 10) {
-								break;
-							}
+  decode(input: BinaryReader | Uint8Array, length?: number): FindExamsManagementDto_FilterOption {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseFindExamsManagementDto_FilterOption();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-							message.title = StringValue.decode(reader, reader.uint32()).value;
-							continue;
-						}
-						case 2: {
-							if (tag !== 18) {
-								break;
-							}
+            message.title = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-							message.createdBy = StringValue.decode(reader, reader.uint32()).value;
-							continue;
-						}
-						case 3: {
-							if (tag !== 26) {
-								break;
-							}
+            message.createdBy = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-							message.status = StringValue.decode(reader, reader.uint32()).value;
-							continue;
-						}
-						case 4: {
-							if (tag !== 34) {
-								break;
-							}
+            message.status = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-							message.createdTimeRange = FindExamsManagementDto_TimeRange.decode(
-								reader,
-								reader.uint32(),
-							);
-							continue;
-						}
-						case 5: {
-							if (tag !== 42) {
-								break;
-							}
+            message.createdTimeRange = FindExamsManagementDto_TimeRange.decode(reader, reader.uint32());
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
 
-							message.updatedTimeRange = FindExamsManagementDto_TimeRange.decode(
-								reader,
-								reader.uint32(),
-							);
-							continue;
-						}
-					}
-					if ((tag & 7) === 4 || tag === 0) {
-						break;
-					}
-					reader.skip(tag & 7);
-				}
-				return message;
-			} finally {
-				(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-			}
-		},
-	};
+            message.updatedTimeRange = FindExamsManagementDto_TimeRange.decode(reader, reader.uint32());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
 
 function createBaseFindExamsManagementDto_TimeRange(): FindExamsManagementDto_TimeRange {
-	return { from: undefined, to: undefined };
+  return { from: undefined, to: undefined };
 }
 
 export const FindExamsManagementDto_TimeRange: MessageFns<FindExamsManagementDto_TimeRange> = {
-	encode(
-		message: FindExamsManagementDto_TimeRange,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.from !== undefined) {
-			Timestamp.encode(toTimestamp(message.from), writer.uint32(10).fork()).join();
-		}
-		if (message.to !== undefined) {
-			Timestamp.encode(toTimestamp(message.to), writer.uint32(18).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: FindExamsManagementDto_TimeRange, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.from !== undefined) {
+      Timestamp.encode(toTimestamp(message.from), writer.uint32(10).fork()).join();
+    }
+    if (message.to !== undefined) {
+      Timestamp.encode(toTimestamp(message.to), writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): FindExamsManagementDto_TimeRange {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseFindExamsManagementDto_TimeRange();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): FindExamsManagementDto_TimeRange {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseFindExamsManagementDto_TimeRange();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.from = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.from = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.to = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.to = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseFindExamsManagementDto_SortOption(): FindExamsManagementDto_SortOption {
-	return { key: undefined, direction: undefined };
+  return { key: undefined, direction: undefined };
 }
 
 export const FindExamsManagementDto_SortOption: MessageFns<FindExamsManagementDto_SortOption> = {
-	encode(
-		message: FindExamsManagementDto_SortOption,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.key !== undefined) {
-			StringValue.encode({ value: message.key! }, writer.uint32(10).fork()).join();
-		}
-		if (message.direction !== undefined) {
-			StringValue.encode({ value: message.direction! }, writer.uint32(18).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: FindExamsManagementDto_SortOption, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== undefined) {
+      StringValue.encode({ value: message.key! }, writer.uint32(10).fork()).join();
+    }
+    if (message.direction !== undefined) {
+      StringValue.encode({ value: message.direction! }, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): FindExamsManagementDto_SortOption {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseFindExamsManagementDto_SortOption();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): FindExamsManagementDto_SortOption {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseFindExamsManagementDto_SortOption();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.key = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.key = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.direction = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.direction = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseGetExamManagementDetailsDto(): GetExamManagementDetailsDto {
-	return { examId: undefined };
+  return { examId: undefined };
 }
 
 export const GetExamManagementDetailsDto: MessageFns<GetExamManagementDetailsDto> = {
-	encode(
-		message: GetExamManagementDetailsDto,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.examId !== undefined) {
-			StringValue.encode({ value: message.examId! }, writer.uint32(10).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: GetExamManagementDetailsDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.examId !== undefined) {
+      StringValue.encode({ value: message.examId! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): GetExamManagementDetailsDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseGetExamManagementDetailsDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): GetExamManagementDetailsDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGetExamManagementDetailsDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.examId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.examId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseGetSectionManagementDetailsDto(): GetSectionManagementDetailsDto {
-	return { sectionId: undefined };
+  return { sectionId: undefined };
 }
 
 export const GetSectionManagementDetailsDto: MessageFns<GetSectionManagementDetailsDto> = {
-	encode(
-		message: GetSectionManagementDetailsDto,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.sectionId !== undefined) {
-			StringValue.encode({ value: message.sectionId! }, writer.uint32(10).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: GetSectionManagementDetailsDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.sectionId !== undefined) {
+      StringValue.encode({ value: message.sectionId! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): GetSectionManagementDetailsDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseGetSectionManagementDetailsDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): GetSectionManagementDetailsDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGetSectionManagementDetailsDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.sectionId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.sectionId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseGetQuestionManagementDetailsDto(): GetQuestionManagementDetailsDto {
-	return { questionId: undefined };
+  return { questionId: undefined };
 }
 
 export const GetQuestionManagementDetailsDto: MessageFns<GetQuestionManagementDetailsDto> = {
-	encode(
-		message: GetQuestionManagementDetailsDto,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.questionId !== undefined) {
-			StringValue.encode({ value: message.questionId! }, writer.uint32(10).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: GetQuestionManagementDetailsDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.questionId !== undefined) {
+      StringValue.encode({ value: message.questionId! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): GetQuestionManagementDetailsDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseGetQuestionManagementDetailsDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): GetQuestionManagementDetailsDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGetQuestionManagementDetailsDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.questionId = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.questionId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseFilePreviewInfo(): FilePreviewInfo {
-	return { id: '' };
+  return { id: "" };
 }
 
 export const FilePreviewInfo: MessageFns<FilePreviewInfo> = {
-	encode(message: FilePreviewInfo, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.id !== '') {
-			writer.uint32(10).string(message.id);
-		}
-		if (message.url !== undefined) {
-			writer.uint32(18).string(message.url);
-		}
-		return writer;
-	},
+  encode(message: FilePreviewInfo, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.url !== undefined) {
+      writer.uint32(18).string(message.url);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): FilePreviewInfo {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseFilePreviewInfo();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): FilePreviewInfo {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseFilePreviewInfo();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = reader.string();
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.url = reader.string();
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.url = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseQuestionManagementInfo(): QuestionManagementInfo {
-	return {
-		id: '',
-		sectionId: '',
-		content: '',
-		type: '',
-		points: 0,
-		explanation: '',
-		choices: [],
-		files: [],
-		tags: [],
-	};
+  return { id: "", sectionId: "", content: "", type: "", points: 0, explanation: "", choices: [], files: [], tags: [] };
 }
 
 export const QuestionManagementInfo: MessageFns<QuestionManagementInfo> = {
-	encode(message: QuestionManagementInfo, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.id !== '') {
-			writer.uint32(10).string(message.id);
-		}
-		if (message.sectionId !== '') {
-			writer.uint32(18).string(message.sectionId);
-		}
-		if (message.content !== '') {
-			writer.uint32(26).string(message.content);
-		}
-		if (message.type !== '') {
-			writer.uint32(34).string(message.type);
-		}
-		if (message.points !== 0) {
-			writer.uint32(40).int32(message.points);
-		}
-		if (message.explanation !== '') {
-			writer.uint32(50).string(message.explanation);
-		}
-		for (const v of message.choices) {
-			QuestionManagementInfo_ChoiceManagementInfo.encode(v!, writer.uint32(58).fork()).join();
-		}
-		for (const v of message.files) {
-			FilePreviewInfo.encode(v!, writer.uint32(66).fork()).join();
-		}
-		for (const v of message.tags) {
-			writer.uint32(74).string(v!);
-		}
-		return writer;
-	},
+  encode(message: QuestionManagementInfo, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.sectionId !== "") {
+      writer.uint32(18).string(message.sectionId);
+    }
+    if (message.content !== "") {
+      writer.uint32(26).string(message.content);
+    }
+    if (message.type !== "") {
+      writer.uint32(34).string(message.type);
+    }
+    if (message.points !== 0) {
+      writer.uint32(40).int32(message.points);
+    }
+    if (message.explanation !== "") {
+      writer.uint32(50).string(message.explanation);
+    }
+    for (const v of message.choices) {
+      QuestionManagementInfo_ChoiceManagementInfo.encode(v!, writer.uint32(58).fork()).join();
+    }
+    for (const v of message.files) {
+      FilePreviewInfo.encode(v!, writer.uint32(66).fork()).join();
+    }
+    for (const v of message.tags) {
+      writer.uint32(74).string(v!);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): QuestionManagementInfo {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseQuestionManagementInfo();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): QuestionManagementInfo {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseQuestionManagementInfo();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = reader.string();
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.sectionId = reader.string();
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.sectionId = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.content = reader.string();
-						continue;
-					}
-					case 4: {
-						if (tag !== 34) {
-							break;
-						}
+            message.content = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-						message.type = reader.string();
-						continue;
-					}
-					case 5: {
-						if (tag !== 40) {
-							break;
-						}
+            message.type = reader.string();
+            continue;
+          }
+          case 5: {
+            if (tag !== 40) {
+              break;
+            }
 
-						message.points = reader.int32();
-						continue;
-					}
-					case 6: {
-						if (tag !== 50) {
-							break;
-						}
+            message.points = reader.int32();
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
 
-						message.explanation = reader.string();
-						continue;
-					}
-					case 7: {
-						if (tag !== 58) {
-							break;
-						}
+            message.explanation = reader.string();
+            continue;
+          }
+          case 7: {
+            if (tag !== 58) {
+              break;
+            }
 
-						message.choices.push(
-							QuestionManagementInfo_ChoiceManagementInfo.decode(reader, reader.uint32()),
-						);
-						continue;
-					}
-					case 8: {
-						if (tag !== 66) {
-							break;
-						}
+            message.choices.push(QuestionManagementInfo_ChoiceManagementInfo.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 8: {
+            if (tag !== 66) {
+              break;
+            }
 
-						message.files.push(FilePreviewInfo.decode(reader, reader.uint32()));
-						continue;
-					}
-					case 9: {
-						if (tag !== 74) {
-							break;
-						}
+            message.files.push(FilePreviewInfo.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 9: {
+            if (tag !== 74) {
+              break;
+            }
 
-						message.tags.push(reader.string());
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.tags.push(reader.string());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseQuestionManagementInfo_ChoiceManagementInfo(): QuestionManagementInfo_ChoiceManagementInfo {
-	return { id: '', key: '', isCorrect: false, questionId: '' };
+  return { id: "", key: "", isCorrect: false, questionId: "" };
 }
 
-export const QuestionManagementInfo_ChoiceManagementInfo: MessageFns<QuestionManagementInfo_ChoiceManagementInfo> =
-	{
-		encode(
-			message: QuestionManagementInfo_ChoiceManagementInfo,
-			writer: BinaryWriter = new BinaryWriter(),
-		): BinaryWriter {
-			if (message.id !== '') {
-				writer.uint32(10).string(message.id);
-			}
-			if (message.key !== '') {
-				writer.uint32(18).string(message.key);
-			}
-			if (message.content !== undefined) {
-				writer.uint32(26).string(message.content);
-			}
-			if (message.isCorrect !== false) {
-				writer.uint32(32).bool(message.isCorrect);
-			}
-			if (message.questionId !== '') {
-				writer.uint32(42).string(message.questionId);
-			}
-			return writer;
-		},
+export const QuestionManagementInfo_ChoiceManagementInfo: MessageFns<QuestionManagementInfo_ChoiceManagementInfo> = {
+  encode(
+    message: QuestionManagementInfo_ChoiceManagementInfo,
+    writer: BinaryWriter = new BinaryWriter(),
+  ): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.key !== "") {
+      writer.uint32(18).string(message.key);
+    }
+    if (message.content !== undefined) {
+      writer.uint32(26).string(message.content);
+    }
+    if (message.isCorrect !== false) {
+      writer.uint32(32).bool(message.isCorrect);
+    }
+    if (message.questionId !== "") {
+      writer.uint32(42).string(message.questionId);
+    }
+    return writer;
+  },
 
-		decode(
-			input: BinaryReader | Uint8Array,
-			length?: number,
-		): QuestionManagementInfo_ChoiceManagementInfo {
-			const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-			const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-			if (previousRecursionDepth >= 100) {
-				throw new globalThis.Error('protobuf decode recursion limit exceeded');
-			}
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-			try {
-				const end = length === undefined ? reader.len : reader.pos + length;
-				const message = createBaseQuestionManagementInfo_ChoiceManagementInfo();
-				while (reader.pos < end) {
-					const tag = reader.uint32();
-					switch (tag >>> 3) {
-						case 1: {
-							if (tag !== 10) {
-								break;
-							}
+  decode(input: BinaryReader | Uint8Array, length?: number): QuestionManagementInfo_ChoiceManagementInfo {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseQuestionManagementInfo_ChoiceManagementInfo();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-							message.id = reader.string();
-							continue;
-						}
-						case 2: {
-							if (tag !== 18) {
-								break;
-							}
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-							message.key = reader.string();
-							continue;
-						}
-						case 3: {
-							if (tag !== 26) {
-								break;
-							}
+            message.key = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-							message.content = reader.string();
-							continue;
-						}
-						case 4: {
-							if (tag !== 32) {
-								break;
-							}
+            message.content = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 32) {
+              break;
+            }
 
-							message.isCorrect = reader.bool();
-							continue;
-						}
-						case 5: {
-							if (tag !== 42) {
-								break;
-							}
+            message.isCorrect = reader.bool();
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
 
-							message.questionId = reader.string();
-							continue;
-						}
-					}
-					if ((tag & 7) === 4 || tag === 0) {
-						break;
-					}
-					reader.skip(tag & 7);
-				}
-				return message;
-			} finally {
-				(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-			}
-		},
-	};
+            message.questionId = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
 
 function createBaseSectionManagementInfo(): SectionManagementInfo {
-	return {
-		id: '',
-		examId: '',
-		directive: '',
-		contentType: '',
-		childrenIds: [],
-		files: [],
-		tags: [],
-	};
+  return { id: "", examId: "", directive: "", contentType: "", childrenIds: [], files: [], tags: [] };
 }
 
 export const SectionManagementInfo: MessageFns<SectionManagementInfo> = {
-	encode(message: SectionManagementInfo, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.id !== '') {
-			writer.uint32(10).string(message.id);
-		}
-		if (message.examId !== '') {
-			writer.uint32(18).string(message.examId);
-		}
-		if (message.parentId !== undefined) {
-			writer.uint32(26).string(message.parentId);
-		}
-		if (message.name !== undefined) {
-			writer.uint32(34).string(message.name);
-		}
-		if (message.directive !== '') {
-			writer.uint32(42).string(message.directive);
-		}
-		if (message.contentType !== '') {
-			writer.uint32(50).string(message.contentType);
-		}
-		for (const v of message.childrenIds) {
-			writer.uint32(58).string(v!);
-		}
-		for (const v of message.files) {
-			FilePreviewInfo.encode(v!, writer.uint32(66).fork()).join();
-		}
-		for (const v of message.tags) {
-			writer.uint32(74).string(v!);
-		}
-		return writer;
-	},
+  encode(message: SectionManagementInfo, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.examId !== "") {
+      writer.uint32(18).string(message.examId);
+    }
+    if (message.parentId !== undefined) {
+      writer.uint32(26).string(message.parentId);
+    }
+    if (message.name !== undefined) {
+      writer.uint32(34).string(message.name);
+    }
+    if (message.directive !== "") {
+      writer.uint32(42).string(message.directive);
+    }
+    if (message.contentType !== "") {
+      writer.uint32(50).string(message.contentType);
+    }
+    for (const v of message.childrenIds) {
+      writer.uint32(58).string(v!);
+    }
+    for (const v of message.files) {
+      FilePreviewInfo.encode(v!, writer.uint32(66).fork()).join();
+    }
+    for (const v of message.tags) {
+      writer.uint32(74).string(v!);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): SectionManagementInfo {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseSectionManagementInfo();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): SectionManagementInfo {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseSectionManagementInfo();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = reader.string();
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.examId = reader.string();
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.examId = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.parentId = reader.string();
-						continue;
-					}
-					case 4: {
-						if (tag !== 34) {
-							break;
-						}
+            message.parentId = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-						message.name = reader.string();
-						continue;
-					}
-					case 5: {
-						if (tag !== 42) {
-							break;
-						}
+            message.name = reader.string();
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
 
-						message.directive = reader.string();
-						continue;
-					}
-					case 6: {
-						if (tag !== 50) {
-							break;
-						}
+            message.directive = reader.string();
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
 
-						message.contentType = reader.string();
-						continue;
-					}
-					case 7: {
-						if (tag !== 58) {
-							break;
-						}
+            message.contentType = reader.string();
+            continue;
+          }
+          case 7: {
+            if (tag !== 58) {
+              break;
+            }
 
-						message.childrenIds.push(reader.string());
-						continue;
-					}
-					case 8: {
-						if (tag !== 66) {
-							break;
-						}
+            message.childrenIds.push(reader.string());
+            continue;
+          }
+          case 8: {
+            if (tag !== 66) {
+              break;
+            }
 
-						message.files.push(FilePreviewInfo.decode(reader, reader.uint32()));
-						continue;
-					}
-					case 9: {
-						if (tag !== 74) {
-							break;
-						}
+            message.files.push(FilePreviewInfo.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 9: {
+            if (tag !== 74) {
+              break;
+            }
 
-						message.tags.push(reader.string());
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.tags.push(reader.string());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseFoundExamsForManagement(): FoundExamsForManagement {
-	return { exams: [], nextCursor: '', prevCursor: '' };
+  return { exams: [], nextCursor: "", prevCursor: "" };
 }
 
 export const FoundExamsForManagement: MessageFns<FoundExamsForManagement> = {
-	encode(
-		message: FoundExamsForManagement,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		for (const v of message.exams) {
-			FoundExamsForManagement_ExamManagementMinimalInfo.encode(v!, writer.uint32(10).fork()).join();
-		}
-		if (message.nextCursor !== '') {
-			writer.uint32(18).string(message.nextCursor);
-		}
-		if (message.prevCursor !== '') {
-			writer.uint32(26).string(message.prevCursor);
-		}
-		return writer;
-	},
+  encode(message: FoundExamsForManagement, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.exams) {
+      FoundExamsForManagement_ExamManagementMinimalInfo.encode(v!, writer.uint32(10).fork()).join();
+    }
+    if (message.nextCursor !== "") {
+      writer.uint32(18).string(message.nextCursor);
+    }
+    if (message.prevCursor !== "") {
+      writer.uint32(26).string(message.prevCursor);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): FoundExamsForManagement {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseFoundExamsForManagement();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): FoundExamsForManagement {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseFoundExamsForManagement();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.exams.push(
-							FoundExamsForManagement_ExamManagementMinimalInfo.decode(reader, reader.uint32()),
-						);
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.exams.push(FoundExamsForManagement_ExamManagementMinimalInfo.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.nextCursor = reader.string();
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.nextCursor = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.prevCursor = reader.string();
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.prevCursor = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseFoundExamsForManagement_ExamManagementMinimalInfo(): FoundExamsForManagement_ExamManagementMinimalInfo {
-	return {
-		id: '',
-		createdBy: '',
-		createdAt: undefined,
-		updatedAt: undefined,
-		title: '',
-		status: '',
-	};
+  return { id: "", createdBy: "", createdAt: undefined, updatedAt: undefined, title: "", status: "" };
 }
 
-export const FoundExamsForManagement_ExamManagementMinimalInfo: MessageFns<FoundExamsForManagement_ExamManagementMinimalInfo> =
-	{
-		encode(
-			message: FoundExamsForManagement_ExamManagementMinimalInfo,
-			writer: BinaryWriter = new BinaryWriter(),
-		): BinaryWriter {
-			if (message.id !== '') {
-				writer.uint32(10).string(message.id);
-			}
-			if (message.createdBy !== '') {
-				writer.uint32(18).string(message.createdBy);
-			}
-			if (message.createdAt !== undefined) {
-				Timestamp.encode(toTimestamp(message.createdAt), writer.uint32(26).fork()).join();
-			}
-			if (message.updatedAt !== undefined) {
-				Timestamp.encode(toTimestamp(message.updatedAt), writer.uint32(34).fork()).join();
-			}
-			if (message.title !== '') {
-				writer.uint32(42).string(message.title);
-			}
-			if (message.status !== '') {
-				writer.uint32(50).string(message.status);
-			}
-			return writer;
-		},
+export const FoundExamsForManagement_ExamManagementMinimalInfo: MessageFns<
+  FoundExamsForManagement_ExamManagementMinimalInfo
+> = {
+  encode(
+    message: FoundExamsForManagement_ExamManagementMinimalInfo,
+    writer: BinaryWriter = new BinaryWriter(),
+  ): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.createdBy !== "") {
+      writer.uint32(18).string(message.createdBy);
+    }
+    if (message.createdAt !== undefined) {
+      Timestamp.encode(toTimestamp(message.createdAt), writer.uint32(26).fork()).join();
+    }
+    if (message.updatedAt !== undefined) {
+      Timestamp.encode(toTimestamp(message.updatedAt), writer.uint32(34).fork()).join();
+    }
+    if (message.title !== "") {
+      writer.uint32(42).string(message.title);
+    }
+    if (message.status !== "") {
+      writer.uint32(50).string(message.status);
+    }
+    return writer;
+  },
 
-		decode(
-			input: BinaryReader | Uint8Array,
-			length?: number,
-		): FoundExamsForManagement_ExamManagementMinimalInfo {
-			const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-			const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-			if (previousRecursionDepth >= 100) {
-				throw new globalThis.Error('protobuf decode recursion limit exceeded');
-			}
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-			try {
-				const end = length === undefined ? reader.len : reader.pos + length;
-				const message = createBaseFoundExamsForManagement_ExamManagementMinimalInfo();
-				while (reader.pos < end) {
-					const tag = reader.uint32();
-					switch (tag >>> 3) {
-						case 1: {
-							if (tag !== 10) {
-								break;
-							}
+  decode(input: BinaryReader | Uint8Array, length?: number): FoundExamsForManagement_ExamManagementMinimalInfo {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseFoundExamsForManagement_ExamManagementMinimalInfo();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-							message.id = reader.string();
-							continue;
-						}
-						case 2: {
-							if (tag !== 18) {
-								break;
-							}
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-							message.createdBy = reader.string();
-							continue;
-						}
-						case 3: {
-							if (tag !== 26) {
-								break;
-							}
+            message.createdBy = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-							message.createdAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
-							continue;
-						}
-						case 4: {
-							if (tag !== 34) {
-								break;
-							}
+            message.createdAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-							message.updatedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
-							continue;
-						}
-						case 5: {
-							if (tag !== 42) {
-								break;
-							}
+            message.updatedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
 
-							message.title = reader.string();
-							continue;
-						}
-						case 6: {
-							if (tag !== 50) {
-								break;
-							}
+            message.title = reader.string();
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
 
-							message.status = reader.string();
-							continue;
-						}
-					}
-					if ((tag & 7) === 4 || tag === 0) {
-						break;
-					}
-					reader.skip(tag & 7);
-				}
-				return message;
-			} finally {
-				(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-			}
-		},
-	};
+            message.status = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
 
 function createBaseExamManagementDetailedInfo(): ExamManagementDetailedInfo {
-	return {
-		id: '',
-		createdBy: '',
-		createdAt: undefined,
-		updatedAt: undefined,
-		title: '',
-		status: '',
-		duration: 0,
-		sectionIds: [],
-		tags: [],
-	};
+  return {
+    id: "",
+    createdBy: "",
+    createdAt: undefined,
+    updatedAt: undefined,
+    title: "",
+    status: "",
+    duration: 0,
+    sectionIds: [],
+    tags: [],
+  };
 }
 
 export const ExamManagementDetailedInfo: MessageFns<ExamManagementDetailedInfo> = {
-	encode(
-		message: ExamManagementDetailedInfo,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.id !== '') {
-			writer.uint32(10).string(message.id);
-		}
-		if (message.createdBy !== '') {
-			writer.uint32(18).string(message.createdBy);
-		}
-		if (message.createdAt !== undefined) {
-			Timestamp.encode(toTimestamp(message.createdAt), writer.uint32(26).fork()).join();
-		}
-		if (message.updatedAt !== undefined) {
-			Timestamp.encode(toTimestamp(message.updatedAt), writer.uint32(34).fork()).join();
-		}
-		if (message.title !== '') {
-			writer.uint32(42).string(message.title);
-		}
-		if (message.status !== '') {
-			writer.uint32(50).string(message.status);
-		}
-		if (message.description !== undefined) {
-			writer.uint32(58).string(message.description);
-		}
-		if (message.duration !== 0) {
-			writer.uint32(64).int32(message.duration);
-		}
-		for (const v of message.sectionIds) {
-			writer.uint32(74).string(v!);
-		}
-		for (const v of message.tags) {
-			writer.uint32(82).string(v!);
-		}
-		return writer;
-	},
+  encode(message: ExamManagementDetailedInfo, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.createdBy !== "") {
+      writer.uint32(18).string(message.createdBy);
+    }
+    if (message.createdAt !== undefined) {
+      Timestamp.encode(toTimestamp(message.createdAt), writer.uint32(26).fork()).join();
+    }
+    if (message.updatedAt !== undefined) {
+      Timestamp.encode(toTimestamp(message.updatedAt), writer.uint32(34).fork()).join();
+    }
+    if (message.title !== "") {
+      writer.uint32(42).string(message.title);
+    }
+    if (message.status !== "") {
+      writer.uint32(50).string(message.status);
+    }
+    if (message.description !== undefined) {
+      writer.uint32(58).string(message.description);
+    }
+    if (message.duration !== 0) {
+      writer.uint32(64).int32(message.duration);
+    }
+    for (const v of message.sectionIds) {
+      writer.uint32(74).string(v!);
+    }
+    for (const v of message.tags) {
+      writer.uint32(82).string(v!);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): ExamManagementDetailedInfo {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseExamManagementDetailedInfo();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): ExamManagementDetailedInfo {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseExamManagementDetailedInfo();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = reader.string();
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.createdBy = reader.string();
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.createdBy = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.createdAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
-						continue;
-					}
-					case 4: {
-						if (tag !== 34) {
-							break;
-						}
+            message.createdAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-						message.updatedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
-						continue;
-					}
-					case 5: {
-						if (tag !== 42) {
-							break;
-						}
+            message.updatedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
 
-						message.title = reader.string();
-						continue;
-					}
-					case 6: {
-						if (tag !== 50) {
-							break;
-						}
+            message.title = reader.string();
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
 
-						message.status = reader.string();
-						continue;
-					}
-					case 7: {
-						if (tag !== 58) {
-							break;
-						}
+            message.status = reader.string();
+            continue;
+          }
+          case 7: {
+            if (tag !== 58) {
+              break;
+            }
 
-						message.description = reader.string();
-						continue;
-					}
-					case 8: {
-						if (tag !== 64) {
-							break;
-						}
+            message.description = reader.string();
+            continue;
+          }
+          case 8: {
+            if (tag !== 64) {
+              break;
+            }
 
-						message.duration = reader.int32();
-						continue;
-					}
-					case 9: {
-						if (tag !== 74) {
-							break;
-						}
+            message.duration = reader.int32();
+            continue;
+          }
+          case 9: {
+            if (tag !== 74) {
+              break;
+            }
 
-						message.sectionIds.push(reader.string());
-						continue;
-					}
-					case 10: {
-						if (tag !== 82) {
-							break;
-						}
+            message.sectionIds.push(reader.string());
+            continue;
+          }
+          case 10: {
+            if (tag !== 82) {
+              break;
+            }
 
-						message.tags.push(reader.string());
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.tags.push(reader.string());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseTagList(): TagList {
-	return { list: [] };
+  return { list: [] };
 }
 
 export const TagList: MessageFns<TagList> = {
-	encode(message: TagList, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		for (const v of message.list) {
-			TagList_TagNode.encode(v!, writer.uint32(10).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: TagList, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.list) {
+      TagList_TagNode.encode(v!, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): TagList {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseTagList();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): TagList {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseTagList();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.list.push(TagList_TagNode.decode(reader, reader.uint32()));
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.list.push(TagList_TagNode.decode(reader, reader.uint32()));
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseTagList_TagNode(): TagList_TagNode {
-	return { id: '', name: '' };
+  return { id: "", name: "" };
 }
 
 export const TagList_TagNode: MessageFns<TagList_TagNode> = {
-	encode(message: TagList_TagNode, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.id !== '') {
-			writer.uint32(10).string(message.id);
-		}
-		if (message.name !== '') {
-			writer.uint32(18).string(message.name);
-		}
-		if (message.parentId !== undefined) {
-			writer.uint32(26).string(message.parentId);
-		}
-		return writer;
-	},
+  encode(message: TagList_TagNode, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.name !== "") {
+      writer.uint32(18).string(message.name);
+    }
+    if (message.parentId !== undefined) {
+      writer.uint32(26).string(message.parentId);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): TagList_TagNode {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseTagList_TagNode();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): TagList_TagNode {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseTagList_TagNode();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = reader.string();
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.name = reader.string();
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.name = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.parentId = reader.string();
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.parentId = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseTagTrees(): TagTrees {
-	return { trees: [] };
+  return { trees: [] };
 }
 
 export const TagTrees: MessageFns<TagTrees> = {
-	encode(message: TagTrees, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		for (const v of message.trees) {
-			TagTrees_TagTree.encode(v!, writer.uint32(10).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: TagTrees, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.trees) {
+      TagTrees_TagTree.encode(v!, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): TagTrees {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseTagTrees();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): TagTrees {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseTagTrees();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.trees.push(TagTrees_TagTree.decode(reader, reader.uint32()));
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.trees.push(TagTrees_TagTree.decode(reader, reader.uint32()));
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseTagTrees_TagTree(): TagTrees_TagTree {
-	return { id: '', name: '', children: [] };
+  return { id: "", name: "", children: [] };
 }
 
 export const TagTrees_TagTree: MessageFns<TagTrees_TagTree> = {
-	encode(message: TagTrees_TagTree, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.id !== '') {
-			writer.uint32(10).string(message.id);
-		}
-		if (message.name !== '') {
-			writer.uint32(18).string(message.name);
-		}
-		for (const v of message.children) {
-			TagTrees_TagTree.encode(v!, writer.uint32(26).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: TagTrees_TagTree, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.name !== "") {
+      writer.uint32(18).string(message.name);
+    }
+    for (const v of message.children) {
+      TagTrees_TagTree.encode(v!, writer.uint32(26).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): TagTrees_TagTree {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseTagTrees_TagTree();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): TagTrees_TagTree {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseTagTrees_TagTree();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.id = reader.string();
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.name = reader.string();
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.name = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.children.push(TagTrees_TagTree.decode(reader, reader.uint32()));
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.children.push(TagTrees_TagTree.decode(reader, reader.uint32()));
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseSetGoalDto(): SetGoalDto {
-	return { uid: undefined, date: undefined, target: undefined, type: undefined };
+  return { uid: undefined, date: undefined, target: undefined, type: undefined };
 }
 
 export const SetGoalDto: MessageFns<SetGoalDto> = {
-	encode(message: SetGoalDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.uid !== undefined) {
-			StringValue.encode({ value: message.uid! }, writer.uint32(10).fork()).join();
-		}
-		if (message.date !== undefined) {
-			Timestamp.encode(toTimestamp(message.date), writer.uint32(18).fork()).join();
-		}
-		if (message.target !== undefined) {
-			Int32Value.encode({ value: message.target! }, writer.uint32(26).fork()).join();
-		}
-		if (message.type !== undefined) {
-			StringValue.encode({ value: message.type! }, writer.uint32(34).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: SetGoalDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.uid !== undefined) {
+      StringValue.encode({ value: message.uid! }, writer.uint32(10).fork()).join();
+    }
+    if (message.date !== undefined) {
+      Timestamp.encode(toTimestamp(message.date), writer.uint32(18).fork()).join();
+    }
+    if (message.target !== undefined) {
+      Int32Value.encode({ value: message.target! }, writer.uint32(26).fork()).join();
+    }
+    if (message.type !== undefined) {
+      StringValue.encode({ value: message.type! }, writer.uint32(34).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): SetGoalDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseSetGoalDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): SetGoalDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseSetGoalDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.uid = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.uid = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.date = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.date = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.target = Int32Value.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 4: {
-						if (tag !== 34) {
-							break;
-						}
+            message.target = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-						message.type = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.type = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseUpdateGoalDto(): UpdateGoalDto {
-	return { uid: undefined, date: undefined, target: undefined, type: undefined };
+  return { uid: undefined, date: undefined, target: undefined, type: undefined };
 }
 
 export const UpdateGoalDto: MessageFns<UpdateGoalDto> = {
-	encode(message: UpdateGoalDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.uid !== undefined) {
-			StringValue.encode({ value: message.uid! }, writer.uint32(10).fork()).join();
-		}
-		if (message.date !== undefined) {
-			Timestamp.encode(toTimestamp(message.date), writer.uint32(18).fork()).join();
-		}
-		if (message.target !== undefined) {
-			Int32Value.encode({ value: message.target! }, writer.uint32(26).fork()).join();
-		}
-		if (message.type !== undefined) {
-			StringValue.encode({ value: message.type! }, writer.uint32(34).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: UpdateGoalDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.uid !== undefined) {
+      StringValue.encode({ value: message.uid! }, writer.uint32(10).fork()).join();
+    }
+    if (message.date !== undefined) {
+      Timestamp.encode(toTimestamp(message.date), writer.uint32(18).fork()).join();
+    }
+    if (message.target !== undefined) {
+      Int32Value.encode({ value: message.target! }, writer.uint32(26).fork()).join();
+    }
+    if (message.type !== undefined) {
+      StringValue.encode({ value: message.type! }, writer.uint32(34).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): UpdateGoalDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseUpdateGoalDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): UpdateGoalDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseUpdateGoalDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.uid = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.uid = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.date = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
-						continue;
-					}
-					case 3: {
-						if (tag !== 26) {
-							break;
-						}
+            message.date = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
 
-						message.target = Int32Value.decode(reader, reader.uint32()).value;
-						continue;
-					}
-					case 4: {
-						if (tag !== 34) {
-							break;
-						}
+            message.target = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-						message.type = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.type = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseDeleteGoalDto(): DeleteGoalDto {
-	return { uid: undefined };
+  return { uid: undefined };
 }
 
 export const DeleteGoalDto: MessageFns<DeleteGoalDto> = {
-	encode(message: DeleteGoalDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.uid !== undefined) {
-			StringValue.encode({ value: message.uid! }, writer.uint32(10).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: DeleteGoalDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.uid !== undefined) {
+      StringValue.encode({ value: message.uid! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): DeleteGoalDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseDeleteGoalDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): DeleteGoalDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseDeleteGoalDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.uid = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.uid = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseGetGoalDto(): GetGoalDto {
-	return { uid: undefined };
+  return { uid: undefined };
 }
 
 export const GetGoalDto: MessageFns<GetGoalDto> = {
-	encode(message: GetGoalDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.uid !== undefined) {
-			StringValue.encode({ value: message.uid! }, writer.uint32(10).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: GetGoalDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.uid !== undefined) {
+      StringValue.encode({ value: message.uid! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): GetGoalDto {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseGetGoalDto();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): GetGoalDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGetGoalDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.uid = StringValue.decode(reader, reader.uint32()).value;
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.uid = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseGoalResponse(): GoalResponse {
-	return { uid: '', date: undefined, target: 0, type: '' };
+  return { uid: "", date: undefined, target: 0, type: "" };
 }
 
 export const GoalResponse: MessageFns<GoalResponse> = {
-	encode(message: GoalResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.uid !== '') {
-			writer.uint32(10).string(message.uid);
-		}
-		if (message.date !== undefined) {
-			Timestamp.encode(toTimestamp(message.date), writer.uint32(18).fork()).join();
-		}
-		if (message.target !== 0) {
-			writer.uint32(24).int32(message.target);
-		}
-		if (message.type !== '') {
-			writer.uint32(34).string(message.type);
-		}
-		return writer;
-	},
+  encode(message: GoalResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.uid !== "") {
+      writer.uint32(10).string(message.uid);
+    }
+    if (message.date !== undefined) {
+      Timestamp.encode(toTimestamp(message.date), writer.uint32(18).fork()).join();
+    }
+    if (message.target !== 0) {
+      writer.uint32(24).int32(message.target);
+    }
+    if (message.type !== "") {
+      writer.uint32(34).string(message.type);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): GoalResponse {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseGoalResponse();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): GoalResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGoalResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-						message.uid = reader.string();
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+            message.uid = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-						message.date = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
-						continue;
-					}
-					case 3: {
-						if (tag !== 24) {
-							break;
-						}
+            message.date = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 3: {
+            if (tag !== 24) {
+              break;
+            }
 
-						message.target = reader.int32();
-						continue;
-					}
-					case 4: {
-						if (tag !== 34) {
-							break;
-						}
+            message.target = reader.int32();
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
 
-						message.type = reader.string();
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.type = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 function createBaseExamCountsResponse(): ExamCountsResponse {
-	return { total: 0, approved: 0, pending: 0, rejected: 0 };
+  return { total: 0, approved: 0, pending: 0, rejected: 0 };
 }
 
 export const ExamCountsResponse: MessageFns<ExamCountsResponse> = {
-	encode(message: ExamCountsResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-		if (message.total !== 0) {
-			writer.uint32(8).int32(message.total);
-		}
-		if (message.approved !== 0) {
-			writer.uint32(16).int32(message.approved);
-		}
-		if (message.pending !== 0) {
-			writer.uint32(24).int32(message.pending);
-		}
-		if (message.rejected !== 0) {
-			writer.uint32(32).int32(message.rejected);
-		}
-		return writer;
-	},
+  encode(message: ExamCountsResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.total !== 0) {
+      writer.uint32(8).int32(message.total);
+    }
+    if (message.approved !== 0) {
+      writer.uint32(16).int32(message.approved);
+    }
+    if (message.pending !== 0) {
+      writer.uint32(24).int32(message.pending);
+    }
+    if (message.rejected !== 0) {
+      writer.uint32(32).int32(message.rejected);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): ExamCountsResponse {
-		const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-		const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-		if (previousRecursionDepth >= 100) {
-			throw new globalThis.Error('protobuf decode recursion limit exceeded');
-		}
-		(reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-		try {
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseExamCountsResponse();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 8) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): ExamCountsResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseExamCountsResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 8) {
+              break;
+            }
 
-						message.total = reader.int32();
-						continue;
-					}
-					case 2: {
-						if (tag !== 16) {
-							break;
-						}
+            message.total = reader.int32();
+            continue;
+          }
+          case 2: {
+            if (tag !== 16) {
+              break;
+            }
 
-						message.approved = reader.int32();
-						continue;
-					}
-					case 3: {
-						if (tag !== 24) {
-							break;
-						}
+            message.approved = reader.int32();
+            continue;
+          }
+          case 3: {
+            if (tag !== 24) {
+              break;
+            }
 
-						message.pending = reader.int32();
-						continue;
-					}
-					case 4: {
-						if (tag !== 32) {
-							break;
-						}
+            message.pending = reader.int32();
+            continue;
+          }
+          case 4: {
+            if (tag !== 32) {
+              break;
+            }
 
-						message.rejected = reader.int32();
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		} finally {
-			(reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-		}
-	},
+            message.rejected = reader.int32();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
 };
 
 export interface ExamManagementServiceClient {
-	createExam(request: CreateExamDto, metadata?: Metadata): Observable<CreatedExamDto>;
+  createExam(request: CreateExamDto, metadata?: Metadata): Observable<CreatedExamDto>;
 
-	createSection(request: CreateSectionDto, metadata?: Metadata): Observable<CreatedSectionDto>;
+  createSection(request: CreateSectionDto, metadata?: Metadata): Observable<CreatedSectionDto>;
 
-	createQuestion(request: CreateQuestionDto, metadata?: Metadata): Observable<CreatedQuestionDto>;
+  createQuestion(request: CreateQuestionDto, metadata?: Metadata): Observable<CreatedQuestionDto>;
 
-	updateExam(request: UpdateExamDto, metadata?: Metadata): Observable<Empty>;
+  updateExam(request: UpdateExamDto, metadata?: Metadata): Observable<Empty>;
 
-	updateSection(request: UpdateSectionDto, metadata?: Metadata): Observable<Empty>;
+  updateSection(request: UpdateSectionDto, metadata?: Metadata): Observable<Empty>;
 
-	updateQuestion(request: UpdateQuestionDto, metadata?: Metadata): Observable<Empty>;
+  updateQuestion(request: UpdateQuestionDto, metadata?: Metadata): Observable<Empty>;
 
-	deleteExam(request: DeleteExamDto, metadata?: Metadata): Observable<Empty>;
+  deleteExam(request: DeleteExamDto, metadata?: Metadata): Observable<Empty>;
 
-	deleteSection(request: DeleteSectionDto, metadata?: Metadata): Observable<Empty>;
+  deleteSection(request: DeleteSectionDto, metadata?: Metadata): Observable<Empty>;
 
-	deleteQuestion(request: DeleteQuestionDto, metadata?: Metadata): Observable<Empty>;
+  deleteQuestion(request: DeleteQuestionDto, metadata?: Metadata): Observable<Empty>;
 
-	moveSection(request: MoveSectionDto, metadata?: Metadata): Observable<Empty>;
+  moveSection(request: MoveSectionDto, metadata?: Metadata): Observable<Empty>;
 
-	moveQuestion(request: MoveQuestionDto, metadata?: Metadata): Observable<Empty>;
+  moveQuestion(request: MoveQuestionDto, metadata?: Metadata): Observable<Empty>;
 
-	reviewExam(request: ReviewExamDto, metadata?: Metadata): Observable<Empty>;
+  reviewExam(request: ReviewExamDto, metadata?: Metadata): Observable<Empty>;
 
-	/** query methods */
+  /** query methods */
 
-	findExams(
-		request: FindExamsManagementDto,
-		metadata?: Metadata,
-	): Observable<FoundExamsForManagement>;
+  findExams(request: FindExamsManagementDto, metadata?: Metadata): Observable<FoundExamsForManagement>;
 
-	getExamDetails(
-		request: GetExamManagementDetailsDto,
-		metadata?: Metadata,
-	): Observable<ExamManagementDetailedInfo>;
+  getExamDetails(request: GetExamManagementDetailsDto, metadata?: Metadata): Observable<ExamManagementDetailedInfo>;
 
-	getSectionDetails(
-		request: GetSectionManagementDetailsDto,
-		metadata?: Metadata,
-	): Observable<SectionManagementInfo>;
+  getSectionDetails(request: GetSectionManagementDetailsDto, metadata?: Metadata): Observable<SectionManagementInfo>;
 
-	getQuestionDetails(
-		request: GetQuestionManagementDetailsDto,
-		metadata?: Metadata,
-	): Observable<QuestionManagementInfo>;
+  getQuestionDetails(request: GetQuestionManagementDetailsDto, metadata?: Metadata): Observable<QuestionManagementInfo>;
 
-	getExamCounts(request: Empty, metadata?: Metadata): Observable<ExamCountsResponse>;
+  getExamCounts(request: Empty, metadata?: Metadata): Observable<ExamCountsResponse>;
 }
 
 export interface ExamManagementServiceController {
-	createExam(
-		request: CreateExamDto,
-		metadata?: Metadata,
-	): Promise<CreatedExamDto> | Observable<CreatedExamDto> | CreatedExamDto;
+  createExam(
+    request: CreateExamDto,
+    metadata?: Metadata,
+  ): Promise<CreatedExamDto> | Observable<CreatedExamDto> | CreatedExamDto;
 
-	createSection(
-		request: CreateSectionDto,
-		metadata?: Metadata,
-	): Promise<CreatedSectionDto> | Observable<CreatedSectionDto> | CreatedSectionDto;
+  createSection(
+    request: CreateSectionDto,
+    metadata?: Metadata,
+  ): Promise<CreatedSectionDto> | Observable<CreatedSectionDto> | CreatedSectionDto;
 
-	createQuestion(
-		request: CreateQuestionDto,
-		metadata?: Metadata,
-	): Promise<CreatedQuestionDto> | Observable<CreatedQuestionDto> | CreatedQuestionDto;
+  createQuestion(
+    request: CreateQuestionDto,
+    metadata?: Metadata,
+  ): Promise<CreatedQuestionDto> | Observable<CreatedQuestionDto> | CreatedQuestionDto;
 
-	updateExam(request: UpdateExamDto, metadata?: Metadata): void | Promise<void>;
+  updateExam(request: UpdateExamDto, metadata?: Metadata): void | Promise<void>;
 
-	updateSection(request: UpdateSectionDto, metadata?: Metadata): void | Promise<void>;
+  updateSection(request: UpdateSectionDto, metadata?: Metadata): void | Promise<void>;
 
-	updateQuestion(request: UpdateQuestionDto, metadata?: Metadata): void | Promise<void>;
+  updateQuestion(request: UpdateQuestionDto, metadata?: Metadata): void | Promise<void>;
 
-	deleteExam(request: DeleteExamDto, metadata?: Metadata): void | Promise<void>;
+  deleteExam(request: DeleteExamDto, metadata?: Metadata): void | Promise<void>;
 
-	deleteSection(request: DeleteSectionDto, metadata?: Metadata): void | Promise<void>;
+  deleteSection(request: DeleteSectionDto, metadata?: Metadata): void | Promise<void>;
 
-	deleteQuestion(request: DeleteQuestionDto, metadata?: Metadata): void | Promise<void>;
+  deleteQuestion(request: DeleteQuestionDto, metadata?: Metadata): void | Promise<void>;
 
-	moveSection(request: MoveSectionDto, metadata?: Metadata): void | Promise<void>;
+  moveSection(request: MoveSectionDto, metadata?: Metadata): void | Promise<void>;
 
-	moveQuestion(request: MoveQuestionDto, metadata?: Metadata): void | Promise<void>;
+  moveQuestion(request: MoveQuestionDto, metadata?: Metadata): void | Promise<void>;
 
-	reviewExam(request: ReviewExamDto, metadata?: Metadata): void | Promise<void>;
+  reviewExam(request: ReviewExamDto, metadata?: Metadata): void | Promise<void>;
 
-	/** query methods */
+  /** query methods */
 
-	findExams(
-		request: FindExamsManagementDto,
-		metadata?: Metadata,
-	):
-		| Promise<FoundExamsForManagement>
-		| Observable<FoundExamsForManagement>
-		| FoundExamsForManagement;
+  findExams(
+    request: FindExamsManagementDto,
+    metadata?: Metadata,
+  ): Promise<FoundExamsForManagement> | Observable<FoundExamsForManagement> | FoundExamsForManagement;
 
-	getExamDetails(
-		request: GetExamManagementDetailsDto,
-		metadata?: Metadata,
-	):
-		| Promise<ExamManagementDetailedInfo>
-		| Observable<ExamManagementDetailedInfo>
-		| ExamManagementDetailedInfo;
+  getExamDetails(
+    request: GetExamManagementDetailsDto,
+    metadata?: Metadata,
+  ): Promise<ExamManagementDetailedInfo> | Observable<ExamManagementDetailedInfo> | ExamManagementDetailedInfo;
 
-	getSectionDetails(
-		request: GetSectionManagementDetailsDto,
-		metadata?: Metadata,
-	): Promise<SectionManagementInfo> | Observable<SectionManagementInfo> | SectionManagementInfo;
+  getSectionDetails(
+    request: GetSectionManagementDetailsDto,
+    metadata?: Metadata,
+  ): Promise<SectionManagementInfo> | Observable<SectionManagementInfo> | SectionManagementInfo;
 
-	getQuestionDetails(
-		request: GetQuestionManagementDetailsDto,
-		metadata?: Metadata,
-	): Promise<QuestionManagementInfo> | Observable<QuestionManagementInfo> | QuestionManagementInfo;
+  getQuestionDetails(
+    request: GetQuestionManagementDetailsDto,
+    metadata?: Metadata,
+  ): Promise<QuestionManagementInfo> | Observable<QuestionManagementInfo> | QuestionManagementInfo;
 
-	getExamCounts(
-		request: Empty,
-		metadata?: Metadata,
-	): Promise<ExamCountsResponse> | Observable<ExamCountsResponse> | ExamCountsResponse;
+  getExamCounts(
+    request: Empty,
+    metadata?: Metadata,
+  ): Promise<ExamCountsResponse> | Observable<ExamCountsResponse> | ExamCountsResponse;
 }
 
 export function ExamManagementServiceControllerMethods() {
-	return function (constructor: Function) {
-		const grpcMethods: string[] = [
-			'createExam',
-			'createSection',
-			'createQuestion',
-			'updateExam',
-			'updateSection',
-			'updateQuestion',
-			'deleteExam',
-			'deleteSection',
-			'deleteQuestion',
-			'moveSection',
-			'moveQuestion',
-			'reviewExam',
-			'findExams',
-			'getExamDetails',
-			'getSectionDetails',
-			'getQuestionDetails',
-			'getExamCounts',
-		];
-		for (const method of grpcMethods) {
-			const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
-			GrpcMethod('ExamManagementService', method)(
-				constructor.prototype[method],
-				method,
-				descriptor,
-			);
-			Object.defineProperty(constructor.prototype, method, descriptor);
-		}
-		const grpcStreamMethods: string[] = [];
-		for (const method of grpcStreamMethods) {
-			const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
-			GrpcStreamMethod('ExamManagementService', method)(
-				constructor.prototype[method],
-				method,
-				descriptor,
-			);
-			Object.defineProperty(constructor.prototype, method, descriptor);
-		}
-	};
+  return function (constructor: Function) {
+    const grpcMethods: string[] = [
+      "createExam",
+      "createSection",
+      "createQuestion",
+      "updateExam",
+      "updateSection",
+      "updateQuestion",
+      "deleteExam",
+      "deleteSection",
+      "deleteQuestion",
+      "moveSection",
+      "moveQuestion",
+      "reviewExam",
+      "findExams",
+      "getExamDetails",
+      "getSectionDetails",
+      "getQuestionDetails",
+      "getExamCounts",
+    ];
+    for (const method of grpcMethods) {
+      const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
+      GrpcMethod("ExamManagementService", method)(constructor.prototype[method], method, descriptor);
+      Object.defineProperty(constructor.prototype, method, descriptor);
+    }
+    const grpcStreamMethods: string[] = [];
+    for (const method of grpcStreamMethods) {
+      const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
+      GrpcStreamMethod("ExamManagementService", method)(constructor.prototype[method], method, descriptor);
+      Object.defineProperty(constructor.prototype, method, descriptor);
+    }
+  };
 }
 
-export const EXAM_MANAGEMENT_SERVICE_NAME = 'ExamManagementService';
+export const EXAM_MANAGEMENT_SERVICE_NAME = "ExamManagementService";
 
 export type ExamManagementServiceService = typeof ExamManagementServiceService;
 export const ExamManagementServiceService = {
-	createExam: {
-		path: '/exam.ExamManagementService/CreateExam' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: CreateExamDto): Buffer =>
-			Buffer.from(CreateExamDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): CreateExamDto => CreateExamDto.decode(value),
-		responseSerialize: (value: CreatedExamDto): Buffer =>
-			Buffer.from(CreatedExamDto.encode(value).finish()),
-		responseDeserialize: (value: Buffer): CreatedExamDto => CreatedExamDto.decode(value),
-	},
-	createSection: {
-		path: '/exam.ExamManagementService/CreateSection' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: CreateSectionDto): Buffer =>
-			Buffer.from(CreateSectionDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): CreateSectionDto => CreateSectionDto.decode(value),
-		responseSerialize: (value: CreatedSectionDto): Buffer =>
-			Buffer.from(CreatedSectionDto.encode(value).finish()),
-		responseDeserialize: (value: Buffer): CreatedSectionDto => CreatedSectionDto.decode(value),
-	},
-	createQuestion: {
-		path: '/exam.ExamManagementService/CreateQuestion' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: CreateQuestionDto): Buffer =>
-			Buffer.from(CreateQuestionDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): CreateQuestionDto => CreateQuestionDto.decode(value),
-		responseSerialize: (value: CreatedQuestionDto): Buffer =>
-			Buffer.from(CreatedQuestionDto.encode(value).finish()),
-		responseDeserialize: (value: Buffer): CreatedQuestionDto => CreatedQuestionDto.decode(value),
-	},
-	updateExam: {
-		path: '/exam.ExamManagementService/UpdateExam' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: UpdateExamDto): Buffer =>
-			Buffer.from(UpdateExamDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): UpdateExamDto => UpdateExamDto.decode(value),
-		responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-		responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
-	},
-	updateSection: {
-		path: '/exam.ExamManagementService/UpdateSection' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: UpdateSectionDto): Buffer =>
-			Buffer.from(UpdateSectionDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): UpdateSectionDto => UpdateSectionDto.decode(value),
-		responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-		responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
-	},
-	updateQuestion: {
-		path: '/exam.ExamManagementService/UpdateQuestion' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: UpdateQuestionDto): Buffer =>
-			Buffer.from(UpdateQuestionDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): UpdateQuestionDto => UpdateQuestionDto.decode(value),
-		responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-		responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
-	},
-	deleteExam: {
-		path: '/exam.ExamManagementService/DeleteExam' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: DeleteExamDto): Buffer =>
-			Buffer.from(DeleteExamDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): DeleteExamDto => DeleteExamDto.decode(value),
-		responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-		responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
-	},
-	deleteSection: {
-		path: '/exam.ExamManagementService/DeleteSection' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: DeleteSectionDto): Buffer =>
-			Buffer.from(DeleteSectionDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): DeleteSectionDto => DeleteSectionDto.decode(value),
-		responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-		responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
-	},
-	deleteQuestion: {
-		path: '/exam.ExamManagementService/DeleteQuestion' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: DeleteQuestionDto): Buffer =>
-			Buffer.from(DeleteQuestionDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): DeleteQuestionDto => DeleteQuestionDto.decode(value),
-		responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-		responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
-	},
-	moveSection: {
-		path: '/exam.ExamManagementService/MoveSection' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: MoveSectionDto): Buffer =>
-			Buffer.from(MoveSectionDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): MoveSectionDto => MoveSectionDto.decode(value),
-		responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-		responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
-	},
-	moveQuestion: {
-		path: '/exam.ExamManagementService/MoveQuestion' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: MoveQuestionDto): Buffer =>
-			Buffer.from(MoveQuestionDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): MoveQuestionDto => MoveQuestionDto.decode(value),
-		responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-		responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
-	},
-	reviewExam: {
-		path: '/exam.ExamManagementService/ReviewExam' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: ReviewExamDto): Buffer =>
-			Buffer.from(ReviewExamDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): ReviewExamDto => ReviewExamDto.decode(value),
-		responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-		responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
-	},
-	/** query methods */
-	findExams: {
-		path: '/exam.ExamManagementService/FindExams' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: FindExamsManagementDto): Buffer =>
-			Buffer.from(FindExamsManagementDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): FindExamsManagementDto =>
-			FindExamsManagementDto.decode(value),
-		responseSerialize: (value: FoundExamsForManagement): Buffer =>
-			Buffer.from(FoundExamsForManagement.encode(value).finish()),
-		responseDeserialize: (value: Buffer): FoundExamsForManagement =>
-			FoundExamsForManagement.decode(value),
-	},
-	getExamDetails: {
-		path: '/exam.ExamManagementService/GetExamDetails' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: GetExamManagementDetailsDto): Buffer =>
-			Buffer.from(GetExamManagementDetailsDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): GetExamManagementDetailsDto =>
-			GetExamManagementDetailsDto.decode(value),
-		responseSerialize: (value: ExamManagementDetailedInfo): Buffer =>
-			Buffer.from(ExamManagementDetailedInfo.encode(value).finish()),
-		responseDeserialize: (value: Buffer): ExamManagementDetailedInfo =>
-			ExamManagementDetailedInfo.decode(value),
-	},
-	getSectionDetails: {
-		path: '/exam.ExamManagementService/GetSectionDetails' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: GetSectionManagementDetailsDto): Buffer =>
-			Buffer.from(GetSectionManagementDetailsDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): GetSectionManagementDetailsDto =>
-			GetSectionManagementDetailsDto.decode(value),
-		responseSerialize: (value: SectionManagementInfo): Buffer =>
-			Buffer.from(SectionManagementInfo.encode(value).finish()),
-		responseDeserialize: (value: Buffer): SectionManagementInfo =>
-			SectionManagementInfo.decode(value),
-	},
-	getQuestionDetails: {
-		path: '/exam.ExamManagementService/GetQuestionDetails' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: GetQuestionManagementDetailsDto): Buffer =>
-			Buffer.from(GetQuestionManagementDetailsDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): GetQuestionManagementDetailsDto =>
-			GetQuestionManagementDetailsDto.decode(value),
-		responseSerialize: (value: QuestionManagementInfo): Buffer =>
-			Buffer.from(QuestionManagementInfo.encode(value).finish()),
-		responseDeserialize: (value: Buffer): QuestionManagementInfo =>
-			QuestionManagementInfo.decode(value),
-	},
-	getExamCounts: {
-		path: '/exam.ExamManagementService/GetExamCounts' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-		requestDeserialize: (value: Buffer): Empty => Empty.decode(value),
-		responseSerialize: (value: ExamCountsResponse): Buffer =>
-			Buffer.from(ExamCountsResponse.encode(value).finish()),
-		responseDeserialize: (value: Buffer): ExamCountsResponse => ExamCountsResponse.decode(value),
-	},
+  createExam: {
+    path: "/exam.ExamManagementService/CreateExam" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: CreateExamDto): Buffer => Buffer.from(CreateExamDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): CreateExamDto => CreateExamDto.decode(value),
+    responseSerialize: (value: CreatedExamDto): Buffer => Buffer.from(CreatedExamDto.encode(value).finish()),
+    responseDeserialize: (value: Buffer): CreatedExamDto => CreatedExamDto.decode(value),
+  },
+  createSection: {
+    path: "/exam.ExamManagementService/CreateSection" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: CreateSectionDto): Buffer => Buffer.from(CreateSectionDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): CreateSectionDto => CreateSectionDto.decode(value),
+    responseSerialize: (value: CreatedSectionDto): Buffer => Buffer.from(CreatedSectionDto.encode(value).finish()),
+    responseDeserialize: (value: Buffer): CreatedSectionDto => CreatedSectionDto.decode(value),
+  },
+  createQuestion: {
+    path: "/exam.ExamManagementService/CreateQuestion" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: CreateQuestionDto): Buffer => Buffer.from(CreateQuestionDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): CreateQuestionDto => CreateQuestionDto.decode(value),
+    responseSerialize: (value: CreatedQuestionDto): Buffer => Buffer.from(CreatedQuestionDto.encode(value).finish()),
+    responseDeserialize: (value: Buffer): CreatedQuestionDto => CreatedQuestionDto.decode(value),
+  },
+  updateExam: {
+    path: "/exam.ExamManagementService/UpdateExam" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: UpdateExamDto): Buffer => Buffer.from(UpdateExamDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): UpdateExamDto => UpdateExamDto.decode(value),
+    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+  },
+  updateSection: {
+    path: "/exam.ExamManagementService/UpdateSection" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: UpdateSectionDto): Buffer => Buffer.from(UpdateSectionDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): UpdateSectionDto => UpdateSectionDto.decode(value),
+    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+  },
+  updateQuestion: {
+    path: "/exam.ExamManagementService/UpdateQuestion" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: UpdateQuestionDto): Buffer => Buffer.from(UpdateQuestionDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): UpdateQuestionDto => UpdateQuestionDto.decode(value),
+    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+  },
+  deleteExam: {
+    path: "/exam.ExamManagementService/DeleteExam" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: DeleteExamDto): Buffer => Buffer.from(DeleteExamDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): DeleteExamDto => DeleteExamDto.decode(value),
+    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+  },
+  deleteSection: {
+    path: "/exam.ExamManagementService/DeleteSection" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: DeleteSectionDto): Buffer => Buffer.from(DeleteSectionDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): DeleteSectionDto => DeleteSectionDto.decode(value),
+    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+  },
+  deleteQuestion: {
+    path: "/exam.ExamManagementService/DeleteQuestion" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: DeleteQuestionDto): Buffer => Buffer.from(DeleteQuestionDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): DeleteQuestionDto => DeleteQuestionDto.decode(value),
+    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+  },
+  moveSection: {
+    path: "/exam.ExamManagementService/MoveSection" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: MoveSectionDto): Buffer => Buffer.from(MoveSectionDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): MoveSectionDto => MoveSectionDto.decode(value),
+    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+  },
+  moveQuestion: {
+    path: "/exam.ExamManagementService/MoveQuestion" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: MoveQuestionDto): Buffer => Buffer.from(MoveQuestionDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): MoveQuestionDto => MoveQuestionDto.decode(value),
+    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+  },
+  reviewExam: {
+    path: "/exam.ExamManagementService/ReviewExam" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: ReviewExamDto): Buffer => Buffer.from(ReviewExamDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ReviewExamDto => ReviewExamDto.decode(value),
+    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+  },
+  /** query methods */
+  findExams: {
+    path: "/exam.ExamManagementService/FindExams" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: FindExamsManagementDto): Buffer =>
+      Buffer.from(FindExamsManagementDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): FindExamsManagementDto => FindExamsManagementDto.decode(value),
+    responseSerialize: (value: FoundExamsForManagement): Buffer =>
+      Buffer.from(FoundExamsForManagement.encode(value).finish()),
+    responseDeserialize: (value: Buffer): FoundExamsForManagement => FoundExamsForManagement.decode(value),
+  },
+  getExamDetails: {
+    path: "/exam.ExamManagementService/GetExamDetails" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: GetExamManagementDetailsDto): Buffer =>
+      Buffer.from(GetExamManagementDetailsDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetExamManagementDetailsDto => GetExamManagementDetailsDto.decode(value),
+    responseSerialize: (value: ExamManagementDetailedInfo): Buffer =>
+      Buffer.from(ExamManagementDetailedInfo.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ExamManagementDetailedInfo => ExamManagementDetailedInfo.decode(value),
+  },
+  getSectionDetails: {
+    path: "/exam.ExamManagementService/GetSectionDetails" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: GetSectionManagementDetailsDto): Buffer =>
+      Buffer.from(GetSectionManagementDetailsDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetSectionManagementDetailsDto => GetSectionManagementDetailsDto.decode(value),
+    responseSerialize: (value: SectionManagementInfo): Buffer =>
+      Buffer.from(SectionManagementInfo.encode(value).finish()),
+    responseDeserialize: (value: Buffer): SectionManagementInfo => SectionManagementInfo.decode(value),
+  },
+  getQuestionDetails: {
+    path: "/exam.ExamManagementService/GetQuestionDetails" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: GetQuestionManagementDetailsDto): Buffer =>
+      Buffer.from(GetQuestionManagementDetailsDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetQuestionManagementDetailsDto =>
+      GetQuestionManagementDetailsDto.decode(value),
+    responseSerialize: (value: QuestionManagementInfo): Buffer =>
+      Buffer.from(QuestionManagementInfo.encode(value).finish()),
+    responseDeserialize: (value: Buffer): QuestionManagementInfo => QuestionManagementInfo.decode(value),
+  },
+  getExamCounts: {
+    path: "/exam.ExamManagementService/GetExamCounts" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    requestDeserialize: (value: Buffer): Empty => Empty.decode(value),
+    responseSerialize: (value: ExamCountsResponse): Buffer => Buffer.from(ExamCountsResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ExamCountsResponse => ExamCountsResponse.decode(value),
+  },
 } as const;
 
 export interface ExamManagementServiceServer extends UntypedServiceImplementation {
-	createExam: handleUnaryCall<CreateExamDto, CreatedExamDto>;
-	createSection: handleUnaryCall<CreateSectionDto, CreatedSectionDto>;
-	createQuestion: handleUnaryCall<CreateQuestionDto, CreatedQuestionDto>;
-	updateExam: handleUnaryCall<UpdateExamDto, Empty>;
-	updateSection: handleUnaryCall<UpdateSectionDto, Empty>;
-	updateQuestion: handleUnaryCall<UpdateQuestionDto, Empty>;
-	deleteExam: handleUnaryCall<DeleteExamDto, Empty>;
-	deleteSection: handleUnaryCall<DeleteSectionDto, Empty>;
-	deleteQuestion: handleUnaryCall<DeleteQuestionDto, Empty>;
-	moveSection: handleUnaryCall<MoveSectionDto, Empty>;
-	moveQuestion: handleUnaryCall<MoveQuestionDto, Empty>;
-	reviewExam: handleUnaryCall<ReviewExamDto, Empty>;
-	/** query methods */
-	findExams: handleUnaryCall<FindExamsManagementDto, FoundExamsForManagement>;
-	getExamDetails: handleUnaryCall<GetExamManagementDetailsDto, ExamManagementDetailedInfo>;
-	getSectionDetails: handleUnaryCall<GetSectionManagementDetailsDto, SectionManagementInfo>;
-	getQuestionDetails: handleUnaryCall<GetQuestionManagementDetailsDto, QuestionManagementInfo>;
-	getExamCounts: handleUnaryCall<Empty, ExamCountsResponse>;
+  createExam: handleUnaryCall<CreateExamDto, CreatedExamDto>;
+  createSection: handleUnaryCall<CreateSectionDto, CreatedSectionDto>;
+  createQuestion: handleUnaryCall<CreateQuestionDto, CreatedQuestionDto>;
+  updateExam: handleUnaryCall<UpdateExamDto, Empty>;
+  updateSection: handleUnaryCall<UpdateSectionDto, Empty>;
+  updateQuestion: handleUnaryCall<UpdateQuestionDto, Empty>;
+  deleteExam: handleUnaryCall<DeleteExamDto, Empty>;
+  deleteSection: handleUnaryCall<DeleteSectionDto, Empty>;
+  deleteQuestion: handleUnaryCall<DeleteQuestionDto, Empty>;
+  moveSection: handleUnaryCall<MoveSectionDto, Empty>;
+  moveQuestion: handleUnaryCall<MoveQuestionDto, Empty>;
+  reviewExam: handleUnaryCall<ReviewExamDto, Empty>;
+  /** query methods */
+  findExams: handleUnaryCall<FindExamsManagementDto, FoundExamsForManagement>;
+  getExamDetails: handleUnaryCall<GetExamManagementDetailsDto, ExamManagementDetailedInfo>;
+  getSectionDetails: handleUnaryCall<GetSectionManagementDetailsDto, SectionManagementInfo>;
+  getQuestionDetails: handleUnaryCall<GetQuestionManagementDetailsDto, QuestionManagementInfo>;
+  getExamCounts: handleUnaryCall<Empty, ExamCountsResponse>;
 }
 
 export interface ExamPracticeServiceClient {
-	attempt(request: AttemptDto, metadata?: Metadata): Observable<CreatedAttemptDto>;
+  attempt(request: AttemptDto, metadata?: Metadata): Observable<CreatedAttemptDto>;
 
-	endAttempt(request: EndAttemptDto, metadata?: Metadata): Observable<Empty>;
+  endAttempt(request: EndAttemptDto, metadata?: Metadata): Observable<Empty>;
 
-	answer(request: AnswerDto, metadata?: Metadata): Observable<Empty>;
+  answer(request: AnswerDto, metadata?: Metadata): Observable<Empty>;
 
-	removeAnswer(request: RemoveAnswerDto, metadata?: Metadata): Observable<Empty>;
+  removeAnswer(request: RemoveAnswerDto, metadata?: Metadata): Observable<Empty>;
 
-	addNote(request: AddNoteDto, metadata?: Metadata): Observable<Empty>;
+  addNote(request: AddNoteDto, metadata?: Metadata): Observable<Empty>;
 
-	toggleFlag(request: ToggleFlagDto, metadata?: Metadata): Observable<FlagStateDto>;
+  toggleFlag(request: ToggleFlagDto, metadata?: Metadata): Observable<FlagStateDto>;
 
-	/** query methods */
+  /** query methods */
 
-	getUserStats(request: GetUserStatsDto, metadata?: Metadata): Observable<UserStats>;
+  getUserStats(request: GetUserStatsDto, metadata?: Metadata): Observable<UserStats>;
 
-	getUsersAttemptSummary(
-		request: GetUsersAttemptSummaryDto,
-		metadata?: Metadata,
-	): Observable<AttemptHistorySummary>;
+  getUsersAttemptSummary(request: GetUsersAttemptSummaryDto, metadata?: Metadata): Observable<AttemptHistorySummary>;
 
-	getUsersAttemptHistory(
-		request: GetUsersAttemptHistoryDto,
-		metadata?: Metadata,
-	): Observable<UsersAttemptHistory>;
+  getUsersAttemptHistory(request: GetUsersAttemptHistoryDto, metadata?: Metadata): Observable<UsersAttemptHistory>;
 
-	findExams(request: FindExamsDto, metadata?: Metadata): Observable<Exams>;
+  findExams(request: FindExamsDto, metadata?: Metadata): Observable<Exams>;
 
-	getExamDetails(request: GetExamDetailsDto, metadata?: Metadata): Observable<DetailedExamInfo>;
+  getExamDetails(request: GetExamDetailsDto, metadata?: Metadata): Observable<DetailedExamInfo>;
 
-	getExamStats(request: GetExamStatsDto, metadata?: Metadata): Observable<ExamStatistics>;
+  getExamStats(request: GetExamStatsDto, metadata?: Metadata): Observable<ExamStatistics>;
 
-	getAttemptSavedData(
-		request: GetAttemptSavedDataDto,
-		metadata?: Metadata,
-	): Observable<AttemptSavedData>;
+  getAttemptSavedData(request: GetAttemptSavedDataDto, metadata?: Metadata): Observable<AttemptSavedData>;
 
-	getAttemptReview(
-		request: GetAttemptReviewDto,
-		metadata?: Metadata,
-	): Observable<DetailedAttemptReviewData>;
+  getAttemptReview(request: GetAttemptReviewDto, metadata?: Metadata): Observable<DetailedAttemptReviewData>;
 
-	getDetailedQuestionInfo(
-		request: GetDetailedQuestionDto,
-		metadata?: Metadata,
-	): Observable<DetailedQuestionInfo>;
+  getDetailedQuestionInfo(request: GetDetailedQuestionDto, metadata?: Metadata): Observable<DetailedQuestionInfo>;
 }
 
 export interface ExamPracticeServiceController {
-	attempt(
-		request: AttemptDto,
-		metadata?: Metadata,
-	): Promise<CreatedAttemptDto> | Observable<CreatedAttemptDto> | CreatedAttemptDto;
+  attempt(
+    request: AttemptDto,
+    metadata?: Metadata,
+  ): Promise<CreatedAttemptDto> | Observable<CreatedAttemptDto> | CreatedAttemptDto;
 
-	endAttempt(request: EndAttemptDto, metadata?: Metadata): void | Promise<void>;
+  endAttempt(request: EndAttemptDto, metadata?: Metadata): void | Promise<void>;
 
-	answer(request: AnswerDto, metadata?: Metadata): void | Promise<void>;
+  answer(request: AnswerDto, metadata?: Metadata): void | Promise<void>;
 
-	removeAnswer(request: RemoveAnswerDto, metadata?: Metadata): void | Promise<void>;
+  removeAnswer(request: RemoveAnswerDto, metadata?: Metadata): void | Promise<void>;
 
-	addNote(request: AddNoteDto, metadata?: Metadata): void | Promise<void>;
+  addNote(request: AddNoteDto, metadata?: Metadata): void | Promise<void>;
 
-	toggleFlag(
-		request: ToggleFlagDto,
-		metadata?: Metadata,
-	): Promise<FlagStateDto> | Observable<FlagStateDto> | FlagStateDto;
+  toggleFlag(
+    request: ToggleFlagDto,
+    metadata?: Metadata,
+  ): Promise<FlagStateDto> | Observable<FlagStateDto> | FlagStateDto;
 
-	/** query methods */
+  /** query methods */
 
-	getUserStats(
-		request: GetUserStatsDto,
-		metadata?: Metadata,
-	): Promise<UserStats> | Observable<UserStats> | UserStats;
+  getUserStats(request: GetUserStatsDto, metadata?: Metadata): Promise<UserStats> | Observable<UserStats> | UserStats;
 
-	getUsersAttemptSummary(
-		request: GetUsersAttemptSummaryDto,
-		metadata?: Metadata,
-	): Promise<AttemptHistorySummary> | Observable<AttemptHistorySummary> | AttemptHistorySummary;
+  getUsersAttemptSummary(
+    request: GetUsersAttemptSummaryDto,
+    metadata?: Metadata,
+  ): Promise<AttemptHistorySummary> | Observable<AttemptHistorySummary> | AttemptHistorySummary;
 
-	getUsersAttemptHistory(
-		request: GetUsersAttemptHistoryDto,
-		metadata?: Metadata,
-	): Promise<UsersAttemptHistory> | Observable<UsersAttemptHistory> | UsersAttemptHistory;
+  getUsersAttemptHistory(
+    request: GetUsersAttemptHistoryDto,
+    metadata?: Metadata,
+  ): Promise<UsersAttemptHistory> | Observable<UsersAttemptHistory> | UsersAttemptHistory;
 
-	findExams(request: FindExamsDto, metadata?: Metadata): Promise<Exams> | Observable<Exams> | Exams;
+  findExams(request: FindExamsDto, metadata?: Metadata): Promise<Exams> | Observable<Exams> | Exams;
 
-	getExamDetails(
-		request: GetExamDetailsDto,
-		metadata?: Metadata,
-	): Promise<DetailedExamInfo> | Observable<DetailedExamInfo> | DetailedExamInfo;
+  getExamDetails(
+    request: GetExamDetailsDto,
+    metadata?: Metadata,
+  ): Promise<DetailedExamInfo> | Observable<DetailedExamInfo> | DetailedExamInfo;
 
-	getExamStats(
-		request: GetExamStatsDto,
-		metadata?: Metadata,
-	): Promise<ExamStatistics> | Observable<ExamStatistics> | ExamStatistics;
+  getExamStats(
+    request: GetExamStatsDto,
+    metadata?: Metadata,
+  ): Promise<ExamStatistics> | Observable<ExamStatistics> | ExamStatistics;
 
-	getAttemptSavedData(
-		request: GetAttemptSavedDataDto,
-		metadata?: Metadata,
-	): Promise<AttemptSavedData> | Observable<AttemptSavedData> | AttemptSavedData;
+  getAttemptSavedData(
+    request: GetAttemptSavedDataDto,
+    metadata?: Metadata,
+  ): Promise<AttemptSavedData> | Observable<AttemptSavedData> | AttemptSavedData;
 
-	getAttemptReview(
-		request: GetAttemptReviewDto,
-		metadata?: Metadata,
-	):
-		| Promise<DetailedAttemptReviewData>
-		| Observable<DetailedAttemptReviewData>
-		| DetailedAttemptReviewData;
+  getAttemptReview(
+    request: GetAttemptReviewDto,
+    metadata?: Metadata,
+  ): Promise<DetailedAttemptReviewData> | Observable<DetailedAttemptReviewData> | DetailedAttemptReviewData;
 
-	getDetailedQuestionInfo(
-		request: GetDetailedQuestionDto,
-		metadata?: Metadata,
-	): Promise<DetailedQuestionInfo> | Observable<DetailedQuestionInfo> | DetailedQuestionInfo;
+  getDetailedQuestionInfo(
+    request: GetDetailedQuestionDto,
+    metadata?: Metadata,
+  ): Promise<DetailedQuestionInfo> | Observable<DetailedQuestionInfo> | DetailedQuestionInfo;
 }
 
 export function ExamPracticeServiceControllerMethods() {
-	return function (constructor: Function) {
-		const grpcMethods: string[] = [
-			'attempt',
-			'endAttempt',
-			'answer',
-			'removeAnswer',
-			'addNote',
-			'toggleFlag',
-			'getUserStats',
-			'getUsersAttemptSummary',
-			'getUsersAttemptHistory',
-			'findExams',
-			'getExamDetails',
-			'getExamStats',
-			'getAttemptSavedData',
-			'getAttemptReview',
-			'getDetailedQuestionInfo',
-		];
-		for (const method of grpcMethods) {
-			const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
-			GrpcMethod('ExamPracticeService', method)(constructor.prototype[method], method, descriptor);
-			Object.defineProperty(constructor.prototype, method, descriptor);
-		}
-		const grpcStreamMethods: string[] = [];
-		for (const method of grpcStreamMethods) {
-			const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
-			GrpcStreamMethod('ExamPracticeService', method)(
-				constructor.prototype[method],
-				method,
-				descriptor,
-			);
-			Object.defineProperty(constructor.prototype, method, descriptor);
-		}
-	};
+  return function (constructor: Function) {
+    const grpcMethods: string[] = [
+      "attempt",
+      "endAttempt",
+      "answer",
+      "removeAnswer",
+      "addNote",
+      "toggleFlag",
+      "getUserStats",
+      "getUsersAttemptSummary",
+      "getUsersAttemptHistory",
+      "findExams",
+      "getExamDetails",
+      "getExamStats",
+      "getAttemptSavedData",
+      "getAttemptReview",
+      "getDetailedQuestionInfo",
+    ];
+    for (const method of grpcMethods) {
+      const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
+      GrpcMethod("ExamPracticeService", method)(constructor.prototype[method], method, descriptor);
+      Object.defineProperty(constructor.prototype, method, descriptor);
+    }
+    const grpcStreamMethods: string[] = [];
+    for (const method of grpcStreamMethods) {
+      const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
+      GrpcStreamMethod("ExamPracticeService", method)(constructor.prototype[method], method, descriptor);
+      Object.defineProperty(constructor.prototype, method, descriptor);
+    }
+  };
 }
 
-export const EXAM_PRACTICE_SERVICE_NAME = 'ExamPracticeService';
+export const EXAM_PRACTICE_SERVICE_NAME = "ExamPracticeService";
 
 export type ExamPracticeServiceService = typeof ExamPracticeServiceService;
 export const ExamPracticeServiceService = {
-	attempt: {
-		path: '/exam.ExamPracticeService/Attempt' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: AttemptDto): Buffer => Buffer.from(AttemptDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): AttemptDto => AttemptDto.decode(value),
-		responseSerialize: (value: CreatedAttemptDto): Buffer =>
-			Buffer.from(CreatedAttemptDto.encode(value).finish()),
-		responseDeserialize: (value: Buffer): CreatedAttemptDto => CreatedAttemptDto.decode(value),
-	},
-	endAttempt: {
-		path: '/exam.ExamPracticeService/EndAttempt' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: EndAttemptDto): Buffer =>
-			Buffer.from(EndAttemptDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): EndAttemptDto => EndAttemptDto.decode(value),
-		responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-		responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
-	},
-	answer: {
-		path: '/exam.ExamPracticeService/Answer' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: AnswerDto): Buffer => Buffer.from(AnswerDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): AnswerDto => AnswerDto.decode(value),
-		responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-		responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
-	},
-	removeAnswer: {
-		path: '/exam.ExamPracticeService/RemoveAnswer' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: RemoveAnswerDto): Buffer =>
-			Buffer.from(RemoveAnswerDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): RemoveAnswerDto => RemoveAnswerDto.decode(value),
-		responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-		responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
-	},
-	addNote: {
-		path: '/exam.ExamPracticeService/AddNote' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: AddNoteDto): Buffer => Buffer.from(AddNoteDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): AddNoteDto => AddNoteDto.decode(value),
-		responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-		responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
-	},
-	toggleFlag: {
-		path: '/exam.ExamPracticeService/ToggleFlag' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: ToggleFlagDto): Buffer =>
-			Buffer.from(ToggleFlagDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): ToggleFlagDto => ToggleFlagDto.decode(value),
-		responseSerialize: (value: FlagStateDto): Buffer =>
-			Buffer.from(FlagStateDto.encode(value).finish()),
-		responseDeserialize: (value: Buffer): FlagStateDto => FlagStateDto.decode(value),
-	},
-	/** query methods */
-	getUserStats: {
-		path: '/exam.ExamPracticeService/GetUserStats' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: GetUserStatsDto): Buffer =>
-			Buffer.from(GetUserStatsDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): GetUserStatsDto => GetUserStatsDto.decode(value),
-		responseSerialize: (value: UserStats): Buffer => Buffer.from(UserStats.encode(value).finish()),
-		responseDeserialize: (value: Buffer): UserStats => UserStats.decode(value),
-	},
-	getUsersAttemptSummary: {
-		path: '/exam.ExamPracticeService/GetUsersAttemptSummary' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: GetUsersAttemptSummaryDto): Buffer =>
-			Buffer.from(GetUsersAttemptSummaryDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): GetUsersAttemptSummaryDto =>
-			GetUsersAttemptSummaryDto.decode(value),
-		responseSerialize: (value: AttemptHistorySummary): Buffer =>
-			Buffer.from(AttemptHistorySummary.encode(value).finish()),
-		responseDeserialize: (value: Buffer): AttemptHistorySummary =>
-			AttemptHistorySummary.decode(value),
-	},
-	getUsersAttemptHistory: {
-		path: '/exam.ExamPracticeService/GetUsersAttemptHistory' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: GetUsersAttemptHistoryDto): Buffer =>
-			Buffer.from(GetUsersAttemptHistoryDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): GetUsersAttemptHistoryDto =>
-			GetUsersAttemptHistoryDto.decode(value),
-		responseSerialize: (value: UsersAttemptHistory): Buffer =>
-			Buffer.from(UsersAttemptHistory.encode(value).finish()),
-		responseDeserialize: (value: Buffer): UsersAttemptHistory => UsersAttemptHistory.decode(value),
-	},
-	findExams: {
-		path: '/exam.ExamPracticeService/FindExams' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: FindExamsDto): Buffer =>
-			Buffer.from(FindExamsDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): FindExamsDto => FindExamsDto.decode(value),
-		responseSerialize: (value: Exams): Buffer => Buffer.from(Exams.encode(value).finish()),
-		responseDeserialize: (value: Buffer): Exams => Exams.decode(value),
-	},
-	getExamDetails: {
-		path: '/exam.ExamPracticeService/GetExamDetails' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: GetExamDetailsDto): Buffer =>
-			Buffer.from(GetExamDetailsDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): GetExamDetailsDto => GetExamDetailsDto.decode(value),
-		responseSerialize: (value: DetailedExamInfo): Buffer =>
-			Buffer.from(DetailedExamInfo.encode(value).finish()),
-		responseDeserialize: (value: Buffer): DetailedExamInfo => DetailedExamInfo.decode(value),
-	},
-	getExamStats: {
-		path: '/exam.ExamPracticeService/GetExamStats' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: GetExamStatsDto): Buffer =>
-			Buffer.from(GetExamStatsDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): GetExamStatsDto => GetExamStatsDto.decode(value),
-		responseSerialize: (value: ExamStatistics): Buffer =>
-			Buffer.from(ExamStatistics.encode(value).finish()),
-		responseDeserialize: (value: Buffer): ExamStatistics => ExamStatistics.decode(value),
-	},
-	getAttemptSavedData: {
-		path: '/exam.ExamPracticeService/GetAttemptSavedData' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: GetAttemptSavedDataDto): Buffer =>
-			Buffer.from(GetAttemptSavedDataDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): GetAttemptSavedDataDto =>
-			GetAttemptSavedDataDto.decode(value),
-		responseSerialize: (value: AttemptSavedData): Buffer =>
-			Buffer.from(AttemptSavedData.encode(value).finish()),
-		responseDeserialize: (value: Buffer): AttemptSavedData => AttemptSavedData.decode(value),
-	},
-	getAttemptReview: {
-		path: '/exam.ExamPracticeService/GetAttemptReview' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: GetAttemptReviewDto): Buffer =>
-			Buffer.from(GetAttemptReviewDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): GetAttemptReviewDto => GetAttemptReviewDto.decode(value),
-		responseSerialize: (value: DetailedAttemptReviewData): Buffer =>
-			Buffer.from(DetailedAttemptReviewData.encode(value).finish()),
-		responseDeserialize: (value: Buffer): DetailedAttemptReviewData =>
-			DetailedAttemptReviewData.decode(value),
-	},
-	getDetailedQuestionInfo: {
-		path: '/exam.ExamPracticeService/GetDetailedQuestionInfo' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: GetDetailedQuestionDto): Buffer =>
-			Buffer.from(GetDetailedQuestionDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): GetDetailedQuestionDto =>
-			GetDetailedQuestionDto.decode(value),
-		responseSerialize: (value: DetailedQuestionInfo): Buffer =>
-			Buffer.from(DetailedQuestionInfo.encode(value).finish()),
-		responseDeserialize: (value: Buffer): DetailedQuestionInfo =>
-			DetailedQuestionInfo.decode(value),
-	},
+  attempt: {
+    path: "/exam.ExamPracticeService/Attempt" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: AttemptDto): Buffer => Buffer.from(AttemptDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): AttemptDto => AttemptDto.decode(value),
+    responseSerialize: (value: CreatedAttemptDto): Buffer => Buffer.from(CreatedAttemptDto.encode(value).finish()),
+    responseDeserialize: (value: Buffer): CreatedAttemptDto => CreatedAttemptDto.decode(value),
+  },
+  endAttempt: {
+    path: "/exam.ExamPracticeService/EndAttempt" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: EndAttemptDto): Buffer => Buffer.from(EndAttemptDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): EndAttemptDto => EndAttemptDto.decode(value),
+    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+  },
+  answer: {
+    path: "/exam.ExamPracticeService/Answer" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: AnswerDto): Buffer => Buffer.from(AnswerDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): AnswerDto => AnswerDto.decode(value),
+    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+  },
+  removeAnswer: {
+    path: "/exam.ExamPracticeService/RemoveAnswer" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: RemoveAnswerDto): Buffer => Buffer.from(RemoveAnswerDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): RemoveAnswerDto => RemoveAnswerDto.decode(value),
+    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+  },
+  addNote: {
+    path: "/exam.ExamPracticeService/AddNote" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: AddNoteDto): Buffer => Buffer.from(AddNoteDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): AddNoteDto => AddNoteDto.decode(value),
+    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+  },
+  toggleFlag: {
+    path: "/exam.ExamPracticeService/ToggleFlag" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: ToggleFlagDto): Buffer => Buffer.from(ToggleFlagDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ToggleFlagDto => ToggleFlagDto.decode(value),
+    responseSerialize: (value: FlagStateDto): Buffer => Buffer.from(FlagStateDto.encode(value).finish()),
+    responseDeserialize: (value: Buffer): FlagStateDto => FlagStateDto.decode(value),
+  },
+  /** query methods */
+  getUserStats: {
+    path: "/exam.ExamPracticeService/GetUserStats" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: GetUserStatsDto): Buffer => Buffer.from(GetUserStatsDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetUserStatsDto => GetUserStatsDto.decode(value),
+    responseSerialize: (value: UserStats): Buffer => Buffer.from(UserStats.encode(value).finish()),
+    responseDeserialize: (value: Buffer): UserStats => UserStats.decode(value),
+  },
+  getUsersAttemptSummary: {
+    path: "/exam.ExamPracticeService/GetUsersAttemptSummary" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: GetUsersAttemptSummaryDto): Buffer =>
+      Buffer.from(GetUsersAttemptSummaryDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetUsersAttemptSummaryDto => GetUsersAttemptSummaryDto.decode(value),
+    responseSerialize: (value: AttemptHistorySummary): Buffer =>
+      Buffer.from(AttemptHistorySummary.encode(value).finish()),
+    responseDeserialize: (value: Buffer): AttemptHistorySummary => AttemptHistorySummary.decode(value),
+  },
+  getUsersAttemptHistory: {
+    path: "/exam.ExamPracticeService/GetUsersAttemptHistory" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: GetUsersAttemptHistoryDto): Buffer =>
+      Buffer.from(GetUsersAttemptHistoryDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetUsersAttemptHistoryDto => GetUsersAttemptHistoryDto.decode(value),
+    responseSerialize: (value: UsersAttemptHistory): Buffer => Buffer.from(UsersAttemptHistory.encode(value).finish()),
+    responseDeserialize: (value: Buffer): UsersAttemptHistory => UsersAttemptHistory.decode(value),
+  },
+  findExams: {
+    path: "/exam.ExamPracticeService/FindExams" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: FindExamsDto): Buffer => Buffer.from(FindExamsDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): FindExamsDto => FindExamsDto.decode(value),
+    responseSerialize: (value: Exams): Buffer => Buffer.from(Exams.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Exams => Exams.decode(value),
+  },
+  getExamDetails: {
+    path: "/exam.ExamPracticeService/GetExamDetails" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: GetExamDetailsDto): Buffer => Buffer.from(GetExamDetailsDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetExamDetailsDto => GetExamDetailsDto.decode(value),
+    responseSerialize: (value: DetailedExamInfo): Buffer => Buffer.from(DetailedExamInfo.encode(value).finish()),
+    responseDeserialize: (value: Buffer): DetailedExamInfo => DetailedExamInfo.decode(value),
+  },
+  getExamStats: {
+    path: "/exam.ExamPracticeService/GetExamStats" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: GetExamStatsDto): Buffer => Buffer.from(GetExamStatsDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetExamStatsDto => GetExamStatsDto.decode(value),
+    responseSerialize: (value: ExamStatistics): Buffer => Buffer.from(ExamStatistics.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ExamStatistics => ExamStatistics.decode(value),
+  },
+  getAttemptSavedData: {
+    path: "/exam.ExamPracticeService/GetAttemptSavedData" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: GetAttemptSavedDataDto): Buffer =>
+      Buffer.from(GetAttemptSavedDataDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetAttemptSavedDataDto => GetAttemptSavedDataDto.decode(value),
+    responseSerialize: (value: AttemptSavedData): Buffer => Buffer.from(AttemptSavedData.encode(value).finish()),
+    responseDeserialize: (value: Buffer): AttemptSavedData => AttemptSavedData.decode(value),
+  },
+  getAttemptReview: {
+    path: "/exam.ExamPracticeService/GetAttemptReview" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: GetAttemptReviewDto): Buffer => Buffer.from(GetAttemptReviewDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetAttemptReviewDto => GetAttemptReviewDto.decode(value),
+    responseSerialize: (value: DetailedAttemptReviewData): Buffer =>
+      Buffer.from(DetailedAttemptReviewData.encode(value).finish()),
+    responseDeserialize: (value: Buffer): DetailedAttemptReviewData => DetailedAttemptReviewData.decode(value),
+  },
+  getDetailedQuestionInfo: {
+    path: "/exam.ExamPracticeService/GetDetailedQuestionInfo" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: GetDetailedQuestionDto): Buffer =>
+      Buffer.from(GetDetailedQuestionDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetDetailedQuestionDto => GetDetailedQuestionDto.decode(value),
+    responseSerialize: (value: DetailedQuestionInfo): Buffer =>
+      Buffer.from(DetailedQuestionInfo.encode(value).finish()),
+    responseDeserialize: (value: Buffer): DetailedQuestionInfo => DetailedQuestionInfo.decode(value),
+  },
 } as const;
 
 export interface ExamPracticeServiceServer extends UntypedServiceImplementation {
-	attempt: handleUnaryCall<AttemptDto, CreatedAttemptDto>;
-	endAttempt: handleUnaryCall<EndAttemptDto, Empty>;
-	answer: handleUnaryCall<AnswerDto, Empty>;
-	removeAnswer: handleUnaryCall<RemoveAnswerDto, Empty>;
-	addNote: handleUnaryCall<AddNoteDto, Empty>;
-	toggleFlag: handleUnaryCall<ToggleFlagDto, FlagStateDto>;
-	/** query methods */
-	getUserStats: handleUnaryCall<GetUserStatsDto, UserStats>;
-	getUsersAttemptSummary: handleUnaryCall<GetUsersAttemptSummaryDto, AttemptHistorySummary>;
-	getUsersAttemptHistory: handleUnaryCall<GetUsersAttemptHistoryDto, UsersAttemptHistory>;
-	findExams: handleUnaryCall<FindExamsDto, Exams>;
-	getExamDetails: handleUnaryCall<GetExamDetailsDto, DetailedExamInfo>;
-	getExamStats: handleUnaryCall<GetExamStatsDto, ExamStatistics>;
-	getAttemptSavedData: handleUnaryCall<GetAttemptSavedDataDto, AttemptSavedData>;
-	getAttemptReview: handleUnaryCall<GetAttemptReviewDto, DetailedAttemptReviewData>;
-	getDetailedQuestionInfo: handleUnaryCall<GetDetailedQuestionDto, DetailedQuestionInfo>;
+  attempt: handleUnaryCall<AttemptDto, CreatedAttemptDto>;
+  endAttempt: handleUnaryCall<EndAttemptDto, Empty>;
+  answer: handleUnaryCall<AnswerDto, Empty>;
+  removeAnswer: handleUnaryCall<RemoveAnswerDto, Empty>;
+  addNote: handleUnaryCall<AddNoteDto, Empty>;
+  toggleFlag: handleUnaryCall<ToggleFlagDto, FlagStateDto>;
+  /** query methods */
+  getUserStats: handleUnaryCall<GetUserStatsDto, UserStats>;
+  getUsersAttemptSummary: handleUnaryCall<GetUsersAttemptSummaryDto, AttemptHistorySummary>;
+  getUsersAttemptHistory: handleUnaryCall<GetUsersAttemptHistoryDto, UsersAttemptHistory>;
+  findExams: handleUnaryCall<FindExamsDto, Exams>;
+  getExamDetails: handleUnaryCall<GetExamDetailsDto, DetailedExamInfo>;
+  getExamStats: handleUnaryCall<GetExamStatsDto, ExamStatistics>;
+  getAttemptSavedData: handleUnaryCall<GetAttemptSavedDataDto, AttemptSavedData>;
+  getAttemptReview: handleUnaryCall<GetAttemptReviewDto, DetailedAttemptReviewData>;
+  getDetailedQuestionInfo: handleUnaryCall<GetDetailedQuestionDto, DetailedQuestionInfo>;
 }
 
 export interface TagServiceClient {
-	addTag(request: AddTagDto, metadata?: Metadata): Observable<AddedTagDto>;
+  addTag(request: AddTagDto, metadata?: Metadata): Observable<AddedTagDto>;
 
-	deleteTag(request: DeleteTagDto, metadata?: Metadata): Observable<Empty>;
+  deleteTag(request: DeleteTagDto, metadata?: Metadata): Observable<Empty>;
 
-	updateTag(request: UpdateTagDto, metadata?: Metadata): Observable<Empty>;
+  updateTag(request: UpdateTagDto, metadata?: Metadata): Observable<Empty>;
 
-	moveTag(request: MoveTagDto, metadata?: Metadata): Observable<Empty>;
+  moveTag(request: MoveTagDto, metadata?: Metadata): Observable<Empty>;
 
-	/** query */
+  /** query */
 
-	getTagTree(request: Empty, metadata?: Metadata): Observable<TagTrees>;
+  getTagTree(request: Empty, metadata?: Metadata): Observable<TagTrees>;
 
-	getTagList(request: Empty, metadata?: Metadata): Observable<TagList>;
+  getTagList(request: Empty, metadata?: Metadata): Observable<TagList>;
 }
 
 export interface TagServiceController {
-	addTag(
-		request: AddTagDto,
-		metadata?: Metadata,
-	): Promise<AddedTagDto> | Observable<AddedTagDto> | AddedTagDto;
+  addTag(request: AddTagDto, metadata?: Metadata): Promise<AddedTagDto> | Observable<AddedTagDto> | AddedTagDto;
 
-	deleteTag(request: DeleteTagDto, metadata?: Metadata): void | Promise<void>;
+  deleteTag(request: DeleteTagDto, metadata?: Metadata): void | Promise<void>;
 
-	updateTag(request: UpdateTagDto, metadata?: Metadata): void | Promise<void>;
+  updateTag(request: UpdateTagDto, metadata?: Metadata): void | Promise<void>;
 
-	moveTag(request: MoveTagDto, metadata?: Metadata): void | Promise<void>;
+  moveTag(request: MoveTagDto, metadata?: Metadata): void | Promise<void>;
 
-	/** query */
+  /** query */
 
-	getTagTree(
-		request: Empty,
-		metadata?: Metadata,
-	): Promise<TagTrees> | Observable<TagTrees> | TagTrees;
+  getTagTree(request: Empty, metadata?: Metadata): Promise<TagTrees> | Observable<TagTrees> | TagTrees;
 
-	getTagList(request: Empty, metadata?: Metadata): Promise<TagList> | Observable<TagList> | TagList;
+  getTagList(request: Empty, metadata?: Metadata): Promise<TagList> | Observable<TagList> | TagList;
 }
 
 export function TagServiceControllerMethods() {
-	return function (constructor: Function) {
-		const grpcMethods: string[] = [
-			'addTag',
-			'deleteTag',
-			'updateTag',
-			'moveTag',
-			'getTagTree',
-			'getTagList',
-		];
-		for (const method of grpcMethods) {
-			const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
-			GrpcMethod('TagService', method)(constructor.prototype[method], method, descriptor);
-			Object.defineProperty(constructor.prototype, method, descriptor);
-		}
-		const grpcStreamMethods: string[] = [];
-		for (const method of grpcStreamMethods) {
-			const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
-			GrpcStreamMethod('TagService', method)(constructor.prototype[method], method, descriptor);
-			Object.defineProperty(constructor.prototype, method, descriptor);
-		}
-	};
+  return function (constructor: Function) {
+    const grpcMethods: string[] = ["addTag", "deleteTag", "updateTag", "moveTag", "getTagTree", "getTagList"];
+    for (const method of grpcMethods) {
+      const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
+      GrpcMethod("TagService", method)(constructor.prototype[method], method, descriptor);
+      Object.defineProperty(constructor.prototype, method, descriptor);
+    }
+    const grpcStreamMethods: string[] = [];
+    for (const method of grpcStreamMethods) {
+      const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
+      GrpcStreamMethod("TagService", method)(constructor.prototype[method], method, descriptor);
+      Object.defineProperty(constructor.prototype, method, descriptor);
+    }
+  };
 }
 
-export const TAG_SERVICE_NAME = 'TagService';
+export const TAG_SERVICE_NAME = "TagService";
 
 export type TagServiceService = typeof TagServiceService;
 export const TagServiceService = {
-	addTag: {
-		path: '/exam.TagService/AddTag' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: AddTagDto): Buffer => Buffer.from(AddTagDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): AddTagDto => AddTagDto.decode(value),
-		responseSerialize: (value: AddedTagDto): Buffer =>
-			Buffer.from(AddedTagDto.encode(value).finish()),
-		responseDeserialize: (value: Buffer): AddedTagDto => AddedTagDto.decode(value),
-	},
-	deleteTag: {
-		path: '/exam.TagService/DeleteTag' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: DeleteTagDto): Buffer =>
-			Buffer.from(DeleteTagDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): DeleteTagDto => DeleteTagDto.decode(value),
-		responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-		responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
-	},
-	updateTag: {
-		path: '/exam.TagService/UpdateTag' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: UpdateTagDto): Buffer =>
-			Buffer.from(UpdateTagDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): UpdateTagDto => UpdateTagDto.decode(value),
-		responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-		responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
-	},
-	moveTag: {
-		path: '/exam.TagService/MoveTag' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: MoveTagDto): Buffer => Buffer.from(MoveTagDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): MoveTagDto => MoveTagDto.decode(value),
-		responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-		responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
-	},
-	/** query */
-	getTagTree: {
-		path: '/exam.TagService/GetTagTree' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-		requestDeserialize: (value: Buffer): Empty => Empty.decode(value),
-		responseSerialize: (value: TagTrees): Buffer => Buffer.from(TagTrees.encode(value).finish()),
-		responseDeserialize: (value: Buffer): TagTrees => TagTrees.decode(value),
-	},
-	getTagList: {
-		path: '/exam.TagService/GetTagList' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-		requestDeserialize: (value: Buffer): Empty => Empty.decode(value),
-		responseSerialize: (value: TagList): Buffer => Buffer.from(TagList.encode(value).finish()),
-		responseDeserialize: (value: Buffer): TagList => TagList.decode(value),
-	},
+  addTag: {
+    path: "/exam.TagService/AddTag" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: AddTagDto): Buffer => Buffer.from(AddTagDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): AddTagDto => AddTagDto.decode(value),
+    responseSerialize: (value: AddedTagDto): Buffer => Buffer.from(AddedTagDto.encode(value).finish()),
+    responseDeserialize: (value: Buffer): AddedTagDto => AddedTagDto.decode(value),
+  },
+  deleteTag: {
+    path: "/exam.TagService/DeleteTag" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: DeleteTagDto): Buffer => Buffer.from(DeleteTagDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): DeleteTagDto => DeleteTagDto.decode(value),
+    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+  },
+  updateTag: {
+    path: "/exam.TagService/UpdateTag" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: UpdateTagDto): Buffer => Buffer.from(UpdateTagDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): UpdateTagDto => UpdateTagDto.decode(value),
+    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+  },
+  moveTag: {
+    path: "/exam.TagService/MoveTag" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: MoveTagDto): Buffer => Buffer.from(MoveTagDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): MoveTagDto => MoveTagDto.decode(value),
+    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+  },
+  /** query */
+  getTagTree: {
+    path: "/exam.TagService/GetTagTree" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    requestDeserialize: (value: Buffer): Empty => Empty.decode(value),
+    responseSerialize: (value: TagTrees): Buffer => Buffer.from(TagTrees.encode(value).finish()),
+    responseDeserialize: (value: Buffer): TagTrees => TagTrees.decode(value),
+  },
+  getTagList: {
+    path: "/exam.TagService/GetTagList" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    requestDeserialize: (value: Buffer): Empty => Empty.decode(value),
+    responseSerialize: (value: TagList): Buffer => Buffer.from(TagList.encode(value).finish()),
+    responseDeserialize: (value: Buffer): TagList => TagList.decode(value),
+  },
 } as const;
 
 export interface TagServiceServer extends UntypedServiceImplementation {
-	addTag: handleUnaryCall<AddTagDto, AddedTagDto>;
-	deleteTag: handleUnaryCall<DeleteTagDto, Empty>;
-	updateTag: handleUnaryCall<UpdateTagDto, Empty>;
-	moveTag: handleUnaryCall<MoveTagDto, Empty>;
-	/** query */
-	getTagTree: handleUnaryCall<Empty, TagTrees>;
-	getTagList: handleUnaryCall<Empty, TagList>;
+  addTag: handleUnaryCall<AddTagDto, AddedTagDto>;
+  deleteTag: handleUnaryCall<DeleteTagDto, Empty>;
+  updateTag: handleUnaryCall<UpdateTagDto, Empty>;
+  moveTag: handleUnaryCall<MoveTagDto, Empty>;
+  /** query */
+  getTagTree: handleUnaryCall<Empty, TagTrees>;
+  getTagList: handleUnaryCall<Empty, TagList>;
 }
 
 export interface GoalServiceClient {
-	setGoal(request: SetGoalDto, metadata?: Metadata): Observable<GoalResponse>;
+  setGoal(request: SetGoalDto, metadata?: Metadata): Observable<GoalResponse>;
 
-	updateGoal(request: UpdateGoalDto, metadata?: Metadata): Observable<GoalResponse>;
+  updateGoal(request: UpdateGoalDto, metadata?: Metadata): Observable<GoalResponse>;
 
-	deleteGoal(request: DeleteGoalDto, metadata?: Metadata): Observable<Empty>;
+  deleteGoal(request: DeleteGoalDto, metadata?: Metadata): Observable<Empty>;
 
-	getGoal(request: GetGoalDto, metadata?: Metadata): Observable<GoalResponse>;
+  getGoal(request: GetGoalDto, metadata?: Metadata): Observable<GoalResponse>;
 }
 
 export interface GoalServiceController {
-	setGoal(
-		request: SetGoalDto,
-		metadata?: Metadata,
-	): Promise<GoalResponse> | Observable<GoalResponse> | GoalResponse;
+  setGoal(request: SetGoalDto, metadata?: Metadata): Promise<GoalResponse> | Observable<GoalResponse> | GoalResponse;
 
-	updateGoal(
-		request: UpdateGoalDto,
-		metadata?: Metadata,
-	): Promise<GoalResponse> | Observable<GoalResponse> | GoalResponse;
+  updateGoal(
+    request: UpdateGoalDto,
+    metadata?: Metadata,
+  ): Promise<GoalResponse> | Observable<GoalResponse> | GoalResponse;
 
-	deleteGoal(request: DeleteGoalDto, metadata?: Metadata): void | Promise<void>;
+  deleteGoal(request: DeleteGoalDto, metadata?: Metadata): void | Promise<void>;
 
-	getGoal(
-		request: GetGoalDto,
-		metadata?: Metadata,
-	): Promise<GoalResponse> | Observable<GoalResponse> | GoalResponse;
+  getGoal(request: GetGoalDto, metadata?: Metadata): Promise<GoalResponse> | Observable<GoalResponse> | GoalResponse;
 }
 
 export function GoalServiceControllerMethods() {
-	return function (constructor: Function) {
-		const grpcMethods: string[] = ['setGoal', 'updateGoal', 'deleteGoal', 'getGoal'];
-		for (const method of grpcMethods) {
-			const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
-			GrpcMethod('GoalService', method)(constructor.prototype[method], method, descriptor);
-			Object.defineProperty(constructor.prototype, method, descriptor);
-		}
-		const grpcStreamMethods: string[] = [];
-		for (const method of grpcStreamMethods) {
-			const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
-			GrpcStreamMethod('GoalService', method)(constructor.prototype[method], method, descriptor);
-			Object.defineProperty(constructor.prototype, method, descriptor);
-		}
-	};
+  return function (constructor: Function) {
+    const grpcMethods: string[] = ["setGoal", "updateGoal", "deleteGoal", "getGoal"];
+    for (const method of grpcMethods) {
+      const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
+      GrpcMethod("GoalService", method)(constructor.prototype[method], method, descriptor);
+      Object.defineProperty(constructor.prototype, method, descriptor);
+    }
+    const grpcStreamMethods: string[] = [];
+    for (const method of grpcStreamMethods) {
+      const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
+      GrpcStreamMethod("GoalService", method)(constructor.prototype[method], method, descriptor);
+      Object.defineProperty(constructor.prototype, method, descriptor);
+    }
+  };
 }
 
-export const GOAL_SERVICE_NAME = 'GoalService';
+export const GOAL_SERVICE_NAME = "GoalService";
 
 export type GoalServiceService = typeof GoalServiceService;
 export const GoalServiceService = {
-	setGoal: {
-		path: '/exam.GoalService/SetGoal' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: SetGoalDto): Buffer => Buffer.from(SetGoalDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): SetGoalDto => SetGoalDto.decode(value),
-		responseSerialize: (value: GoalResponse): Buffer =>
-			Buffer.from(GoalResponse.encode(value).finish()),
-		responseDeserialize: (value: Buffer): GoalResponse => GoalResponse.decode(value),
-	},
-	updateGoal: {
-		path: '/exam.GoalService/UpdateGoal' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: UpdateGoalDto): Buffer =>
-			Buffer.from(UpdateGoalDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): UpdateGoalDto => UpdateGoalDto.decode(value),
-		responseSerialize: (value: GoalResponse): Buffer =>
-			Buffer.from(GoalResponse.encode(value).finish()),
-		responseDeserialize: (value: Buffer): GoalResponse => GoalResponse.decode(value),
-	},
-	deleteGoal: {
-		path: '/exam.GoalService/DeleteGoal' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: DeleteGoalDto): Buffer =>
-			Buffer.from(DeleteGoalDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): DeleteGoalDto => DeleteGoalDto.decode(value),
-		responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-		responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
-	},
-	getGoal: {
-		path: '/exam.GoalService/GetGoal' as const,
-		requestStream: false as const,
-		responseStream: false as const,
-		requestSerialize: (value: GetGoalDto): Buffer => Buffer.from(GetGoalDto.encode(value).finish()),
-		requestDeserialize: (value: Buffer): GetGoalDto => GetGoalDto.decode(value),
-		responseSerialize: (value: GoalResponse): Buffer =>
-			Buffer.from(GoalResponse.encode(value).finish()),
-		responseDeserialize: (value: Buffer): GoalResponse => GoalResponse.decode(value),
-	},
+  setGoal: {
+    path: "/exam.GoalService/SetGoal" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: SetGoalDto): Buffer => Buffer.from(SetGoalDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): SetGoalDto => SetGoalDto.decode(value),
+    responseSerialize: (value: GoalResponse): Buffer => Buffer.from(GoalResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): GoalResponse => GoalResponse.decode(value),
+  },
+  updateGoal: {
+    path: "/exam.GoalService/UpdateGoal" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: UpdateGoalDto): Buffer => Buffer.from(UpdateGoalDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): UpdateGoalDto => UpdateGoalDto.decode(value),
+    responseSerialize: (value: GoalResponse): Buffer => Buffer.from(GoalResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): GoalResponse => GoalResponse.decode(value),
+  },
+  deleteGoal: {
+    path: "/exam.GoalService/DeleteGoal" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: DeleteGoalDto): Buffer => Buffer.from(DeleteGoalDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): DeleteGoalDto => DeleteGoalDto.decode(value),
+    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+  },
+  getGoal: {
+    path: "/exam.GoalService/GetGoal" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: GetGoalDto): Buffer => Buffer.from(GetGoalDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetGoalDto => GetGoalDto.decode(value),
+    responseSerialize: (value: GoalResponse): Buffer => Buffer.from(GoalResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): GoalResponse => GoalResponse.decode(value),
+  },
 } as const;
 
 export interface GoalServiceServer extends UntypedServiceImplementation {
-	setGoal: handleUnaryCall<SetGoalDto, GoalResponse>;
-	updateGoal: handleUnaryCall<UpdateGoalDto, GoalResponse>;
-	deleteGoal: handleUnaryCall<DeleteGoalDto, Empty>;
-	getGoal: handleUnaryCall<GetGoalDto, GoalResponse>;
+  setGoal: handleUnaryCall<SetGoalDto, GoalResponse>;
+  updateGoal: handleUnaryCall<UpdateGoalDto, GoalResponse>;
+  deleteGoal: handleUnaryCall<DeleteGoalDto, Empty>;
+  getGoal: handleUnaryCall<GetGoalDto, GoalResponse>;
 }
 
 function toTimestamp(date: Date): Timestamp {
-	const seconds = Math.trunc(date.getTime() / 1_000);
-	const nanos = (date.getTime() % 1_000) * 1_000_000;
-	return { seconds, nanos };
+  const seconds = Math.trunc(date.getTime() / 1_000);
+  const nanos = (date.getTime() % 1_000) * 1_000_000;
+  return { seconds, nanos };
 }
 
 function fromTimestamp(t: Timestamp): Date {
-	let millis = (t.seconds || 0) * 1_000;
-	millis += (t.nanos || 0) / 1_000_000;
-	return new globalThis.Date(millis);
+  let millis = (t.seconds || 0) * 1_000;
+  millis += (t.nanos || 0) / 1_000_000;
+  return new globalThis.Date(millis);
 }
 
 interface MessageFns<T> {
-	encode(message: T, writer?: BinaryWriter): BinaryWriter;
-	decode(input: BinaryReader | Uint8Array, length?: number): T;
+  encode(message: T, writer?: BinaryWriter): BinaryWriter;
+  decode(input: BinaryReader | Uint8Array, length?: number): T;
 }
