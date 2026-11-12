@@ -89,9 +89,9 @@ Generated message types (`exam.AddTagDto`, `resource.CreateBlogRequest`, …) ar
   - `<pkg>.XServiceClient` as the type of `client.getService<…>()` in gateway controllers, guards, strategies, and in query handlers that call another service (e.g. `file.FileServiceClient` in `auth`/`exam`).
   - `<pkg>.XServiceController` plus the `@<pkg>.XServiceControllerMethods()` decorator on a service's gRPC controller.
   - Internal values that only pass between gateway pieces and never become a request or response body, e.g. `auth.Tokens` between the Google OAuth strategy and its callback.
-- **Known legacy violations** (don't copy them; migrate them when you touch these files):
-  - `apps/resource/src/app/services/*.service.ts` and `apps/notification/src/app/services/*.service.ts` take and return generated messages.
-  - `apps/gateway/src/resource-gateway/resource.router.controller.ts` uses `Omit<resource.X, …>` as `@Body()` types.
+- When a route takes IDs from the path, the body DTO implements `Omit<pkg.XRequest, 'idField'>`. Use the camelCase field name from the generated interface, not the proto's snake_case.
+- Don't cast the object you pass to a gRPC client (`as pkg.XRequest`). A cast there usually hides a real mismatch, such as a `string` where the proto expects a `Date`. Fix the DTO instead.
+- **Known legacy violations** (don't copy them; migrate them when you touch these files): `apps/resource/src/app/services/*.service.ts` and `apps/notification/src/app/services/*.service.ts` take and return generated messages.
 
 ## DTOs
 

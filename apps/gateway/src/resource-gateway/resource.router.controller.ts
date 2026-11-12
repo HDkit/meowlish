@@ -1,6 +1,8 @@
 import { ResourceAccess } from '../auth/decorators/resource-access.decorator';
 import { type AuthenticatedRequest } from '../types/authenticated-request';
 import { RESOURCE_CLIENT } from './constants/resource';
+import { AddCardToListDto } from './dtos/req/add-card-to-list.req.dto';
+import { AddFileToReportDto } from './dtos/req/add-file-to-report.req.dto';
 import { CreateBlogDto } from './dtos/req/create-blog.req.dto';
 import { CreateFlashCardListDto } from './dtos/req/create-flash-card-list.req.dto';
 import { CreateFlashCardDto } from './dtos/req/create-flash-card.req.dto';
@@ -8,6 +10,7 @@ import { CreateReportDto } from './dtos/req/create-report.req.dto';
 import { UpdateBlogDto } from './dtos/req/update-blog.req.dto';
 import { UpdateFlashCardListDto } from './dtos/req/update-flash-card-list.req.dto';
 import { UpdateFlashCardDto } from './dtos/req/update-flash-card.req.dto';
+import { UpdateReportDto } from './dtos/req/update-report.req.dto';
 import { BlogDto, ListBlogsDto } from './dtos/res/blog.dto';
 import {
 	FlashCardListDetailDto,
@@ -161,8 +164,9 @@ export class ResourceGatewayController implements OnModuleInit {
 			...body,
 			examples: body.examples ?? [],
 			tags: body.tags ?? [],
+			listId: body.listId,
 			authorId: req.user.sub,
-		} as resource.CreateFlashCardRequest);
+		});
 	}
 
 	@Get('flash-cards/:id')
@@ -291,10 +295,7 @@ export class ResourceGatewayController implements OnModuleInit {
 	@Post('flash-card-lists/:id/cards')
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Add a card to a list' })
-	addCardToList(
-		@Param('id') id: string,
-		@Body() body: Omit<resource.AddCardToListRequest, 'list_id'>,
-	) {
+	addCardToList(@Param('id') id: string, @Body() body: AddCardToListDto) {
 		return this.flashCardListService.addCardToList({ ...body, listId: id });
 	}
 
@@ -343,7 +344,7 @@ export class ResourceGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Update a report' })
 	@ApiResponseEntity(ReportDto)
 	@SerializeOptions({ type: ReportDto, strategy: 'exposeAll' })
-	updateReport(@Param('id') id: string, @Body() body: Omit<resource.UpdateReportRequest, 'id'>) {
+	updateReport(@Param('id') id: string, @Body() body: UpdateReportDto) {
 		return this.reportService.updateReport({ ...body, id: id });
 	}
 
@@ -381,10 +382,7 @@ export class ResourceGatewayController implements OnModuleInit {
 	@Post('reports/:id/files')
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Add a file to a report' })
-	addFileToReport(
-		@Param('id') id: string,
-		@Body() body: Omit<resource.AddFileToReportRequest, 'report_id'>,
-	) {
+	addFileToReport(@Param('id') id: string, @Body() body: AddFileToReportDto) {
 		return this.reportService.addFileToReport({ ...body, reportId: id });
 	}
 

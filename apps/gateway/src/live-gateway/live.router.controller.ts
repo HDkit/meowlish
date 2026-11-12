@@ -102,7 +102,7 @@ export class LiveGatewayController implements OnModuleInit {
 		return this.chatService.updateRoomSchedule({
 			...body,
 			roomId: roomId,
-		} as live.UpdateRoomScheduleRequest);
+		});
 	}
 
 	@Post(':roomId/ban')
