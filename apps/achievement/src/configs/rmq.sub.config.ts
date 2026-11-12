@@ -4,7 +4,7 @@ import { LOGIN_QUEUE } from '../app/events/handlers/login.handler';
 import { IEnvVars } from './config';
 import { MessageHandlerErrorBehavior, RabbitMQConfig } from '@golevelup/nestjs-rabbitmq';
 import { ConfigService } from '@nestjs/config';
-import { dlqQueueConfig } from '@server/messaging';
+import { consumerQueueConfigs } from '@server/messaging';
 import { defaultRmqExchanges } from '@server/utils';
 
 export const rmqSubConfig = (configService: ConfigService<IEnvVars>): RabbitMQConfig => {
@@ -13,9 +13,9 @@ export const rmqSubConfig = (configService: ConfigService<IEnvVars>): RabbitMQCo
 		name: 'sub',
 		exchanges: [...defaultRmqExchanges],
 		queues: [
-			dlqQueueConfig(LOGIN_QUEUE),
-			dlqQueueConfig(ATTEMPT_SUBMITTED_QUEUE),
-			dlqQueueConfig(ATTEMPT_SCORED_QUEUE),
+			...consumerQueueConfigs(LOGIN_QUEUE),
+			...consumerQueueConfigs(ATTEMPT_SUBMITTED_QUEUE),
+			...consumerQueueConfigs(ATTEMPT_SCORED_QUEUE),
 		],
 		uri: `amqp://${rmqConfig.user}:${rmqConfig.password}@${rmqConfig.host}:${rmqConfig.port}`,
 		connectionInitOptions: { wait: true },

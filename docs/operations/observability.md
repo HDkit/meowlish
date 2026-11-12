@@ -113,19 +113,21 @@ Grafana > Dashboards > "Messaging" (uid `meowlish-messaging`, `docker/observabil
 - **Inbox duplicates skipped** (`inbox_duplicates_total{service,consumer}`, 5 min increase): redeliveries that the inbox recognised and ignored. Occasional values are expected (at-least-once delivery); a steady stream means a consumer keeps failing after commit or a queue keeps redelivering.
 - **Dead-letter queue depth** (`rabbitmq_detailed_queue_messages{queue=~".*\\.dlq"}`): messages sitting in each `<queue>.dlq`. Comes from RabbitMQ, not the apps.
 
-- **Consumer failures** (`consumer_failures_total{consumer}`, 5 min rate, grouped by `job` = the service): handler errors. The `deadLetterQueue` error handler counts each one and then nacks the message without requeue, so every increment is a message headed for `<queue>.dlq`.
+- **Consumer failures** (`consumer_failures_total{consumer}`, 5 min rate, grouped by `job` = the service): handler errors. The `deadLetterQueue` error handler counts every failed delivery, including ones that are then retried, so one message that never succeeds counts 6 times (first delivery + 5 retries) before it lands in `<queue>.dlq`.
 
 RabbitMQ metrics reach Grafana through `docker/observability/otelcol-rabbitmq.yaml`, an extra collector config passed to `lgtm` through `OTELCOL_EXTRA_ARGS`. It scrapes `rabbit-mq:15692/metrics/detailed?family=queue_coarse_metrics` every 15 s, which needs the `rabbitmq_prometheus` plugin. `docker/docker-compose.db.yaml` enables it with `docker/rabbitmq/enabled_plugins`; the file only takes effect when the `rabbit-mq` container is recreated (`docker compose -f docker/docker-compose.db.yaml up -d --force-recreate rabbit-mq`). Until then the DLQ panel and the `DeadLetters` alert have no data.
 
 ## Event bus: dead letters and replay
 
-Every consumer queue `<q>` dead-letters (nack without requeue) to the `eventbus.dlx` exchange, which routes to the queue `<q>.dlq`. Consumers do not swallow errors: a failure nacks the message, so it lands in the DLQ instead of being lost. The one documented exception is the writing-scored handler.
+Consumers do not swallow errors. When a handler throws, the `deadLetterQueue` error handler retries the message with exponential backoff: it republishes the original message (same content, message id and headers, plus `x-retry-count`) through the default exchange into `<q>.retry.N` and acks the original. `<q>.retry.1` … `<q>.retry.5` hold the message for 1, 2, 4, 8 and 16 s (queue TTL, capped at 60 s) and have no consumer; on expiry they dead-letter through the default exchange back to `<q>` only, so other subscribers of the same routing key never see the retry. If the republish itself fails, the original is nacked with requeue so it is not lost. After the 5th retry fails, the message is nacked without requeue to the `eventbus.dlx` exchange, which routes it to `<q>.dlq`.
 
 `exam.writing.submitted` is published bare, without the event envelope, because its consumer is the external AI scorer. All other events are wrapped in an envelope with an event id that the inbox uses for deduplication.
 
 To inspect a dead-lettered message: RabbitMQ management UI (<http://localhost:15672>) > Queues > `<q>.dlq` > Get messages (choose "Nack message requeue true" so it stays). The `x-death` header shows the original queue and the reason; the service logs have the error.
 
 To replay it after fixing the cause: on the same page open "Move messages", enter the original queue name `<q>` as destination, and move. Alternatively use a shovel from `<q>.dlq` to `<q>`. "Move messages" and shovels need the `rabbitmq_shovel` and `rabbitmq_shovel_management` plugins; they are listed in `docker/rabbitmq/enabled_plugins` and, like `rabbitmq_prometheus`, only take effect after the `rabbit-mq` container is recreated. The inbox makes a replay safe: if the first attempt had already committed, the message is skipped as a duplicate.
+
+A replayed message keeps its `x-retry-count` header, so if it fails again it goes straight back to `<q>.dlq` without further retries. To get the retries again, publish a copy without that header.
 
 ## One-time upgrade: recreate consumer queues
 
@@ -161,6 +163,18 @@ How: RabbitMQ management UI > Queues > pick the queue > Delete, or `docker exec 
 When: after stopping the old containers and before starting the new build. Check that each queue is empty first (0 ready, 0 unacked), because deleting a queue discards its messages.
 
 Afterwards the old `achievement.dlx` and `notification.dlx` exchanges and their bindings are unused and can be removed (optional).
+
+### Retry queues and the exam writing-scored queue
+
+Consumer retries go through new per-queue delay queues `<q>.retry.1` … `<q>.retry.5` (TTL 1, 2, 4, 8, 16 s; `x-dead-letter-exchange=""`, `x-dead-letter-routing-key=<q>`). They are new, so the services create them on startup and nothing needs recreating:
+
+- `<q>.retry.1` … `<q>.retry.5` for each queue listed above, and for `exam.events.writing.scored`.
+
+The exam writing-scored consumer now uses the same mechanism, which changes its queues:
+
+- `exam.events.writing.scored` must be deleted once (same steps as above, check it is empty first): it used to dead-letter to `exam.dlx` / `writing.result.dlq` and now carries `x-dead-letter-exchange=eventbus.dlx`, `x-dead-letter-routing-key=exam.events.writing.scored`, so redeclaring it would fail with `PRECONDITION_FAILED`.
+- Its dead-letter queue is now `exam.events.writing.scored.dlq` (was `exam.writing.result.dlq`). Move any messages still in the old one to `exam.events.writing.scored` first if you want them replayed.
+- No longer used, safe to delete once empty: the exchanges `exam.retry` and `exam.dlx`, and the queues `exam.retry.writing-scored.1`, `exam.retry.writing-scored.2`, `exam.retry.writing-scored.3` and `exam.writing.result.dlq`. The old retry queues dead-lettered back through `eventbus`, so other subscribers of `exam.writing.scored` could receive duplicates.
 
 ## Alerts
 
