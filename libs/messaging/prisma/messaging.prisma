@@ -1,0 +1,23 @@
+model OutboxEvent {
+  id            String    @id @db.Uuid
+  routingKey    String    @map("routing_key")
+  payload       Json
+  createdAt     DateTime  @default(now()) @map("created_at")
+  publishedAt   DateTime? @map("published_at")
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime  @default(now()) @map("next_attempt_at")
+  lastError     String?   @map("last_error")
+
+  @@index([publishedAt, nextAttemptAt, createdAt])
+  @@map("outbox_events")
+}
+
+model InboxEvent {
+  id          String   @db.Uuid
+  consumer    String
+  processedAt DateTime @default(now()) @map("processed_at")
+
+  @@id([id, consumer])
+  @@index([processedAt])
+  @@map("inbox_events")
+}

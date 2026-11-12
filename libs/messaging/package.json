@@ -6,6 +6,8 @@
 	"main": "./src/index.js",
 	"types": "./src/index.d.ts",
 	"dependencies": {
-		"tslib": "2.9.1"
+		"tslib": "2.9.1",
+		"@nestjs/common": "11.2.8",
+		"@nestjs-cls/transactional": "3.3.1"
 	}
 }
