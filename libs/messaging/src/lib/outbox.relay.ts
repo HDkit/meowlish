@@ -1,4 +1,4 @@
-import { AmqpConnectionManager } from '@golevelup/nestjs-rabbitmq';
+import { AmqpConnection, AmqpConnectionManager } from '@golevelup/nestjs-rabbitmq';
 import {
 	Inject,
 	Injectable,
@@ -29,6 +29,8 @@ export interface OutboxRelayPrisma extends RawQueryClient {
 	): Promise<T>;
 }
 
+type PublishOptions = NonNullable<Parameters<AmqpConnection['publish']>[3]>;
+
 interface PendingRow {
 	id: string;
 	routing_key: string;
@@ -41,6 +43,10 @@ const POLL_INTERVAL_MS = 1000;
 const CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const MAX_BACKOFF_SECONDS = 300;
 const TX_TIMEOUT_MS = 60_000;
+// amqp-connection-manager queues publishes while disconnected and only rejects on this timeout,
+// so without it a broker outage would hang the batch instead of triggering back-off.
+const PUBLISH_TIMEOUT_MS = 5000;
+const FIRST_CLEANUP_DELAY_MS = 60_000;
 
 @Injectable()
 export class OutboxRelay implements OnApplicationBootstrap, OnModuleDestroy {
@@ -50,6 +56,7 @@ export class OutboxRelay implements OnApplicationBootstrap, OnModuleDestroy {
 	});
 	private relayTimer?: NodeJS.Timeout;
 	private cleanupTimer?: NodeJS.Timeout;
+	private firstCleanupTimer?: NodeJS.Timeout;
 	private running = false;
 
 	constructor(
@@ -68,13 +75,20 @@ export class OutboxRelay implements OnApplicationBootstrap, OnModuleDestroy {
 		this.cleanupTimer = setInterval(() => {
 			this.cleanup().catch(err => this.logger.error(`Outbox cleanup failed: ${errorMessage(err)}`));
 		}, CLEANUP_INTERVAL_MS);
+		// Services restarted more often than daily would never reach the 24 h tick.
+		this.firstCleanupTimer = setTimeout(() => {
+			this.cleanup().catch(err => this.logger.error(`Outbox cleanup failed: ${errorMessage(err)}`));
+		}, FIRST_CLEANUP_DELAY_MS);
 		this.relayTimer.unref();
 		this.cleanupTimer.unref();
+		this.firstCleanupTimer.unref();
 	}
 
 	onModuleDestroy(): void {
 		clearInterval(this.relayTimer);
 		clearInterval(this.cleanupTimer);
+		clearTimeout(this.firstCleanupTimer);
+		this.firstCleanupTimer = undefined;
 		this.relayTimer = undefined;
 		this.cleanupTimer = undefined;
 	}
@@ -114,7 +128,8 @@ export class OutboxRelay implements OnApplicationBootstrap, OnModuleDestroy {
 						await connection.publish(EXCHANGE, row.routing_key, row.payload, {
 							persistent: true,
 							messageId: row.id,
-						});
+							timeout: PUBLISH_TIMEOUT_MS,
+						} as PublishOptions);
 					} catch (err) {
 						const attempts = row.attempts + 1;
 						const delaySeconds = Math.min(2 ** attempts, MAX_BACKOFF_SECONDS);

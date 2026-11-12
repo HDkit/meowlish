@@ -83,7 +83,7 @@ describe('OutboxRelay', () => {
 			'eventbus',
 			'rk.a',
 			{ id: 'a' },
-			{ persistent: true, messageId: 'a' },
+			{ persistent: true, messageId: 'a', timeout: 5000 },
 		);
 		expect(rows.every(r => r.publishedAt !== null)).toBe(true);
 	});
@@ -120,6 +120,46 @@ describe('OutboxRelay', () => {
 
 		expect(rows[0].attempts).toBe(21);
 		expect(rows[0].nextAttemptAt).toBeLessThanOrEqual(Date.now() + 300_000);
+	});
+
+	it('treats a publish that never confirms as a failure', async () => {
+		jest.useFakeTimers({ now: new Date('2026-01-01T00:00:00Z') });
+		const rows = [row('a'), row('b')];
+		let hang = true;
+		// Mimics ChannelWrapper.publish: pends while the broker is down, rejects only when `timeout` fires.
+		const publish = jest.fn(
+			(_e: string, _rk: string, _p: unknown, o: { timeout?: number }) =>
+				new Promise<void>((resolve, reject) => {
+					if (!hang) return resolve();
+					if (o.timeout) setTimeout(() => reject(new Error('timeout')), o.timeout);
+				}),
+		);
+		const { relay } = setup(rows, publish);
+
+		const run = relay.relayOnce();
+		await jest.advanceTimersByTimeAsync(5000);
+		await expect(run).resolves.toBe(0);
+
+		expect(publish.mock.calls[0][3].timeout).toBe(5000);
+		expect(rows[0]).toMatchObject({ attempts: 1, lastError: 'timeout' });
+		expect(rows[1].publishedAt).toBeNull();
+
+		hang = false;
+		jest.setSystemTime(Date.now() + 2500);
+		await expect(relay.relayOnce()).resolves.toBe(2);
+	});
+
+	it('schedules the first cleanup shortly after bootstrap', async () => {
+		jest.useFakeTimers();
+		const { relay, executed } = setup([]);
+
+		relay.onApplicationBootstrap();
+		expect(executed).toHaveLength(0);
+		await jest.advanceTimersByTimeAsync(60_000);
+		relay.onModuleDestroy();
+
+		expect(executed).toHaveLength(2);
+		expect(executed[0]).toMatch(/DELETE FROM outbox_events/);
 	});
 
 	it('does not overlap runs', async () => {
