@@ -33,8 +33,8 @@ export class JwtRefreshStrategy
 	}
 
 	async validate(payload: AuthRefreshPayload): Promise<Claims> {
-		const isCorrectSchema = refreshPayloadSchema.parse(payload);
-		if (!isCorrectSchema) {
+		// safeParse: a malformed (but validly signed) payload is a 401, not a 500.
+		if (!refreshPayloadSchema.safeParse(payload).success) {
 			throw new UnauthorizedException('Invalid token');
 		}
 

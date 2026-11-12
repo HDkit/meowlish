@@ -30,8 +30,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'access-jwt') implem
 	}
 
 	async validate(payload: AuthPayload): Promise<Claims> {
-		const isCorrectSchema = payloadSchema.parse(payload);
-		if (!isCorrectSchema) {
+		// safeParse: a malformed (but validly signed) payload is a 401, not a 500.
+		if (!payloadSchema.safeParse(payload).success) {
 			throw new UnauthorizedException('Invalid token');
 		}
 
