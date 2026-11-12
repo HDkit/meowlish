@@ -1,5 +1,8 @@
+import { type IEnvVars } from './configs/config';
+import { corsOptions } from './cors';
 import { GatewayModule } from './gateway.module';
 import { INestApplicationContext, VersioningType } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -22,7 +25,10 @@ async function bootstrap() {
 		defaultVersion: '1',
 		type: VersioningType.URI,
 	});
-	gatewayModule.enableCors();
+	const configService = gatewayModule.get<ConfigService<IEnvVars>>(ConfigService);
+	// only honour X-Forwarded-For (rate-limit client IP) when explicitly behind a trusted proxy
+	gatewayModule.set('trust proxy', configService.getOrThrow('trustProxy', { infer: true }));
+	gatewayModule.enableCors(corsOptions(configService.getOrThrow('corsOrigins', { infer: true })));
 	useLogger(gatewayModule);
 
 	// HTTP API docs

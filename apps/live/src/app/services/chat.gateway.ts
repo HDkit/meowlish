@@ -35,11 +35,8 @@ type ModifiedSocket = Omit<Socket, 'data'> & { data: { uid: string } };
 @UseGuards(ClsGuard)
 @UsePipes(GlobalValidationPipe)
 @UseFilters(GlobalWsExceptionFilter)
-@WebSocketGateway({
-	cors: {
-		origin: '*',
-	},
-})
+// CORS is set from CORS_ORIGINS in RedisIoAdapter (gateway options are static)
+@WebSocketGateway()
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 	private readonly jwtPublicKey?: string;
 

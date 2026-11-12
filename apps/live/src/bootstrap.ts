@@ -1,4 +1,5 @@
 import { RedisIoAdapter } from './app/infra/adapter/redis-io.adapter';
+import { type IEnvVars } from './configs/config';
 import { LiveModule } from './live.module';
 import { PackageDefinition } from '@grpc/grpc-js/build/src/make-client';
 import { INestApplication, INestApplicationContext } from '@nestjs/common';
@@ -23,7 +24,13 @@ const useRedisWsAdapter = async (module: INestApplication) => {
 
 async function bootstrap() {
 	const liveModule = await NestFactory.create<NestExpressApplication>(LiveModule);
-	liveModule.enableCors();
+	const corsOrigins = liveModule
+		.get<ConfigService<IEnvVars>>(ConfigService)
+		.getOrThrow('corsOrigins', { infer: true });
+	liveModule.enableCors({
+		origin: corsOrigins.length > 0 ? corsOrigins : false,
+		credentials: true,
+	});
 
 	liveModule.connectMicroservice<MicroserviceOptions>(
 		{

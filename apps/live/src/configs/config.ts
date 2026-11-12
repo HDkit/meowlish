@@ -21,8 +21,28 @@ const mqSchema = z.object({
 	port: z.coerce.number(),
 });
 
+const DEV_CORS_ORIGINS = 'http://localhost:3000,http://localhost:5173';
+
+/** Comma-separated origins -> list. Never contains `*`: credentials are always allowed. */
+const corsOriginsSchema = z.preprocess(
+	v =>
+		typeof v === 'string' ?
+			v
+				.split(',')
+				.map(o => o.trim().replace(/\/+$/, ''))
+				.filter(o => o && o !== '*')
+		:	[],
+	z.array(z.string()),
+);
+
+/** CORS_ORIGINS, or the local dev front-ends when unset outside production. */
+const loadCorsOrigins = () =>
+	process.env.CORS_ORIGINS ?? (process.env.NODE_ENV === 'production' ? '' : DEV_CORS_ORIGINS);
+
 export const envFileSchema = z.object({
 	env: z.union([z.literal('development'), z.literal('production')]),
+	/** Origins allowed by CORS (HTTP and socket.io); empty means no cross-origin access. */
+	corsOrigins: corsOriginsSchema,
 	/** Signs pagination cursors (see CursorPaginationFactory). */
 	cursorSecret: z.string().min(32).optional(),
 	/** RS256 public key matching auth's JWT_PRIVATE_KEY; sockets are rejected without it. */
@@ -37,6 +57,7 @@ export type IEnvVars = z.infer<typeof envFileSchema>;
 // map your env vars to ConfigService's properties
 const loadEnv = (): DeepStringify<IEnvVars> => ({
 	env: process.env.NODE_ENV,
+	corsOrigins: loadCorsOrigins(),
 	cursorSecret: process.env.CURSOR_SECRET || undefined,
 	jwtPublicKey: process.env.JWT_PUBLIC_KEY || undefined,
 	database: {

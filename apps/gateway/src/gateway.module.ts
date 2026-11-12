@@ -13,11 +13,12 @@ import { LiveWsGatewayModule } from './live-ws-gateway/live-ws.router.module';
 import { NotificationGatewayModule } from './notification-gateway/notification.router.module';
 import { ResourceGatewayModule } from './resource-gateway/resource.router.module';
 import { RouteModule } from './router.module';
+import { throttlerOptions } from './throttle';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { CqrsModule } from '@nestjs/cqrs';
-// import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from '@server/logger';
 import { HealthModule } from '@server/telemetry';
 import {
@@ -41,15 +42,7 @@ import { GlobalValidationPipe } from '@server/utils';
 		}),
 		CqrsModule.forRoot(),
 		LoggerModule.forRoot({ appName: 'GatewayModule' }),
-		// ThrottlerModule.forRoot({
-		// 	throttlers: [
-		// 		{
-		// 			ttl: 60000,
-		// 			limit: 60,
-		// 		},
-		// 	],
-		// 	errorMessage: 'Rate limit reached',
-		// }),
+		ThrottlerModule.forRoot(throttlerOptions),
 		RouteModule,
 		AuthGatewayModule,
 		ExamGatewayModule,
@@ -69,10 +62,10 @@ import { GlobalValidationPipe } from '@server/utils';
 			provide: APP_PIPE,
 			useClass: GlobalValidationPipe,
 		},
-		// {
-		// 	provide: APP_GUARD,
-		// 	useClass: ThrottlerGuard,
-		// },
+		{
+			provide: APP_GUARD,
+			useClass: ThrottlerGuard,
+		},
 		{
 			provide: APP_GUARD,
 			useClass: JwtAuthGuard,

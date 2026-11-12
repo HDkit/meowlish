@@ -4,6 +4,7 @@ import { HasRoles } from '../auth/decorators/roles.decorator';
 import { GoogleOAuth2Guard } from '../auth/guards/google-oauth2.guard';
 import { JwtRefreshAuthGuard } from '../auth/guards/jwt-refresh-auth.guard';
 import { IEnvVars } from '../configs/config';
+import { strictThrottle } from '../throttle';
 import { type AuthenticatedRequest } from '../types/authenticated-request';
 import { AUTH_CLIENT } from './constants/auth';
 import { AddMailCredDto } from './dtos/req/add-mail-cred.req.dto';
@@ -55,6 +56,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { type ClientGrpc } from '@nestjs/microservices';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { auth } from '@server/generated';
 import { Permission, Role } from '@server/typing';
 import { ApiEmptyResponseEntity, ApiResponseEntity } from '@server/utils';
@@ -86,6 +88,7 @@ export class AuthGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Register with email and password' })
 	@ApiResponseEntity(ResponseTokensDto)
 	@SerializeOptions({ type: ResponseTokensDto })
+	@Throttle(strictThrottle)
 	registerMail(@Body() body: RegisterMailDto) {
 		const res = this.authService.registerMail(body);
 		return res;
@@ -96,6 +99,7 @@ export class AuthGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Log in with email and password' })
 	@ApiResponseEntity(ResponseTokensDto)
 	@SerializeOptions({ type: ResponseTokensDto })
+	@Throttle(strictThrottle)
 	loginMail(@Body() body: LoginMailDto) {
 		const res = this.authService.loginMail(body);
 		return res;
@@ -107,6 +111,7 @@ export class AuthGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Refresh access tokens using a refresh token' })
 	@ApiResponseEntity(ResponseTokensDto)
 	@SerializeOptions({ type: ResponseTokensDto })
+	@Throttle(strictThrottle)
 	refresh(@Req() req: AuthenticatedRequest) {
 		const res = this.authService.refresh({ identityId: req.user.sub });
 		return res;
@@ -175,6 +180,7 @@ export class AuthGatewayController implements OnModuleInit {
 	@Post('credentials/mail')
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Add mail credential to existing account' })
+	@Throttle(strictThrottle)
 	addMailCredential(@Body() body: AddMailCredDto, @Req() request: AuthenticatedRequest) {
 		return this.authService.addMailCredential({ ...body, identityId: request.user.sub });
 	}
@@ -271,6 +277,7 @@ export class AuthGatewayController implements OnModuleInit {
 	@Post('credentials/mail/password')
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Change password' })
+	@Throttle(strictThrottle)
 	updateMailPassword(@Body() body: UpdateMailPasswordDto, @Req() request: AuthenticatedRequest) {
 		return this.authService.updateMailPassword({ ...body, identityId: request.user.sub });
 	}

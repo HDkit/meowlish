@@ -54,8 +54,30 @@ const vpsEnvSchema = z.object({
 	feLoginRedirectUrl: z.url(),
 });
 
+const DEV_CORS_ORIGINS = 'http://localhost:3000,http://localhost:5173';
+
+/** Comma-separated origins -> list. Never contains `*`: credentials are always allowed. */
+const corsOriginsSchema = z.preprocess(
+	v =>
+		typeof v === 'string' ?
+			v
+				.split(',')
+				.map(o => o.trim().replace(/\/+$/, ''))
+				.filter(o => o && o !== '*')
+		:	[],
+	z.array(z.string()),
+);
+
+/** CORS_ORIGINS, or the local dev front-ends when unset outside production. */
+const loadCorsOrigins = () =>
+	process.env.CORS_ORIGINS ?? (process.env.NODE_ENV === 'production' ? '' : DEV_CORS_ORIGINS);
+
 export const envFileSchema = z.object({
 	env: z.union([z.literal('development'), z.literal('production')]),
+	/** Origins allowed by CORS; empty means no cross-origin access. */
+	corsOrigins: corsOriginsSchema,
+	/** Honour X-Forwarded-For (express `trust proxy`) when behind a reverse proxy. */
+	trustProxy: z.preprocess(v => v === 'true' || v === '1', z.boolean()),
 	redis: redisVarsSchema,
 	jwt: jwtVarsSchema,
 	googleOAuth2: googleOAuth2Schema,
@@ -68,6 +90,8 @@ export type IEnvVars = z.infer<typeof envFileSchema>;
 // map your env vars to ConfigService's properties
 const loadEnv = (): DeepStringify<IEnvVars> => ({
 	env: process.env.NODE_ENV,
+	corsOrigins: loadCorsOrigins(),
+	trustProxy: process.env.TRUST_PROXY,
 	redis: {
 		host: process.env.REDIS_HOST,
 		port: process.env.REDIS_PORT,
