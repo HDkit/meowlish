@@ -91,7 +91,6 @@ Generated message types (`exam.AddTagDto`, `resource.CreateBlogRequest`, …) ar
   - Internal values that only pass between gateway pieces and never become a request or response body, e.g. `auth.Tokens` between the Google OAuth strategy and its callback.
 - When a route takes IDs from the path, the body DTO implements `Omit<pkg.XRequest, 'idField'>`. Use the camelCase field name from the generated interface, not the proto's snake_case.
 - Don't cast the object you pass to a gRPC client (`as pkg.XRequest`). A cast there usually hides a real mismatch, such as a `string` where the proto expects a `Date`. Fix the DTO instead.
-- **Known legacy violations** (don't copy them; migrate them when you touch these files): `apps/resource/src/app/services/*.service.ts` and `apps/notification/src/app/services/*.service.ts` take and return generated messages.
 
 ## DTOs
 
@@ -187,6 +186,14 @@ configs/        config.ts (zod env schema), rmq/bullmq configs
 - Controllers stay thin: validate with a DTO, call the gRPC client, and return the result. Business logic belongs in the service.
 - Every route is documented (see **API documentation**).
 - Auth is on by default. Use `@IsPublic()` to open a route, and `@HasRoles(Role.X, …)` (from `@server/typing`) to restrict one.
+- **Authorization: pick the right mechanism.**
+  - Role-only rules go on the route with `@HasRoles(...)`.
+  - Mutations of resources tracked by the authorization service (exam, room, blog, flashcard) use `@ResourceAccess({ ..., requireOwnership: true })`. The owning service must publish `<svc>.<resource>.created` / `.deleted` events, and the authorization seed must backfill existing rows.
+  - Visibility that depends on the data itself (private lists, "own reports only", "own notifications only") is enforced **in the owning service**. The gateway forwards who is asking, and the service filters by it:
+    - resource RPCs carry `requesterId` + `privileged`, built with `requesterOf(req.user, PRIVILEGED_ROLES)` from `apps/gateway/src/auth/functions/requester.ts`;
+    - notification RPCs carry `recipientId: req.user.sub`.
+  - Never take a user id for these checks from the request body or query. Services answer "not yours" with 404, not 403, so ids of private data don't leak.
+- Paginated or filtered `GET` routes take a `@Query()` DTO: arrays via `ToStringArray()`, booleans via `str2bool`, and `page`/`limit` bounded with `@Min`/`@Max`. Don't use individual `@Query('x')` params.
 
 ## Naming
 
