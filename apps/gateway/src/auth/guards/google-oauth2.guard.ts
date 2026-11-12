@@ -3,7 +3,12 @@ import { RedisService } from '@liaoliaots/nestjs-redis';
 import { ExecutionContext, Injectable } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Claims } from '@server/utils';
+import { Response } from 'express';
 import Redis from 'ioredis';
+
+export const OAUTH_STATE_COOKIE = 'oauth2_state';
+export const OAUTH_STATE_TTL_SECONDS = 300;
+export const oauthStateKey = (nonce: string) => `gateway:oauth2:state:${nonce}`;
 
 @Injectable()
 export class GoogleOAuth2Guard extends AuthGuard('google') {
@@ -15,16 +20,22 @@ export class GoogleOAuth2Guard extends AuthGuard('google') {
 
 	async getAuthenticateOptions(context: ExecutionContext) {
 		const request = context.switchToHttp().getRequest<AuthenticatedRequest & { user?: Claims }>();
-		const stateKey = request.user && `gateway:oauth2:state:${crypto.randomUUID()}`;
-		if (stateKey) {
-			await this.redis.set(stateKey, request.user.sub, 'EX', 300);
-		}
-		// the `state` is one of the option key that's very hard to find document for when using passport-google-oauth20
-		// and the guard method getAuthenticateOptions of nestjs passport will pass the returned state to be used in canActivate()
-		// which is passed to passport.authenticate() function
+		if (!request.user) return { state: undefined };
+
+		// Linking flow: the state is an opaque single-use nonce (the server adds the key prefix) and is
+		// bound to this browser by a cookie, so a consent link can't be replayed by someone else.
+		const nonce = crypto.randomUUID();
+		await this.redis.set(oauthStateKey(nonce), request.user.sub, 'EX', OAUTH_STATE_TTL_SECONDS);
+		const response = context.switchToHttp().getResponse<Response>();
+		response.cookie(OAUTH_STATE_COOKIE, nonce, {
+			httpOnly: true,
+			sameSite: 'lax',
+			secure: request.secure || request.headers['x-forwarded-proto'] === 'https',
+			maxAge: OAUTH_STATE_TTL_SECONDS * 1000,
+			path: '/api/v1/auth/google/callback',
+		});
+		// `state` is passed by nestjs/passport's AuthGuard to passport.authenticate()
 		// https://github.com/nestjs/passport/blob/master/lib/auth.guard.ts
-		return {
-			state: stateKey,
-		};
+		return { state: nonce };
 	}
 }

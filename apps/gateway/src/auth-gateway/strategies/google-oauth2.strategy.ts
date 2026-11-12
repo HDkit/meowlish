@@ -1,3 +1,4 @@
+import { OAUTH_STATE_COOKIE, oauthStateKey } from '../../auth/guards/google-oauth2.guard';
 import { IEnvVars } from '../../configs/config';
 import { AUTH_CLIENT } from '../constants/auth';
 import { RedisService } from '@liaoliaots/nestjs-redis';
@@ -10,6 +11,12 @@ import { Request } from 'express';
 import Redis from 'ioredis';
 import { Profile, Strategy } from 'passport-google-oauth20';
 import { lastValueFrom } from 'rxjs';
+
+const readCookie = (req: Request, name: string): string | undefined =>
+	req.headers.cookie
+		?.split(';')
+		.map(part => part.trim().split('='))
+		.find(([key]) => key === name)?.[1];
 
 @Injectable()
 export class GoogleOAuth2Strategy
@@ -49,9 +56,12 @@ export class GoogleOAuth2Strategy
 	): Promise<auth.Tokens | boolean> {
 		const { id } = profile;
 		// If already logged in, add new credential to the identity
-		if (req.query['state']) {
-			const stateKey = req.query['state'] as string;
-			const cachedIdentityId = await this.redis.get(stateKey); // parse to Claims
+		const state = req.query['state'];
+		if (state) {
+			if (typeof state !== 'string' || readCookie(req, OAUTH_STATE_COOKIE) !== state) {
+				throw new UnauthorizedException('OAuth state mismatch');
+			}
+			const cachedIdentityId = await this.redis.getdel(oauthStateKey(state));
 			if (!cachedIdentityId) throw new UnauthorizedException('Expired session');
 			await lastValueFrom(
 				this.authService.addGoogleCredential({

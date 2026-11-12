@@ -153,7 +153,7 @@ export class AuthGatewayController implements OnModuleInit {
 	async getGoogleTokens(@Query('loginToken') loginToken: string) {
 		const data = await this.redis.get(`oauth2:google:loginToken:${loginToken}`);
 		if (!data) {
-			throw new Error('Invalid or expired login token');
+			throw new UnauthorizedException('Invalid or expired login token');
 		}
 		await this.redis.del(`oauth2:google:loginToken:${loginToken}`);
 		const tokens = JSON.parse(data) as auth.Tokens;
