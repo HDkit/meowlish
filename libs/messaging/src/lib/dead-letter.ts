@@ -1,0 +1,27 @@
+import type { RabbitMQConfig } from '@golevelup/nestjs-rabbitmq';
+
+export const DEAD_LETTER_EXCHANGE = 'eventbus.dlx';
+
+type QueueConfig = NonNullable<RabbitMQConfig['queues']>[number];
+
+/** Spread into `@RabbitSubscribe({...})` so rejected messages route to `<queue>.dlq`. */
+export function deadLetterQueue(queue: string) {
+	return {
+		queue,
+		queueOptions: {
+			durable: true as const,
+			deadLetterExchange: DEAD_LETTER_EXCHANGE,
+			deadLetterRoutingKey: queue,
+		},
+	};
+}
+
+/** Declares `<queue>.dlq`, bound to the dead-letter exchange with routing key `<queue>`. */
+export function dlqQueueConfig(queue: string): QueueConfig {
+	return {
+		name: `${queue}.dlq`,
+		exchange: DEAD_LETTER_EXCHANGE,
+		routingKey: queue,
+		options: { durable: true },
+	};
+}
