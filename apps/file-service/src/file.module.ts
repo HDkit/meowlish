@@ -37,6 +37,7 @@ const databaseModule = DatabaseModule.forRoot(PrismaClient);
 			serviceName: 'file-service',
 			prismaToken: DATABASE_SERVICE,
 			rabbitmq: true,
+			imports: [databaseModule],
 		}),
 		ConfigModule.forRoot({
 			envFilePath: ['apps/file-service/.env', '.env'], // nx serve runs from the workspace root

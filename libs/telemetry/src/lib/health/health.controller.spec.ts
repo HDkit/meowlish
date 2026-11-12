@@ -2,7 +2,9 @@ import { HealthModule } from './health.module';
 import { ReadinessRegistry } from './readiness.registry';
 import { AmqpConnectionManager } from '@golevelup/nestjs-rabbitmq';
 import { type INestApplication } from '@nestjs/common';
-import { Global, Module } from '@nestjs/common';
+import { Catch, ClassSerializerInterceptor, Global, Module } from '@nestjs/common';
+import { type ExceptionFilter } from '@nestjs/common';
+import { APP_FILTER, APP_INTERCEPTOR, Reflector } from '@nestjs/core';
 import { HealthCheckService } from '@nestjs/terminus';
 import { Test } from '@nestjs/testing';
 import { metrics } from '@opentelemetry/api';
@@ -11,6 +13,14 @@ import { type Server } from 'node:http';
 import request from 'supertest';
 
 const PRISMA = Symbol('PRISMA');
+
+// Mimics the gRPC apps: excludeAll serializer + catch-all filter that rethrows outside RPC.
+@Catch()
+class RethrowFilter implements ExceptionFilter {
+	catch(exception: unknown): never {
+		throw exception;
+	}
+}
 
 class TestReader extends MetricReader {
 	protected onShutdown(): Promise<void> {
@@ -53,6 +63,17 @@ describe('HealthController', () => {
 			providers: [
 				{ provide: PRISMA, useValue: prisma },
 				{
+					provide: APP_INTERCEPTOR,
+					inject: [Reflector],
+					useFactory: (reflector: Reflector) =>
+						new ClassSerializerInterceptor(reflector, {
+							excludeExtraneousValues: true,
+							exposeUnsetFields: true,
+							strategy: 'excludeAll',
+						}),
+				},
+				{ provide: APP_FILTER, useClass: RethrowFilter },
+				{
 					provide: AmqpConnectionManager,
 					useValue: { getConnections: () => [connection] },
 				},
@@ -80,6 +101,23 @@ describe('HealthController', () => {
 	afterEach(async () => {
 		await app.close();
 		metrics.disable();
+	});
+
+	it('ready 200 body keeps terminus shape under an excludeAll serializer', async () => {
+		const body = await get('/health/ready', 200);
+		expect(body.status).toBe('ok');
+		expect(body.info).toHaveProperty('database');
+	});
+
+	it('ready 503 body is terminus JSON despite a rethrowing catch-all filter', async () => {
+		prisma.$queryRawUnsafe.mockRejectedValue(new Error('db down'));
+		const res = await request(app.getHttpServer() as Server)
+			.get('/health/ready')
+			.expect(503)
+			.expect('content-type', /json/);
+		const body = res.body as HealthBody;
+		expect(body.status).toBe('error');
+		expect(body.error).toHaveProperty('database');
 	});
 
 	it('live returns 200 ok', async () => {

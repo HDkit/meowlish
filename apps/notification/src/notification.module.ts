@@ -41,6 +41,7 @@ const databaseModule = DatabaseModule.forRoot(PrismaClient);
 			serviceName: 'notification',
 			prismaToken: DATABASE_SERVICE,
 			rabbitmq: true,
+			imports: [databaseModule],
 		}),
 		ConfigModule.forRoot({
 			envFilePath: ['apps/notification/.env', '.env'], // nx serve runs from the workspace root

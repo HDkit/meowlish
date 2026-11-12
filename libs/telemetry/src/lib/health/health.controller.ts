@@ -2,13 +2,19 @@ import { getMeter } from '../start-telemetry';
 import { RabbitMqHealthIndicator } from './rabbitmq.health';
 import { ReadinessRegistry } from './readiness.registry';
 import {
+	ArgumentsHost,
+	Catch,
 	Controller,
+	type ExceptionFilter,
 	Get,
 	Inject,
 	type ModuleMetadata,
 	type OnModuleInit,
 	Optional,
+	SerializeOptions,
+	ServiceUnavailableException,
 	SetMetadata,
+	UseFilters,
 	VERSION_NEUTRAL,
 	Version,
 } from '@nestjs/common';
@@ -38,6 +44,21 @@ interface PingableClient {
 
 const CHECK_TIMEOUT_MS = 1000;
 
+/** Writes terminus's failure payload as JSON, bypassing app-wide catch-all filters. */
+@Catch(ServiceUnavailableException)
+export class HealthUnavailableFilter implements ExceptionFilter<ServiceUnavailableException> {
+	catch(exception: ServiceUnavailableException, host: ArgumentsHost): void {
+		host
+			.switchToHttp()
+			.getResponse<{ status: (code: number) => { json: (body: unknown) => void } }>()
+			.status(exception.getStatus())
+			.json(exception.getResponse());
+	}
+}
+
+@UseFilters(HealthUnavailableFilter)
+// Apps install a global serializer with `excludeAll`, which would strip the plain payload to `{}`.
+@SerializeOptions({ strategy: 'exposeAll', excludeExtraneousValues: false })
 @SetMetadata('isPublic', true)
 @Controller({ path: 'health', version: VERSION_NEUTRAL })
 export class HealthController implements OnModuleInit {
