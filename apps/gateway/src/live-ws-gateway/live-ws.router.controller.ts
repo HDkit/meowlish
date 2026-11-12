@@ -1,7 +1,7 @@
 import { IsPublic } from '../auth/decorators/public.decorator';
+import { SkipAllThrottlers } from '../throttle';
 import { All, Controller, Next, Req, Res } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { SkipThrottle } from '@nestjs/throttler';
 import { NextFunction, Request, Response } from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 
@@ -18,8 +18,11 @@ export class LiveWsGatewayController {
 			`http://${process.env.LIVE_SERVICE_WS_HOST}:${process.env.LIVE_SERVICE_WS_PORT}`,
 		changeOrigin: true,
 		ws: true,
+		// Live's engine.io matches its path by the strict prefix `/socket.io/`, so every form the
+		// gateway receives (`…/socket.io?EIO=…`, `…/socket.io/?EIO=…`, upgrades) must reach it with the
+		// slash. `[^?]*` keeps the match inside the path, never the query string.
 		pathRewrite: {
-			'^.*\\/socket\\.io': '/socket.io',
+			'^[^?]*/socket\\.io/?': '/socket.io/',
 		},
 	});
 
@@ -29,7 +32,7 @@ export class LiveWsGatewayController {
 		summary: 'Proxy to Live service',
 		description: 'Handles WebSocket upgrade and proxies requests to Live service Socket.IO server.',
 	})
-	@SkipThrottle()
+	@SkipAllThrottlers()
 	async get(@Req() req: Request, @Res() res: Response, @Next() next: NextFunction) {
 		await this.proxy(req, res, next);
 	}
