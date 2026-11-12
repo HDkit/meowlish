@@ -2,6 +2,9 @@
 # Apps send OTLP to http://lgtm:4318 (in compose) or http://localhost:${LGTM_OTLP_HTTP_PORT} (nx serve).
 # Start next to the main stack so the apps can resolve `lgtm`:
 #   docker compose -f docker/docker-compose.observability.yaml up -d
+# Both files declare `name: meowlish`, so they share the `meowlish_api-network` network.
+name: meowlish
+
 services:
   lgtm:
     image: grafana/otel-lgtm:0.38.1
@@ -22,7 +25,7 @@ services:
 networks:
   # Same network as the app stack (compose project `meowlish`) so `lgtm` resolves from the apps.
   api-network:
-    name: meowlish_api-network
+    driver: bridge
 
 volumes:
   lgtm-data:
