@@ -220,6 +220,48 @@
 					"mode": "multi"
 				}
 			}
+		},
+		{
+			"type": "timeseries",
+			"title": "Consumer failures (5m rate)",
+			"id": 6,
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"gridPos": {
+				"h": 8,
+				"w": 12,
+				"x": 12,
+				"y": 16
+			},
+			"targets": [
+				{
+					"datasource": {
+						"type": "prometheus",
+						"uid": "prometheus"
+					},
+					"expr": "sum by (job, consumer) (rate(consumer_failures_total[5m]))",
+					"legendFormat": "{{job}} / {{consumer}}",
+					"refId": "A"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"unit": "ops",
+					"noValue": "no data"
+				},
+				"overrides": []
+			},
+			"options": {
+				"legend": {
+					"displayMode": "list",
+					"placement": "bottom"
+				},
+				"tooltip": {
+					"mode": "multi"
+				}
+			}
 		}
 	]
 }

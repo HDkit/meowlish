@@ -1,7 +1,9 @@
-import { MessageHandlerErrorBehavior, type RabbitMQConfig } from '@golevelup/nestjs-rabbitmq';
+import type { MessageHandlerOptions, RabbitMQConfig } from '@golevelup/nestjs-rabbitmq';
+import { getMeter } from '@server/telemetry';
 
 export const DEAD_LETTER_EXCHANGE = 'eventbus.dlx';
 
+type MessageErrorHandler = NonNullable<MessageHandlerOptions['errorHandler']>;
 type QueueConfig = NonNullable<RabbitMQConfig['queues']>[number];
 
 /** Spread into `@RabbitSubscribe({...})` so rejected messages route to `<queue>.dlq`. */
@@ -13,8 +15,20 @@ export function deadLetterQueue(queue: string) {
 			deadLetterExchange: DEAD_LETTER_EXCHANGE,
 			deadLetterRoutingKey: queue,
 		},
-		// NACK without requeue so a throwing handler dead-letters instead of looping.
-		errorBehavior: MessageHandlerErrorBehavior.NACK,
+		// Counts the failure, then NACKs without requeue (like golevelup's defaultNackErrorHandler)
+		// so a throwing handler dead-letters instead of looping. Overrides `errorBehavior`.
+		errorHandler: consumerFailureHandler(queue),
+	};
+}
+
+function consumerFailureHandler(queue: string): MessageErrorHandler {
+	return (channel, msg) => {
+		getMeter()
+			.createCounter('consumer_failures_total', {
+				description: 'Messages whose consumer handler threw and were dead-lettered',
+			})
+			.add(1, { consumer: queue });
+		channel.nack(msg, false, false);
 	};
 }
 

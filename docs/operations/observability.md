@@ -113,7 +113,7 @@ Grafana > Dashboards > "Messaging" (uid `meowlish-messaging`, `docker/observabil
 - **Inbox duplicates skipped** (`inbox_duplicates_total{service,consumer}`, 5 min increase): redeliveries that the inbox recognised and ignored. Occasional values are expected (at-least-once delivery); a steady stream means a consumer keeps failing after commit or a queue keeps redelivering.
 - **Dead-letter queue depth** (`rabbitmq_detailed_queue_messages{queue=~".*\\.dlq"}`): messages sitting in each `<queue>.dlq`. Comes from RabbitMQ, not the apps.
 
-There is no `consumer_failures_total` metric and so no panel for it. Consumer failures show up as dead-lettered messages (the DLQ panel) and in the service logs.
+- **Consumer failures** (`consumer_failures_total{consumer}`, 5 min rate, grouped by `job` = the service): handler errors. The `deadLetterQueue` error handler counts each one and then nacks the message without requeue, so every increment is a message headed for `<queue>.dlq`.
 
 RabbitMQ metrics reach Grafana through `docker/observability/otelcol-rabbitmq.yaml`, an extra collector config passed to `lgtm` through `OTELCOL_EXTRA_ARGS`. It scrapes `rabbit-mq:15692/metrics/detailed?family=queue_coarse_metrics` every 15 s, which needs the `rabbitmq_prometheus` plugin. `docker/docker-compose.db.yaml` enables it with `docker/rabbitmq/enabled_plugins`; the file only takes effect when the `rabbit-mq` container is recreated (`docker compose -f docker/docker-compose.db.yaml up -d --force-recreate rabbit-mq`). Until then the DLQ panel and the `DeadLetters` alert have no data.
 
@@ -125,7 +125,7 @@ Every consumer queue `<q>` dead-letters (nack without requeue) to the `eventbus.
 
 To inspect a dead-lettered message: RabbitMQ management UI (<http://localhost:15672>) > Queues > `<q>.dlq` > Get messages (choose "Nack message requeue true" so it stays). The `x-death` header shows the original queue and the reason; the service logs have the error.
 
-To replay it after fixing the cause: on the same page open "Move messages", enter the original queue name `<q>` as destination, and move. Alternatively use a shovel from `<q>.dlq` to `<q>`. The inbox makes a replay safe: if the first attempt had already committed, the message is skipped as a duplicate.
+To replay it after fixing the cause: on the same page open "Move messages", enter the original queue name `<q>` as destination, and move. Alternatively use a shovel from `<q>.dlq` to `<q>`. "Move messages" and shovels need the `rabbitmq_shovel` and `rabbitmq_shovel_management` plugins; they are listed in `docker/rabbitmq/enabled_plugins` and, like `rabbitmq_prometheus`, only take effect after the `rabbit-mq` container is recreated. The inbox makes a replay safe: if the first attempt had already committed, the message is skipped as a duplicate.
 
 ## One-time upgrade: recreate consumer queues
 
