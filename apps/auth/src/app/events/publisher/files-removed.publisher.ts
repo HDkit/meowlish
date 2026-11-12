@@ -3,45 +3,48 @@ import {
 	IFileRepositoryToken,
 } from '../../../domain/repositories/file.repository';
 import { FileRemovedIntegrationEvent } from '../files-removed.event';
-import { AmqpConnectionManager } from '@golevelup/nestjs-rabbitmq';
+import { Transactional } from '@nestjs-cls/transactional';
 import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
-import { Inject, Injectable, InternalServerErrorException, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { AppLoggerService } from '@server/logger';
+import { OutboxPublisher } from '@server/messaging';
 import { Job, Queue } from 'bullmq';
+import { UseCls } from 'nestjs-cls';
 
 @Processor('auth')
 export class FilesRemovedPublisher extends WorkerHost {
 	constructor(
 		@Inject(IFileRepositoryToken) private readonly fileRepository: IFileRepository,
-		private readonly amqpConnectionManager: AmqpConnectionManager,
+		private readonly outbox: OutboxPublisher,
 		private readonly logger: AppLoggerService,
 	) {
 		super();
 	}
 
-	get amqpConnection() {
-		const connection = this.amqpConnectionManager.getConnection('pub');
-		if (!connection) throw new InternalServerErrorException('AMQP "pub" connection not available');
-		return connection;
+	async process(job: Job): Promise<void> {
+		if (job.name !== 'publish-deleted-files') return;
+		try {
+			let more = true;
+			while (more) more = await this.publishBatch();
+		} catch (e) {
+			// Rethrow so BullMQ marks the job failed; the batch rolled back and the rows stay queued.
+			this.logger.error(`Failed to publish deleted files: ${String(e)}`);
+			throw e;
+		}
+		this.logger.log('Finished publishing files to be deleted');
 	}
 
-	async process(job: Job) {
-		try {
-			if (job.name !== 'publish-deleted-files') return;
-			while (true) {
-				const files = await this.fileRepository.getAndRemoveDeletedFileIds();
-				if (files.length === 0) break;
-				const message: FileRemovedIntegrationEvent = {
-					files: files,
-				};
-				await this.amqpConnection.publish('eventbus', 'auth.files.removed', message, {
-					persistent: true,
-				});
-			}
-			this.logger.log('Finished publishing files to be deleted');
-		} catch (e) {
-			this.logger.error(e as string);
-		}
+	/** Removes one batch of deleted-file rows and writes the event in the same transaction. */
+	@UseCls()
+	@Transactional()
+	private async publishBatch(): Promise<boolean> {
+		const files = await this.fileRepository.getAndRemoveDeletedFileIds();
+		if (files.length === 0) return false;
+		const message: FileRemovedIntegrationEvent = {
+			files: files,
+		};
+		await this.outbox.add('auth.files.removed', message);
+		return true;
 	}
 }
 

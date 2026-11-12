@@ -11,7 +11,7 @@ import {
 } from '../types/flash-card.input';
 import { toSkipTake } from '../types/pagination';
 import { type Requester } from '../types/requester';
-import { TransactionHost } from '@nestjs-cls/transactional';
+import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma-client/resource';
@@ -23,6 +23,7 @@ export class FlashcardService {
 		private readonly events: ResourceEventsPublisher,
 	) {}
 
+	@Transactional()
 	async createFlashCard(data: CreateFlashCardInput): Promise<FlashCardReadModel> {
 		const list = await this.txHost.tx.flashCardList.findUnique({ where: { id: data.listId } });
 		if (!list) throw new NotFoundException('FlashCardList not found');
@@ -76,6 +77,7 @@ export class FlashcardService {
 		return toFlashCardReadModel(updated);
 	}
 
+	@Transactional()
 	async deleteFlashCard(id: string): Promise<void> {
 		const entity = await this.txHost.tx.flashCard.findUnique({ where: { id: id } });
 		if (!entity) throw new NotFoundException('FlashCard not found');

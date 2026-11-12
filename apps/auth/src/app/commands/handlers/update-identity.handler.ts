@@ -2,17 +2,20 @@ import {
 	type IIdentityRepository,
 	IIdentityRepositoryToken,
 } from '../../../domain/repositories/identity.repository';
+import { FileAddedPublisher } from '../../events/publisher/file-added.publisher';
 import { UpdateIdentityCommand } from '../auth.update-identity.command';
+import { Transactional } from '@nestjs-cls/transactional';
 import { Inject, NotFoundException } from '@nestjs/common';
-import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 
 @CommandHandler(UpdateIdentityCommand)
 export class UpdateIdentityCommandHandler implements ICommandHandler<UpdateIdentityCommand> {
 	constructor(
 		@Inject(IIdentityRepositoryToken) private readonly identityRepository: IIdentityRepository,
-		private readonly eventBus: EventBus,
+		private readonly fileAddedPublisher: FileAddedPublisher,
 	) {}
 
+	@Transactional()
 	public async execute(command: UpdateIdentityCommand): Promise<void> {
 		const payload = command.payload;
 		const identity = await this.identityRepository.findOneById(payload.identityId);
@@ -25,6 +28,6 @@ export class UpdateIdentityCommandHandler implements ICommandHandler<UpdateIdent
 			phoneNumber: payload.phoneNumber,
 		});
 		await this.identityRepository.save(identity);
-		this.eventBus.publishAll(identity.getUncommittedEvents());
+		await this.fileAddedPublisher.publish(identity.getUncommittedEvents());
 	}
 }

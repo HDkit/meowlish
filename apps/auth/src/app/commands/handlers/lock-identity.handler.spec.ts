@@ -1,7 +1,17 @@
 import { LockIdentityCommand } from '../auth.lock-identity.command';
 import { LockIdentityCommandHandler } from './lock-identity.handler';
+import { NoOpTransactionalAdapter, TransactionHost } from '@nestjs-cls/transactional';
 import { ForbiddenException } from '@nestjs/common';
 import { Role } from '@server/typing';
+
+// execute() is @Transactional(); register the static host it looks up, backed by a no-op adapter.
+const txHost = new TransactionHost<NoOpTransactionalAdapter>({
+	...new NoOpTransactionalAdapter({ tx: {}, disableWarning: true }).optionsFactory({}),
+	connectionName: undefined,
+	enableTransactionProxy: false,
+	defaultTxOptions: {},
+	extraProviderTokens: [],
+});
 
 const setup = (roles: Record<string, Role[]>) => {
 	const identity = { lock: jest.fn(), getUncommittedEvents: () => [] };
@@ -12,8 +22,14 @@ const setup = (roles: Record<string, Role[]>) => {
 		),
 		save: jest.fn(),
 	};
-	const handler = new LockIdentityCommandHandler(repo as never, { publishAll: jest.fn() } as never);
-	return { handler: handler, repo: repo, identity: identity };
+	const publisher = {
+		publish: jest.fn(() => {
+			if (!txHost.isTransactionActive()) throw new Error('publish outside a transaction');
+			return Promise.resolve();
+		}),
+	};
+	const handler = new LockIdentityCommandHandler(repo as never, publisher as never);
+	return { handler: handler, repo: repo, identity: identity, publisher: publisher };
 };
 
 const lock = (identityId: string, lockedBy: string) =>
@@ -21,9 +37,10 @@ const lock = (identityId: string, lockedBy: string) =>
 
 describe('LockIdentityCommandHandler', () => {
 	it('lets a mod lock a regular user', async () => {
-		const { handler, identity } = setup({ mod: [Role.Mod], user: [Role.User] });
+		const { handler, identity, publisher } = setup({ mod: [Role.Mod], user: [Role.User] });
 		await handler.execute(lock('user', 'mod'));
 		expect(identity.lock).toHaveBeenCalledWith('mod');
+		expect(publisher.publish).toHaveBeenCalledTimes(1);
 	});
 
 	it.each([

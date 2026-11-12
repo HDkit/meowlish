@@ -2,7 +2,7 @@ import {
 	ExamManagementCommandHandlers,
 	ExamPracticeCommandHandlers,
 } from './app/commands/handlers';
-import { IntegrationEventHandlers } from './app/events/handlers';
+import { ExamEventHandlers, IntegrationEventHandlers } from './app/events/handlers';
 import { IntegrationEventPublishers } from './app/events/publishers';
 import { ExamManagementQueryHandlers } from './app/queries/handlers/management';
 import { ExamPracticeQueryHandler } from './app/queries/handlers/practice';
@@ -13,7 +13,6 @@ import { config } from './configs/config';
 import { rmqPubConfig } from './configs/rmq.pub.config';
 import { rmqSubConfig } from './configs/rmq.sub.config';
 import { FILE_CLIENT } from './constants/file';
-import { ExamEventHandlers } from './domain/events/handlers';
 import { IAttemptRepositoryToken } from './domain/repositories/attempt.repository';
 import { IExamRepositoryToken } from './domain/repositories/exam.repository';
 import { IFileRepositoryToken } from './domain/repositories/file.repository';

@@ -8,6 +8,7 @@ import {
 } from '../../../domain/repositories/attempt.repository';
 import {
 	AmqpConnectionManager,
+	MessageHandlerErrorBehavior,
 	RabbitPayload,
 	RabbitRequest,
 	RabbitSubscribe,
@@ -107,6 +108,9 @@ export class WritingScoredHandler {
 			deadLetterExchange: 'exam.dlx',
 			deadLetterRoutingKey: 'writing.result.dlq',
 		},
+		// Retries go through exam.retry; once they are exhausted the throw below dead-letters the
+		// message (NACK without requeue) to exam.writing.result.dlq.
+		errorBehavior: MessageHandlerErrorBehavior.NACK,
 	})
 	async handle(
 		@RabbitPayload() payload: WritingScoredEvent,

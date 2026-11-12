@@ -1,5 +1,6 @@
 import { type ResourceEventsPublisher } from '../events/resource-events.publisher';
 import { ReportService } from './report.service';
+import { NoOpTransactionalAdapter, TransactionHost } from '@nestjs-cls/transactional';
 import { NotFoundException } from '@nestjs/common';
 
 const report = (overrides: Record<string, unknown> = {}) => ({
@@ -21,6 +22,15 @@ const report = (overrides: Record<string, unknown> = {}) => ({
 
 const firstArg = (fn: jest.Mock): unknown => (fn.mock.calls as unknown[][])[0][0];
 const whereOf = (fn: jest.Mock): unknown => (firstArg(fn) as { where: unknown }).where;
+
+// Writing methods are @Transactional(); register the static host they look up (no-op adapter).
+new TransactionHost<NoOpTransactionalAdapter>({
+	...new NoOpTransactionalAdapter({ tx: {}, disableWarning: true }).optionsFactory({}),
+	connectionName: undefined,
+	enableTransactionProxy: false,
+	defaultTxOptions: {},
+	extraProviderTokens: [],
+});
 
 const setup = () => {
 	const tx = {

@@ -4,27 +4,21 @@ import {
 	IAttemptRepositoryToken,
 } from '../../../domain/repositories/attempt.repository';
 import { AttemptSubmittedIntegrationEvent } from '../attempt-submitted.event';
-import { AmqpConnectionManager } from '@golevelup/nestjs-rabbitmq';
-import { Inject, InternalServerErrorException, NotFoundException } from '@nestjs/common';
-import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
-import { AppLoggerService } from '@server/logger';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { OutboxPublisher } from '@server/messaging';
+import { type Event } from '@server/utils';
 
-@EventsHandler(AttemptSubmittedEvent)
-export class AttemptSubmittedPublisher implements IEventHandler<AttemptSubmittedEvent> {
+/** Writes `exam.attempt.submitted` to the outbox; call it inside the transaction that ended the attempt. */
+@Injectable()
+export class AttemptSubmittedPublisher {
 	constructor(
 		@Inject(IAttemptRepositoryToken) private readonly attemptRepository: IAttemptRepository,
-		private readonly amqpConnectionManager: AmqpConnectionManager,
-		private readonly logger: AppLoggerService,
+		private readonly outbox: OutboxPublisher,
 	) {}
 
-	get amqpConnection() {
-		const connection = this.amqpConnectionManager.getConnection('pub');
-		if (!connection) throw new InternalServerErrorException('AMQP "pub" connection not available');
-		return connection;
-	}
-
-	async handle(event: AttemptSubmittedEvent) {
-		try {
+	async publish(events: readonly Event<unknown>[]): Promise<void> {
+		for (const event of events) {
+			if (!(event instanceof AttemptSubmittedEvent)) continue;
 			const attemptedBy = await this.attemptRepository.getAttemptedUser(event.payload.attemptId);
 			if (!attemptedBy) throw new NotFoundException('Could not find user for the attempt');
 
@@ -32,11 +26,7 @@ export class AttemptSubmittedPublisher implements IEventHandler<AttemptSubmitted
 				attemptId: event.payload.attemptId,
 				attemptedBy: attemptedBy,
 			};
-			await this.amqpConnection.publish('eventbus', 'exam.attempt.submitted', message, {
-				persistent: true,
-			});
-		} catch (e) {
-			this.logger.error(e as string);
+			await this.outbox.add('exam.attempt.submitted', message);
 		}
 	}
 }

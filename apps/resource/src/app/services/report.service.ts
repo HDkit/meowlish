@@ -10,7 +10,7 @@ import {
 	type UpdateReportInput,
 } from '../types/report.input';
 import { type Requester } from '../types/requester';
-import { TransactionHost } from '@nestjs-cls/transactional';
+import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, PrismaClient, Report, ReportFile } from '@prisma-client/resource';
@@ -79,6 +79,7 @@ export class ReportService {
 		return this.toReadModel(await this.findVisibleReport(id, requester));
 	}
 
+	@Transactional()
 	async updateReport(data: UpdateReportInput): Promise<ReportReadModel> {
 		const report = await this.txHost.tx.report.findUnique({ where: { id: data.id } });
 		if (!report) throw new NotFoundException('Report not found');

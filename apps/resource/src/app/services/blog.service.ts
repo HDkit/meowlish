@@ -9,7 +9,7 @@ import {
 	type UpdateBlogInput,
 } from '../types/blog.input';
 import { toSkipTake } from '../types/pagination';
-import { TransactionHost } from '@nestjs-cls/transactional';
+import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Blog, Prisma, PrismaClient } from '@prisma-client/resource';
@@ -33,6 +33,7 @@ export class BlogService {
 		};
 	}
 
+	@Transactional()
 	async createBlog(data: CreateBlogInput): Promise<BlogReadModel> {
 		const created = await this.txHost.tx.blog.create({
 			data: {
@@ -67,6 +68,7 @@ export class BlogService {
 		return this.toReadModel(updated);
 	}
 
+	@Transactional()
 	async deleteBlog(id: string): Promise<void> {
 		const entity = await this.txHost.tx.blog.findUnique({ where: { id: id } });
 		if (!entity) throw new NotFoundException('Blog not found');

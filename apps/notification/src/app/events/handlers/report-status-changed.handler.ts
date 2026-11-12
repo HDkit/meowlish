@@ -1,13 +1,14 @@
 import { NotificationPreferencesService } from '../../services/notification-preferences.service';
 import { NotificationService } from '../../services/notification.service';
-import {
-	RabbitPayload,
-	RabbitSubscribe,
-	defaultNackErrorHandler,
-} from '@golevelup/nestjs-rabbitmq';
+import { RabbitPayload, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
+import { Transactional } from '@nestjs-cls/transactional';
 import { Injectable } from '@nestjs/common';
-import { AppLoggerService } from '@server/logger';
+import { InboxService, deadLetterQueue, unwrapEvent } from '@server/messaging';
+import { validatePayload } from '@server/utils';
 import { IsString } from 'class-validator';
+import { UseCls } from 'nestjs-cls';
+
+export const REPORT_STATUS_CHANGED_QUEUE = 'notification.events.report.status-changed';
 
 class ReportStatusChangedEvent {
 	@IsString() reportId!: string;
@@ -21,38 +22,31 @@ export class ReportStatusChangedHandler {
 	constructor(
 		private readonly notificationService: NotificationService,
 		private readonly preferencesService: NotificationPreferencesService,
-		private readonly logger: AppLoggerService,
+		private readonly inbox: InboxService,
 	) {}
 
+	@UseCls()
 	@RabbitSubscribe({
 		connection: 'sub',
 		exchange: 'eventbus',
 		routingKey: 'resource.report.status-changed',
-		queue: 'notification.events.report.status-changed',
-		queueOptions: {
-			durable: true,
-			deadLetterExchange: 'notification.dlx',
-			deadLetterRoutingKey: 'report.status-changed.failed',
-		},
-		errorHandler: defaultNackErrorHandler,
+		...deadLetterQueue(REPORT_STATUS_CHANGED_QUEUE),
 	})
-	async handle(@RabbitPayload() payload: ReportStatusChangedEvent) {
-		try {
-			if (!(await this.preferencesService.isEnabled(payload.reportedBy, 'report'))) return;
-			await this.notificationService.createNotification({
-				recipientId: payload.reportedBy,
-				type: 'report',
-				title: 'Report Status Updated',
-				message: `Your report "${payload.title}" has been ${payload.status}.`,
-				data: JSON.stringify({
-					reportId: payload.reportId,
-					status: payload.status,
-				}),
-			});
-		} catch (e) {
-			this.logger.error(
-				`Failed to create report notification: ${e instanceof Error ? (e.stack ?? e.message) : String(e)}`,
-			);
-		}
+	@Transactional()
+	async handle(@RabbitPayload() message: unknown): Promise<void> {
+		const { id, payload } = unwrapEvent<unknown>(message);
+		if (!(await this.inbox.claim(id, REPORT_STATUS_CHANGED_QUEUE))) return;
+		const event = await validatePayload(ReportStatusChangedEvent, payload);
+		if (!(await this.preferencesService.isEnabled(event.reportedBy, 'report'))) return;
+		await this.notificationService.createNotification({
+			recipientId: event.reportedBy,
+			type: 'report',
+			title: 'Report Status Updated',
+			message: `Your report "${event.title}" has been ${event.status}.`,
+			data: JSON.stringify({
+				reportId: event.reportId,
+				status: event.status,
+			}),
+		});
 	}
 }

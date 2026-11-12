@@ -1,6 +1,5 @@
-import { AmqpConnectionManager } from '@golevelup/nestjs-rabbitmq';
 import { Injectable } from '@nestjs/common';
-import { AppLoggerService } from '@server/logger';
+import { OutboxPublisher } from '@server/messaging';
 
 /** Resource types the authorization service tracks ownership for. */
 export type OwnedResourceType = 'blog' | 'flashcard';
@@ -13,22 +12,19 @@ export interface ReportStatusChangedEvent {
 }
 
 /**
- * Publishes integration events on the `eventbus` exchange.
- * Failures are logged, not thrown: the DB write already happened and must not be reported as failed.
+ * Writes integration events to the outbox; the relay publishes them on the `eventbus` exchange.
+ * Call these inside the `@Transactional()` method that writes the data they describe.
  */
 @Injectable()
 export class ResourceEventsPublisher {
-	constructor(
-		private readonly amqpConnectionManager: AmqpConnectionManager,
-		private readonly logger: AppLoggerService,
-	) {}
+	constructor(private readonly outbox: OutboxPublisher) {}
 
 	async resourceCreated(
 		resourceType: OwnedResourceType,
 		resourceId: string,
 		ownerId: string,
 	): Promise<void> {
-		await this.publish('resource.resource.created', {
+		await this.outbox.add('resource.resource.created', {
 			resourceType: resourceType,
 			resourceId: resourceId,
 			ownerId: ownerId,
@@ -36,30 +32,16 @@ export class ResourceEventsPublisher {
 	}
 
 	async resourcesDeleted(resourceType: OwnedResourceType, resourceIds: string[]): Promise<void> {
-		await Promise.all(
-			resourceIds.map(resourceId =>
-				this.publish('resource.resource.deleted', {
-					resourceType: resourceType,
-					resourceId: resourceId,
-				}),
-			),
-		);
+		// Sequential: the outbox rows share one interactive transaction.
+		for (const resourceId of resourceIds) {
+			await this.outbox.add('resource.resource.deleted', {
+				resourceType: resourceType,
+				resourceId: resourceId,
+			});
+		}
 	}
 
 	async reportStatusChanged(event: ReportStatusChangedEvent): Promise<void> {
-		await this.publish('resource.report.status-changed', event);
-	}
-
-	private async publish(routingKey: string, payload: object): Promise<void> {
-		const connection = this.amqpConnectionManager.getConnection('pub');
-		if (!connection) {
-			this.logger.error(`AMQP "pub" connection not available; dropped ${routingKey}`);
-			return;
-		}
-		try {
-			await connection.publish('eventbus', routingKey, payload, { persistent: true });
-		} catch (e) {
-			this.logger.error(`Failed to publish ${routingKey}: ${String(e)}`);
-		}
+		await this.outbox.add('resource.report.status-changed', event);
 	}
 }

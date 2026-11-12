@@ -13,9 +13,9 @@ import {
 	IRoomRepositoryToken,
 } from '../../domain/repositories/room.repository';
 import { ChatGateway } from './chat.gateway';
-import { AmqpConnectionManager } from '@golevelup/nestjs-rabbitmq';
-import { Inject, Injectable, InternalServerErrorException } from '@nestjs/common';
-import { AppLoggerService } from '@server/logger';
+import { Transactional } from '@nestjs-cls/transactional';
+import { Inject, Injectable } from '@nestjs/common';
+import { OutboxPublisher } from '@server/messaging';
 import { CursorPaginationFactory, CursorPaginationHelper } from '@server/utils';
 
 @Injectable()
@@ -34,19 +34,12 @@ export class ChatService {
 		private readonly roomReadRepository: IRoomReadRepository,
 		@Inject(IRoomRepositoryToken)
 		private readonly roomRepository: IRoomRepository,
-		private readonly amqpConnectionManager: AmqpConnectionManager,
-		private readonly logger: AppLoggerService,
+		private readonly outbox: OutboxPublisher,
 	) {
 		this.cursorPaginationHelpers = {
 			getRoomList: cursorPaginationFactory.create('GetRoomList'),
 			getChatLogsOf: cursorPaginationFactory.create('GetChatLogsOf'),
 		};
-	}
-
-	private get amqpConnection() {
-		const connection = this.amqpConnectionManager.getConnection('pub');
-		if (!connection) throw new InternalServerErrorException('AMQP "pub" connection not available');
-		return connection;
 	}
 
 	async getRoomList(options?: {
@@ -160,39 +153,26 @@ export class ChatService {
 		});
 	}
 
+	@Transactional()
 	async createRoom(name: string, createdBy?: string): Promise<string> {
 		const roomId = await this.roomRepository.createRoom(name);
 
 		if (createdBy) {
-			try {
-				await this.amqpConnection.publish(
-					'eventbus',
-					'live.room.created',
-					{ resourceType: 'room', resourceId: roomId, ownerId: createdBy },
-					{ persistent: true },
-				);
-			} catch (e) {
-				this.logger.error(`Failed to publish live.room.created event: ${e as string}`);
-			}
+			await this.outbox.add('live.room.created', {
+				resourceType: 'room',
+				resourceId: roomId,
+				ownerId: createdBy,
+			});
 		}
 
 		return roomId;
 	}
 
+	@Transactional()
 	async removeRoom(roomId: string): Promise<void> {
 		await this.roomRepository.removeRoom(roomId);
 		this.chatGateway.closeRoom(roomId);
-
-		try {
-			await this.amqpConnection.publish(
-				'eventbus',
-				'live.room.deleted',
-				{ resourceId: roomId },
-				{ persistent: true },
-			);
-		} catch (e) {
-			this.logger.error(`Failed to publish live.room.deleted event: ${e as string}`);
-		}
+		await this.outbox.add('live.room.deleted', { resourceId: roomId });
 	}
 
 	async banUserFrom(roomId: string, uid: string, reason: string): Promise<void> {

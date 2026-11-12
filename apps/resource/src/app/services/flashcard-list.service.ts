@@ -18,7 +18,7 @@ import {
 } from '../types/flash-card-list.input';
 import { toSkipTake } from '../types/pagination';
 import { type Requester } from '../types/requester';
-import { TransactionHost } from '@nestjs-cls/transactional';
+import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { FlashCardList, Prisma, PrismaClient } from '@prisma-client/resource';
@@ -88,6 +88,7 @@ export class FlashcardListService {
 		return toFlashCardListReadModel(updated);
 	}
 
+	@Transactional()
 	async deleteFlashCardList(id: string, requester: Requester): Promise<void> {
 		await this.findOwnedList(id, requester);
 
@@ -143,6 +144,7 @@ export class FlashcardListService {
 	}
 
 	/** listId is required on cards, so removing a card from its list deletes the card. */
+	@Transactional()
 	async removeCardFromList(
 		listId: string,
 		flashCardId: string,

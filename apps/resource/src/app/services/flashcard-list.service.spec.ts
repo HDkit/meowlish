@@ -1,5 +1,6 @@
 import { type ResourceEventsPublisher } from '../events/resource-events.publisher';
 import { FlashcardListService } from './flashcard-list.service';
+import { NoOpTransactionalAdapter, TransactionHost } from '@nestjs-cls/transactional';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 
 const list = (overrides: Record<string, unknown> = {}) => ({
@@ -12,6 +13,15 @@ const list = (overrides: Record<string, unknown> = {}) => ({
 	createdAt: new Date('2026-01-01'),
 	updatedAt: new Date('2026-01-01'),
 	...overrides,
+});
+
+// Writing methods are @Transactional(); register the static host they look up (no-op adapter).
+new TransactionHost<NoOpTransactionalAdapter>({
+	...new NoOpTransactionalAdapter({ tx: {}, disableWarning: true }).optionsFactory({}),
+	connectionName: undefined,
+	enableTransactionProxy: false,
+	defaultTxOptions: {},
+	extraProviderTokens: [],
 });
 
 const setup = () => {

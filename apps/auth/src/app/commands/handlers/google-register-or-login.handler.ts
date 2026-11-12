@@ -11,10 +11,12 @@ import {
 } from '../../../domain/repositories/role.read.repository';
 import { LoginType } from '../../../enums/login-type.enum';
 import { Tokens } from '../../../types/tokens.type';
+import { UserLoggedInPublisher } from '../../events/publisher/logged-in.publisher';
 import { TokenService } from '../../services/token.service';
 import { GoogleRegisterOrLoginCommand } from '../auth.google-register-or-login.command';
+import { Transactional } from '@nestjs-cls/transactional';
 import { Inject, UnauthorizedException } from '@nestjs/common';
-import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Role } from '@server/typing';
 
 @CommandHandler(GoogleRegisterOrLoginCommand)
@@ -23,10 +25,11 @@ export class GoogleRegisterOrLoginCommandHandler implements ICommandHandler<Goog
 		@Inject(IIdentityRepositoryToken) private readonly identityRepository: IIdentityRepository,
 		@Inject(IRoleReadRepositoryToken)
 		private readonly roleReadRepository: IRoleReadRepository,
-		private readonly eventBus: EventBus,
+		private readonly loggedInPublisher: UserLoggedInPublisher,
 		private readonly tokenService: TokenService,
 	) {}
 
+	@Transactional()
 	public async execute(command: GoogleRegisterOrLoginCommand): Promise<Tokens> {
 		const payload = command.payload;
 		const credential = await this.identityRepository.findOneCredential(
@@ -40,7 +43,9 @@ export class GoogleRegisterOrLoginCommandHandler implements ICommandHandler<Goog
 	async login(identityId: string): Promise<Tokens> {
 		const claims = await this.identityRepository.getClaimsOfId(identityId);
 		if (!claims) throw new UnauthorizedException();
-		this.eventBus.publish(new UserLoggedInEvent({ uid: identityId, date: new Date() }));
+		await this.loggedInPublisher.publish(
+			new UserLoggedInEvent({ uid: identityId, date: new Date() }),
+		);
 		return this.tokenService.generateTokens(
 			{
 				sub: identityId,

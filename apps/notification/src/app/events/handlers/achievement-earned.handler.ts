@@ -1,13 +1,14 @@
 import { NotificationPreferencesService } from '../../services/notification-preferences.service';
 import { NotificationService } from '../../services/notification.service';
-import {
-	RabbitPayload,
-	RabbitSubscribe,
-	defaultNackErrorHandler,
-} from '@golevelup/nestjs-rabbitmq';
+import { RabbitPayload, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
+import { Transactional } from '@nestjs-cls/transactional';
 import { Injectable } from '@nestjs/common';
-import { AppLoggerService } from '@server/logger';
+import { InboxService, deadLetterQueue, unwrapEvent } from '@server/messaging';
+import { validatePayload } from '@server/utils';
 import { IsString } from 'class-validator';
+import { UseCls } from 'nestjs-cls';
+
+export const ACHIEVEMENT_EARNED_QUEUE = 'notification.events.badge.earned';
 
 class AchievementEarnedEvent {
 	@IsString() uid!: string;
@@ -19,35 +20,28 @@ export class AchievementEarnedHandler {
 	constructor(
 		private readonly notificationService: NotificationService,
 		private readonly preferencesService: NotificationPreferencesService,
-		private readonly logger: AppLoggerService,
+		private readonly inbox: InboxService,
 	) {}
 
+	@UseCls()
 	@RabbitSubscribe({
 		connection: 'sub',
 		exchange: 'eventbus',
 		routingKey: 'achievement.badge.earned',
-		queue: 'notification.events.badge.earned',
-		queueOptions: {
-			durable: true,
-			deadLetterExchange: 'notification.dlx',
-			deadLetterRoutingKey: 'badge.earned.failed',
-		},
-		errorHandler: defaultNackErrorHandler,
+		...deadLetterQueue(ACHIEVEMENT_EARNED_QUEUE),
 	})
-	async handle(@RabbitPayload() payload: AchievementEarnedEvent) {
-		try {
-			if (!(await this.preferencesService.isEnabled(payload.uid, 'achievement'))) return;
-			await this.notificationService.createNotification({
-				recipientId: payload.uid,
-				type: 'achievement',
-				title: 'Achievement Unlocked!',
-				message: `You earned the "${payload.badgeName}" badge!`,
-				data: JSON.stringify({ badgeName: payload.badgeName }),
-			});
-		} catch (e) {
-			this.logger.error(
-				`Failed to create achievement notification: ${e instanceof Error ? (e.stack ?? e.message) : String(e)}`,
-			);
-		}
+	@Transactional()
+	async handle(@RabbitPayload() message: unknown): Promise<void> {
+		const { id, payload } = unwrapEvent<unknown>(message);
+		if (!(await this.inbox.claim(id, ACHIEVEMENT_EARNED_QUEUE))) return;
+		const event = await validatePayload(AchievementEarnedEvent, payload);
+		if (!(await this.preferencesService.isEnabled(event.uid, 'achievement'))) return;
+		await this.notificationService.createNotification({
+			recipientId: event.uid,
+			type: 'achievement',
+			title: 'Achievement Unlocked!',
+			message: `You earned the "${event.badgeName}" badge!`,
+			data: JSON.stringify({ badgeName: event.badgeName }),
+		});
 	}
 }

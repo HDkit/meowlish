@@ -1,34 +1,21 @@
 import { IdentityAvatarUpdatedEvent } from '../../../domain/events/identity-update.events';
 import { FileAddedIntegrationEvent } from '../file-added.event';
-import { AmqpConnectionManager } from '@golevelup/nestjs-rabbitmq';
-import { InternalServerErrorException } from '@nestjs/common';
-import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
-import { AppLoggerService } from '@server/logger';
+import { Injectable } from '@nestjs/common';
+import { OutboxPublisher } from '@server/messaging';
+import { type Event } from '@server/utils';
 
-@EventsHandler(IdentityAvatarUpdatedEvent)
-export class FileAddedPublisher implements IEventHandler<IdentityAvatarUpdatedEvent> {
-	constructor(
-		private readonly amqpConnectionManager: AmqpConnectionManager,
-		private readonly logger: AppLoggerService,
-	) {}
+/** Writes `auth.file.added` to the outbox; call it inside the transaction that saved the identity. */
+@Injectable()
+export class FileAddedPublisher {
+	constructor(private readonly outbox: OutboxPublisher) {}
 
-	get amqpConnection() {
-		const connection = this.amqpConnectionManager.getConnection('pub');
-		if (!connection) throw new InternalServerErrorException('AMQP "pub" connection not available');
-		return connection;
-	}
-
-	async handle(event: IdentityAvatarUpdatedEvent) {
-		if (!event.payload.avatarFileId) return;
-		try {
+	async publish(events: readonly Event<unknown>[]): Promise<void> {
+		for (const event of events) {
+			if (!(event instanceof IdentityAvatarUpdatedEvent) || !event.payload.avatarFileId) continue;
 			const message: FileAddedIntegrationEvent = {
 				fileId: event.payload.avatarFileId,
 			};
-			await this.amqpConnection.publish('eventbus', 'auth.file.added', message, {
-				persistent: true,
-			});
-		} catch (e) {
-			this.logger.error(e as string);
+			await this.outbox.add('auth.file.added', message);
 		}
 	}
 }
