@@ -130,47 +130,45 @@ This means the private key must only exist in the auth service environment, whil
 
 ### 1. Start the infrastructure
 
-The repo contains `docker-compose` files under `docker/`. Note that the application **Dockerfile builds are not required for local dev** — you only need the infrastructure services.
+The repo contains `docker-compose` files under `docker/`. The application **Dockerfile builds are not required for local dev**; you only need the infrastructure services.
 
 ```
 cp docker/.env.example docker/.env
 docker compose -f docker/docker-compose.db.yaml --env-file docker/.env up -d
 ```
 
-This starts **PostgreSQL, Redis, Adminer, MinIO, and RabbitMQ**. You can start everything (including app containers and Envoy sidecars — see Docker section below) with `docker compose -f docker/docker-compose.yaml up`.
+This starts **PostgreSQL, Redis, Adminer, MinIO, and RabbitMQ**. Each service gets its **own database** (`auth_db`, `exam_db`, ...), created by `docker/postgres/init-databases.sql` the first time the Postgres volume starts. Host ports come from `docker/.env` (Postgres `5433`, Redis `6380`, RabbitMQ `5672`, MinIO `9000`, Adminer `8090`); change them there if they clash with something else on your machine, and mirror the change in the apps' `.env` files.
+
+> Already ran an older version of this compose file? Its Postgres volume has the pre-18 layout and no per-service databases. Recreate it with `docker compose -f docker/docker-compose.db.yaml --env-file docker/.env down -v` (this deletes local data).
 
 ### 2. Install dependencies
 
 ```
+corepack enable   # uses the pnpm version pinned in package.json "packageManager"
 pnpm install
 ```
 
-### 3. Generate the database client
+### 3. Set up environment variables
+
+Every app ships an `.env.example` with working local values (unique ports, its own database). Copy them all, then paste your RSA keys into `apps/auth/.env` and `apps/gateway/.env` (see **JWT / RSA Keys** below):
 
 ```
-nx run auth:prisma:generate
+for f in apps/*/.env.example; do cp -n "$f" "${f%.example}"; done
 ```
 
-### 4. Set up environment variables
+Each app loads `apps/<app>/.env` (falling back to `.env` in the working directory), so this works with `nx serve` from the workspace root.
 
-Copy the relevant `.env.example` files and fill in the values (see the **JWT / RSA keys** section below, which is required).
-
-```
-cp apps/auth/.env.example apps/auth/.env
-cp apps/gateway/.env.example apps/gateway/.env
-```
-
-(Other apps have their own `.env.example` files as needed. App containers read a shared `docker/.env.services` — see Docker section.)
-
-### 5. Run the database migration / push
-
-To sync the Prisma schema to a running Postgres instance:
+### 4. Create schemas and seed data
 
 ```
-nx run auth:prisma:push
+pnpm db:setup            # or: pnpm db:setup --no-seed
 ```
 
-### 6. Start the development servers
+For every service this generates the Prisma client, applies migrations (`migrate deploy`, or `db push` for services without migrations), and runs the seed. It is safe to re-run. It also creates placeholder images/audio for every file the seeds reference (`scripts/dev-media/generate.mjs`), writes them to `apps/file-service/eng-media/` and uploads them to MinIO's `public` bucket. Drop real media into that folder to use it instead; existing files are kept.
+
+Seeded login: `admin@gmail.com` / `admin` (plus test users, see `apps/auth/prisma/seed.ts`).
+
+### 5. Start the development servers
 
 ```
 nx run-many -t serve
@@ -183,7 +181,7 @@ nx serve gateway
 nx serve auth
 ```
 
-The gateway will be available at `http://localhost:3000`, with interactive API docs at `http://localhost:3000/reference`.
+The gateway will be available at `http://localhost:3000`, with interactive API docs at `http://localhost:3000/reference`. Point the frontend's `NEXT_PUBLIC_API_URL` at it.
 
 ## JWT / RSA Keys (Important)
 
@@ -203,12 +201,14 @@ Paste the **entire contents** of the PEM files into your env (a PEM file include
 
 - `apps/auth/.env`:
   ```
-  JWT_PRIVATE_KEY=<contents of jwt_private.pem>
+  JWT_PRIVATE_KEY="<contents of jwt_private.pem>"
   ```
 - `apps/gateway/.env` (and the shared `docker/.env.services`):
   ```
-  JWT_PUBLIC_KEY=<contents of jwt_public.pem>
+  JWT_PUBLIC_KEY="<contents of jwt_public.pem>"
   ```
+
+Keep the double quotes so the multi-line value survives `.env` parsing.
 
 > Security: keep the private key out of source control and only in the auth service's environment. The gateway (and any token validator) should only ever receive the public key.
 
@@ -224,13 +224,19 @@ Paste the **entire contents** of the PEM files into your env (a PEM file include
 - `JWT_PRIVATE_KEY` — RSA private key for **signing** tokens
 - `JWT_ACCESS_TOKEN_EXPIRATION` (default 15 min) / `JWT_REFRESH_TOKEN_EXPIRATION` (default 7 days)
 - `GOOGLE_OA2_CLIENT_ID` / `GOOGLE_OA2_CLIENT_SECRET`
-- `POSTGRES_URL` — full connection string used by Prisma
+- `POSTGRES_URL` — optional full connection string; when unset it is assembled from the `POSTGRES_*` values
+
+### File service (`apps/file-service/.env.example`)
+
+- `MINIO_HOST` / `MINIO_PORT` / `MINIO_USER` / `MINIO_PASSWORD` — object storage
+- `MINIO_USE_SSL` — TLS to MinIO (default: on only when `NODE_ENV=production`)
+- `MINIO_PUBLIC_URL` — browser-facing MinIO address: base of public file links, and the host presigned upload/download URLs are signed for. Set it whenever `MINIO_HOST` is an internal name (e.g. `min-io` in docker). Default: `http(s)://MINIO_HOST:MINIO_PORT`
 
 ### Gateway (`apps/gateway/.env.example`)
 
 - `NODE_ENV`, `PORT`, `HOST`, `BASE_URL`, `FE_LOGIN_REDIRECT_URL`
 - `JWT_PUBLIC_KEY` — RSA public key for **verifying** tokens
-- `*_SERVICE_HOST` / `*_SERVICE_PORT` (and optional `*_SERVICE_URL`) — gRPC service discovery for `auth`, `exam`, `file`, `achievement`, `live`, `notification`, `resource`
+- `*_SERVICE_HOST` / `*_SERVICE_PORT` (and optional `*_SERVICE_URL`) — gRPC service discovery for `auth`, `authorization`, `exam`, `file`, `achievement`, `live`, `notification`, `resource`
 - `GOOGLE_OA2_CLIENT_ID` / `GOOGLE_OA2_CLIENT_SECRET`
 
 ## Running with Docker (Full Stack)
@@ -242,6 +248,8 @@ The Docker setup builds each app separately and adds **Envoy** sidecars so each 
    cp docker/.env.example docker/.env
    cp docker/.env.services.example docker/.env.services   # fill in, incl. JWT_PRIVATE_KEY & JWT_PUBLIC_KEY
    ```
+
+   Schemas and seed data are not applied by the containers; run `pnpm db:setup` from the host against the published Postgres port (step 4 above).
 
 2. Build & start everything:
    ```
@@ -255,7 +263,7 @@ This brings up the database infrastructure, all application services, and the En
 Protobuf contracts live in `proto/`. After editing them, regenerate the client/server code:
 
 ```
-nx run generated:generate          # or the OS-specific variant in package.json
+nx run generated:generate          # runs `pnpm proto:gen` (Windows: `pnpm proto:gen:window`)
 ```
 
 The generated code is written to `libs/generated/src`.
@@ -265,6 +273,7 @@ The generated code is written to `libs/generated/src`.
 | Command | Description |
 | --- | --- |
 | `pnpm install` | Install workspace dependencies |
+| `pnpm db:setup` | Migrate + seed every service database (and upload dev media) |
 | `nx run-many -t serve` | Run all services in dev mode |
 | `nx serve <app>` | Run a single app in dev mode (e.g. `nx serve gateway`) |
 | `nx run <app>:build` | Build an app (e.g. `nx run auth:build`) |
