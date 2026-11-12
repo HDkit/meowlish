@@ -131,6 +131,8 @@ A replayed message keeps its `x-retry-count` header, so if it fails again it goe
 
 ## One-time upgrade: recreate consumer queues
 
+The full deploy order for a release (database migrations, env vars, frontend coupling) is in [upgrade-notes.md](upgrade-notes.md).
+
 Do these steps in order.
 
 1. Apply the schema first: `pnpm db:setup` (or, per service, `prisma migrate deploy` / `prisma db push`) so the `outbox_events` and `inbox_events` tables exist. Without them, logins fail (the outbox insert throws) and consumed messages dead-letter (the inbox table is missing).

@@ -160,7 +160,7 @@ Runtime config pattern (`apps/<svc>/src/configs/config.ts`):
 4. The module registers `ConfigModule.forRoot({ load: [config], envFilePath: ['apps/<svc>/.env', '.env'] })`.
 5. Consumers inject `ConfigService<IEnvVars>`. In new code, read config only through it, so every variable is validated by the schema.
 
-Existing code also reads `process.env` directly in a few places: `PORT`/`HOST` in `main.ts`, gRPC/RMQ client registration in `*.module.ts` / `*.router.module.ts`, and some query handlers. Don't add more. If you touch one of these spots, move it to `ConfigService` (for client modules, use `registerAsync` with `inject: [ConfigService]`).
+Existing code also reads `process.env` directly in a few places: `PORT`/`HOST` in `bootstrap.ts`, gRPC/RMQ client registration in `*.module.ts` / `*.router.module.ts`, and some query handlers. Don't add more. If you touch one of these spots, move it to `ConfigService` (for client modules, use `registerAsync` with `inject: [ConfigService]`).
 
 To add a variable, update the schema, `loadEnv`, and `.env.example`, plus `docker/.env.services.example` if Docker needs it.
 
@@ -200,9 +200,12 @@ configs/        config.ts (zod env schema), rmq/bullmq configs
   - Google account linking (frontend on a different origin, same site): open `/auth/credentials/google` with a top-level navigation, not fetch. The navigation carries the `access_token` cookie, and the `oauth2_state` cookie set there comes back on the callback.
 - **Authorization: pick the right mechanism.**
   - Role-only rules go on the route with `@HasRoles(...)`.
-  - Mutations of resources tracked by the authorization service (exam, room, blog, flashcard) use `@ResourceAccess({ ..., requireOwnership: true })`. The owning service must publish `<svc>.<resource>.created` / `.deleted` events, and the authorization seed must backfill existing rows.
-  - Visibility that depends on the data itself (private lists, "own reports only", "own notifications only") is enforced **in the owning service**. The gateway forwards who is asking, and the service filters by it:
-    - resource RPCs carry `requesterId` + `privileged`, built with `requesterOf(req.user, PRIVILEGED_ROLES)` from `apps/gateway/src/auth/functions/requester.ts`;
+  - Room delete/schedule, blog and flashcard mutations still use `@ResourceAccess({ ..., requireOwnership: true })` (ownership copied into the authorization service). The owning service must publish `<svc>.<resource>.created` / `.deleted` events, and the authorization seed must backfill existing rows. Don't add new `@ResourceAccess` routes; prefer the requester pattern below.
+  - Rules that depend on the data itself are enforced **in the owning service**. The gateway forwards who is asking, and the service decides from its own rows:
+    - resource RPCs (private lists, "own reports only") carry `requesterId` + `privileged`, built with `requesterOf(req.user, PRIVILEGED_ROLES)` from `apps/gateway/src/auth/functions/requester.ts`;
+    - exam management mutations (sections, questions, update/delete/move exam) carry `requesterOf(req.user, [Role.Admin])`; exam allows only the exam's creator or an admin (`ExamManagementController.assertCanModify`), and move checks the destination too;
+    - live ban/unban carries `requesterOf(req.user, [Role.Admin])`; live allows only the room owner (`Room.createdBy`) or an admin, and rooms with no recorded owner are admin-only;
+    - attaching files (exam `addFiles`, report files, auth avatar) checks the uploader: file-service records `uploadedBy` from the JWT on presign, and the attaching service calls `CheckFilesOwnedBy` (403 listing the foreign ids). Admins skip it on exam and report attaches (avatars have no override); files with no recorded uploader are therefore admin-only. Re-sending the current avatar is exempt. Viewing files is not restricted;
     - notification RPCs carry `recipientId: req.user.sub`.
   - Never take a user id for these checks from the request body or query. Services answer "not yours" with 404, not 403, so ids of private data don't leak.
 - Paginated or filtered `GET` routes take a `@Query()` DTO: arrays via `ToStringArray()`, booleans via `str2bool`, and `page`/`limit` bounded with `@Min`/`@Max`. Don't use individual `@Query('x')` params.

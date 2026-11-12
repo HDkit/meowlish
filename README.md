@@ -259,6 +259,8 @@ The Docker setup builds each app separately and adds **Envoy** sidecars so each 
 
 This brings up the database infrastructure, all application services, and the Envoy sidecars (ports defined in `docker/.env.example`, e.g. gateway `8080`, auth `8081`, exam `8082`, achievement `8083`, resource `8084`, notification `8085`/`8095`, file `8086`, live `8087`/`8088`).
 
+Upgrading an existing environment? Follow [docs/operations/upgrade-notes.md](docs/operations/upgrade-notes.md) (deploy order, migrations, queues to recreate, new env vars).
+
 ## Observability
 
 Every app exports traces, metrics, and logs over OTLP and serves `/health/live` and `/health/ready`. A local Grafana stack with a platform status dashboard and alerts runs separately from the app stack:

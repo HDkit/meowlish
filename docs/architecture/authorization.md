@@ -1,6 +1,6 @@
 # Authorization architecture
 
-How a request is authenticated and authorized, and where each rule lives. This is the **target design**. The rollout status table at the end shows which parts are live.
+How a request is authenticated and authorized, and where each rule lives. This is the **target design**. The rollout status table at the end shows which parts are live. The hybrid authorization design (`docs/superpowers/specs/2026-11-12-hybrid-authorization-design.md`, pending approval) supersedes its "retire the authorization service" direction. The current rules for gateway and service code are in `AGENTS.md` > Gateway conventions.
 
 ## The model in one paragraph
 
@@ -82,18 +82,20 @@ Services answer "you may not even see this" with **404** and "you may see it but
 
 ## What is being retired
 
-- The `requesterId` / `privileged` fields on resource RPCs. The gateway used to decide "privileged", which put policy in the wrong place.
+- The `requesterId` / `privileged` fields on resource, exam management and live moderation RPCs. The gateway decides "privileged", which puts policy in the wrong place. Until the `Actor` rollout reaches a service, these fields remain the way to scope a check to the caller. Never take them from the request body.
 - `@ResourceAccess` and the authorization service's ownership copy. Ownership already lives in each service's own rows. The copy caused 403s right after creation, and permanent lock-out when an event was lost.
 - `@HasRoles(Role.X)` in the gateway, replaced by `@HasPermissions(...)` or domain policy.
 - The shared `Permission` enum in `@server/typing`, split into per-context constants.
 
 ## Rollout status
 
-| Area                        | Status                                                                                |
-| --------------------------- | ------------------------------------------------------------------------------------- |
-| Reports (resource)          | Planned, pilot: `docs/superpowers/plans/2026-11-12-actor-permission-authorization.md` |
-| Flash cards / lists, blogs  | Still `requesterId`/`privileged` + `@ResourceAccess`                                  |
-| Notifications               | Still `recipientId` field                                                             |
-| Exam attempts, exam content | Still `userId` field / `@ResourceAccess`                                              |
-| Live rooms                  | Live verifies the JWT for sockets; room rules still `@ResourceAccess`                 |
-| Gateway role gates          | Still `@HasRoles`                                                                     |
+| Area                       | Status                                                                                                                                                                       |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reports (resource)         | Planned, pilot: `docs/superpowers/plans/2026-11-12-actor-permission-authorization.md`. Today `requesterId`/`privileged`                                                      |
+| Flash cards / lists, blogs | Still `requesterId`/`privileged` + `@ResourceAccess`                                                                                                                         |
+| Notifications              | Still `recipientId` field                                                                                                                                                    |
+| Exam content               | `requesterId`/`privileged` (`requesterOf(req.user, [Role.Admin])`): exam allows the exam's creator or an admin, including the move destination. `@ResourceAccess` removed    |
+| Exam attempts              | Still `userId` field                                                                                                                                                         |
+| Live rooms                 | Live verifies the JWT for sockets. Ban/unban: `requesterId`/`privileged`, room owner (`Room.createdBy`) or admin, checked in live. Delete/schedule still `@ResourceAccess`   |
+| File attachments           | file-service records `uploadedBy`. Exam, resource and auth call `CheckFilesOwnedBy` before attaching (403). Admin override on exam and reports only. Viewing is unrestricted |
+| Gateway role gates         | Still `@HasRoles`                                                                                                                                                            |
