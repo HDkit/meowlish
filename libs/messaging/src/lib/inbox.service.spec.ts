@@ -1,67 +1,68 @@
 import { InboxService, type InboxTransactionHost } from './inbox.service';
 
-type CreateArgs = Parameters<InboxTransactionHost['tx']['inboxEvent']['create']>[0];
+type CreateManyArgs = Parameters<InboxTransactionHost['tx']['inboxEvent']['createMany']>[0];
+
+const EVENT_ID = '6f1c2b1e-0000-4000-8000-000000000001';
 
 describe('InboxService', () => {
-	function setup(options: { active?: boolean; createError?: unknown } = {}) {
-		const create = jest.fn<Promise<unknown>, [CreateArgs]>();
-		if (options.createError !== undefined) {
-			create.mockRejectedValue(options.createError);
+	function setup(options: { active?: boolean; count?: number; error?: unknown } = {}) {
+		const createMany = jest.fn<Promise<{ count: number }>, [CreateManyArgs]>();
+		if (options.error !== undefined) {
+			createMany.mockRejectedValue(options.error);
 		} else {
-			create.mockResolvedValue(undefined);
+			createMany.mockResolvedValue({ count: options.count ?? 1 });
 		}
 		const txHost: InboxTransactionHost = {
 			isTransactionActive: () => options.active ?? true,
-			tx: { inboxEvent: { create: create } },
+			tx: { inboxEvent: { createMany: createMany } },
 		};
 		const service = new InboxService(txHost, { serviceName: 'exam' });
-		return { create: create, service: service };
+		return { createMany: createMany, service: service };
 	}
 
 	it('claim inserts and returns true for a new event', async () => {
-		const { create, service } = setup();
+		const { createMany, service } = setup({ count: 1 });
 
-		const claimed = await service.claim('6f1c2b1e-0000-4000-8000-000000000001', 'exam.scoring');
+		const claimed = await service.claim(EVENT_ID, 'exam.scoring');
 
 		expect(claimed).toBe(true);
-		expect(create).toHaveBeenCalledTimes(1);
-		expect(create).toHaveBeenCalledWith({
-			data: { id: '6f1c2b1e-0000-4000-8000-000000000001', consumer: 'exam.scoring' },
+		expect(createMany).toHaveBeenCalledTimes(1);
+		expect(createMany).toHaveBeenCalledWith({
+			data: [{ id: EVENT_ID, consumer: 'exam.scoring' }],
+			skipDuplicates: true,
 		});
 	});
 
 	it('claim returns false for an already processed event', async () => {
-		const { service } = setup({ createError: { code: 'P2002' } });
+		const { service } = setup({ count: 0 });
 
-		const claimed = await service.claim('6f1c2b1e-0000-4000-8000-000000000001', 'exam.scoring');
+		const claimed = await service.claim(EVENT_ID, 'exam.scoring');
 
 		expect(claimed).toBe(false);
 	});
 
-	it('claim rethrows errors other than P2002', async () => {
-		const failure = { code: 'P2034' };
-		const { service } = setup({ createError: failure });
+	it('claim propagates other errors', async () => {
+		const failure = new Error('connection lost');
+		const { service } = setup({ error: failure });
 
-		await expect(
-			service.claim('6f1c2b1e-0000-4000-8000-000000000001', 'exam.scoring'),
-		).rejects.toBe(failure);
+		await expect(service.claim(EVENT_ID, 'exam.scoring')).rejects.toBe(failure);
 	});
 
 	it('claim returns true without writing for legacy messages', async () => {
-		const { create, service } = setup();
+		const { createMany, service } = setup();
 
 		const claimed = await service.claim(undefined, 'exam.scoring');
 
 		expect(claimed).toBe(true);
-		expect(create).not.toHaveBeenCalled();
+		expect(createMany).not.toHaveBeenCalled();
 	});
 
 	it('claim throws outside a transaction', async () => {
-		const { create, service } = setup({ active: false });
+		const { createMany, service } = setup({ active: false });
 
-		await expect(
-			service.claim('6f1c2b1e-0000-4000-8000-000000000001', 'exam.scoring'),
-		).rejects.toThrow('InboxService.claim must run inside a transaction');
-		expect(create).not.toHaveBeenCalled();
+		await expect(service.claim(EVENT_ID, 'exam.scoring')).rejects.toThrow(
+			'InboxService.claim must run inside a transaction',
+		);
+		expect(createMany).not.toHaveBeenCalled();
 	});
 });

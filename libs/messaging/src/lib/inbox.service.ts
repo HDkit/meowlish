@@ -16,7 +16,10 @@ export interface InboxTransactionHost {
 	isTransactionActive(): boolean;
 	readonly tx: {
 		inboxEvent: {
-			create(args: { data: { id: string; consumer: string } }): Promise<unknown>;
+			createMany(args: {
+				data: { id: string; consumer: string }[];
+				skipDuplicates: true;
+			}): Promise<{ count: number }>;
 		};
 	};
 }
@@ -36,6 +39,10 @@ export class InboxService {
 	 * Records that `consumer` processed `eventId`. Returns `false` when it was already processed.
 	 * Legacy messages without an id cannot be deduplicated, so they are always claimed.
 	 * Must run inside a transaction so the claim commits together with the handler's writes.
+	 *
+	 * Uses `createMany` with `skipDuplicates` (`ON CONFLICT DO NOTHING`) rather than catching a
+	 * unique violation: a caught P2002 leaves a PostgreSQL transaction aborted (25P02), which
+	 * would fail every later statement in the same handler transaction.
 	 */
 	async claim(eventId: string | undefined, consumer: string): Promise<boolean> {
 		if (!this.txHost.isTransactionActive()) {
@@ -44,19 +51,13 @@ export class InboxService {
 		if (eventId === undefined) {
 			return true;
 		}
-		try {
-			await this.txHost.tx.inboxEvent.create({ data: { id: eventId, consumer: consumer } });
-			return true;
-		} catch (error) {
-			if (isUniqueViolation(error)) {
-				this.duplicates.add(1, { service: this.options.serviceName, consumer: consumer });
-				return false;
-			}
-			throw error;
+		const { count } = await this.txHost.tx.inboxEvent.createMany({
+			data: [{ id: eventId, consumer: consumer }],
+			skipDuplicates: true,
+		});
+		if (count === 0) {
+			this.duplicates.add(1, { service: this.options.serviceName, consumer: consumer });
 		}
+		return count === 1;
 	}
-}
-
-function isUniqueViolation(error: unknown): boolean {
-	return typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002';
 }
