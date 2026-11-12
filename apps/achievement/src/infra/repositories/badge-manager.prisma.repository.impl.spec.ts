@@ -1,3 +1,4 @@
+import { BADGE_INFORMATION } from '../../constants/badge-info.const';
 import { LoginBadgeManager } from '../../domain/entities/login-badge-manager.entity';
 import { BadgeAddedEvent } from '../../domain/events/badge.event';
 import { Badge } from '../../enums/badge.enum';
@@ -38,7 +39,7 @@ describe('BadgeManagerPrismaRepositoryImpl badge award', () => {
 		expect(outbox.add).toHaveBeenCalledTimes(1);
 		expect(outbox.add).toHaveBeenCalledWith('achievement.badge.earned', {
 			uid: 'u1',
-			badgeName: Badge.LoginSevenDays,
+			badgeName: BADGE_INFORMATION[Badge.LoginSevenDays].displayName,
 		});
 	});
 

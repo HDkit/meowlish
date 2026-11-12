@@ -1,3 +1,4 @@
+import { BADGE_INFORMATION } from '../../constants/badge-info.const';
 import { AttemptCounterBadgeManager } from '../../domain/entities/attempt-counter-badge-manager.entity';
 import { AttemptScoreBadgeManager } from '../../domain/entities/attempt-score-badge-manager.entity';
 import { LoginBadgeManager } from '../../domain/entities/login-badge-manager.entity';
@@ -184,7 +185,7 @@ export class BadgeManagerPrismaRepositoryImpl implements IBadgeManagerRepository
 		// Same transaction as the award: a rolled-back or retried attempt publishes nothing.
 		await this.outbox.add('achievement.badge.earned', {
 			uid: event.payload.uid,
-			badgeName: event.payload.badge,
+			badgeName: BADGE_INFORMATION[event.payload.badge].displayName,
 		});
 	}
 }

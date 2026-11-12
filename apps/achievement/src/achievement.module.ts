@@ -30,6 +30,11 @@ import {
 import { ClsGuard, ClsModule } from 'nestjs-cls';
 
 const databaseModule = DatabaseModule.forRoot(PrismaClient);
+// shared with MessagingModule so OutboxRelay can resolve AmqpConnectionManager
+const rmqPubModule = RabbitMQModule.forRootAsync({
+	inject: [ConfigService],
+	useFactory: rmqPubConfig,
+});
 
 @Module({
 	controllers: [BadgeController],
@@ -38,7 +43,7 @@ const databaseModule = DatabaseModule.forRoot(PrismaClient);
 			serviceName: 'achievement',
 			prismaToken: DATABASE_SERVICE,
 			relay: true,
-			imports: [databaseModule],
+			imports: [databaseModule, rmqPubModule],
 		}),
 		HealthModule.forRoot({
 			serviceName: 'achievement',
@@ -68,7 +73,7 @@ const databaseModule = DatabaseModule.forRoot(PrismaClient);
 			],
 		}),
 		RabbitMQModule.forRootAsync({ inject: [ConfigService], useFactory: rmqSubConfig }),
-		RabbitMQModule.forRootAsync({ inject: [ConfigService], useFactory: rmqPubConfig }),
+		rmqPubModule,
 		LoggerModule.forRoot({ appName: 'AchievementModule' }),
 	],
 	providers: [
