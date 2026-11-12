@@ -13,7 +13,7 @@ docker compose -f docker/docker-compose.yaml --env-file docker/.env up --build
 
 Both compose files declare `name: meowlish`, so they share one project and one network (`meowlish_api-network`). That is how the apps resolve the `lgtm` host name. Compose may print a harmless "orphan containers" warning because each file sees the other's containers. Never pass `--remove-orphans`: it would remove the other file's containers.
 
-Grafana is at <http://localhost:3001> (otel-lgtm default login `admin` / `admin`). Dashboards and alert rules are provisioned from `docker/observability/` (read-only mounts), so edit the files there and restart `lgtm` rather than editing in the UI.
+Grafana is at <http://localhost:3001> (otel-lgtm default login `admin` / `admin`). Dashboards and alert rules are provisioned from files in `docker/observability/`. Each file is mounted individually (`:ro`) into the `lgtm` service in `docker/docker-compose.observability.yaml`, because the container's provisioning directories already hold the image's own files. Edit the files and restart `lgtm` rather than editing in the UI. A new file dropped into the directory is NOT picked up: add a `:ro` mount for it to the `lgtm` service, then run `docker compose -f docker/docker-compose.observability.yaml up -d`.
 
 ### Port overrides
 
@@ -101,7 +101,7 @@ gRPC-only apps have no business HTTP traffic, so their HTTP panels only show the
 
 ### Later dashboards
 
-Dashboards for "Authz sync health" and "Messaging" will be added by later plans. They will be provisioned from `docker/observability/dashboards/` the same way and appear next to "Platform status" in Grafana's Dashboards list.
+Dashboards for "Authz sync health" and "Messaging" will be added by later plans. Each will be a JSON file in `docker/observability/dashboards/` with its own `:ro` mount added to the `lgtm` service (see above), and will appear next to "Platform status" in Grafana's Dashboards list.
 
 ## Alerts
 
