@@ -47,7 +47,7 @@ To check only what you touched, use `nx affected -t lint test build`. The Husky 
 
 The config is in `eslint.config.mjs` and uses `typescript-eslint` `recommendedTypeChecked`, `@darraghor/eslint-plugin-nestjs-typed`, and `perfectionist`.
 
-- **Decorator order is enforced** (`perfectionist/sort-decorators`). Groups go in this order: `Version` → HTTP method (`Get`/`Post`/…) → `UseGuards` → `UseInterceptors` → `UsePipes` → `UseFilters` → class-transformer (`Expose`, `Type`, …) → class-validator (`Is*`, `Min*`, …) → everything else → `Module` → `Controller` → `Injectable`. Decorators within a group are alphabetical. `--fix` reorders them.
+- **Decorator order is enforced** (`perfectionist/sort-decorators`). Groups go in this order: `Version` → HTTP method (`Get`/`Post`/…) → `UseGuards` → `UseInterceptors` → `UsePipes` → `UseFilters` → class-transformer (`Expose`, `Type`, …) → class-validator (`Is*`, `Min*`, …) → `UseCls` → everything else → `Module` → `Controller` → `Injectable`. Decorators within a group are alphabetical. `--fix` reorders them.
 - `object-shorthand: never`. Write `{ id: id }`, not `{ id }`.
 - No `console.log`. Use the logger (`@server/logger`); `console.warn`/`console.error` are allowed.
 - No unnecessary type assertions (`no-unnecessary-type-assertion`), no inferrable type annotations, no empty functions.
