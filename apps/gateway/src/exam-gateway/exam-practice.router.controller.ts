@@ -64,8 +64,8 @@ export class ExamPracticeGatewayController implements OnModuleInit {
 	@Post('attempt/:id/submit')
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Submit an attempt' })
-	endAttempt(@Param('id') id: string) {
-		const res = this.examPracticeService.endAttempt({ attemptId: id });
+	endAttempt(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
+		const res = this.examPracticeService.endAttempt({ attemptId: id, userId: req.user.sub });
 		return res;
 	}
 
@@ -73,11 +73,17 @@ export class ExamPracticeGatewayController implements OnModuleInit {
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Answer a question in an attempt' })
 	answer(
+		@Req() req: AuthenticatedRequest,
 		@Param('id') id: string,
 		@Param('questionId') questionId: string,
 		@Body() body: AnswerDto,
 	) {
-		const res = this.examPracticeService.answer({ ...body, attemptId: id, questionId: questionId });
+		const res = this.examPracticeService.answer({
+			...body,
+			attemptId: id,
+			questionId: questionId,
+			userId: req.user.sub,
+		});
 		return res;
 	}
 
@@ -85,6 +91,7 @@ export class ExamPracticeGatewayController implements OnModuleInit {
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Remove an answer from a question in an attempt' })
 	removeAnswer(
+		@Req() req: AuthenticatedRequest,
 		@Param('id') id: string,
 		@Param('questionId') questionId: string,
 		@Body() body: RemoveAnswerDto,
@@ -93,6 +100,7 @@ export class ExamPracticeGatewayController implements OnModuleInit {
 			...body,
 			attemptId: id,
 			questionId: questionId,
+			userId: req.user.sub,
 		});
 		return res;
 	}
@@ -101,10 +109,15 @@ export class ExamPracticeGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Toggle question flag state' })
 	@ApiResponseEntity(FlagStateDto)
 	@SerializeOptions({ type: FlagStateDto })
-	toggleFlag(@Param('id') id: string, @Param('questionId') questionId: string) {
+	toggleFlag(
+		@Req() req: AuthenticatedRequest,
+		@Param('id') id: string,
+		@Param('questionId') questionId: string,
+	) {
 		const res = this.examPracticeService.toggleFlag({
 			attemptId: id,
 			questionId: questionId,
+			userId: req.user.sub,
 		});
 		return res;
 	}
@@ -113,6 +126,7 @@ export class ExamPracticeGatewayController implements OnModuleInit {
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Add or update a note for a question' })
 	addNote(
+		@Req() req: AuthenticatedRequest,
 		@Param('id') id: string,
 		@Param('questionId') questionId: string,
 		@Body() body: AddNoteDto,
@@ -121,6 +135,7 @@ export class ExamPracticeGatewayController implements OnModuleInit {
 			...body,
 			attemptId: id,
 			questionId: questionId,
+			userId: req.user.sub,
 		});
 		return res;
 	}
@@ -169,8 +184,11 @@ export class ExamPracticeGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Get saved attempt data' })
 	@ApiResponseEntity(AttemptDataDto)
 	@SerializeOptions({ type: AttemptDataDto, strategy: 'exposeAll' })
-	getAttemptSavedData(@Param('id') attemptId: string) {
-		const res = this.examPracticeService.getAttemptSavedData({ attemptId: attemptId });
+	getAttemptSavedData(@Req() req: AuthenticatedRequest, @Param('id') attemptId: string) {
+		const res = this.examPracticeService.getAttemptSavedData({
+			attemptId: attemptId,
+			userId: req.user.sub,
+		});
 		return res;
 	}
 
@@ -178,8 +196,11 @@ export class ExamPracticeGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Get attempt review data' })
 	@ApiResponseEntity(AttemptReviewDto)
 	@SerializeOptions({ type: AttemptReviewDto, strategy: 'exposeAll' })
-	getAttemptReview(@Param('id') attemptId: string) {
-		const res = this.examPracticeService.getAttemptReview({ attemptId: attemptId });
+	getAttemptReview(@Req() req: AuthenticatedRequest, @Param('id') attemptId: string) {
+		const res = this.examPracticeService.getAttemptReview({
+			attemptId: attemptId,
+			userId: req.user.sub,
+		});
 		return res;
 	}
 

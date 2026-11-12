@@ -142,30 +142,50 @@ export interface CreatedAttemptDto {
 }
 
 export interface EndAttemptDto {
-  attemptId: string | undefined;
+  attemptId:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; the attempt must belong to this user. */
+  userId: string | undefined;
 }
 
 export interface AnswerDto {
   attemptId: string | undefined;
   questionId: string | undefined;
-  answer: string | undefined;
+  answer:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; the attempt must belong to this user. */
+  userId: string | undefined;
 }
 
 export interface RemoveAnswerDto {
   attemptId: string | undefined;
   questionId: string | undefined;
-  answer?: string | undefined;
+  answer?:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; the attempt must belong to this user. */
+  userId: string | undefined;
 }
 
 export interface AddNoteDto {
   attemptId: string | undefined;
   questionId: string | undefined;
-  note: string | undefined;
+  note:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; the attempt must belong to this user. */
+  userId: string | undefined;
 }
 
 export interface ToggleFlagDto {
   attemptId: string | undefined;
-  questionId: string | undefined;
+  questionId:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; the attempt must belong to this user. */
+  userId: string | undefined;
 }
 
 export interface FlagStateDto {
@@ -215,7 +235,11 @@ export interface AttemptHistorySummary_HistoryEntry {
 }
 
 export interface GetAttemptReviewDto {
-  attemptId: string | undefined;
+  attemptId:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; the attempt must belong to this user. */
+  userId: string | undefined;
 }
 
 export interface DetailedAttemptReviewData {
@@ -265,7 +289,11 @@ export interface DetailedAttemptReviewData_SectionReviewData_QuestionReviewData_
 }
 
 export interface GetAttemptSavedDataDto {
-  attemptId: string | undefined;
+  attemptId:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; the attempt must belong to this user. */
+  userId: string | undefined;
 }
 
 export interface AttemptSavedData {
@@ -2046,13 +2074,16 @@ export const CreatedAttemptDto: MessageFns<CreatedAttemptDto> = {
 };
 
 function createBaseEndAttemptDto(): EndAttemptDto {
-  return { attemptId: undefined };
+  return { attemptId: undefined, userId: undefined };
 }
 
 export const EndAttemptDto: MessageFns<EndAttemptDto> = {
   encode(message: EndAttemptDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.attemptId !== undefined) {
       StringValue.encode({ value: message.attemptId! }, writer.uint32(10).fork()).join();
+    }
+    if (message.userId !== undefined) {
+      StringValue.encode({ value: message.userId! }, writer.uint32(18).fork()).join();
     }
     return writer;
   },
@@ -2078,6 +2109,14 @@ export const EndAttemptDto: MessageFns<EndAttemptDto> = {
             message.attemptId = StringValue.decode(reader, reader.uint32()).value;
             continue;
           }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.userId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -2092,7 +2131,7 @@ export const EndAttemptDto: MessageFns<EndAttemptDto> = {
 };
 
 function createBaseAnswerDto(): AnswerDto {
-  return { attemptId: undefined, questionId: undefined, answer: undefined };
+  return { attemptId: undefined, questionId: undefined, answer: undefined, userId: undefined };
 }
 
 export const AnswerDto: MessageFns<AnswerDto> = {
@@ -2105,6 +2144,9 @@ export const AnswerDto: MessageFns<AnswerDto> = {
     }
     if (message.answer !== undefined) {
       StringValue.encode({ value: message.answer! }, writer.uint32(26).fork()).join();
+    }
+    if (message.userId !== undefined) {
+      StringValue.encode({ value: message.userId! }, writer.uint32(34).fork()).join();
     }
     return writer;
   },
@@ -2146,6 +2188,14 @@ export const AnswerDto: MessageFns<AnswerDto> = {
             message.answer = StringValue.decode(reader, reader.uint32()).value;
             continue;
           }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.userId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -2160,7 +2210,7 @@ export const AnswerDto: MessageFns<AnswerDto> = {
 };
 
 function createBaseRemoveAnswerDto(): RemoveAnswerDto {
-  return { attemptId: undefined, questionId: undefined };
+  return { attemptId: undefined, questionId: undefined, userId: undefined };
 }
 
 export const RemoveAnswerDto: MessageFns<RemoveAnswerDto> = {
@@ -2173,6 +2223,9 @@ export const RemoveAnswerDto: MessageFns<RemoveAnswerDto> = {
     }
     if (message.answer !== undefined) {
       StringValue.encode({ value: message.answer! }, writer.uint32(26).fork()).join();
+    }
+    if (message.userId !== undefined) {
+      StringValue.encode({ value: message.userId! }, writer.uint32(34).fork()).join();
     }
     return writer;
   },
@@ -2214,6 +2267,14 @@ export const RemoveAnswerDto: MessageFns<RemoveAnswerDto> = {
             message.answer = StringValue.decode(reader, reader.uint32()).value;
             continue;
           }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.userId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -2228,7 +2289,7 @@ export const RemoveAnswerDto: MessageFns<RemoveAnswerDto> = {
 };
 
 function createBaseAddNoteDto(): AddNoteDto {
-  return { attemptId: undefined, questionId: undefined, note: undefined };
+  return { attemptId: undefined, questionId: undefined, note: undefined, userId: undefined };
 }
 
 export const AddNoteDto: MessageFns<AddNoteDto> = {
@@ -2241,6 +2302,9 @@ export const AddNoteDto: MessageFns<AddNoteDto> = {
     }
     if (message.note !== undefined) {
       StringValue.encode({ value: message.note! }, writer.uint32(26).fork()).join();
+    }
+    if (message.userId !== undefined) {
+      StringValue.encode({ value: message.userId! }, writer.uint32(34).fork()).join();
     }
     return writer;
   },
@@ -2282,6 +2346,14 @@ export const AddNoteDto: MessageFns<AddNoteDto> = {
             message.note = StringValue.decode(reader, reader.uint32()).value;
             continue;
           }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.userId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -2296,7 +2368,7 @@ export const AddNoteDto: MessageFns<AddNoteDto> = {
 };
 
 function createBaseToggleFlagDto(): ToggleFlagDto {
-  return { attemptId: undefined, questionId: undefined };
+  return { attemptId: undefined, questionId: undefined, userId: undefined };
 }
 
 export const ToggleFlagDto: MessageFns<ToggleFlagDto> = {
@@ -2306,6 +2378,9 @@ export const ToggleFlagDto: MessageFns<ToggleFlagDto> = {
     }
     if (message.questionId !== undefined) {
       StringValue.encode({ value: message.questionId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.userId !== undefined) {
+      StringValue.encode({ value: message.userId! }, writer.uint32(26).fork()).join();
     }
     return writer;
   },
@@ -2337,6 +2412,14 @@ export const ToggleFlagDto: MessageFns<ToggleFlagDto> = {
             }
 
             message.questionId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.userId = StringValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }
@@ -2882,13 +2965,16 @@ export const AttemptHistorySummary_HistoryEntry: MessageFns<AttemptHistorySummar
 };
 
 function createBaseGetAttemptReviewDto(): GetAttemptReviewDto {
-  return { attemptId: undefined };
+  return { attemptId: undefined, userId: undefined };
 }
 
 export const GetAttemptReviewDto: MessageFns<GetAttemptReviewDto> = {
   encode(message: GetAttemptReviewDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.attemptId !== undefined) {
       StringValue.encode({ value: message.attemptId! }, writer.uint32(10).fork()).join();
+    }
+    if (message.userId !== undefined) {
+      StringValue.encode({ value: message.userId! }, writer.uint32(18).fork()).join();
     }
     return writer;
   },
@@ -2912,6 +2998,14 @@ export const GetAttemptReviewDto: MessageFns<GetAttemptReviewDto> = {
             }
 
             message.attemptId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.userId = StringValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }
@@ -3478,13 +3572,16 @@ export const DetailedAttemptReviewData_SectionReviewData_QuestionReviewData_Choi
 };
 
 function createBaseGetAttemptSavedDataDto(): GetAttemptSavedDataDto {
-  return { attemptId: undefined };
+  return { attemptId: undefined, userId: undefined };
 }
 
 export const GetAttemptSavedDataDto: MessageFns<GetAttemptSavedDataDto> = {
   encode(message: GetAttemptSavedDataDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.attemptId !== undefined) {
       StringValue.encode({ value: message.attemptId! }, writer.uint32(10).fork()).join();
+    }
+    if (message.userId !== undefined) {
+      StringValue.encode({ value: message.userId! }, writer.uint32(18).fork()).join();
     }
     return writer;
   },
@@ -3508,6 +3605,14 @@ export const GetAttemptSavedDataDto: MessageFns<GetAttemptSavedDataDto> = {
             }
 
             message.attemptId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.userId = StringValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }

@@ -11,4 +11,7 @@ export class AddNoteDto implements exam.AddNoteDto {
 	@IsString()
 	@Length(0, 500)
 	note!: string;
+
+	@IsString()
+	userId!: string;
 }

@@ -10,6 +10,8 @@ import { UserStats } from '../read-models/practice/user-stats.read-model';
 import { SortDirection } from '@server/typing';
 
 export interface IPracticeReadRepository {
+	/** Owner (attemptedBy) of an attempt, or null if it doesn't exist. */
+	getAttemptOwner(attemptId: string): Promise<string | null>;
 	// if doesn't exist return default values
 	getUserStats(uid: string): Promise<UserStats>;
 	getUsersAttemptSummary(

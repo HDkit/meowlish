@@ -61,7 +61,13 @@ import { FlagStateDto } from '../dtos/res/practice/flag-state.res.dto';
 import { QuestionDetailDto } from '../dtos/res/practice/question-detail.res.dto';
 import { UserCalendarDto } from '../dtos/res/practice/user-calendar.res.dto';
 import { UserStatsDto } from '../dtos/res/practice/user-stats.res.dto';
-import { Controller, Inject, SerializeOptions, UseFilters } from '@nestjs/common';
+import {
+	Controller,
+	Inject,
+	NotFoundException,
+	SerializeOptions,
+	UseFilters,
+} from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { Payload } from '@nestjs/microservices';
 import { exam } from '@server/generated';
@@ -78,6 +84,12 @@ export class ExamPracticeController implements exam.ExamPracticeServiceControlle
 		private readonly praciceReadRepository: IPracticeReadRepository,
 	) {}
 
+	/** Attempts are private to the user who started them; anyone else gets 404. */
+	private async assertOwnAttempt(attemptId: string, userId: string): Promise<void> {
+		const owner = await this.praciceReadRepository.getAttemptOwner(attemptId);
+		if (!owner || owner !== userId) throw new NotFoundException('Attempt not found');
+	}
+
 	@SerializeOptions({ type: CreatedAttemptDto })
 	async attempt(@Payload() request: AttemptDto): Promise<CreatedAttemptDto> {
 		return await this.commandBus.execute(
@@ -88,12 +100,14 @@ export class ExamPracticeController implements exam.ExamPracticeServiceControlle
 	}
 
 	async endAttempt(@Payload() request: EndAttemptDto): Promise<void> {
+		await this.assertOwnAttempt(request.attemptId, request.userId);
 		await this.commandBus.execute(
 			new EndAttemptCommand(new EndAttemptCommandPayload(request.attemptId)),
 		);
 	}
 
 	async answer(@Payload() request: AnswerDto): Promise<void> {
+		await this.assertOwnAttempt(request.attemptId, request.userId);
 		await this.commandBus.execute(
 			new AnswerCommand(
 				new AnswerCommandPayload(request.attemptId, request.questionId, request.answer),
@@ -102,6 +116,7 @@ export class ExamPracticeController implements exam.ExamPracticeServiceControlle
 	}
 
 	async removeAnswer(@Payload() request: RemoveAnswerDto): Promise<void> {
+		await this.assertOwnAttempt(request.attemptId, request.userId);
 		await this.commandBus.execute(
 			new RemoveAnswerCommand(
 				new RemoveAnswerCommandPayload(request.attemptId, request.questionId, request.answer),
@@ -111,12 +126,14 @@ export class ExamPracticeController implements exam.ExamPracticeServiceControlle
 
 	@SerializeOptions({ type: FlagStateDto })
 	async toggleFlag(@Payload() request: ToggleFlagDto): Promise<FlagStateDto> {
+		await this.assertOwnAttempt(request.attemptId, request.userId);
 		return await this.commandBus.execute(
 			new ToggleFlagCommand(new ToggleFlagCommandPayload(request.attemptId, request.questionId)),
 		);
 	}
 
 	async addNote(@Payload() request: AddNoteDto): Promise<void> {
+		await this.assertOwnAttempt(request.attemptId, request.userId);
 		await this.commandBus.execute(
 			new AddNoteCommand(
 				new AddNoteCommandPayload(request.attemptId, request.questionId, request.note),
@@ -148,11 +165,13 @@ export class ExamPracticeController implements exam.ExamPracticeServiceControlle
 
 	@SerializeOptions({ type: AttemptDataDto, strategy: 'exposeAll' })
 	async getAttemptSavedData(@Payload() request: GetAttemptDataDto): Promise<AttemptDataDto> {
+		await this.assertOwnAttempt(request.attemptId, request.userId);
 		return await this.queryBus.execute(new GetAttemptDataQuery(request));
 	}
 
 	@SerializeOptions({ type: AttemptReviewDto, strategy: 'exposeAll' })
 	async getAttemptReview(@Payload() request: GetAttemptReviewDto): Promise<AttemptReviewDto> {
+		await this.assertOwnAttempt(request.attemptId, request.userId);
 		return await this.queryBus.execute(new GetAttemptReviewQuery(request));
 	}
 

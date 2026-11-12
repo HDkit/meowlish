@@ -26,6 +26,14 @@ import { SortDirection } from '@server/typing';
 export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository {
 	constructor(private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>) {}
 
+	async getAttemptOwner(attemptId: string): Promise<string | null> {
+		const attempt = await this.txHost.tx.attempt.findUnique({
+			where: { id: attemptId },
+			select: { attemptedBy: true },
+		});
+		return attempt?.attemptedBy ?? null;
+	}
+
 	private removeDescriptionBlock(text: string): string {
 		return text
 			.replace(/#BEGIN_DESCRIPTION[\s\S]*?#END_DESCRIPTION/g, '')

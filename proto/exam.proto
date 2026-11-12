@@ -195,29 +195,39 @@ message CreatedAttemptDto {
 
 message EndAttemptDto {
 	google.protobuf.StringValue attempt_id = 1;
+	// Set by the gateway from the JWT; the attempt must belong to this user.
+	google.protobuf.StringValue user_id = 2;
 }
 
 message AnswerDto {
 	google.protobuf.StringValue attempt_id  = 1;
 	google.protobuf.StringValue question_id = 2;
 	google.protobuf.StringValue answer      = 3;
+	// Set by the gateway from the JWT; the attempt must belong to this user.
+	google.protobuf.StringValue user_id = 4;
 }
 
 message RemoveAnswerDto {
 	google.protobuf.StringValue          attempt_id  = 1;
 	google.protobuf.StringValue          question_id = 2;
 	optional google.protobuf.StringValue answer      = 3;
+	// Set by the gateway from the JWT; the attempt must belong to this user.
+	google.protobuf.StringValue user_id = 4;
 }
 
 message AddNoteDto {
 	google.protobuf.StringValue attempt_id  = 1;
 	google.protobuf.StringValue question_id = 2;
 	google.protobuf.StringValue note        = 3;
+	// Set by the gateway from the JWT; the attempt must belong to this user.
+	google.protobuf.StringValue user_id = 4;
 }
 
 message ToggleFlagDto {
 	google.protobuf.StringValue attempt_id  = 1;
 	google.protobuf.StringValue question_id = 2;
+	// Set by the gateway from the JWT; the attempt must belong to this user.
+	google.protobuf.StringValue user_id = 3;
 }
 
 message FlagStateDto {
@@ -263,6 +273,8 @@ message AttemptHistorySummary {
 
 message GetAttemptReviewDto {
 	google.protobuf.StringValue attempt_id = 1;
+	// Set by the gateway from the JWT; the attempt must belong to this user.
+	google.protobuf.StringValue user_id = 2;
 }
 
 message DetailedAttemptReviewData {
@@ -313,6 +325,8 @@ message DetailedAttemptReviewData {
 
 message GetAttemptSavedDataDto {
 	google.protobuf.StringValue attempt_id = 1;
+	// Set by the gateway from the JWT; the attempt must belong to this user.
+	google.protobuf.StringValue user_id = 2;
 }
 
 message AttemptSavedData {

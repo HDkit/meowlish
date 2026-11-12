@@ -10,4 +10,7 @@ export class AnswerDto implements exam.AnswerDto {
 
 	@IsString()
 	answer!: string;
+
+	@IsString()
+	userId!: string;
 }
