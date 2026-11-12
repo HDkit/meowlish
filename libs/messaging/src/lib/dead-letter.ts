@@ -1,4 +1,4 @@
-import type { RabbitMQConfig } from '@golevelup/nestjs-rabbitmq';
+import { MessageHandlerErrorBehavior, type RabbitMQConfig } from '@golevelup/nestjs-rabbitmq';
 
 export const DEAD_LETTER_EXCHANGE = 'eventbus.dlx';
 
@@ -7,12 +7,14 @@ type QueueConfig = NonNullable<RabbitMQConfig['queues']>[number];
 /** Spread into `@RabbitSubscribe({...})` so rejected messages route to `<queue>.dlq`. */
 export function deadLetterQueue(queue: string) {
 	return {
-		queue,
+		queue: queue,
 		queueOptions: {
 			durable: true as const,
 			deadLetterExchange: DEAD_LETTER_EXCHANGE,
 			deadLetterRoutingKey: queue,
 		},
+		// NACK without requeue so a throwing handler dead-letters instead of looping.
+		errorBehavior: MessageHandlerErrorBehavior.NACK,
 	};
 }
 

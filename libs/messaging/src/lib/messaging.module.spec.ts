@@ -53,7 +53,7 @@ async function build(relay: boolean) {
 			MessagingModule.forRoot({
 				serviceName: 'svc',
 				prismaToken: PRISMA,
-				relay,
+				relay: relay,
 				imports: [FakeDatabaseModule],
 			}),
 		],

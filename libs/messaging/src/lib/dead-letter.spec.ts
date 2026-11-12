@@ -1,4 +1,5 @@
 import { deadLetterQueue, dlqQueueConfig } from './dead-letter';
+import { MessageHandlerErrorBehavior } from '@golevelup/nestjs-rabbitmq';
 
 describe('dead-letter helpers', () => {
 	it('deadLetterQueue returns options binding <q>.dlq', () => {
@@ -9,6 +10,7 @@ describe('dead-letter helpers', () => {
 				deadLetterExchange: 'eventbus.dlx',
 				deadLetterRoutingKey: 'notification.events.badge.earned',
 			},
+			errorBehavior: MessageHandlerErrorBehavior.NACK,
 		});
 	});
 

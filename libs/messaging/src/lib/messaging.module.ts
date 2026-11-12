@@ -36,7 +36,7 @@ export class MessagingModule {
 		return {
 			module: MessagingModule,
 			imports: options.imports ?? [],
-			providers,
+			providers: providers,
 			exports: [OutboxPublisher, InboxService],
 		};
 	}
