@@ -122,7 +122,7 @@ export class AuthController implements auth.AuthServiceController {
 	async validateRefresh(@Payload() request: ValidateRefreshDto): Promise<ClaimsDto> {
 		const res = await this.commandBus.execute(
 			new ValidateRefreshCommand(
-				new ValidateRefreshCommandPayload(request.identityId, request.iat),
+				new ValidateRefreshCommandPayload(request.identityId, request.iat, request.iatMs),
 			),
 		);
 		return res;
@@ -130,7 +130,9 @@ export class AuthController implements auth.AuthServiceController {
 
 	async validateAccess(@Payload() request: ValidateAccessDto): Promise<void> {
 		await this.commandBus.execute(
-			new ValidateAccessCommand(new ValidateAccessCommandPayload(request.identityId, request.iat)),
+			new ValidateAccessCommand(
+				new ValidateAccessCommandPayload(request.identityId, request.iat, request.iatMs),
+			),
 		);
 	}
 

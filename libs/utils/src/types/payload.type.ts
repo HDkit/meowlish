@@ -6,6 +6,7 @@ export const payloadSchema = z.object({
 	roles: z.array(z.enum(Role)),
 	permissions: z.array(z.enum(Permission)),
 	iat: z.coerce.number(),
+	iatMs: z.coerce.number().optional(),
 	exp: z.coerce.number(),
 });
 

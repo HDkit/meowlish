@@ -39,7 +39,11 @@ export class JwtRefreshStrategy
 		}
 
 		const claims = await lastValueFrom(
-			this.authService.validateRefresh({ identityId: payload.sub, iat: payload.iat }),
+			this.authService.validateRefresh({
+				identityId: payload.sub,
+				iat: payload.iat,
+				iatMs: payload.iatMs,
+			}),
 		);
 		return claims as Claims;
 	}

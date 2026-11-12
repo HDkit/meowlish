@@ -96,11 +96,13 @@ message RefreshDto {
 message ValidateRefreshDto {
 	google.protobuf.StringValue identity_id = 1;
 	google.protobuf.Int32Value  iat         = 2;
+	google.protobuf.DoubleValue iat_ms      = 3;
 }
 
 message ValidateAccessDto {
 	google.protobuf.StringValue identity_id = 1;
 	google.protobuf.Int32Value  iat         = 2;
+	google.protobuf.DoubleValue iat_ms      = 3;
 }
 
 message LogOutAllDto {

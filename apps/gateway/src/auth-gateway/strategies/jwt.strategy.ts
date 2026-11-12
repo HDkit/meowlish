@@ -36,7 +36,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'access-jwt') implem
 		}
 
 		await lastValueFrom(
-			this.authService.validateAccess({ identityId: payload.sub, iat: payload.iat }),
+			this.authService.validateAccess({
+				identityId: payload.sub,
+				iat: payload.iat,
+				iatMs: payload.iatMs,
+			}),
 		);
 
 		return {

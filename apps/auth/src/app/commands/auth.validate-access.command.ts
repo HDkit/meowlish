@@ -4,6 +4,7 @@ export class ValidateAccessCommandPayload {
 	constructor(
 		public readonly identityId: string,
 		public readonly iat: number,
+		public readonly iatMs?: number,
 	) {}
 }
 

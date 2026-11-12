@@ -33,14 +33,21 @@ export class TokenService {
 		};
 	}
 
+	// `iatMs` is a millisecond-precision issue time. JWT `iat` is whole seconds, which cannot
+	// tell "issued just before a revoke" from "issued just after it" within the same second.
 	private async generateAccessToken(claims: Claims): Promise<string> {
-		return await this.AccessTokenService.signAsync({ ...claims, jti: crypto.randomUUID() });
+		return await this.AccessTokenService.signAsync({
+			...claims,
+			jti: crypto.randomUUID(),
+			iatMs: Date.now(),
+		});
 	}
 
 	private async generateRefreshToken(claims: Claims): Promise<string> {
 		const token = await this.RefreshTokenService.signAsync({
 			sub: claims.sub,
 			jti: crypto.randomUUID(),
+			iatMs: Date.now(),
 		});
 		return token;
 	}
@@ -53,13 +60,18 @@ export class TokenService {
 		await this.redis.setex(
 			this.key(userId),
 			this.configService.getOrThrow('jwt', { infer: true }).refreshTokenExpiration,
-			Math.floor(Date.now() / 1000),
+			Date.now(),
 		);
 	}
 
-	async isTokenRevoked(userId: string, tokenIat: number): Promise<boolean> {
+	/**
+	 * revokedAt is stored in epoch milliseconds. Every token issued at or before it is revoked.
+	 * Tokens carry `iatMs` (ms precision), so a login right after a revoke stays valid even within
+	 * the same second. Legacy tokens without `iatMs` fall back to `iat * 1000` (fails closed).
+	 */
+	async isTokenRevoked(userId: string, tokenIat: number, tokenIatMs?: number): Promise<boolean> {
 		const revokedAt = await this.redis.get(this.key(userId));
 		if (!revokedAt) return false;
-		return tokenIat < Number(revokedAt);
+		return (tokenIatMs ?? tokenIat * 1000) <= Number(revokedAt);
 	}
 }

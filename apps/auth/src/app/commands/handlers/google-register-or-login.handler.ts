@@ -15,7 +15,7 @@ import { UserLoggedInPublisher } from '../../events/publisher/logged-in.publishe
 import { TokenService } from '../../services/token.service';
 import { GoogleRegisterOrLoginCommand } from '../auth.google-register-or-login.command';
 import { Transactional } from '@nestjs-cls/transactional';
-import { Inject, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Inject, UnauthorizedException } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Role } from '@server/typing';
 
@@ -41,6 +41,10 @@ export class GoogleRegisterOrLoginCommandHandler implements ICommandHandler<Goog
 	}
 
 	async login(identityId: string): Promise<Tokens> {
+		// Reject before any outbox write.
+		const identity = await this.identityRepository.findOneById(identityId);
+		if (!identity) throw new UnauthorizedException();
+		if (identity.isLocked) throw new ForbiddenException('Account locked');
 		const claims = await this.identityRepository.getClaimsOfId(identityId);
 		if (!claims) throw new UnauthorizedException();
 		await this.loggedInPublisher.publish(

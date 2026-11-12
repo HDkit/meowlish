@@ -10,7 +10,7 @@ import type { handleUnaryCall, Metadata, UntypedServiceImplementation } from "@g
 import { GrpcMethod, GrpcStreamMethod } from "@nestjs/microservices";
 import { Observable } from "rxjs";
 import { Empty } from "./google/protobuf/empty";
-import { BoolValue, Int32Value, Int64Value, StringValue } from "./google/protobuf/wrappers";
+import { BoolValue, DoubleValue, Int32Value, Int64Value, StringValue } from "./google/protobuf/wrappers";
 
 /** Request */
 export interface RegisterMailDto {
@@ -63,11 +63,13 @@ export interface RefreshDto {
 export interface ValidateRefreshDto {
   identityId: string | undefined;
   iat: number | undefined;
+  iatMs: number | undefined;
 }
 
 export interface ValidateAccessDto {
   identityId: string | undefined;
   iat: number | undefined;
+  iatMs: number | undefined;
 }
 
 export interface LogOutAllDto {
@@ -789,7 +791,7 @@ export const RefreshDto: MessageFns<RefreshDto> = {
 };
 
 function createBaseValidateRefreshDto(): ValidateRefreshDto {
-  return { identityId: undefined, iat: undefined };
+  return { identityId: undefined, iat: undefined, iatMs: undefined };
 }
 
 export const ValidateRefreshDto: MessageFns<ValidateRefreshDto> = {
@@ -799,6 +801,9 @@ export const ValidateRefreshDto: MessageFns<ValidateRefreshDto> = {
     }
     if (message.iat !== undefined) {
       Int32Value.encode({ value: message.iat! }, writer.uint32(18).fork()).join();
+    }
+    if (message.iatMs !== undefined) {
+      DoubleValue.encode({ value: message.iatMs! }, writer.uint32(26).fork()).join();
     }
     return writer;
   },
@@ -832,6 +837,14 @@ export const ValidateRefreshDto: MessageFns<ValidateRefreshDto> = {
             message.iat = Int32Value.decode(reader, reader.uint32()).value;
             continue;
           }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.iatMs = DoubleValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -846,7 +859,7 @@ export const ValidateRefreshDto: MessageFns<ValidateRefreshDto> = {
 };
 
 function createBaseValidateAccessDto(): ValidateAccessDto {
-  return { identityId: undefined, iat: undefined };
+  return { identityId: undefined, iat: undefined, iatMs: undefined };
 }
 
 export const ValidateAccessDto: MessageFns<ValidateAccessDto> = {
@@ -856,6 +869,9 @@ export const ValidateAccessDto: MessageFns<ValidateAccessDto> = {
     }
     if (message.iat !== undefined) {
       Int32Value.encode({ value: message.iat! }, writer.uint32(18).fork()).join();
+    }
+    if (message.iatMs !== undefined) {
+      DoubleValue.encode({ value: message.iatMs! }, writer.uint32(26).fork()).join();
     }
     return writer;
   },
@@ -887,6 +903,14 @@ export const ValidateAccessDto: MessageFns<ValidateAccessDto> = {
             }
 
             message.iat = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.iatMs = DoubleValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }
