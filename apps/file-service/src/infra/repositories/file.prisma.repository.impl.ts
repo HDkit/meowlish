@@ -29,16 +29,14 @@ export class FilePrismaRepositoryImpl implements IFileRepository {
 	}
 
 	async decrementRef(files: { id: string; count?: number }[]): Promise<void> {
-		await Promise.all(
-			files.map(({ id, count = 1 }) =>
-				this.txHost.tx.file.update({
-					where: { id: id },
-					data: {
-						refCount: { decrement: count },
-					},
-				}),
-			),
-		);
+		// updateMany skips unknown ids (count 0) instead of throwing P2025, so one stale id
+		// can't roll back the other decrements. Sequential: they share one transaction.
+		for (const { id, count = 1 } of files) {
+			await this.txHost.tx.file.updateMany({
+				where: { id: id },
+				data: { refCount: { decrement: count } },
+			});
+		}
 	}
 
 	async remove(ids: string[]): Promise<void> {

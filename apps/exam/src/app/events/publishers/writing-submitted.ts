@@ -38,7 +38,8 @@ export class WritingSubmittedPublisher {
 				task_type: response.questionTags.toString(),
 				target_score: goal?.target ?? 0, // need to map from tag?
 			};
-			await this.outbox.add('exam.writing.submitted', message);
+			// The external AI scorer consumes this and expects the bare payload, not the envelope.
+			await this.outbox.add('exam.writing.submitted', message, { bare: true });
 		}
 	}
 }

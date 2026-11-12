@@ -11,23 +11,39 @@ export interface OutboxTransactionHost {
 	readonly tx: {
 		outboxEvent: {
 			create(args: {
-				data: { id: string; routingKey: string; payload: EventEnvelope<unknown> };
+				data: { id: string; routingKey: string; payload: unknown };
 			}): Promise<unknown>;
 		};
 	};
+}
+
+export interface OutboxAddOptions {
+	/**
+	 * Publish the bare payload instead of the envelope, for consumers outside this repo that
+	 * expect the legacy shape. The AMQP messageId is still the outbox row id.
+	 */
+	bare?: boolean;
 }
 
 @Injectable()
 export class OutboxPublisher {
 	constructor(@Inject(TransactionHost) private readonly txHost: OutboxTransactionHost) {}
 
-	async add<T>(routingKey: string, payload: T): Promise<EventEnvelope<T>> {
+	async add<T>(
+		routingKey: string,
+		payload: T,
+		options: OutboxAddOptions = {},
+	): Promise<EventEnvelope<T>> {
 		if (!this.txHost.isTransactionActive()) {
 			throw new Error('OutboxPublisher.add must run inside a transaction');
 		}
 		const envelope = createEnvelope(routingKey, payload);
 		await this.txHost.tx.outboxEvent.create({
-			data: { id: envelope.id, routingKey: routingKey, payload: envelope },
+			data: {
+				id: envelope.id,
+				routingKey: routingKey,
+				payload: options.bare ? payload : envelope,
+			},
 		});
 		return envelope;
 	}

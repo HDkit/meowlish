@@ -17,10 +17,25 @@ describe('OutboxPublisher', () => {
 		expect(create).toHaveBeenCalledTimes(1);
 		const { data } = create.mock.calls[0][0];
 		expect(data.routingKey).toBe('exam.attempt.scored');
-		expect(data.payload.type).toBe('exam.attempt.scored');
+		expect((data.payload as { type: string }).type).toBe('exam.attempt.scored');
 		expect(data.payload).toEqual(envelope);
 		expect(data.id).toBe(envelope.id);
 		expect(envelope.payload).toEqual({ score: 9 });
+	});
+
+	it('add with bare stores the payload unwrapped', async () => {
+		const { create, publisher } = setup(true);
+
+		const envelope = await publisher.add(
+			'exam.writing.submitted',
+			{ attempt_id: 'a1' },
+			{ bare: true },
+		);
+
+		const { data } = create.mock.calls[0][0];
+		expect(data.routingKey).toBe('exam.writing.submitted');
+		expect(data.payload).toEqual({ attempt_id: 'a1' });
+		expect(data.id).toBe(envelope.id);
 	});
 
 	it('add throws when no transaction is active', async () => {
