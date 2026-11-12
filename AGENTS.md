@@ -50,12 +50,114 @@ The config is in `eslint.config.mjs` and uses `typescript-eslint` `recommendedTy
 - `@nx/enforce-module-boundaries`: import libs through their `@server/*` alias, never through relative paths into `libs/`.
 - `any` is allowed but avoid it. Floating promises and non-null assertions produce warnings, so don't add new ones.
 
-## TypeScript
+## Typing conventions
 
 - `strict: true`, `module`/`moduleResolution: nodenext`, decorators with metadata enabled.
+- Annotate return types explicitly on service, handler, repository, and service-side gRPC controller methods (`Promise<AddedTagDto>`, `Promise<void>`). Gateway controller methods may infer them from the gRPC client call. Let local variables infer.
+- DTO and entity fields that are always set use the definite-assignment `!` (`name!: string;`). Optional fields use `?`. Don't add `| undefined` noise.
 - Use `import { type X }` for type-only imports of interfaces (e.g. repository interfaces).
-- Prisma clients are generated per service and imported as `@prisma-client/<service>` (e.g. `import { PrismaClient } from '@prisma-client/exam'`).
+- Avoid `as` casts. Shape objects so they satisfy the target type (a DTO that `implements` the generated message). A cast is acceptable only on an untyped boundary, e.g. `JSON.parse(json) as T`. The `no-unnecessary-type-assertion` rule removes redundant ones.
+- Prefer `unknown` over `any` for untrusted input. Narrow it with zod or class-validator.
+- **Enums:** use string enums with PascalCase members and UPPER_CASE values (`Approved = 'APPROVED'`).
+  - Enums shared across services (`Role`, `Permission`, `SortDirection`) live in `@server/typing`.
+  - Service-local enums go in `apps/<svc>/src/enums/*.enum.ts`.
+  - Don't redefine an enum that already exists.
+- Generic helpers go in `@server/typing` (`DeepPartial`, `DeepStringify`, `Complete`). Check there before writing a new one.
+- Prisma clients are generated per service and imported as `@prisma-client/<service>` (e.g. `import { PrismaClient } from '@prisma-client/exam'`). Prisma model types stay in `infra/`; map them to domain entities or read models before they leave the repository.
 - Zod is imported from `zod/v4`.
+
+## Generated gRPC types (`@server/generated`)
+
+Generated message types (`exam.AddTagDto`, `resource.CreateBlogRequest`, …) are the **wire contract**, not app types. Rules:
+
+- **DTOs are the only place generated message types appear.** A DTO class, in a service or in the gateway, may (and should, when one exists) `implements` the generated interface. The compiler and IDE then keep it in sync with the proto and autocomplete its fields, and the DTO adds validation, serialization, and OpenAPI decorators on top:
+
+  ```ts
+  export class AddTagDto implements exam.AddTagDto {
+  	@IsOptional()
+  	@IsString()
+  	parentId?: string;
+
+  	@IsString()
+  	name!: string;
+  }
+  ```
+
+- Everywhere else, in controllers' `@Payload()`/`@Body()` parameters, return types, services, handlers, and domain code, use the DTO, a domain entity, or a read model. Never write `@Body() body: Omit<resource.X, 'id'>`: a plain interface carries no validation and produces no OpenAPI schema. Create a DTO instead (use `OmitType`/`PickType` from `@nestjs/swagger` to derive variants).
+- **Allowed direct uses**: gRPC plumbing that has no DTO equivalent.
+  - `<pkg>.X_SERVICE_NAME` and `<pkg>.XServiceService` (definitions) in `main.ts` and `ClientsModule`/router modules.
+  - `<pkg>.XServiceClient` as the type of `client.getService<…>()` in gateway controllers, guards, strategies, and in query handlers that call another service (e.g. `file.FileServiceClient` in `auth`/`exam`).
+  - `<pkg>.XServiceController` plus the `@<pkg>.XServiceControllerMethods()` decorator on a service's gRPC controller.
+  - Internal values that only pass between gateway pieces and never become a request or response body, e.g. `auth.Tokens` between the Google OAuth strategy and its callback.
+- **Known legacy violations** (don't copy them; migrate them when you touch these files):
+  - `apps/resource/src/app/services/*.service.ts` and `apps/notification/src/app/services/*.service.ts` take and return generated messages.
+  - `apps/gateway/src/resource-gateway/resource.router.controller.ts` uses `Omit<resource.X, …>` as `@Body()` types.
+
+## DTOs
+
+- Location: `presentation/dtos/{req,res}/<feature>/` in services and `<domain>-gateway/dtos/{req,res}/<feature>/` in the gateway. Names follow `<action>-<thing>.req.dto.ts` / `<thing>.res.dto.ts`.
+- **Request DTOs** use class-validator (`@IsString()`, `@IsOptional()`, `@IsInt()`, …) on every field, and `@Type(() => X)` + `@ValidateNested()` for nested objects. Extend `OffsetPaginationDto` / `CursorPaginationDto` from `@server/utils` for paginated lists instead of redeclaring `page`/`limit`/`sortBy`.
+- **Response DTOs** mark every field `@Expose()`. Responses are serialized through `@SerializeOptions({ type: ResDto })`, which strips anything not exposed. Use `strategy: 'exposeAll'` only for deeply nested read models.
+- **Gateway DTOs** also carry OpenAPI decorators (see below). Service-side DTOs don't need them.
+
+## API documentation (OpenAPI / Scalar at `/reference`)
+
+The gateway builds the document from decorators. Every HTTP route must be fully documented:
+
+- Controller: `@ApiTags('<Group>')`, and `@ApiBearerAuth()` unless every route is `@IsPublic()`.
+- Route: `@ApiOperation({ summary: '…' })`.
+- **Responses: use the custom decorators from `@server/utils`, not raw `@ApiOkResponse`.**
+  - `@ApiResponseEntity(ResDto)` wraps `ResDto` in the standard `ResponseEntity` envelope (`path`, `statusCode`, `success`, `timestamp`, `error`, `data`), which is what the response interceptor actually returns.
+  - `@ApiEmptyResponseEntity()` is for routes that return no data (`data: null`).
+  - If you need a new response shape (e.g. paginated lists), add another custom decorator in `libs/utils/src/decorators/` and export it from the index, rather than writing inline schemas in controllers.
+- DTO fields: `@ApiProperty()` for required fields, `@ApiPropertyOptional()` for optional ones. Pass `enum`, `type: [X]` for arrays, and `example`/`description` where the meaning isn't obvious.
+- Order decorators as `perfectionist/sort-decorators` requires (method → guards → … → `Api*`). `eslint --fix` sorts them.
+- Auth metadata decorators live in `apps/gateway/src/auth/decorators/`: `@IsPublic()`, `@HasRoles(...)`, `@HasPermissions(...)`, `@ResourceAccess({ resourceType, resourceIdParam, rules })`. Use them; don't read metadata or check roles by hand in controllers.
+
+## Configuration files
+
+Root:
+
+| File                                                  | Purpose                                                                                                          |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `package.json`                                        | Exact-pinned deps, `packageManager`, `proto:gen` and `db:setup` scripts                                          |
+| `pnpm-workspace.yaml`, `.npmrc`                       | Workspace and pnpm settings                                                                                      |
+| `nx.json`                                             | Nx plugins that infer `build`/`serve` (webpack), `lint` (eslint), and `test` (jest) targets; `defaultBase: main` |
+| `tsconfig.base.json`                                  | Compiler options and the `@server/*` / `@prisma-client/*` path aliases. Add a new lib's alias here               |
+| `eslint.config.mjs`, `.prettierrc`, `.prettierignore` | Lint and format rules (see above)                                                                                |
+| `jest.preset.js`, `jest.config.ts`                    | Shared Jest preset                                                                                               |
+| `knip.json`                                           | Unused file and export detection (`pnpm knip`)                                                                   |
+| `.husky/pre-commit`                                   | Runs affected format, lint, and test                                                                             |
+| `.github/workflows/*.yml`                             | CI: install → prisma generate → lint → test → build                                                              |
+| `docker/`                                             | Compose stacks, Dockerfile, Envoy configs, `.env*.example`                                                       |
+
+Per app (`apps/<svc>/`):
+
+| File                                                         | Purpose                                                                               |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| `project.json`                                               | Nx project. Defines explicit `prisma:*` targets, and other targets are inferred       |
+| `webpack.config.js`                                          | `NxAppWebpackPlugin` with the swc compiler and output to `dist/apps/<svc>`            |
+| `.swcrc`                                                     | swc transpile options (decorators on, es2023)                                         |
+| `tsconfig.json` / `tsconfig.app.json` / `tsconfig.spec.json` | Extend `tsconfig.base.json`                                                           |
+| `eslint.config.mjs`                                          | Extends the root config and points `parserOptions.project` at the app's tsconfigs     |
+| `jest.config.cts` (plus a duplicate `jest.config.js`)        | Jest config. Keep them identical if you change one                                    |
+| `prisma.config.ts`                                           | Prisma schema folder, migrations path, seed command                                   |
+| `.env.example`                                               | Every env var the app reads, with working local values. The real `.env` is gitignored |
+| `.nvmrc`                                                     | Node version                                                                          |
+
+Libs (`libs/<lib>/`) have `project.json` (`@nx/js:tsc` build), `package.json` (deps checked by `@nx/dependency-checks`), and `tsconfig.lib.json`.
+
+Runtime config pattern (`apps/<svc>/src/configs/config.ts`):
+
+1. A zod `envFileSchema` describes the typed config, and `IEnvVars = z.infer<typeof envFileSchema>`.
+2. `loadEnv(): DeepStringify<IEnvVars>` maps `process.env.*` onto that shape.
+3. `config()` parses it, so the app fails fast on bad env.
+4. The module registers `ConfigModule.forRoot({ load: [config], envFilePath: ['apps/<svc>/.env', '.env'] })`.
+5. Consumers inject `ConfigService<IEnvVars>`. In new code, read config only through it, so every variable is validated by the schema.
+
+Existing code also reads `process.env` directly in a few places: `PORT`/`HOST` in `main.ts`, gRPC/RMQ client registration in `*.module.ts` / `*.router.module.ts`, and some query handlers. Don't add more. If you touch one of these spots, move it to `ConfigService` (for client modules, use `registerAsync` with `inject: [ConfigService]`).
+
+To add a variable, update the schema, `loadEnv`, and `.env.example`, plus `docker/.env.services.example` if Docker needs it.
 
 ## Service architecture (DDD + CQRS, follow existing layout)
 
@@ -82,7 +184,8 @@ configs/        config.ts (zod env schema), rmq/bullmq configs
 
 - One `<domain>-gateway/` folder per service, containing `*.router.controller.ts`, `*.router.module.ts`, `constants/` (client tokens such as `EXAM_CLIENT`), and `dtos/`.
 - Get gRPC clients in `onModuleInit` via `client.getService<pkg.XServiceClient>(pkg.X_SERVICE_NAME)`.
-- Every route has Swagger docs: `@ApiTags`, `@ApiOperation({ summary })`, `@ApiResponseEntity(Dto)` / `@ApiEmptyResponseEntity()`, and `@ApiBearerAuth()` when it requires auth.
+- Controllers stay thin: validate with a DTO, call the gRPC client, and return the result. Business logic belongs in the service.
+- Every route is documented (see **API documentation**).
 - Auth is on by default. Use `@IsPublic()` to open a route, and `@HasRoles(Role.X, …)` (from `@server/typing`) to restrict one.
 
 ## Naming
