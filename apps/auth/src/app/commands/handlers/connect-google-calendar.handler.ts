@@ -7,9 +7,7 @@ import { Inject } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 
 @CommandHandler(ConnectGoogleCalendarCommand)
-export class ConnectGoogleCalendarCommandHandler
-	implements ICommandHandler<ConnectGoogleCalendarCommand>
-{
+export class ConnectGoogleCalendarCommandHandler implements ICommandHandler<ConnectGoogleCalendarCommand> {
 	constructor(
 		@Inject(IGoogleCalendarTokenRepositoryToken)
 		private readonly tokenRepository: IGoogleCalendarTokenRepository,

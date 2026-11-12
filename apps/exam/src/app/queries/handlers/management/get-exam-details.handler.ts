@@ -8,9 +8,7 @@ import { Inject, NotFoundException } from '@nestjs/common';
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 
 @QueryHandler(GetExamManagementDetailsQuery)
-export class GetExamManagementDetailsQueryHandler
-	implements IQueryHandler<GetExamManagementDetailsQuery>
-{
+export class GetExamManagementDetailsQueryHandler implements IQueryHandler<GetExamManagementDetailsQuery> {
 	constructor(
 		@Inject(IManagementReadRepositoryToken)
 		private readonly managementReadRepository: IManagementReadRepository,

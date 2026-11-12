@@ -10,9 +10,7 @@ import { Inject, NotFoundException } from '@nestjs/common';
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 
 @QueryHandler(GetGoogleCalendarTokenQuery)
-export class GetGoogleCalendarTokenQueryHandler
-	implements IQueryHandler<GetGoogleCalendarTokenQuery>
-{
+export class GetGoogleCalendarTokenQueryHandler implements IQueryHandler<GetGoogleCalendarTokenQuery> {
 	constructor(
 		@Inject(IGoogleCalendarTokenRepositoryToken)
 		private readonly tokenRepository: IGoogleCalendarTokenRepository,

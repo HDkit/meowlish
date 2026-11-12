@@ -18,9 +18,7 @@ import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
 import { Role } from '@server/typing';
 
 @CommandHandler(GoogleRegisterOrLoginCommand)
-export class GoogleRegisterOrLoginCommandHandler
-	implements ICommandHandler<GoogleRegisterOrLoginCommand>
-{
+export class GoogleRegisterOrLoginCommandHandler implements ICommandHandler<GoogleRegisterOrLoginCommand> {
 	constructor(
 		@Inject(IIdentityRepositoryToken) private readonly identityRepository: IIdentityRepository,
 		@Inject(IRoleReadRepositoryToken)

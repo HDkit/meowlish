@@ -67,7 +67,7 @@ export class NotificationService {
 		const skip = (page - 1) * limit;
 
 		const where: Record<string, unknown> = {
-			recipientId: data.recipientId as string,
+			recipientId: data.recipientId,
 		};
 		if (data.type) where.type = data.type;
 		if (data.isRead !== undefined && data.isRead !== null) where.isRead = data.isRead;

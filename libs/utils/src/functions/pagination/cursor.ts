@@ -19,7 +19,7 @@ export class CursorPaginationHelper {
 		if (!isValid) throw new Error('Invalid cursor signature');
 		const json = Buffer.from(payload, 'base64url').toString('utf-8');
 		try {
-			return JSON.parse(json) as unknown as T;
+			return JSON.parse(json) as T;
 		} catch {
 			throw new Error('Invalid cursor payload');
 		}

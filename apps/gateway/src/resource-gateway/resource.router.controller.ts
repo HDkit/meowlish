@@ -74,7 +74,7 @@ export class ResourceGatewayController implements OnModuleInit {
 			...body,
 			tags: body.tags ?? [],
 			authorId: req.user.sub,
-		} as resource.CreateBlogRequest);
+		});
 	}
 
 	@Get('blogs/:id')
@@ -102,7 +102,7 @@ export class ResourceGatewayController implements OnModuleInit {
 			...body,
 			tags: body.tags ?? [],
 			id: id,
-		} as resource.UpdateBlogRequest);
+		});
 	}
 
 	@Delete('blogs/:id')
@@ -191,7 +191,7 @@ export class ResourceGatewayController implements OnModuleInit {
 			examples: body.examples ?? [],
 			tags: body.tags ?? [],
 			id: id,
-		} as resource.UpdateFlashCardRequest);
+		});
 	}
 
 	@Delete('flash-cards/:id')
@@ -238,7 +238,7 @@ export class ResourceGatewayController implements OnModuleInit {
 			...body,
 			tags: body.tags ?? [],
 			authorId: req.user.sub,
-		} as resource.CreateFlashCardListRequest);
+		});
 	}
 
 	@Get('flash-card-lists/:id')
@@ -258,7 +258,7 @@ export class ResourceGatewayController implements OnModuleInit {
 			...body,
 			tags: body.tags ?? [],
 			id: id,
-		} as resource.UpdateFlashCardListRequest);
+		});
 	}
 
 	@Delete('flash-card-lists/:id')
@@ -328,7 +328,7 @@ export class ResourceGatewayController implements OnModuleInit {
 			...body,
 			fileIds: body.fileIds ?? [],
 			reportedBy: req.user.sub,
-		} as resource.CreateReportRequest);
+		});
 	}
 
 	@Get('reports/:id')
