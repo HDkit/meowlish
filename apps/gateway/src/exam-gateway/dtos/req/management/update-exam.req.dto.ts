@@ -33,13 +33,19 @@ export class UpdateExamDto {
 
 	@IsArray()
 	@IsString({ each: true })
-	@ApiProperty({ type: [String] })
+	@ApiProperty({
+		description: 'Ids of tags (not names) to add to the exam',
+		type: [String],
+	})
 	@ArrayUnique()
 	addTags: string[] = [];
 
 	@IsArray()
 	@IsString({ each: true })
-	@ApiProperty({ type: [String] })
+	@ApiProperty({
+		description: 'Ids of tags (not names) to remove from the exam',
+		type: [String],
+	})
 	@ArrayUnique()
 	removeTags: string[] = [];
 }

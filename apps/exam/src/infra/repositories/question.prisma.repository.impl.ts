@@ -12,6 +12,7 @@ import {
 import { IQuestionRepository } from '../../domain/repositories/question.repository';
 import { ExamStatus } from '../../enums/exam-status.enum';
 import { QuestionType } from '../../enums/question-type.enum';
+import { insertTagLink } from './tag-link';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { Injectable } from '@nestjs/common';
@@ -53,7 +54,7 @@ class QuestionPrismaMapper {
 			points: from.points,
 			type: this.mapQuestionType(from.type),
 			fileIds: from.questionFiles.map(f => f.fileId),
-			tags: from.questionTags.map(t => t.tag.name),
+			tags: from.questionTags.map(t => t.tagId),
 		});
 	}
 
@@ -144,19 +145,17 @@ export class QuestionPrismaRepositoryImpl implements IQuestionRepository {
 	}
 
 	private async onQuestionTagAdded(event: QuestionTagAdded): Promise<void> {
-		await this.txHost.tx.questionTag.create({
-			data: {
-				question: { connect: { id: event.payload.questionId } },
-				tag: { connect: { name: event.payload.tag } },
-			},
-		});
+		await insertTagLink(() =>
+			this.txHost.tx.questionTag.create({
+				data: { questionId: event.payload.questionId, tagId: event.payload.tag },
+			}),
+		);
 	}
 
 	private async onQuestionTagRemoved(event: QuestionTagRemoved): Promise<void> {
-		await this.txHost.tx.questionTag.deleteMany({
+		await this.txHost.tx.questionTag.delete({
 			where: {
-				questionId: event.payload.questionId,
-				tag: { name: event.payload.tag },
+				questionId_tagId: { questionId: event.payload.questionId, tagId: event.payload.tag },
 			},
 		});
 	}
@@ -185,7 +184,7 @@ type RepoQuestion = Omit<PrismaQuestion, 'order'>;
 
 const questionPrismaIncludeObj = {
 	choices: true,
-	questionTags: { select: { tag: { select: { name: true } } } },
+	questionTags: { select: { tagId: true } },
 	questionFiles: { select: { fileId: true }, orderBy: [{ updatedAt: 'asc' }, { fileId: 'asc' }] },
 	section: { select: { exam: { select: { id: true, version: true, status: true } } } },
 } satisfies Prisma.QuestionInclude;

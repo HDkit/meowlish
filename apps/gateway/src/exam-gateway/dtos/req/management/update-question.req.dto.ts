@@ -93,13 +93,19 @@ export class UpdateQuestionDto {
 
 	@IsArray()
 	@IsString({ each: true })
-	@ApiProperty({ type: [String] })
+	@ApiProperty({
+		description: 'Ids of tags (not names) to add to the question',
+		type: [String],
+	})
 	@ArrayUnique()
 	addTags: string[] = [];
 
 	@IsArray()
 	@IsString({ each: true })
-	@ApiProperty({ type: [String] })
+	@ApiProperty({
+		description: 'Ids of tags (not names) to remove from the question',
+		type: [String],
+	})
 	@ArrayUnique()
 	removeTags: string[] = [];
 

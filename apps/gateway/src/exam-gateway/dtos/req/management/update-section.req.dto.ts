@@ -24,13 +24,19 @@ export class UpdateSectionDto {
 
 	@IsArray()
 	@IsString({ each: true })
-	@ApiProperty({ type: [String] })
+	@ApiProperty({
+		description: 'Ids of tags (not names) to add to the section',
+		type: [String],
+	})
 	@ArrayUnique()
 	addTags: string[] = [];
 
 	@IsArray()
 	@IsString({ each: true })
-	@ApiProperty({ type: [String] })
+	@ApiProperty({
+		description: 'Ids of tags (not names) to remove from the section',
+		type: [String],
+	})
 	@ArrayUnique()
 	removeTags: string[] = [];
 

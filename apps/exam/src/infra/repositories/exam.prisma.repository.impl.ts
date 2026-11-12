@@ -8,6 +8,7 @@ import {
 } from '../../domain/events/exam-management.event';
 import { IExamRepository } from '../../domain/repositories/exam.repository';
 import { ExamStatus } from '../../enums/exam-status.enum';
+import { insertTagLink } from './tag-link';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { Injectable, NotFoundException } from '@nestjs/common';
@@ -133,9 +134,11 @@ export class ExamPrismaRepositoryImpl implements IExamRepository {
 	}
 
 	private async onExamTagAdded(event: ExamTagAdded): Promise<void> {
-		await this.txHost.tx.examTag.create({
-			data: { examId: event.payload.examId, tagId: event.payload.tag },
-		});
+		await insertTagLink(() =>
+			this.txHost.tx.examTag.create({
+				data: { examId: event.payload.examId, tagId: event.payload.tag },
+			}),
+		);
 	}
 
 	private async onExamTagRemoved(event: ExamTagRemoved): Promise<void> {
