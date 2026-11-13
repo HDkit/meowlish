@@ -2,13 +2,15 @@ import { IntegrationEventHandlers } from './app/events/handlers';
 import { NotificationPreferencesService } from './app/services/notification-preferences.service';
 import { NotificationSseService } from './app/services/notification-sse.service';
 import { NotificationService } from './app/services/notification.service';
-import { config } from './configs/config';
+import { IEnvVars, config } from './configs/config';
 import { rmqPubConfig } from './configs/rmq.pub.config';
 import { rmqSubConfig } from './configs/rmq.sub.config';
+import { AUTH_CLIENT } from './constants/auth';
 import { NotificationPreferencesController } from './presentation/controllers/notification-preferences.controller';
 import { NotificationSseController } from './presentation/controllers/notification-sse.controller';
 import { NotificationController } from './presentation/controllers/notification.controller';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
+import { PackageDefinition } from '@grpc/grpc-js/build/src/make-client';
 import { ClsPluginTransactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { Module } from '@nestjs/common';
@@ -18,10 +20,12 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PrismaClient } from '@prisma-client/notification';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
+import { auth } from '@server/generated';
 import { LoggerModule } from '@server/logger';
 import { MessagingModule } from '@server/messaging';
 import { HealthModule } from '@server/telemetry';
 import {
+	ErrorHandlingGrpcProxy,
 	GlobalClassSerializerInterceptor,
 	GlobalRpcExceptionFilter,
 	GlobalValidationPipe,
@@ -81,6 +85,20 @@ const databaseModule = DatabaseModule.forRoot(PrismaClient);
 		NotificationPreferencesService,
 		NotificationSseService,
 		...IntegrationEventHandlers,
+		{
+			provide: AUTH_CLIENT,
+			inject: [ConfigService],
+			useFactory: (configService: ConfigService<IEnvVars>) => {
+				const authService = configService.getOrThrow('authService', { infer: true });
+				return new ErrorHandlingGrpcProxy({
+					url: authService.url ?? `${authService.host}:${authService.port}`,
+					package: 'auth',
+					packageDefinition: {
+						[`auth.${auth.AUTH_SERVICE_NAME}`]: auth.AuthServiceService,
+					} satisfies PackageDefinition,
+				});
+			},
+		},
 		{
 			provide: APP_GUARD,
 			useClass: ClsGuard,

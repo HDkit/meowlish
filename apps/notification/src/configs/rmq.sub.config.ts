@@ -1,4 +1,5 @@
 import { ACHIEVEMENT_EARNED_QUEUE } from '../app/events/handlers/achievement-earned.handler';
+import { REPORT_CREATED_QUEUE } from '../app/events/handlers/report-created.handler';
 import { REPORT_STATUS_CHANGED_QUEUE } from '../app/events/handlers/report-status-changed.handler';
 import { IEnvVars } from './config';
 import { MessageHandlerErrorBehavior, RabbitMQConfig } from '@golevelup/nestjs-rabbitmq';
@@ -12,6 +13,7 @@ export const rmqSubConfig = (configService: ConfigService<IEnvVars>): RabbitMQCo
 		exchanges: [...defaultRmqExchanges],
 		queues: [
 			...ACHIEVEMENT_EARNED_QUEUE.queues,
+			...REPORT_CREATED_QUEUE.queues,
 			...REPORT_STATUS_CHANGED_QUEUE.queues,
 		],
 		uri: `amqp://${rmqConfig.user}:${rmqConfig.password}@${rmqConfig.host}:${rmqConfig.port}`,

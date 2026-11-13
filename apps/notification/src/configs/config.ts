@@ -16,10 +16,18 @@ const mqSchema = z.object({
 	port: z.coerce.number(),
 });
 
+/** auth gRPC address (to find the admins to notify); `url` overrides host:port. */
+const authServiceSchema = z.object({
+	url: z.string().optional(),
+	host: z.string(),
+	port: z.coerce.number(),
+});
+
 export const envFileSchema = z.object({
 	env: z.union([z.literal('development'), z.literal('production')]),
 	database: dbVarsSchema,
 	messageQueue: mqSchema,
+	authService: authServiceSchema,
 });
 
 export type IEnvVars = z.infer<typeof envFileSchema>;
@@ -38,6 +46,11 @@ const loadEnv = (): DeepStringify<IEnvVars> => ({
 		port: process.env.RMQ_PORT,
 		user: process.env.RMQ_USER,
 		password: process.env.RMQ_PASS,
+	},
+	authService: {
+		url: process.env.AUTH_SERVICE_URL || undefined,
+		host: process.env.AUTH_SERVICE_HOST,
+		port: process.env.AUTH_SERVICE_PORT,
 	},
 });
 

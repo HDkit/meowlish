@@ -19,6 +19,20 @@ class ReportStatusChangedEvent {
 	@IsString() title!: string;
 }
 
+const REPORT_STATUS_TEXT: Record<string, string> = {
+	pending: 'đang chờ xử lý',
+	reviewing: 'đang được xem xét',
+	in_progress: 'đang được xử lý',
+	resolved: 'đã được giải quyết',
+	rejected: 'đã bị từ chối',
+	dismissed: 'đã được đóng',
+	closed: 'đã được đóng',
+};
+
+/** Vietnamese phrase for a report status ("đã được giải quyết"), falling back to the raw status. */
+export const reportStatusText = (status: string): string =>
+	REPORT_STATUS_TEXT[status.toLowerCase()] ?? `chuyển sang trạng thái "${status}"`;
+
 @Injectable()
 export class ReportStatusChangedHandler {
 	constructor(
@@ -43,8 +57,8 @@ export class ReportStatusChangedHandler {
 		await this.notificationService.createNotification({
 			recipientId: event.reportedBy,
 			type: 'report',
-			title: 'Report Status Updated',
-			message: `Your report "${event.title}" has been ${event.status}.`,
+			title: 'Báo cáo của bạn đã được cập nhật',
+			message: `Báo cáo "${event.title}" ${reportStatusText(event.status)}.`,
 			data: JSON.stringify({
 				reportId: event.reportId,
 				status: event.status,

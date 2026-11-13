@@ -196,6 +196,8 @@ services:
         APP: notification
     environment:
       - POSTGRES_DB=notification_db
+      - AUTH_SERVICE_HOST=auth
+      - AUTH_SERVICE_PORT=50050
       - GRPC_HOST=0.0.0.0
       - GRPC_PORT=50060
       - HTTP_HOST=0.0.0.0

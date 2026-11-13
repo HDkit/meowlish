@@ -39,8 +39,8 @@ export class AchievementEarnedHandler {
 		await this.notificationService.createNotification({
 			recipientId: event.uid,
 			type: 'achievement',
-			title: 'Achievement Unlocked!',
-			message: `You earned the "${event.badgeName}" badge!`,
+			title: 'Đạt thành tích mới!',
+			message: `Bạn vừa nhận huy hiệu "${event.badgeName}". Tiếp tục phát huy nhé!`,
 			data: JSON.stringify({ badgeName: event.badgeName }),
 		});
 	}
