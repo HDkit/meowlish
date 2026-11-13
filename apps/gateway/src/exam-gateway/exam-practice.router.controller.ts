@@ -6,6 +6,7 @@ import { AddNoteDto } from './dtos/req/practice/add-note.req.dto';
 import { AnswerDto } from './dtos/req/practice/answer.req.dto';
 import { AttemptDto } from './dtos/req/practice/attempt.req.dto';
 import { FindExamsDto } from './dtos/req/practice/find-exams.req.dto';
+import { GetUserActivityDto } from './dtos/req/practice/get-user-activity.req.dto';
 import { GetUserCalendarDto } from './dtos/req/practice/get-user-calendar.req.dto';
 import { GetUsersAttemptHistoryDto } from './dtos/req/practice/get-users-attempt-history.req.dto';
 import { RemoveAnswerDto } from './dtos/req/practice/remove-answer.req.dto';
@@ -18,7 +19,9 @@ import { ExamStatsDto } from './dtos/res/practice/exam-stats.res.dto';
 import { ExamsInfoDto } from './dtos/res/practice/exams.res.dto';
 import { FlagStateDto } from './dtos/res/practice/flag-state.res.dto';
 import { QuestionDetailDto } from './dtos/res/practice/question-detail.res.dto';
+import { UserActivityDto } from './dtos/res/practice/user-activity.res.dto';
 import { UserCalendarDto } from './dtos/res/practice/user-calendar.res.dto';
+import { UserSkillStatsDto } from './dtos/res/practice/user-skill-stats.res.dto';
 import { UserStatsDto } from './dtos/res/practice/user-stats.res.dto';
 import {
 	Body,
@@ -242,6 +245,31 @@ export class ExamPracticeGatewayController implements OnModuleInit {
 	@SerializeOptions({ type: UserStatsDto, strategy: 'exposeAll' })
 	getUserStats(@Req() request: AuthenticatedRequest) {
 		const res = this.examPracticeService.getUserStats({ uid: request.user.sub });
+		return res;
+	}
+
+	@Get('my/activity')
+	@ApiOperation({
+		summary: 'Get the authenticated user daily practice activity and streaks (UTC days)',
+	})
+	@ApiResponseEntity(UserActivityDto)
+	@SerializeOptions({ type: UserActivityDto, strategy: 'exposeAll' })
+	getUserActivity(@Req() request: AuthenticatedRequest, @Query() query: GetUserActivityDto) {
+		const res = this.examPracticeService.getUserActivity({
+			uid: request.user.sub,
+			days: query.days,
+		});
+		return res;
+	}
+
+	@Get('my/skills')
+	@ApiOperation({
+		summary: 'Get the authenticated user per-skill scores and per-tag accuracy',
+	})
+	@ApiResponseEntity(UserSkillStatsDto)
+	@SerializeOptions({ type: UserSkillStatsDto, strategy: 'exposeAll' })
+	getUserSkillStats(@Req() request: AuthenticatedRequest) {
+		const res = this.examPracticeService.getUserSkillStats({ uid: request.user.sub });
 		return res;
 	}
 }
