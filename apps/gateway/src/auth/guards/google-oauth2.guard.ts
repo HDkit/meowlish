@@ -124,13 +124,16 @@ export class GoogleOAuth2Guard extends GoogleOAuth2BaseGuard {
 	}
 }
 
-/** Guards /google/callback: resolves the flow (`request.googleOAuth`) before the strategy runs. */
+/**
+ * Guards /google/callback: resolves the flow (`request.googleOAuth`) before the strategy runs.
+ * It is set as soon as the state is read, so GoogleOAuthCallbackFilter can redirect even a
+ * rejected callback to the right frontend.
+ */
 @Injectable()
 export class GoogleOAuth2CallbackGuard extends GoogleOAuth2BaseGuard {
 	async getAuthenticateOptions(context: ExecutionContext) {
 		const request = context.switchToHttp().getRequest<GoogleOAuthRequest>();
 		const flow = await this.consumeState(request);
-		request.googleOAuth = flow;
 		return { callbackURL: flow.frontend.callbackUrl };
 	}
 
@@ -140,12 +143,18 @@ export class GoogleOAuth2CallbackGuard extends GoogleOAuth2BaseGuard {
 			// Default-frontend login never sends a state, and that never fails to resolve.
 			const frontend = resolveGoogleOAuthFrontend(this.vps);
 			if (!frontend) throw new UnauthorizedException('Expired session');
-			return { frontend: frontend };
+			request.googleOAuth = { frontend: frontend };
+			return request.googleOAuth;
 		}
 		if (typeof state !== 'string') throw new UnauthorizedException('OAuth state mismatch');
 
 		const record = parseStateRecord(await this.redis.get(oauthStateKey(state)));
 		if (!record) throw new UnauthorizedException('Expired session');
+		const frontend = resolveGoogleOAuthFrontend(this.vps, record.frontend);
+		// The frontend was removed from GOOGLE_OAUTH_FRONTENDS while this flow was in progress.
+		if (!frontend) throw new UnauthorizedException('Expired session');
+		// Known from here on, so an error below still returns to the right frontend and flow.
+		request.googleOAuth = { identityId: record.identityId, frontend: frontend };
 		// Check the cookie before deleting, so someone else's request can't burn this state.
 		if (record.identityId && readCookie(request, OAUTH_STATE_COOKIE) !== state) {
 			throw new UnauthorizedException('OAuth state mismatch');
@@ -154,9 +163,6 @@ export class GoogleOAuth2CallbackGuard extends GoogleOAuth2BaseGuard {
 		if ((await this.redis.del(oauthStateKey(state))) === 0) {
 			throw new UnauthorizedException('Expired session');
 		}
-		const frontend = resolveGoogleOAuthFrontend(this.vps, record.frontend);
-		// The frontend was removed from GOOGLE_OAUTH_FRONTENDS while this flow was in progress.
-		if (!frontend) throw new UnauthorizedException('Expired session');
-		return { identityId: record.identityId, frontend: frontend };
+		return request.googleOAuth;
 	}
 }

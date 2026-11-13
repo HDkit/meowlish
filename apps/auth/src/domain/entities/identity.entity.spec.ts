@@ -1,7 +1,7 @@
 import { LoginType } from '../../enums/login-type.enum';
 import { Credential } from './credential.entity';
 import { Identity } from './identity.entity';
-import { ForbiddenException } from '@nestjs/common';
+import { ConflictException, ForbiddenException } from '@nestjs/common';
 
 const mailCred = () =>
 	new Credential({
@@ -70,18 +70,27 @@ describe('Identity demo guard', () => {
 	it('leaves a normal identity unaffected', () => {
 		const identity = build(false);
 		identity.updateDetails({ username: 'other', phoneNumber: '0911111111' });
-		identity.addCredential(
-			new Credential({
-				identifier: 'x@y.z',
-				loginType: LoginType.Mail,
-				secretHash: 'h',
-				isHashed: true,
-			}),
-		);
 		identity.deleteCredential('google');
+		identity.addCredential(
+			new Credential({ identifier: 'g-9', loginType: LoginType.Google, isHashed: true }),
+		);
 		identity.updateCredential('mail', { identifier: 'new@y.z' });
 		expect(identity.username).toBe('other');
 		expect(identity.phoneNumber).toBe('0911111111');
-		expect(identity.credentials.map(c => c.identifier)).toEqual(['new@y.z', 'x@y.z']);
+		expect(identity.credentials.map(c => c.identifier)).toEqual(['new@y.z', 'g-9']);
+	});
+});
+
+describe('Identity.addCredential', () => {
+	it('allows one sign-in method per type', () => {
+		const identity = new Identity({ id: 'i2', username: 'u', credentials: [googleCred()] });
+		expect(() =>
+			identity.addCredential(
+				new Credential({ identifier: 'g-2', loginType: LoginType.Google, isHashed: true }),
+			),
+		).toThrow(ConflictException);
+		expect(identity.credentials).toHaveLength(1);
+		identity.addCredential(mailCred());
+		expect(identity.credentials.map(c => c.loginType)).toEqual([LoginType.Google, LoginType.Mail]);
 	});
 });

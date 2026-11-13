@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
 
 class CredentialDto {
@@ -7,8 +7,12 @@ class CredentialDto {
 	id!: string;
 
 	@Expose()
-	@ApiProperty()
+	@ApiProperty({ enum: ['MAIL', 'GOOGLE'] })
 	type!: string;
+
+	@Expose()
+	@ApiPropertyOptional({ description: 'Email address of a MAIL credential' })
+	mail?: string;
 }
 
 export class CredentialsDto {

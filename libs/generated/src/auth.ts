@@ -38,8 +38,19 @@ export interface UpdateMailPasswordDto {
 }
 
 export interface RegisterOrLoginGoogleDto {
-  identifier: string | undefined;
-  username: string | undefined;
+  identifier:
+    | string
+    | undefined;
+  /** fallback username when no usable one can be derived from the email */
+  username:
+    | string
+    | undefined;
+  /** Google profile display name; becomes the full name of a new account */
+  fullName?:
+    | string
+    | undefined;
+  /** Google account email; a new account's username is derived from its local part */
+  email?: string | undefined;
 }
 
 export interface AddGoogleCredDto {
@@ -209,6 +220,8 @@ export interface Credentials {
 export interface Credentials_Credential {
   id: string;
   type: string;
+  /** the email address of a MAIL credential; unset for other types */
+  mail?: string | undefined;
 }
 
 /** Lock/Unlock */
@@ -552,6 +565,12 @@ export const RegisterOrLoginGoogleDto: MessageFns<RegisterOrLoginGoogleDto> = {
     if (message.username !== undefined) {
       StringValue.encode({ value: message.username! }, writer.uint32(18).fork()).join();
     }
+    if (message.fullName !== undefined) {
+      StringValue.encode({ value: message.fullName! }, writer.uint32(26).fork()).join();
+    }
+    if (message.email !== undefined) {
+      StringValue.encode({ value: message.email! }, writer.uint32(34).fork()).join();
+    }
     return writer;
   },
 
@@ -582,6 +601,22 @@ export const RegisterOrLoginGoogleDto: MessageFns<RegisterOrLoginGoogleDto> = {
             }
 
             message.username = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.fullName = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.email = StringValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }
@@ -2388,6 +2423,9 @@ export const Credentials_Credential: MessageFns<Credentials_Credential> = {
     if (message.type !== "") {
       writer.uint32(18).string(message.type);
     }
+    if (message.mail !== undefined) {
+      StringValue.encode({ value: message.mail! }, writer.uint32(26).fork()).join();
+    }
     return writer;
   },
 
@@ -2418,6 +2456,14 @@ export const Credentials_Credential: MessageFns<Credentials_Credential> = {
             }
 
             message.type = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.mail = StringValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }

@@ -144,6 +144,9 @@ export class Identity extends AggregateRoot<Event<any>> implements IAggregate<Id
 				throw new ConflictException(
 					'Identity cannot have the same identifier for the same type of credential',
 				);
+			// one sign-in method per type (also a unique index on identity_id + login_type)
+			if (x.loginType === cred.loginType)
+				throw new ConflictException(`Identity already has a ${cred.loginType} credential`);
 		}
 		this.credentials.push(cred);
 		this.apply(new CredAddedEvent({ identityId: this.id, data: structuredClone(cred) }));

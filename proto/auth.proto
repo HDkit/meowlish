@@ -72,7 +72,12 @@ message UpdateMailPasswordDto {
 
 message RegisterOrLoginGoogleDto {
 	google.protobuf.StringValue identifier = 1;
+	// fallback username when no usable one can be derived from the email
 	google.protobuf.StringValue username   = 2;
+	// Google profile display name; becomes the full name of a new account
+	optional google.protobuf.StringValue full_name  = 3;
+	// Google account email; a new account's username is derived from its local part
+	optional google.protobuf.StringValue email      = 4;
 }
 
 message AddGoogleCredDto {
@@ -237,6 +242,8 @@ message Credentials {
 	message Credential {
 		string id   = 1;
 		string type = 2;
+		// the email address of a MAIL credential; unset for other types
+		optional google.protobuf.StringValue mail = 3;
 	}
 }
 

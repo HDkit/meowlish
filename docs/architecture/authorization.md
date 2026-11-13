@@ -131,6 +131,8 @@ sequenceDiagram
   B->>G: POST /auth/google/tokens -> nothing to set (value is true)
 ```
 
+Failures never end as a JSON page: `GoogleOAuthCallbackFilter` (`apps/gateway/src/auth-gateway/google-oauth-callback.filter.ts`) redirects to the flow's frontend callback page with `?error=<code>` (`ACCESS_DENIED`, `SESSION_EXPIRED`, `GOOGLE_ALREADY_LINKED`, `GOOGLE_ACCOUNT_IN_USE`, `FORBIDDEN`, `GOOGLE_FAILED`; `apps/gateway/src/enums/google-oauth-error.enum.ts`) and `flow=link` for linking, which success redirects also carry. An account has at most one sign-in method per type (`Identity.addCredential`, matching the `identity_id + login_type` unique index), so linking a second Google account is `GOOGLE_ALREADY_LINKED`; a Google account that signs in to another account is `GOOGLE_ACCOUNT_IN_USE`. New Google accounts take their full name from the Google profile and their username from the email's local part (random suffix if taken); older ones with no full name or a UUID username get them on their next Google login.
+
 Sources: `apps/gateway/src/auth/guards/google-oauth2.guard.ts`, `apps/gateway/src/auth-gateway/google-oauth-frontends.ts`, `apps/gateway/src/auth-gateway/strategies/google-oauth2.strategy.ts`, `auth.router.controller.ts` (`googleCallback`, `getGoogleTokens`). `FE_LOGIN_REDIRECT_URL` must be the frontend's callback page, not `/` (`docs/operations/upgrade-notes.md`).
 
 ## 4. Role and permission gates

@@ -46,6 +46,7 @@ import { IdentityIdsDto } from './dtos/res/identity-ids.res.dto';
 import { LimitedIdentitiesDto } from './dtos/res/limited-identities.res.dto';
 import { PermissionsDto } from './dtos/res/permissions.res.dto';
 import { RolesDto } from './dtos/res/roles.res.dto';
+import { GoogleOAuthCallbackFilter } from './google-oauth-callback.filter';
 import { RedisService } from '@liaoliaots/nestjs-redis';
 import {
 	Body,
@@ -62,6 +63,7 @@ import {
 	SerializeOptions,
 	UnauthorizedException,
 	UnsupportedMediaTypeException,
+	UseFilters,
 	UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -196,9 +198,14 @@ export class AuthGatewayController implements OnModuleInit {
 
 	@Get('google/callback')
 	@UseGuards(GoogleOAuth2CallbackGuard)
+	@UseFilters(GoogleOAuthCallbackFilter)
 	@IsPublic()
 	@ApiEmptyResponseEntity()
-	@ApiOperation({ summary: 'Callback url for OAuth2' })
+	@ApiOperation({
+		summary: 'Callback url for OAuth2',
+		description:
+			'Redirects to the frontend login callback page with `?loginToken=` on success or `?error=<code>` on failure (ACCESS_DENIED, SESSION_EXPIRED, GOOGLE_ALREADY_LINKED, GOOGLE_ACCOUNT_IN_USE, FORBIDDEN, GOOGLE_FAILED), plus `flow=link` for the linking flow. Never answers with JSON.',
+	})
 	async googleCallback(
 		@Req() request: { user: auth.Tokens | boolean; googleOAuth: GoogleOAuthFlow },
 		@Res() res: Response,
@@ -212,6 +219,7 @@ export class AuthGatewayController implements OnModuleInit {
 		// GoogleOAuth2CallbackGuard resolved which frontend this flow started on
 		const url = new URL(request.googleOAuth.frontend.loginRedirectUrl);
 		url.searchParams.set('loginToken', loginToken);
+		if (request.googleOAuth.identityId) url.searchParams.set('flow', 'link');
 		return res.redirect(url.toString());
 	}
 
