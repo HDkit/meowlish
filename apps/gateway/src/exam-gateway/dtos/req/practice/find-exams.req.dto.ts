@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { SortDirection } from '@server/typing';
+import { ToStringArray } from '@server/utils';
 import { Type } from 'class-transformer';
 import {
 	IsArray,
@@ -25,6 +26,8 @@ class FilterOptionsDto {
 		type: [String],
 		description: 'Exams with ANY of these tag names (a descendant tag also matches)',
 	})
+	// one query value (`filter[tags]=X`) arrives as a string
+	@ToStringArray()
 	tags: string[] = [];
 
 	@IsArray()
@@ -35,6 +38,8 @@ class FilterOptionsDto {
 		description:
 			'Exams with EVERY one of these tag names (or a descendant of each), e.g. ["TOEIC"]',
 	})
+	// one query value (`filter[tags]=X`) arrives as a string
+	@ToStringArray()
 	requiredTags: string[] = [];
 }
 
