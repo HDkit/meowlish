@@ -2,6 +2,8 @@
 # Create/upgrade every service's schema in its own database, then seed it.
 #   pnpm db:setup            # migrate + seed
 #   pnpm db:setup --no-seed  # migrate only
+#   pnpm db:setup --reset    # DROP every service's data, then migrate + seed from scratch
+#                            # (local hosts only; set DB_SETUP_ALLOW_REMOTE_RESET=1 to override)
 #
 # Connects to the Postgres from docker/docker-compose.db.yaml using the
 # POSTGRES_* values in docker/.env (override with env vars). Databases are
@@ -18,7 +20,26 @@ PGPORT=${POSTGRES_PORT:-5432}
 PGUSER=${POSTGRES_USER:-postgres}
 PGPASS=${POSTGRES_PASSWORD:-12345}
 SEED=1
-[ "$1" = "--no-seed" ] && SEED=0
+RESET=0
+for arg in "$@"; do
+	case "$arg" in
+	--no-seed) SEED=0 ;;
+	--reset) RESET=1 ;;
+	*) echo "unknown option: $arg" >&2; exit 2 ;;
+	esac
+done
+if [ "$RESET" = 1 ]; then
+	case "$PGHOST" in
+	localhost | 127.0.0.1 | ::1) ;;
+	*)
+		if [ "${DB_SETUP_ALLOW_REMOTE_RESET:-0}" != 1 ]; then
+			echo "refusing to reset databases on $PGHOST (set DB_SETUP_ALLOW_REMOTE_RESET=1)" >&2
+			exit 1
+		fi
+		;;
+	esac
+	echo "!! --reset: dropping all data in every service database on $PGHOST:$PGPORT"
+fi
 
 # app:database — order matters for seeding: authorization's seed reads the
 # exam/resource/live databases, notification's seed reads auth.
@@ -39,7 +60,13 @@ for entry in $SERVICES; do
 		cd "apps/$app"
 		pnpm exec prisma generate >/dev/null
 		if [ -d prisma/migrations ]; then
-			pnpm exec prisma migrate deploy
+			if [ "$RESET" = 1 ]; then
+				pnpm exec prisma migrate reset --force --skip-seed --skip-generate
+			else
+				pnpm exec prisma migrate deploy
+			fi
+		elif [ "$RESET" = 1 ]; then
+			pnpm exec prisma db push --force-reset --skip-generate
 		else
 			pnpm exec prisma db push --skip-generate
 		fi

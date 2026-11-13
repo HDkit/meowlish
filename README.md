@@ -165,10 +165,18 @@ Each app loads `apps/<app>/.env` (falling back to `.env` in the working director
 ### 4. Create schemas and seed data
 
 ```
-pnpm db:setup            # or: pnpm db:setup --no-seed
+git lfs install && git lfs pull   # once: the exam media in scripts/eng-media is stored with Git LFS
+pnpm db:setup                     # or: pnpm db:setup --no-seed
+pnpm db:setup --reset             # drop all local data and seed from scratch
 ```
 
-For every service this generates the Prisma client, applies migrations (`migrate deploy`, or `db push` for services without migrations), and runs the seed. It is safe to re-run. It also creates placeholder images/audio for every file the seeds reference (`scripts/dev-media/generate.mjs`), writes them to `apps/file-service/eng-media/` and uploads them to MinIO's `public` bucket. Drop real media into that folder to use it instead; existing files are kept.
+For every service this generates the Prisma client, applies migrations (`migrate deploy`, or `db push` for services without migrations), and runs the seed. It is safe to re-run. `--reset` instead drops every service's data first (`migrate reset` / `db push --force-reset`); it refuses non-local database hosts unless `DB_SETUP_ALLOW_REMOTE_RESET=1`.
+
+Before seeding it builds the media the seeds reference (`scripts/dev-media/generate.mjs`) into `apps/file-service/eng-media/` (generated, git-ignored) and uploads it to MinIO's `public` bucket:
+
+- the real TOEIC/IELTS audio and scans come from `scripts/eng-media/<exam>/{audio,images}/` (Git LFS; add new media there, named by the `fileId` the seed uses);
+- any referenced file without real media gets a labelled placeholder (ffmpeg/espeak-ng when installed), and so does a file that is still an LFS pointer because `git lfs pull` wasn't run;
+- outputs that are no longer referenced are deleted, locally and from the bucket (`SYSTEM_*` objects only).
 
 Seeded login: `admin@gmail.com` / `admin` (plus test users, see `apps/auth/prisma/seed.ts`).
 
@@ -186,6 +194,12 @@ nx serve auth
 ```
 
 The gateway will be available at `http://localhost:3000`, with interactive API docs at `http://localhost:3000/reference`. Point the frontend's `NEXT_PUBLIC_API_URL` at it.
+
+## Demo account
+
+The seed creates a shared account for public testers: `demo@lingriser.test` / `Demo@12345` (student role). These credentials are public by design.
+
+Because everyone shares it, the account can't change its password, add or remove sign-in methods, change its username or phone number, log out every session (`/auth/logout-all`) or connect Google Calendar; those requests get 403. Full name, bio and avatar stay editable. `GET /api/v1/auth/my/identity` returns `isDemo: true` so the frontend can hide those controls. Re-running the auth seed (`pnpm db:setup`) restores its password.
 
 ## JWT / RSA Keys (Important)
 
@@ -297,21 +311,21 @@ The generated code is written to `libs/generated/src`.
 
 ## Common Commands
 
-| Command                        | Description                                                  |
-| ------------------------------ | ------------------------------------------------------------ |
-| `pnpm install`                 | Install workspace dependencies                               |
-| `pnpm db:setup`                | Migrate + seed every service database (and upload dev media) |
-| `nx run-many -t serve`         | Run all services in dev mode                                 |
-| `nx serve <app>`               | Run a single app in dev mode (e.g. `nx serve gateway`)       |
-| `nx run <app>:build`           | Build an app (e.g. `nx run auth:build`)                      |
-| `nx run <app>:test`            | Run tests for an app                                         |
-| `nx run <app>:lint`            | Lint an app                                                  |
-| `nx run <app>:prisma:generate` | Generate the Prisma client                                   |
-| `nx run <app>:prisma:push`     | Push the Prisma schema to the DB                             |
-| `nx run <app>:prisma:migrate`  | Run Prisma migrations                                        |
-| `nx run <app>:prisma:seed`     | Seed the database                                            |
-| `nx run generated:generate`    | Regenerate gRPC code from `proto/`                           |
-| `nx graph`                     | Visualize the project dependency graph                       |
+| Command                        | Description                                                                                    |
+| ------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `pnpm install`                 | Install workspace dependencies                                                                 |
+| `pnpm db:setup`                | Migrate + seed every service database (and upload exam media); `--reset` to start from scratch |
+| `nx run-many -t serve`         | Run all services in dev mode                                                                   |
+| `nx serve <app>`               | Run a single app in dev mode (e.g. `nx serve gateway`)                                         |
+| `nx run <app>:build`           | Build an app (e.g. `nx run auth:build`)                                                        |
+| `nx run <app>:test`            | Run tests for an app                                                                           |
+| `nx run <app>:lint`            | Lint an app                                                                                    |
+| `nx run <app>:prisma:generate` | Generate the Prisma client                                                                     |
+| `nx run <app>:prisma:push`     | Push the Prisma schema to the DB                                                               |
+| `nx run <app>:prisma:migrate`  | Run Prisma migrations                                                                          |
+| `nx run <app>:prisma:seed`     | Seed the database                                                                              |
+| `nx run generated:generate`    | Regenerate gRPC code from `proto/`                                                             |
+| `nx graph`                     | Visualize the project dependency graph                                                         |
 
 Use `nx show project <name>` to see every available target for a given project.
 
