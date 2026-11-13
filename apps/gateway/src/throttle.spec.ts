@@ -158,6 +158,17 @@ describe('gateway throttling and CORS', () => {
 		expect(statuses[100]).toBe(429);
 	});
 
+	it('gives each signed-in user behind one IP their own default budget', async () => {
+		const get = (sub: string) =>
+			fetch(`${base}/ping`, {
+				headers: { Cookie: `access_token=${fakeJwt(sub)}`, 'X-Forwarded-For': '203.0.113.50' },
+			});
+		for (let i = 0; i < 100; i++) expect((await get('alice')).status).toBe(200);
+		expect((await get('alice')).status).toBe(429);
+		// same proxy IP, different account: untouched budget
+		expect((await get('bob')).status).toBe(200);
+	});
+
 	it('does not throttle the socket.io proxy route', async () => {
 		for (let i = 0; i < 120; i++) {
 			expect((await fetch(`${base}/socket.io/?EIO=4&transport=polling`)).status).not.toBe(429);

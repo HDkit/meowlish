@@ -35,7 +35,14 @@ const isStrictRoute = (context: ExecutionContext): boolean =>
  *   accounts still hits a per-IP ceiling there. Skipped elsewhere: normal routes count once.
  */
 const throttlers: ThrottlerOptions[] = [
-	{ name: 'default', ttl: MINUTE, limit: IP_LIMIT },
+	// per IP and signed-in account (IP alone when signed out): behind the frontend's proxy every
+	// user reaches the gateway from the proxy's address, so a per-IP budget was shared by all users
+	{
+		name: 'default',
+		ttl: MINUTE,
+		limit: IP_LIMIT,
+		getTracker: (req, context) => defaultTracker(req, context),
+	},
 	{
 		name: 'ip',
 		ttl: MINUTE,
@@ -93,6 +100,10 @@ const tokenSubject =
 		const sub: unknown = typeof payload === 'object' ? payload?.sub : undefined;
 		return typeof sub === 'string' && sub ? `sub:${sub}` : undefined;
 	};
+
+/** Tracker of the `default` throttler: `<ip>:sub:<id>` for signed-in requests, else the IP. */
+const defaultTracker: ThrottlerGetTrackerFunction = (req, context) =>
+	accountTracker(tokenSubject(ACCESS_TOKEN_COOKIE))(req, context);
 
 /** Per-account 10/min (`default` overridden) plus the per-IP 100/min `ip` throttler. */
 const strict = (accountKey: AccountKey) =>
