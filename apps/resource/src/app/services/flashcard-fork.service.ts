@@ -10,7 +10,6 @@ import {
 	type FlashCardListDiffReadModel,
 	type PullUpstreamResultReadModel,
 } from '../../domain/read-models/flash-card-proposal.read-model';
-import { FlashCardProposalStatus } from '@server/typing';
 import { ResourceEventsPublisher } from '../events/resource-events.publisher';
 import {
 	cardContentData,
@@ -26,6 +25,7 @@ import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { FlashCard, FlashCardList, PrismaClient } from '@prisma-client/resource';
+import { FlashCardProposalStatus } from '@server/typing';
 import { randomUUID } from 'node:crypto';
 
 /** A copy and its original, with their cards. */

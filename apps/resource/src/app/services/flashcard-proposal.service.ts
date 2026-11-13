@@ -13,7 +13,6 @@ import {
 	type FlashCardProposalReadModel,
 	type FlashCardProposalsPageReadModel,
 } from '../../domain/read-models/flash-card-proposal.read-model';
-import { FlashCardProposalStatus } from '@server/typing';
 import { ResourceEventsPublisher } from '../events/resource-events.publisher';
 import {
 	cardContentData,
@@ -40,6 +39,7 @@ import {
 	NotFoundException,
 } from '@nestjs/common';
 import { FlashCardListProposal, Prisma, PrismaClient } from '@prisma-client/resource';
+import { FlashCardProposalStatus } from '@server/typing';
 import { randomUUID } from 'node:crypto';
 
 const WITH_LISTS = {

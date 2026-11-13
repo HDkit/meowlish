@@ -1,5 +1,5 @@
-import { type FlashCardProposalStatus } from '@server/typing';
 import { type PageInput } from './pagination';
+import { type FlashCardProposalStatus } from '@server/typing';
 
 export interface CreateFlashCardProposalInput {
 	/** The requester's copy; the proposal targets its original. */

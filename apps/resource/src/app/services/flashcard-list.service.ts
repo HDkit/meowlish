@@ -4,7 +4,6 @@ import {
 	type FlashCardListsPageReadModel,
 } from '../../domain/read-models/flash-card-list.read-model';
 import { type FlashCardListPageReadModel } from '../../domain/read-models/flash-card.read-model';
-import { FlashCardProposalStatus } from '@server/typing';
 import { ResourceEventsPublisher } from '../events/resource-events.publisher';
 import {
 	WITH_FORK_COUNT,
@@ -24,6 +23,7 @@ import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { FlashCardList, Prisma, PrismaClient } from '@prisma-client/resource';
+import { FlashCardProposalStatus } from '@server/typing';
 
 @Injectable()
 export class FlashcardListService {

@@ -1,6 +1,6 @@
-import { FlashCardProposalStatus } from '@server/typing';
 import { RequesterReqDto } from '../requester.req.dto';
 import { resource } from '@server/generated';
+import { FlashCardProposalStatus } from '@server/typing';
 import { Type } from 'class-transformer';
 import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
