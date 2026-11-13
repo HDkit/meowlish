@@ -20,6 +20,8 @@ A microservices-based backend for an English-learning application, built with **
 
 ## Architecture
 
+Detailed architecture docs (services, data, authorization, messaging, operations): [docs/architecture/README.md](docs/architecture/README.md).
+
 ```
                        ┌──────────────────────────────────────────────┐
                        │                 Gateway (HTTP)                │

@@ -2,6 +2,7 @@
 
 Guide for AI coding agents (Claude Code, Codex, opencode, …) working in this repo.
 Read it before changing anything. Human-facing setup docs live in `README.md`.
+Architecture overview: `docs/architecture/README.md`.
 
 ## What this is
 
