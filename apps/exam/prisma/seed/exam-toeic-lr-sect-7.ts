@@ -13,7 +13,7 @@ export class ToeicLrExamSect7Seeder {
 				contentType: SectionType.Section,
 				childSections: {
 					create: [
-						// ── Group 1: Q147–148 — Memo ────────────────────────────────────
+						// ── Group 1: Q147–148 — Flyer (TriStar Sports Gear summer sale)
 						{
 							id: 's171',
 							examId: '1',
@@ -24,54 +24,58 @@ export class ToeicLrExamSect7Seeder {
 								create: [
 									{
 										order: 147,
-										content: 'What is the purpose of this memo?',
+										content: 'What is being advertised?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
 												{
 													key: 'A',
-													content: 'To ask employees not to take the elevator',
-													isCorrect: false,
-												},
-												{
-													key: 'B',
-													content: 'To inform employees of elevator maintenance',
+													content: 'A seasonal sale at a sporting goods store',
 													isCorrect: true,
 												},
 												{
-													key: 'C',
-													content: 'To address employee complaints about the elevator',
+													key: 'B',
+													content: 'The opening of a new sports stadium',
 													isCorrect: false,
 												},
 												{
-													key: 'D',
-													content: 'To notify employees of the new elevator schedule',
+													key: 'C',
+													content: 'A summer sports camp for students',
 													isCorrect: false,
 												},
+												{ key: 'D', content: 'A new line of team jerseys', isCorrect: false },
 											],
 										},
 										questionTags: {
-											create: this.tagNamesToIdInputs(['Topic Purpose', 'Email Letter Memo']),
+											create: this.tagNamesToIdInputs(['Topic Purpose', 'Advertisement Article']),
 										},
 									},
 									{
 										order: 148,
-										content: 'The word "serviced" in line 3 is closest in meaning to',
+										content: 'How can customers receive a discount on balls?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'cleaned', isCorrect: false },
-												{ key: 'B', content: 'offered', isCorrect: false },
-												{ key: 'C', content: 'maintained', isCorrect: true },
-												{ key: 'D', content: 'operated', isCorrect: false },
+												{
+													key: 'A',
+													content: 'By buying two pairs of athletic shoes',
+													isCorrect: false,
+												},
+												{
+													key: 'B',
+													content: 'By bringing the flyer to the store',
+													isCorrect: true,
+												},
+												{ key: 'C', content: 'By ordering from the Web site', isCorrect: false },
+												{ key: 'D', content: 'By shopping before Friday', isCorrect: false },
 											],
 										},
-										questionTags: { create: this.tagNamesToIdInputs(['Synonym In Context']) },
+										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
 									},
 								],
 							},
 						},
-						// ── Group 2: Q149–150 — Notice ──────────────────────────────────
+						// ── Group 2: Q149–150 — Text message chain (choosing a movie)
 						{
 							id: 's172',
 							examId: '1',
@@ -82,38 +86,42 @@ export class ToeicLrExamSect7Seeder {
 								create: [
 									{
 										order: 149,
-										content: 'What is the notice mainly about?',
+										content: 'What are the writers mainly discussing?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'A product replacement program', isCorrect: true },
-												{ key: 'B', content: 'How to use a product correctly', isCorrect: false },
-												{ key: 'C', content: 'Safe storage of electrical items', isCorrect: false },
-												{ key: 'D', content: 'A new cooking appliance', isCorrect: false },
+												{ key: 'A', content: 'Where to have dinner', isCorrect: false },
+												{ key: 'B', content: 'Which movie to see', isCorrect: true },
+												{ key: 'C', content: 'How to get to the theater', isCorrect: false },
+												{ key: 'D', content: 'Who will buy the tickets', isCorrect: false },
 											],
 										},
 										questionTags: {
-											create: this.tagNamesToIdInputs(['Topic Purpose', 'Announcement Notice']),
+											create: this.tagNamesToIdInputs(['Topic Purpose', 'Text Message Chain']),
 										},
 									},
 									{
 										order: 150,
-										content: 'What should customers do to receive a replacement?',
+										content: 'At 19:25, what does Jason most likely mean when he writes, "Im in"?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'Visit the store', isCorrect: false },
-												{ key: 'B', content: 'Call a phone number', isCorrect: true },
-												{ key: 'C', content: 'Fill out a form online', isCorrect: false },
-												{ key: 'D', content: 'Mail back the defective item', isCorrect: false },
+												{ key: 'A', content: 'He has arrived at the theater', isCorrect: false },
+												{ key: 'B', content: 'He agrees to see the comedy', isCorrect: true },
+												{
+													key: 'C',
+													content: 'He still prefers the horror movie',
+													isCorrect: false,
+												},
+												{ key: 'D', content: 'He has already bought a ticket', isCorrect: false },
 											],
 										},
-										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
+										questionTags: { create: this.tagNamesToIdInputs(['Inference']) },
 									},
 								],
 							},
 						},
-						// ── Group 3: Q151–152 — E-mail ──────────────────────────────────
+						// ── Group 3: Q151–152 — Article (Brixton Science Journal, archeology presentation)
 						{
 							id: 's173',
 							examId: '1',
@@ -124,30 +132,46 @@ export class ToeicLrExamSect7Seeder {
 								create: [
 									{
 										order: 151,
-										content: 'What is the e-mail about?',
+										content: 'What is the article mainly about?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'A new product launch', isCorrect: false },
-												{ key: 'B', content: 'A job opening', isCorrect: true },
-												{ key: 'C', content: 'A company policy update', isCorrect: false },
-												{ key: 'D', content: 'A client meeting', isCorrect: false },
+												{
+													key: 'A',
+													content: 'The opening of a new public library',
+													isCorrect: false,
+												},
+												{
+													key: 'B',
+													content: 'An upcoming presentation by an archeologist',
+													isCorrect: true,
+												},
+												{
+													key: 'C',
+													content: 'A farming course offered in Egypt',
+													isCorrect: false,
+												},
+												{
+													key: 'D',
+													content: 'The sale of ancient Egyptian tools',
+													isCorrect: false,
+												},
 											],
 										},
 										questionTags: {
-											create: this.tagNamesToIdInputs(['Topic Purpose', 'Email Letter Memo']),
+											create: this.tagNamesToIdInputs(['Topic Purpose', 'Advertisement Article']),
 										},
 									},
 									{
 										order: 152,
-										content: 'What is Lisa Wu asked to include with her application?',
+										content: 'Why are attendees encouraged to arrive early?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'A cover letter', isCorrect: false },
-												{ key: 'B', content: 'A portfolio', isCorrect: false },
-												{ key: 'C', content: 'A list of references', isCorrect: true },
-												{ key: 'D', content: 'A writing sample', isCorrect: false },
+												{ key: 'A', content: 'To get a seat near the stage', isCorrect: false },
+												{ key: 'B', content: 'To meet Mr. Price in person', isCorrect: false },
+												{ key: 'C', content: 'To view ancient items on display', isCorrect: true },
+												{ key: 'D', content: 'To register for an expedition', isCorrect: false },
 											],
 										},
 										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
@@ -155,7 +179,7 @@ export class ToeicLrExamSect7Seeder {
 								],
 							},
 						},
-						// ── Group 4: Q153–154 — Notice ──────────────────────────────────
+						// ── Group 4: Q153–154 — Notice (Spring Valley Center grand opening)
 						{
 							id: 's174',
 							examId: '1',
@@ -166,38 +190,58 @@ export class ToeicLrExamSect7Seeder {
 								create: [
 									{
 										order: 153,
-										content: 'Where would this notice most likely be found?',
+										content: 'What is the purpose of the notice?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'In a restaurant', isCorrect: false },
-												{ key: 'B', content: 'In a gym', isCorrect: true },
-												{ key: 'C', content: 'At a school', isCorrect: false },
-												{ key: 'D', content: 'At a hotel', isCorrect: false },
+												{
+													key: 'A',
+													content: 'To announce the construction of a highway',
+													isCorrect: false,
+												},
+												{
+													key: 'B',
+													content: 'To invite people to tour office spaces for rent',
+													isCorrect: true,
+												},
+												{ key: 'C', content: 'To advertise apartments for sale', isCorrect: false },
+												{
+													key: 'D',
+													content: 'To announce that a company is relocating',
+													isCorrect: false,
+												},
 											],
 										},
 										questionTags: {
-											create: this.tagNamesToIdInputs(['Inference', 'Announcement Notice']),
+											create: this.tagNamesToIdInputs(['Topic Purpose', 'Announcement Notice']),
 										},
 									},
 									{
 										order: 154,
-										content: 'What change will take effect on Monday?',
+										content: 'What is indicated about Spring Valley Center?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'New hours of operation', isCorrect: true },
-												{ key: 'B', content: 'New staff members', isCorrect: false },
-												{ key: 'C', content: 'New pricing', isCorrect: false },
-												{ key: 'D', content: 'New equipment', isCorrect: false },
+												{ key: 'A', content: 'It is open only on weekends', isCorrect: false },
+												{
+													key: 'B',
+													content: 'Tours must be reserved in advance',
+													isCorrect: false,
+												},
+												{
+													key: 'C',
+													content: 'It is easy to reach from a highway',
+													isCorrect: true,
+												},
+												{ key: 'D', content: 'It is located in Oregon', isCorrect: false },
 											],
 										},
-										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
+										questionTags: { create: this.tagNamesToIdInputs(['Inference']) },
 									},
 								],
 							},
 						},
-						// ── Group 5: Q155–157 — Letter ──────────────────────────────────
+						// ── Group 5: Q155–157 — Article (Lockland Business News, new Cashco warehouse)
 						{
 							id: 's175',
 							examId: '1',
@@ -208,52 +252,61 @@ export class ToeicLrExamSect7Seeder {
 								create: [
 									{
 										order: 155,
-										content: 'Who is the letter addressed to?',
+										content: 'What is the article mainly about?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'A new employee', isCorrect: false },
-												{ key: 'B', content: 'A job applicant', isCorrect: true },
-												{ key: 'C', content: 'A long-term customer', isCorrect: false },
-												{ key: 'D', content: 'A business partner', isCorrect: false },
+												{
+													key: 'A',
+													content: 'Long waits at the Canadian border',
+													isCorrect: false,
+												},
+												{
+													key: 'B',
+													content: 'A new Cashco warehouse coming to Lockland',
+													isCorrect: true,
+												},
+												{ key: 'C', content: 'The closing of a Canadian Cashco', isCorrect: false },
+												{ key: 'D', content: 'A petition against a new store', isCorrect: false },
 											],
 										},
 										questionTags: {
-											create: this.tagNamesToIdInputs(['Detail Information', 'Email Letter Memo']),
+											create: this.tagNamesToIdInputs(['Topic Purpose', 'Advertisement Article']),
 										},
 									},
 									{
 										order: 156,
-										content: 'What is true about the position?',
+										content: 'What is NOT mentioned as a feature of the new Lockland Cashco?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'It involves travel.', isCorrect: true },
-												{ key: 'B', content: 'It is part-time.', isCorrect: false },
-												{ key: 'C', content: 'It requires a graduate degree.', isCorrect: false },
-												{ key: 'D', content: 'It is temporary.', isCorrect: false },
+												{ key: 'A', content: 'A pet center', isCorrect: false },
+												{ key: 'B', content: 'A medical clinic', isCorrect: false },
+												{ key: 'C', content: 'A bakery', isCorrect: true },
+												{ key: 'D', content: 'A garden center', isCorrect: false },
 											],
 										},
-										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
+										questionTags: { create: this.tagNamesToIdInputs(['Exception NOT true']) },
 									},
 									{
 										order: 157,
-										content: 'What is the applicant asked to do?',
+										content:
+											'In which of the positions marked [1], [2], [3], and [4] does the following sentence best belong? "Cashco has announced that it will open a warehouse in Lockland."',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'Send a revised resume', isCorrect: false },
-												{ key: 'B', content: 'Call to confirm the interview', isCorrect: true },
-												{ key: 'C', content: 'Complete an online application', isCorrect: false },
-												{ key: 'D', content: 'Attend an orientation session', isCorrect: false },
+												{ key: 'A', content: '[1]', isCorrect: true },
+												{ key: 'B', content: '[2]', isCorrect: false },
+												{ key: 'C', content: '[3]', isCorrect: false },
+												{ key: 'D', content: '[4]', isCorrect: false },
 											],
 										},
-										questionTags: { create: this.tagNamesToIdInputs(['Request Suggestion']) },
+										questionTags: { create: this.tagNamesToIdInputs(['Text Completion']) },
 									},
 								],
 							},
 						},
-						// ── Group 6: Q158–160 — Advertisement ───────────────────────────
+						// ── Group 6: Q158–160 — Article (Centerville County Shelter charity walking marathon)
 						{
 							id: 's176',
 							examId: '1',
@@ -264,14 +317,26 @@ export class ToeicLrExamSect7Seeder {
 								create: [
 									{
 										order: 158,
-										content: 'What is being advertised?',
+										content: 'What is the purpose of the article?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'A cooking class', isCorrect: false },
-												{ key: 'B', content: 'A catering service', isCorrect: false },
-												{ key: 'C', content: 'A kitchen appliance', isCorrect: true },
-												{ key: 'D', content: 'A food delivery service', isCorrect: false },
+												{ key: 'A', content: 'To announce a fundraising event', isCorrect: true },
+												{
+													key: 'B',
+													content: 'To report on the history of a shelter',
+													isCorrect: false,
+												},
+												{
+													key: 'C',
+													content: 'To recruit volunteers for a shelter',
+													isCorrect: false,
+												},
+												{
+													key: 'D',
+													content: 'To announce the results of a race',
+													isCorrect: false,
+												},
 											],
 										},
 										questionTags: {
@@ -280,28 +345,40 @@ export class ToeicLrExamSect7Seeder {
 									},
 									{
 										order: 159,
-										content: 'What is offered with the purchase?',
+										content: 'What is indicated about the marathon?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'A free recipe book', isCorrect: false },
-												{ key: 'B', content: 'Extended warranty', isCorrect: true },
-												{ key: 'C', content: 'Free installation', isCorrect: false },
-												{ key: 'D', content: 'A discount coupon', isCorrect: false },
+												{
+													key: 'A',
+													content: 'It will be held for the first time',
+													isCorrect: false,
+												},
+												{ key: 'B', content: 'It has been held once before', isCorrect: true },
+												{ key: 'C', content: 'It is open only to adults', isCorrect: false },
+												{ key: 'D', content: 'It is a running race', isCorrect: false },
 											],
 										},
 										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
 									},
 									{
 										order: 160,
-										content: 'How can customers get more information?',
+										content: 'What is stated about children who participate?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'Visit a showroom', isCorrect: false },
-												{ key: 'B', content: 'Send an e-mail', isCorrect: false },
-												{ key: 'C', content: 'Visit a website', isCorrect: true },
-												{ key: 'D', content: 'Call a hotline', isCorrect: false },
+												{
+													key: 'A',
+													content: 'They must be accompanied by an adult family member',
+													isCorrect: true,
+												},
+												{
+													key: 'B',
+													content: 'They must pay a reduced entry fee',
+													isCorrect: false,
+												},
+												{ key: 'C', content: 'They will walk a shorter route', isCorrect: false },
+												{ key: 'D', content: 'They must register in advance', isCorrect: false },
 											],
 										},
 										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
@@ -309,133 +386,178 @@ export class ToeicLrExamSect7Seeder {
 								],
 							},
 						},
-						// ── Group 7: Q161–163 — Article ─────────────────────────────────
+						// ── Group 7: Q161–164 — Online chat discussion (victory parade)
 						{
 							id: 's177',
 							examId: '1',
 							order: 7,
 							contentType: SectionType.Question,
-							sectionFiles: { create: [{ fileId: 'SYSTEM_161-163.jpg' }] },
+							sectionFiles: { create: [{ fileId: 'SYSTEM_161-164.jpg' }] },
 							questions: {
 								create: [
 									{
 										order: 161,
-										content: 'What is the article mainly about?',
+										content: 'What are the writers mainly discussing?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'A new transit system', isCorrect: false },
-												{ key: 'B', content: 'A city planning project', isCorrect: true },
-												{ key: 'C', content: 'A local business initiative', isCorrect: false },
-												{ key: 'D', content: 'Environmental regulations', isCorrect: false },
+												{ key: 'A', content: 'Attending a victory parade', isCorrect: true },
+												{ key: 'B', content: 'Signing a sponsorship contract', isCorrect: false },
+												{ key: 'C', content: 'Planning a university event', isCorrect: false },
+												{ key: 'D', content: 'Hiring a new quarterback', isCorrect: false },
 											],
 										},
 										questionTags: {
-											create: this.tagNamesToIdInputs(['Topic Purpose', 'Advertisement Article']),
+											create: this.tagNamesToIdInputs(['Topic Purpose', 'Text Message Chain']),
 										},
 									},
 									{
 										order: 162,
-										content: 'According to the article, when will the project begin?',
+										content: 'What kind of business do the writers most likely work for?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'Next month', isCorrect: false },
-												{ key: 'B', content: 'Next spring', isCorrect: true },
-												{ key: 'C', content: 'In two years', isCorrect: false },
-												{ key: 'D', content: 'Next fall', isCorrect: false },
-											],
-										},
-										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
-									},
-									{
-										order: 163,
-										content: 'What concern do residents have?',
-										type: QuestionType.MultipleChoiceSingle,
-										choices: {
-											create: [
-												{ key: 'A', content: 'Noise pollution', isCorrect: false },
-												{ key: 'B', content: 'Construction costs', isCorrect: false },
-												{ key: 'C', content: 'Traffic disruptions', isCorrect: true },
-												{ key: 'D', content: 'Loss of green space', isCorrect: false },
-											],
-										},
-										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
-									},
-								],
-							},
-						},
-						// ── Group 8: Q164–167 — E-mail ──────────────────────────────────
-						{
-							id: 's178',
-							examId: '1',
-							order: 8,
-							contentType: SectionType.Question,
-							sectionFiles: { create: [{ fileId: 'SYSTEM_164-167.jpg' }] },
-							questions: {
-								create: [
-									{
-										order: 164,
-										content: 'What is the purpose of the e-mail?',
-										type: QuestionType.MultipleChoiceSingle,
-										choices: {
-											create: [
-												{ key: 'A', content: 'To respond to a complaint', isCorrect: false },
-												{ key: 'B', content: 'To request feedback on a service', isCorrect: true },
-												{ key: 'C', content: 'To announce a new policy', isCorrect: false },
-												{ key: 'D', content: 'To confirm a reservation', isCorrect: false },
-											],
-										},
-										questionTags: {
-											create: this.tagNamesToIdInputs(['Topic Purpose', 'Email Letter Memo']),
-										},
-									},
-									{
-										order: 165,
-										content: 'Who most likely is Chen Li?',
-										type: QuestionType.MultipleChoiceSingle,
-										choices: {
-											create: [
-												{ key: 'A', content: 'A hotel manager', isCorrect: false },
-												{ key: 'B', content: 'A travel agent', isCorrect: false },
-												{ key: 'C', content: 'A hotel guest', isCorrect: true },
-												{ key: 'D', content: 'A restaurant employee', isCorrect: false },
+												{ key: 'A', content: 'A university', isCorrect: false },
+												{ key: 'B', content: 'A sports stadium', isCorrect: false },
+												{ key: 'C', content: 'A beer company', isCorrect: true },
+												{ key: 'D', content: 'A marketing agency', isCorrect: false },
 											],
 										},
 										questionTags: { create: this.tagNamesToIdInputs(['Inference']) },
 									},
 									{
-										order: 166,
-										content: 'What is NOT mentioned as an amenity?',
+										order: 163,
+										content: 'Why is Jeff concerned?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'Free breakfast', isCorrect: true },
-												{ key: 'B', content: 'A swimming pool', isCorrect: false },
-												{ key: 'C', content: 'Free Wi-Fi', isCorrect: false },
-												{ key: 'D', content: 'A fitness center', isCorrect: false },
+												{ key: 'A', content: 'The parade may be canceled', isCorrect: false },
+												{
+													key: 'B',
+													content: 'A competitor has contracts with the university and the stadium',
+													isCorrect: true,
+												},
+												{
+													key: 'C',
+													content: 'He does not have a ticket to the game',
+													isCorrect: false,
+												},
+												{ key: 'D', content: 'Their new product is not ready', isCorrect: false },
 											],
 										},
-										questionTags: { create: this.tagNamesToIdInputs(['Exception NOT true']) },
+										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
 									},
 									{
-										order: 167,
-										content: 'What is the recipient asked to do?',
+										order: 164,
+										content:
+											'What does Susan most likely mean when she writes, "you better keep your mouth shut"?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'Call customer service', isCorrect: false },
-												{ key: 'B', content: 'Complete an online survey', isCorrect: true },
-												{ key: 'C', content: 'Return to the hotel', isCorrect: false },
-												{ key: 'D', content: 'Send a written review', isCorrect: false },
+												{
+													key: 'A',
+													content: 'Jeff should stop complaining about the game',
+													isCorrect: false,
+												},
+												{
+													key: 'B',
+													content: 'Jeff should not draw attention to their company at the event',
+													isCorrect: true,
+												},
+												{
+													key: 'C',
+													content: 'Jeff should not share his notes with Molly',
+													isCorrect: false,
+												},
+												{
+													key: 'D',
+													content: 'Jeff should not cheer during the parade',
+													isCorrect: false,
+												},
 											],
 										},
-										questionTags: { create: this.tagNamesToIdInputs(['Request Suggestion']) },
+										questionTags: { create: this.tagNamesToIdInputs(['Inference']) },
 									},
 								],
 							},
 						},
-						// ── Group 9: Q168–171 — Advertisement ───────────────────────────
+						// ── Group 8: Q165–167 — Notice (Lichtenberg Air baggage fee increase)
+						{
+							id: 's178',
+							examId: '1',
+							order: 8,
+							contentType: SectionType.Question,
+							sectionFiles: { create: [{ fileId: 'SYSTEM_165-167.jpg' }] },
+							questions: {
+								create: [
+									{
+										order: 165,
+										content: 'What is the purpose of the notice?',
+										type: QuestionType.MultipleChoiceSingle,
+										choices: {
+											create: [
+												{
+													key: 'A',
+													content: 'To announce an increase in baggage fees',
+													isCorrect: true,
+												},
+												{ key: 'B', content: 'To introduce new flight routes', isCorrect: false },
+												{
+													key: 'C',
+													content: 'To explain a new carry-on bag policy',
+													isCorrect: false,
+												},
+												{ key: 'D', content: 'To apologize for flight delays', isCorrect: false },
+											],
+										},
+										questionTags: {
+											create: this.tagNamesToIdInputs(['Topic Purpose', 'Announcement Notice']),
+										},
+									},
+									{
+										order: 166,
+										content: 'According to the notice, why is the change being made?',
+										type: QuestionType.MultipleChoiceSingle,
+										choices: {
+											create: [
+												{
+													key: 'A',
+													content: 'Passengers are carrying more bags',
+													isCorrect: false,
+												},
+												{ key: 'B', content: 'Fuel costs are rising', isCorrect: true },
+												{ key: 'C', content: 'Airport fees have increased', isCorrect: false },
+												{ key: 'D', content: 'New aircraft have been purchased', isCorrect: false },
+											],
+										},
+										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
+									},
+									{
+										order: 167,
+										content: 'What is indicated about Lichtenberg Air?',
+										type: QuestionType.MultipleChoiceSingle,
+										choices: {
+											create: [
+												{
+													key: 'A',
+													content: 'It will start charging for carry-on bags',
+													isCorrect: false,
+												},
+												{ key: 'B', content: 'It plans to lower ticket prices', isCorrect: false },
+												{
+													key: 'C',
+													content: 'It has not raised its baggage fees in ten years',
+													isCorrect: true,
+												},
+												{ key: 'D', content: 'It will stop flying on October 1', isCorrect: false },
+											],
+										},
+										questionTags: { create: this.tagNamesToIdInputs(['Inference']) },
+									},
+								],
+							},
+						},
+						// ── Group 9: Q168–171 — Letter (Conference for Second Language Education speaker)
 						{
 							id: 's179',
 							examId: '1',
@@ -446,69 +568,102 @@ export class ToeicLrExamSect7Seeder {
 								create: [
 									{
 										order: 168,
-										content: 'What type of business is described in the passage?',
+										content: 'Why was the letter written?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'An accounting firm', isCorrect: false },
-												{ key: 'B', content: 'A software company', isCorrect: true },
-												{ key: 'C', content: 'A retail store', isCorrect: false },
-												{ key: 'D', content: 'A consulting agency', isCorrect: false },
+												{
+													key: 'A',
+													content: 'To offer Ms. Lynch a teaching position',
+													isCorrect: false,
+												},
+												{
+													key: 'B',
+													content: 'To provide details to a conference speaker',
+													isCorrect: true,
+												},
+												{
+													key: 'C',
+													content: 'To ask Ms. Lynch to register for a workshop',
+													isCorrect: false,
+												},
+												{
+													key: 'D',
+													content: 'To request payment for a conference',
+													isCorrect: false,
+												},
 											],
 										},
 										questionTags: {
-											create: this.tagNamesToIdInputs([
-												'Detail Information',
-												'Advertisement Article',
-											]),
+											create: this.tagNamesToIdInputs(['Topic Purpose', 'Email Letter Memo']),
 										},
 									},
 									{
 										order: 169,
-										content: 'What is the company looking for in candidates?',
+										content: 'What is suggested about Ms. Lynch?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'Sales experience', isCorrect: false },
-												{ key: 'B', content: 'Programming skills', isCorrect: true },
-												{ key: 'C', content: 'Marketing knowledge', isCorrect: false },
-												{ key: 'D', content: 'Customer service skills', isCorrect: false },
+												{
+													key: 'A',
+													content: 'She will travel to the conference by plane',
+													isCorrect: true,
+												},
+												{
+													key: 'B',
+													content: 'She teaches German at a university',
+													isCorrect: false,
+												},
+												{
+													key: 'C',
+													content: "She organized last year's conference",
+													isCorrect: false,
+												},
+												{ key: 'D', content: 'She lives in Salem, Oregon', isCorrect: false },
 											],
 										},
-										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
+										questionTags: { create: this.tagNamesToIdInputs(['Inference']) },
 									},
 									{
 										order: 170,
-										content: 'What benefit is specifically mentioned?',
+										content: 'What is NOT offered to speakers?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'Flexible working hours', isCorrect: true },
-												{ key: 'B', content: 'Monthly bonuses', isCorrect: false },
-												{ key: 'C', content: 'Company car', isCorrect: false },
-												{ key: 'D', content: 'Childcare assistance', isCorrect: false },
+												{ key: 'A', content: 'The loan of a laptop', isCorrect: false },
+												{
+													key: 'B',
+													content: 'Free admission to other workshops',
+													isCorrect: false,
+												},
+												{ key: 'C', content: 'A ride from the airport', isCorrect: false },
+												{ key: 'D', content: 'Free hotel accommodation', isCorrect: true },
 											],
 										},
-										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
+										questionTags: { create: this.tagNamesToIdInputs(['Exception NOT true']) },
 									},
 									{
 										order: 171,
-										content: 'How should interested applicants apply?',
+										content: 'What is Ms. Lynch asked to do before April 10?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'By visiting the office', isCorrect: false },
-												{ key: 'B', content: 'By sending a fax', isCorrect: false },
-												{ key: 'C', content: 'By submitting a resume online', isCorrect: true },
-												{ key: 'D', content: 'By calling the HR department', isCorrect: false },
+												{ key: 'A', content: 'Send a copy of her presentation', isCorrect: false },
+												{
+													key: 'B',
+													content: 'Call the office with her travel itinerary',
+													isCorrect: true,
+												},
+												{ key: 'C', content: 'Return any borrowed equipment', isCorrect: false },
+												{ key: 'D', content: 'Reserve a rental car', isCorrect: false },
 											],
 										},
-										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
+										questionTags: { create: this.tagNamesToIdInputs(['Request Suggestion']) },
 									},
 								],
 							},
 						},
-						// ── Group 10: Q172–175 — Article ────────────────────────────────
+						// ── Group 10: Q172–175 — Letter (Bandit Pharmaceuticals, new employee relocation)
 						{
 							id: 's17_10',
 							examId: '1',
@@ -519,82 +674,95 @@ export class ToeicLrExamSect7Seeder {
 								create: [
 									{
 										order: 172,
-										content: 'What is the article mainly about?',
+										content: 'What is the purpose of the letter?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'A new product launch', isCorrect: false },
-												{ key: 'B', content: 'An award-winning company', isCorrect: true },
-												{ key: 'C', content: 'A stock market update', isCorrect: false },
-												{ key: 'D', content: 'An industry report', isCorrect: false },
+												{
+													key: 'A',
+													content: 'To offer Mr. Jean a job interview',
+													isCorrect: false,
+												},
+												{
+													key: 'B',
+													content: 'To welcome a new employee and help with his move',
+													isCorrect: true,
+												},
+												{ key: 'C', content: 'To confirm a hotel reservation', isCorrect: false },
+												{ key: 'D', content: 'To announce a new safety policy', isCorrect: false },
 											],
 										},
 										questionTags: {
-											create: this.tagNamesToIdInputs(['Topic Purpose', 'Advertisement Article']),
+											create: this.tagNamesToIdInputs(['Topic Purpose', 'Email Letter Memo']),
 										},
 									},
 									{
 										order: 173,
-										content: 'Why is the company being recognized?',
+										content: 'What will Mr. Jean do on May 5?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'For its innovative technology', isCorrect: true },
-												{ key: 'B', content: 'For its community service', isCorrect: false },
+												{ key: 'A', content: 'Arrive in Boston', isCorrect: false },
 												{
-													key: 'C',
-													content: 'For its customer satisfaction rate',
+													key: 'B',
+													content: 'Check in to the Boston Family Inn',
 													isCorrect: false,
 												},
-												{ key: 'D', content: 'For its environmental policies', isCorrect: false },
+												{
+													key: 'C',
+													content: 'Attend an orientation for new hires',
+													isCorrect: true,
+												},
+												{ key: 'D', content: 'Meet with a real estate agent', isCorrect: false },
 											],
 										},
 										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
 									},
 									{
 										order: 174,
-										content: 'Who presented the award?',
+										content: 'Who most likely is Ms. Rhimes?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'A local mayor', isCorrect: false },
-												{ key: 'B', content: 'The industry association', isCorrect: true },
-												{ key: 'C', content: 'A government official', isCorrect: false },
-												{ key: 'D', content: 'A university board', isCorrect: false },
+												{
+													key: 'A',
+													content: 'A front-desk clerk at the Boston Family Inn',
+													isCorrect: false,
+												},
+												{
+													key: 'B',
+													content: 'A human resources employee who assists new staff',
+													isCorrect: true,
+												},
+												{
+													key: 'C',
+													content: 'A research director at Bandit Pharmaceuticals',
+													isCorrect: false,
+												},
+												{ key: 'D', content: 'A taxi driver in Boston', isCorrect: false },
 											],
 										},
 										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
 									},
 									{
 										order: 175,
-										content: 'What does the CEO say about the future?',
+										content:
+											'In which of the positions marked [1], [2], [3], and [4] does the following sentence best belong? "Lunch will be provided for all participants in the company cafeteria."',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{
-													key: 'A',
-													content: 'The company plans to expand internationally.',
-													isCorrect: true,
-												},
-												{
-													key: 'B',
-													content: 'The company will release a new product soon.',
-													isCorrect: false,
-												},
-												{
-													key: 'C',
-													content: 'The company is merging with a competitor.',
-													isCorrect: false,
-												},
-												{ key: 'D', content: 'The company will reduce staff.', isCorrect: false },
+												{ key: 'A', content: '[1]', isCorrect: true },
+												{ key: 'B', content: '[2]', isCorrect: false },
+												{ key: 'C', content: '[3]', isCorrect: false },
+												{ key: 'D', content: '[4]', isCorrect: false },
 											],
 										},
-										questionTags: { create: this.tagNamesToIdInputs(['Inference']) },
+										questionTags: { create: this.tagNamesToIdInputs(['Text Completion']) },
 									},
 								],
 							},
 						},
-						// ── Group 11: Q176–180 — Double passage (Form + E-mail) ─────────
+						// ── Group 11: Q176–180 — Double passage (Web page + E-mail, Blackrock German Language Scholarship)
 						{
 							id: 's17_11',
 							examId: '1',
@@ -607,100 +775,132 @@ export class ToeicLrExamSect7Seeder {
 								create: [
 									{
 										order: 176,
-										content: 'What is the first document about?',
-										type: QuestionType.MultipleChoiceSingle,
-										choices: {
-											create: [
-												{ key: 'A', content: 'A job posting', isCorrect: false },
-												{ key: 'B', content: 'A company newsletter', isCorrect: false },
-												{ key: 'C', content: 'A service agreement', isCorrect: true },
-												{ key: 'D', content: 'A product manual', isCorrect: false },
-											],
-										},
-										questionTags: {
-											create: this.tagNamesToIdInputs(['Topic Purpose', 'Form Schedule List']),
-										},
-									},
-									{
-										order: 177,
-										content: 'What is true about the second document?',
-										type: QuestionType.MultipleChoiceSingle,
-										choices: {
-											create: [
-												{ key: 'A', content: "It confirms the client's order.", isCorrect: true },
-												{
-													key: 'B',
-													content: 'It lists the terms of a contract.',
-													isCorrect: false,
-												},
-												{
-													key: 'C',
-													content: 'It provides installation instructions.',
-													isCorrect: false,
-												},
-												{ key: 'D', content: 'It announces a price increase.', isCorrect: false },
-											],
-										},
-										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
-									},
-									{
-										order: 178,
-										content: 'What can be inferred about the company?',
+										content: 'What is the main purpose of the Web page?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
 												{
 													key: 'A',
-													content: 'It has recently merged with another firm.',
+													content: 'To announce a scholarship application period',
+													isCorrect: true,
+												},
+												{
+													key: 'B',
+													content: 'To advertise German language classes',
+													isCorrect: false,
+												},
+												{
+													key: 'C',
+													content: 'To introduce a new foundation director',
+													isCorrect: false,
+												},
+												{
+													key: 'D',
+													content: 'To report the results of a competition',
+													isCorrect: false,
+												},
+											],
+										},
+										questionTags: {
+											create: this.tagNamesToIdInputs(['Topic Purpose', 'Announcement Notice']),
+										},
+									},
+									{
+										order: 177,
+										content: 'What is NOT a requirement for scholarship applicants?',
+										type: QuestionType.MultipleChoiceSingle,
+										choices: {
+											create: [
+												{
+													key: 'A',
+													content: "Being enrolled in a master's program",
 													isCorrect: false,
 												},
 												{
 													key: 'B',
-													content: 'It specializes in office equipment.',
-													isCorrect: true,
+													content: 'Submitting a complete health check',
+													isCorrect: false,
 												},
 												{
 													key: 'C',
-													content: 'It is expanding to a new location.',
+													content: 'Providing a recommendation from a former language instructor',
 													isCorrect: false,
 												},
-												{ key: 'D', content: 'It is a newly founded business.', isCorrect: false },
+												{
+													key: 'D',
+													content: 'Having previously studied in Germany',
+													isCorrect: true,
+												},
 											],
 										},
-										questionTags: { create: this.tagNamesToIdInputs(['Inference']) },
+										questionTags: { create: this.tagNamesToIdInputs(['Exception NOT true']) },
 									},
 									{
-										order: 179,
-										content: 'When will the delivery take place?',
+										order: 178,
+										content: 'According to the Web page, what must scholarship recipients do?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'Monday', isCorrect: false },
-												{ key: 'B', content: 'Tuesday', isCorrect: false },
-												{ key: 'C', content: 'Wednesday', isCorrect: true },
-												{ key: 'D', content: 'Friday', isCorrect: false },
+												{ key: 'A', content: 'Teach a German class', isCorrect: false },
+												{ key: 'B', content: 'Maintain a B+ grade average', isCorrect: true },
+												{ key: 'C', content: 'Submit weekly progress reports', isCorrect: false },
+												{ key: 'D', content: 'Work part-time at the foundation', isCorrect: false },
 											],
 										},
 										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
 									},
 									{
-										order: 180,
-										content: 'What is the customer asked to do upon receipt?',
+										order: 179,
+										content: 'What is suggested about Mr. Porter?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'Sign a delivery form', isCorrect: true },
-												{ key: 'B', content: 'Call customer support', isCorrect: false },
-												{ key: 'C', content: 'Register the product online', isCorrect: false },
-												{ key: 'D', content: 'Return the old equipment', isCorrect: false },
+												{
+													key: 'A',
+													content: "He is currently enrolled in a master's program",
+													isCorrect: true,
+												},
+												{ key: 'B', content: 'He works as a German instructor', isCorrect: false },
+												{
+													key: 'C',
+													content: 'He submitted his application in April',
+													isCorrect: false,
+												},
+												{
+													key: 'D',
+													content: 'He has lived in Germany for a year',
+													isCorrect: false,
+												},
 											],
 										},
-										questionTags: { create: this.tagNamesToIdInputs(['Request Suggestion']) },
+										questionTags: { create: this.tagNamesToIdInputs(['Inference']) },
+									},
+									{
+										order: 180,
+										content: 'What does Mr. Richter say he will send within the next week?',
+										type: QuestionType.MultipleChoiceSingle,
+										choices: {
+											create: [
+												{ key: 'A', content: 'An application form', isCorrect: false },
+												{
+													key: 'B',
+													content: 'A booklet on scholarship regulations',
+													isCorrect: false,
+												},
+												{
+													key: 'C',
+													content: 'Specific details on preparing for his studies',
+													isCorrect: true,
+												},
+												{ key: 'D', content: 'A check for travel expenses', isCorrect: false },
+											],
+										},
+										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
 									},
 								],
 							},
 						},
-						// ── Group 12: Q181–185 — Double passage (Ad + E-mail) ───────────
+						// ── Group 12: Q181–185 — Double passage (Invoice + Letter, Sunny Day Cleaning billing)
 						{
 							id: 's17_12',
 							examId: '1',
@@ -713,82 +913,87 @@ export class ToeicLrExamSect7Seeder {
 								create: [
 									{
 										order: 181,
-										content: 'What is the first passage about?',
+										content: 'What is the invoice for?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'A training program', isCorrect: false },
-												{ key: 'B', content: 'A promotional event', isCorrect: true },
-												{ key: 'C', content: 'A budget proposal', isCorrect: false },
-												{ key: 'D', content: 'A company relocation', isCorrect: false },
+												{ key: 'A', content: 'Office cleaning services', isCorrect: true },
+												{ key: 'B', content: 'Auto body repairs', isCorrect: false },
+												{ key: 'C', content: 'Carpet installation', isCorrect: false },
+												{ key: 'D', content: 'Furniture delivery', isCorrect: false },
 											],
 										},
 										questionTags: {
-											create: this.tagNamesToIdInputs(['Topic Purpose', 'Advertisement Article']),
+											create: this.tagNamesToIdInputs(['Topic Purpose', 'Form Schedule List']),
 										},
 									},
 									{
 										order: 182,
-										content: 'Who sent the second document?',
+										content:
+											'According to the invoice, what will happen if payment is received after April 1?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'A supplier', isCorrect: false },
-												{ key: 'B', content: 'A customer', isCorrect: true },
-												{ key: 'C', content: 'A government agency', isCorrect: false },
-												{ key: 'D', content: 'A colleague', isCorrect: false },
-											],
-										},
-										questionTags: {
-											create: this.tagNamesToIdInputs(['Detail Information', 'Email Letter Memo']),
-										},
-									},
-									{
-										order: 183,
-										content: 'What does the writer of the second passage request?',
-										type: QuestionType.MultipleChoiceSingle,
-										choices: {
-											create: [
-												{ key: 'A', content: 'A refund', isCorrect: false },
-												{ key: 'B', content: 'More information about the event', isCorrect: true },
-												{ key: 'C', content: 'A product replacement', isCorrect: false },
-												{ key: 'D', content: 'A meeting appointment', isCorrect: false },
-											],
-										},
-										questionTags: { create: this.tagNamesToIdInputs(['Request Suggestion']) },
-									},
-									{
-										order: 184,
-										content: 'What does the first passage indicate about the discount?',
-										type: QuestionType.MultipleChoiceSingle,
-										choices: {
-											create: [
-												{ key: 'A', content: 'It applies only to new members.', isCorrect: false },
-												{
-													key: 'B',
-													content: 'It is available for a limited time.',
-													isCorrect: true,
-												},
-												{ key: 'C', content: 'It requires a minimum purchase.', isCorrect: false },
-												{ key: 'D', content: 'It is offered online only.', isCorrect: false },
+												{ key: 'A', content: 'The service will be canceled', isCorrect: false },
+												{ key: 'B', content: 'A $20 late charge will be added', isCorrect: true },
+												{ key: 'C', content: 'A $5 discount will be lost', isCorrect: false },
+												{ key: 'D', content: 'A new invoice will be sent', isCorrect: false },
 											],
 										},
 										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
 									},
 									{
-										order: 185,
-										content: 'What can be inferred from the two passages?',
+										order: 183,
+										content: 'Why did Ms. Collins write the letter?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'The customer is a regular client.', isCorrect: true },
-												{ key: 'B', content: 'The event was cancelled.', isCorrect: false },
-												{ key: 'C', content: 'The company is relocating.', isCorrect: false },
 												{
-													key: 'D',
-													content: 'The discount was already applied.',
+													key: 'A',
+													content: 'To complain about the quality of the cleaning',
 													isCorrect: false,
 												},
+												{ key: 'B', content: 'To cancel a cleaning contract', isCorrect: false },
+												{ key: 'C', content: 'To ask for a corrected bill', isCorrect: true },
+												{
+													key: 'D',
+													content: 'To schedule an additional cleaning',
+													isCorrect: false,
+												},
+											],
+										},
+										questionTags: {
+											create: this.tagNamesToIdInputs(['Topic Purpose', 'Email Letter Memo']),
+										},
+									},
+									{
+										order: 184,
+										content: 'Who most likely is Rod Sanford?',
+										type: QuestionType.MultipleChoiceSingle,
+										choices: {
+											create: [
+												{ key: 'A', content: 'A manager at Randall Auto Body', isCorrect: false },
+												{ key: 'B', content: 'An employee of Sunny Day Cleaning', isCorrect: true },
+												{ key: 'C', content: 'A customer at another location', isCorrect: false },
+												{
+													key: 'D',
+													content: 'An accountant hired by Ms. Collins',
+													isCorrect: false,
+												},
+											],
+										},
+										questionTags: { create: this.tagNamesToIdInputs(['Inference']) },
+									},
+									{
+										order: 185,
+										content: 'What should the total on the corrected invoice most likely be?',
+										type: QuestionType.MultipleChoiceSingle,
+										choices: {
+											create: [
+												{ key: 'A', content: '$170', isCorrect: false },
+												{ key: 'B', content: '$180', isCorrect: true },
+												{ key: 'C', content: '$185', isCorrect: false },
+												{ key: 'D', content: '$190', isCorrect: false },
 											],
 										},
 										questionTags: { create: this.tagNamesToIdInputs(['Inference']) },
@@ -796,27 +1001,35 @@ export class ToeicLrExamSect7Seeder {
 								],
 							},
 						},
-						// ── Group 13: Q186–190 — Double passage (Ad + Letter) ───────────
+						// ── Group 13: Q186–190 — Triple passage (Article + Web page + Award, Freewheel ride-sharing app)
 						{
 							id: 's17_13',
 							examId: '1',
 							order: 13,
 							contentType: SectionType.Question,
 							sectionFiles: {
-								create: [{ fileId: 'SYSTEM_186-190.jpg' }, { fileId: 'SYSTEM_186-190_2.jpg' }],
+								create: [
+									{ fileId: 'SYSTEM_186-190.jpg' },
+									{ fileId: 'SYSTEM_186-190_2.jpg' },
+									{ fileId: 'SYSTEM_186-190_3.jpg' },
+								],
 							},
 							questions: {
 								create: [
 									{
 										order: 186,
-										content: 'What is the first document?',
+										content: 'What is the article mainly about?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'A job advertisement', isCorrect: true },
-												{ key: 'B', content: 'A meeting agenda', isCorrect: false },
-												{ key: 'C', content: 'A press release', isCorrect: false },
-												{ key: 'D', content: 'A company memo', isCorrect: false },
+												{ key: 'A', content: 'Rising bus and taxi fares', isCorrect: false },
+												{
+													key: 'B',
+													content: 'The growing popularity of a ride-sharing app',
+													isCorrect: true,
+												},
+												{ key: 'C', content: 'A new subway line in Sherwood', isCorrect: false },
+												{ key: 'D', content: 'A small business in Brentwood', isCorrect: false },
 											],
 										},
 										questionTags: {
@@ -825,74 +1038,84 @@ export class ToeicLrExamSect7Seeder {
 									},
 									{
 										order: 187,
-										content: 'What skill is required for the position advertised?',
+										content: 'What is indicated about Jordan Mills?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'Graphic design', isCorrect: false },
-												{ key: 'B', content: 'Data analysis', isCorrect: true },
-												{ key: 'C', content: 'Public relations', isCorrect: false },
-												{ key: 'D', content: 'Project management', isCorrect: false },
+												{ key: 'A', content: 'He owns a small business', isCorrect: true },
+												{ key: 'B', content: 'He works as a Freewheel driver', isCorrect: false },
+												{ key: 'C', content: 'He lives in Sherwood', isCorrect: false },
+												{ key: 'D', content: 'He drives to work every day', isCorrect: false },
 											],
 										},
 										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
 									},
 									{
 										order: 188,
-										content: 'What does the second passage indicate about the applicant?',
+										content: 'In the article title, the word "Respite" is closest in meaning to',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'She has ten years of experience.', isCorrect: false },
+												{ key: 'A', content: 'delay', isCorrect: false },
+												{ key: 'B', content: 'relief', isCorrect: true },
+												{ key: 'C', content: 'payment', isCorrect: false },
+												{ key: 'D', content: 'challenge', isCorrect: false },
+											],
+										},
+										questionTags: { create: this.tagNamesToIdInputs(['Synonym In Context']) },
+									},
+									{
+										order: 189,
+										content: 'According to the Web page, how did Freewheel begin?',
+										type: QuestionType.MultipleChoiceSingle,
+										choices: {
+											create: [
+												{ key: 'A', content: 'As a taxi company in Brentwood', isCorrect: false },
 												{
 													key: 'B',
-													content: 'She currently works in the same field.',
+													content: 'As a car pooling program at a workplace',
 													isCorrect: true,
 												},
 												{
 													key: 'C',
-													content: 'She is relocating from another city.',
+													content: 'As a project at a technology conference',
 													isCorrect: false,
 												},
-												{ key: 'D', content: 'She does not have a degree.', isCorrect: false },
-											],
-										},
-										questionTags: {
-											create: this.tagNamesToIdInputs(['Detail Information', 'Email Letter Memo']),
-										},
-									},
-									{
-										order: 189,
-										content: 'What does the applicant enclose with her letter?',
-										type: QuestionType.MultipleChoiceSingle,
-										choices: {
-											create: [
-												{ key: 'A', content: 'A writing sample', isCorrect: false },
-												{ key: 'B', content: 'A resume', isCorrect: true },
-												{ key: 'C', content: 'A reference letter', isCorrect: false },
-												{ key: 'D', content: 'A certificate', isCorrect: false },
+												{ key: 'D', content: 'As a bus route planning service', isCorrect: false },
 											],
 										},
 										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
 									},
 									{
 										order: 190,
-										content: 'What does the applicant request?',
+										content: 'Why did Mr. Owens receive the award?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'A phone interview', isCorrect: false },
-												{ key: 'B', content: 'An in-person interview', isCorrect: true },
-												{ key: 'C', content: 'A company tour', isCorrect: false },
-												{ key: 'D', content: 'A job description', isCorrect: false },
+												{
+													key: 'A',
+													content: 'For founding Technology Initiatives',
+													isCorrect: false,
+												},
+												{
+													key: 'B',
+													content: 'For his novel use of technology in transportation',
+													isCorrect: true,
+												},
+												{
+													key: 'C',
+													content: 'For reducing the cost of subway fares',
+													isCorrect: false,
+												},
+												{ key: 'D', content: 'For hiring 500 new drivers', isCorrect: false },
 											],
 										},
-										questionTags: { create: this.tagNamesToIdInputs(['Request Suggestion']) },
+										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
 									},
 								],
 							},
 						},
-						// ── Group 14: Q191–195 — Triple passage ──────────────────────────
+						// ── Group 14: Q191–195 — Triple passage (three E-mails, Action Services shipping contract)
 						{
 							id: 's17_14',
 							examId: '1',
@@ -909,50 +1132,26 @@ export class ToeicLrExamSect7Seeder {
 								create: [
 									{
 										order: 191,
-										content: 'What is the topic of the first passage?',
-										type: QuestionType.MultipleChoiceSingle,
-										choices: {
-											create: [
-												{ key: 'A', content: 'A conference schedule', isCorrect: false },
-												{ key: 'B', content: 'A product review', isCorrect: true },
-												{ key: 'C', content: 'An employee survey', isCorrect: false },
-												{ key: 'D', content: 'A financial report', isCorrect: false },
-											],
-										},
-										questionTags: {
-											create: this.tagNamesToIdInputs(['Topic Purpose', 'Advertisement Article']),
-										},
-									},
-									{
-										order: 192,
-										content: 'What criticism is mentioned in the second passage?',
-										type: QuestionType.MultipleChoiceSingle,
-										choices: {
-											create: [
-												{ key: 'A', content: 'Poor packaging', isCorrect: false },
-												{ key: 'B', content: 'High price', isCorrect: true },
-												{ key: 'C', content: 'Limited availability', isCorrect: false },
-												{ key: 'D', content: 'Slow customer service', isCorrect: false },
-											],
-										},
-										questionTags: {
-											create: this.tagNamesToIdInputs(['Detail Information', 'Email Letter Memo']),
-										},
-									},
-									{
-										order: 193,
-										content: 'What is the purpose of the third passage?',
+										content: 'Why did Ms. Pierce write the first e-mail?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
 												{
 													key: 'A',
-													content: "To respond to a customer's complaint",
+													content: 'To complain about a late delivery',
+													isCorrect: false,
+												},
+												{
+													key: 'B',
+													content: 'To ask whether a company can offer lower shipping rates',
 													isCorrect: true,
 												},
-												{ key: 'B', content: 'To announce a new policy', isCorrect: false },
-												{ key: 'C', content: 'To introduce a new product', isCorrect: false },
-												{ key: 'D', content: 'To request a refund', isCorrect: false },
+												{ key: 'C', content: 'To order flower arrangements', isCorrect: false },
+												{
+													key: 'D',
+													content: 'To cancel a contract with Emergent Solutions',
+													isCorrect: false,
+												},
 											],
 										},
 										questionTags: {
@@ -960,33 +1159,86 @@ export class ToeicLrExamSect7Seeder {
 										},
 									},
 									{
-										order: 194,
-										content: 'What does the company offer as compensation?',
+										order: 192,
+										content: 'What does Action Services specialize in?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'A full refund', isCorrect: false },
-												{ key: 'B', content: 'A discount voucher', isCorrect: true },
-												{ key: 'C', content: 'A free replacement', isCorrect: false },
-												{ key: 'D', content: 'Store credit', isCorrect: false },
+												{ key: 'A', content: 'Shipping and delivery', isCorrect: false },
+												{
+													key: 'B',
+													content: 'Personalized flower arrangements and gifts',
+													isCorrect: true,
+												},
+												{ key: 'C', content: 'Environmental consulting', isCorrect: false },
+												{ key: 'D', content: 'Hybrid vehicle sales', isCorrect: false },
+											],
+										},
+										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
+									},
+									{
+										order: 193,
+										content: 'What is indicated about Express Corp.?',
+										type: QuestionType.MultipleChoiceSingle,
+										choices: {
+											create: [
+												{
+													key: 'A',
+													content: "It is Action Services' current shipping company",
+													isCorrect: true,
+												},
+												{
+													key: 'B',
+													content: 'It was founded by college students',
+													isCorrect: false,
+												},
+												{ key: 'C', content: 'It uses hybrid delivery vehicles', isCorrect: false },
+												{
+													key: 'D',
+													content: 'It is owned by Emergent Solutions',
+													isCorrect: false,
+												},
+											],
+										},
+										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
+									},
+									{
+										order: 194,
+										content:
+											'According to Mr. Alberts, what does Emergent Solutions use for small deliveries?',
+										type: QuestionType.MultipleChoiceSingle,
+										choices: {
+											create: [
+												{ key: 'A', content: 'Bicycles', isCorrect: false },
+												{ key: 'B', content: 'Rental trucks', isCorrect: false },
+												{ key: 'C', content: 'Fuel-efficient hybrid vehicles', isCorrect: true },
+												{ key: 'D', content: 'The postal service', isCorrect: false },
 											],
 										},
 										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
 									},
 									{
 										order: 195,
-										content: 'What can be inferred about the product?',
+										content: 'Why is Ms. Pierce most likely pleased with Emergent Solutions?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'It is sold exclusively online.', isCorrect: false },
-												{ key: 'B', content: 'It recently received an award.', isCorrect: false },
+												{
+													key: 'A',
+													content: 'Its office is close to City College',
+													isCorrect: false,
+												},
+												{ key: 'B', content: 'It offers international shipping', isCorrect: false },
 												{
 													key: 'C',
-													content: 'It is popular despite mixed reviews.',
+													content: 'Its transportation is environmentally responsible',
 													isCorrect: true,
 												},
-												{ key: 'D', content: 'It is being discontinued.', isCorrect: false },
+												{
+													key: 'D',
+													content: 'It has agreed to buy recyclable products',
+													isCorrect: false,
+												},
 											],
 										},
 										questionTags: { create: this.tagNamesToIdInputs(['Inference']) },
@@ -994,7 +1246,7 @@ export class ToeicLrExamSect7Seeder {
 								],
 							},
 						},
-						// ── Group 15: Q196–200 — Triple passage ──────────────────────────
+						// ── Group 15: Q196–200 — Triple passage (two E-mails + Sales leads table, performance review)
 						{
 							id: 's17_15',
 							examId: '1',
@@ -1011,91 +1263,89 @@ export class ToeicLrExamSect7Seeder {
 								create: [
 									{
 										order: 196,
-										content: 'What is the first document about?',
+										content: 'What is the purpose of the first e-mail?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'A travel itinerary', isCorrect: false },
-												{ key: 'B', content: 'A hotel booking confirmation', isCorrect: true },
-												{ key: 'C', content: 'A flight reservation', isCorrect: false },
-												{ key: 'D', content: 'A rental car agreement', isCorrect: false },
+												{
+													key: 'A',
+													content: 'To give a coworker advance notice of a performance review',
+													isCorrect: true,
+												},
+												{ key: 'B', content: 'To announce a promotion', isCorrect: false },
+												{
+													key: 'C',
+													content: 'To invite a coworker to a training session',
+													isCorrect: false,
+												},
+												{
+													key: 'D',
+													content: 'To request sales figures from last year',
+													isCorrect: false,
+												},
 											],
 										},
 										questionTags: {
-											create: this.tagNamesToIdInputs(['Topic Purpose', 'Form Schedule List']),
+											create: this.tagNamesToIdInputs(['Topic Purpose', 'Email Letter Memo']),
 										},
 									},
 									{
 										order: 197,
-										content: 'What concern does the writer of the second passage express?',
+										content: 'What is suggested about the company?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'The check-in time is too late.', isCorrect: true },
-												{ key: 'B', content: 'The room rate is too high.', isCorrect: false },
-												{ key: 'C', content: 'The hotel does not have parking.', isCorrect: false },
-												{
-													key: 'D',
-													content: 'The reservation was not confirmed.',
-													isCorrect: false,
-												},
+												{ key: 'A', content: 'It is opening a beauty parlor', isCorrect: false },
+												{ key: 'B', content: 'It may reduce its staff', isCorrect: true },
+												{ key: 'C', content: 'It has exceeded its sales goals', isCorrect: false },
+												{ key: 'D', content: "It will hire Mr. Jones's sister", isCorrect: false },
 											],
 										},
-										questionTags: {
-											create: this.tagNamesToIdInputs(['Detail Information', 'Email Letter Memo']),
-										},
+										questionTags: { create: this.tagNamesToIdInputs(['Inference']) },
 									},
 									{
 										order: 198,
-										content: 'What does the third passage confirm?',
+										content: 'What is indicated about Mr. Holt?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'A room upgrade was provided.', isCorrect: false },
-												{
-													key: 'B',
-													content: 'The check-in issue has been resolved.',
-													isCorrect: true,
-												},
-												{ key: 'C', content: 'A refund was issued.', isCorrect: false },
-												{ key: 'D', content: 'The booking was cancelled.', isCorrect: false },
+												{ key: 'A', content: 'He has exceeded his sales targets', isCorrect: true },
+												{ key: 'B', content: 'He works in the beauty industry', isCorrect: false },
+												{ key: 'C', content: "He is Mr. Donald's supervisor", isCorrect: false },
+												{ key: 'D', content: 'He plans to change industries', isCorrect: false },
 											],
 										},
-										questionTags: {
-											create: this.tagNamesToIdInputs(['Detail Information', 'Email Letter Memo']),
-										},
+										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
 									},
 									{
 										order: 199,
-										content: 'What is indicated about the hotel?',
+										content: 'When will the results of the review most likely be released?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'It offers an airport shuttle.', isCorrect: true },
-												{ key: 'B', content: 'It does not allow pets.', isCorrect: false },
-												{
-													key: 'C',
-													content: 'It has recently renovated its rooms.',
-													isCorrect: false,
-												},
-												{ key: 'D', content: 'It offers complimentary parking.', isCorrect: false },
+												{ key: 'A', content: 'In January', isCorrect: false },
+												{ key: 'B', content: 'In February', isCorrect: false },
+												{ key: 'C', content: 'In March', isCorrect: true },
+												{ key: 'D', content: 'In April', isCorrect: false },
 											],
 										},
 										questionTags: { create: this.tagNamesToIdInputs(['Detail Information']) },
 									},
 									{
 										order: 200,
-										content: 'What will the guest most likely do next?',
+										content: 'Which sales lead has the highest account potential?',
 										type: QuestionType.MultipleChoiceSingle,
 										choices: {
 											create: [
-												{ key: 'A', content: 'Cancel the reservation', isCorrect: false },
-												{ key: 'B', content: 'Contact the travel agency', isCorrect: false },
-												{ key: 'C', content: 'Check in at an earlier time', isCorrect: true },
-												{ key: 'D', content: 'Book a different hotel', isCorrect: false },
+												{ key: 'A', content: 'Sally Jones', isCorrect: false },
+												{ key: 'B', content: 'Bob Knuddle', isCorrect: true },
+												{ key: 'C', content: 'Marquise Lee', isCorrect: false },
+												{ key: 'D', content: 'Mr. Jones', isCorrect: false },
 											],
 										},
-										questionTags: { create: this.tagNamesToIdInputs(['Inference']) },
+										questionTags: {
+											create: this.tagNamesToIdInputs(['Detail Information', 'Form Schedule List']),
+										},
 									},
 								],
 							},
