@@ -316,6 +316,12 @@ async function seedTestUsers() {
 }
 
 async function main() {
+	// SEED_ONLY=demo (re)creates just the demo account, for a live DB where the full seed would
+	// reset the admin password and add the test users.
+	if (process.env.SEED_ONLY === 'demo') {
+		await seedDemoUser();
+		return;
+	}
 	await seedPermissions();
 	await seedRoles();
 	await seedRolePermissions();
