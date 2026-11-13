@@ -5,6 +5,9 @@ import { type AuthenticatedRequest } from '../types/authenticated-request';
 import { RESOURCE_CLIENT } from './constants/resource';
 import { AddCardToListDto } from './dtos/req/add-card-to-list.req.dto';
 import { AddFileToReportDto } from './dtos/req/add-file-to-report.req.dto';
+import { CreateBlogCommentDto } from './dtos/req/blog-comment/create-blog-comment.req.dto';
+import { ListBlogCommentsQueryDto } from './dtos/req/blog-comment/list-blog-comments.query.dto';
+import { UpdateBlogCommentDto } from './dtos/req/blog-comment/update-blog-comment.req.dto';
 import { CreateBlogDto } from './dtos/req/create-blog.req.dto';
 import { CreateFlashCardListDto } from './dtos/req/create-flash-card-list.req.dto';
 import { CreateFlashCardDto } from './dtos/req/create-flash-card.req.dto';
@@ -18,6 +21,7 @@ import { UpdateBlogDto } from './dtos/req/update-blog.req.dto';
 import { UpdateFlashCardListDto } from './dtos/req/update-flash-card-list.req.dto';
 import { UpdateFlashCardDto } from './dtos/req/update-flash-card.req.dto';
 import { UpdateReportDto } from './dtos/req/update-report.req.dto';
+import { BlogCommentDto, ListBlogCommentsDto } from './dtos/res/blog-comment.dto';
 import { BlogDto, ListBlogsDto } from './dtos/res/blog.dto';
 import {
 	FlashCardListDetailDto,
@@ -50,12 +54,15 @@ import { ApiEmptyResponseEntity, ApiResponseEntity } from '@server/utils';
 const FLASH_CARD_ADMIN_ROLES = [Role.Admin] as const;
 /** Staff who triage reports: they see every report, everyone else only their own. */
 const REPORT_STAFF_ROLES = [Role.Mod, Role.Admin] as const;
+/** Moderators may delete anyone's blog comment (authors delete their own). */
+const COMMENT_MODERATOR_ROLES = [Role.Mod, Role.Admin] as const;
 
 @ApiBearerAuth()
 @ApiTags('Resources')
 @Controller()
 export class ResourceGatewayController implements OnModuleInit {
 	private blogService!: resource.BlogServiceClient;
+	private blogCommentService!: resource.BlogCommentServiceClient;
 	private flashCardService!: resource.FlashCardServiceClient;
 	private flashCardListService!: resource.FlashCardListServiceClient;
 	private reportService!: resource.ReportServiceClient;
@@ -65,6 +72,9 @@ export class ResourceGatewayController implements OnModuleInit {
 	onModuleInit() {
 		this.blogService = this.resourceClient.getService<resource.BlogServiceClient>(
 			resource.BLOG_SERVICE_NAME,
+		);
+		this.blogCommentService = this.resourceClient.getService<resource.BlogCommentServiceClient>(
+			resource.BLOG_COMMENT_SERVICE_NAME,
 		);
 		this.flashCardService = this.resourceClient.getService<resource.FlashCardServiceClient>(
 			resource.FLASH_CARD_SERVICE_NAME,
@@ -140,6 +150,61 @@ export class ResourceGatewayController implements OnModuleInit {
 	@SerializeOptions({ type: ListBlogsDto, strategy: 'exposeAll' })
 	listBlogs(@Query() query: ListBlogsQueryDto) {
 		return this.blogService.listBlogs(query);
+	}
+
+	// ── Blog comments ────────────────────────────────────────────────────────
+
+	@Get('blogs/:id/comments')
+	@ApiOperation({ summary: 'List comments of a blog post (top-level paged, with nested replies)' })
+	@ApiResponseEntity(ListBlogCommentsDto)
+	@SerializeOptions({ type: ListBlogCommentsDto, strategy: 'exposeAll' })
+	listBlogComments(@Param('id') id: string, @Query() query: ListBlogCommentsQueryDto) {
+		return this.blogCommentService.listBlogComments({ ...query, blogId: id });
+	}
+
+	@Post('blogs/:id/comments')
+	@ApiOperation({ summary: 'Comment on a blog post, or reply to a comment' })
+	@ApiResponseEntity(BlogCommentDto)
+	@SerializeOptions({ type: BlogCommentDto, strategy: 'exposeAll' })
+	createBlogComment(
+		@Req() req: AuthenticatedRequest,
+		@Param('id') id: string,
+		@Body() body: CreateBlogCommentDto,
+	) {
+		return this.blogCommentService.createBlogComment({
+			...body,
+			blogId: id,
+			...requesterOf(req.user, COMMENT_MODERATOR_ROLES),
+		});
+	}
+
+	@Patch('blog-comments/:commentId')
+	@ApiOperation({ summary: 'Edit your own blog comment' })
+	@ApiResponseEntity(BlogCommentDto)
+	@SerializeOptions({ type: BlogCommentDto, strategy: 'exposeAll' })
+	updateBlogComment(
+		@Req() req: AuthenticatedRequest,
+		@Param('commentId') commentId: string,
+		@Body() body: UpdateBlogCommentDto,
+	) {
+		return this.blogCommentService.updateBlogComment({
+			...body,
+			id: commentId,
+			...requesterOf(req.user, COMMENT_MODERATOR_ROLES),
+		});
+	}
+
+	@Delete('blog-comments/:commentId')
+	@ApiEmptyResponseEntity()
+	@ApiOperation({
+		summary:
+			'Delete a blog comment (author or moderators); kept as a placeholder if it has replies',
+	})
+	deleteBlogComment(@Req() req: AuthenticatedRequest, @Param('commentId') commentId: string) {
+		return this.blogCommentService.deleteBlogComment({
+			id: commentId,
+			...requesterOf(req.user, COMMENT_MODERATOR_ROLES),
+		});
 	}
 
 	// ── Flash Cards ──────────────────────────────────────────────────────────

@@ -21,6 +21,7 @@ import { ErrorHandlingGrpcProxy } from '@server/utils';
 					package: 'resource',
 					packageDefinition: {
 						[`resource.${resource.BLOG_SERVICE_NAME}`]: resource.BlogServiceService,
+						[`resource.${resource.BLOG_COMMENT_SERVICE_NAME}`]: resource.BlogCommentServiceService,
 						[`resource.${resource.FLASH_CARD_SERVICE_NAME}`]: resource.FlashCardServiceService,
 						[`resource.${resource.FLASH_CARD_LIST_SERVICE_NAME}`]:
 							resource.FlashCardListServiceService,
