@@ -357,6 +357,12 @@ Mẹo nhớ: *since* đi với **điểm bắt đầu**, *for* đi với **độ
 				after: 90,
 				body: 'Mình học **10–15 từ mới** mỗi ngày và ôn hết các từ đến hạn. Quan trọng là đều đặn, đừng học 100 từ một hôm rồi nghỉ cả tuần.',
 			},
+			{
+				id: 'seed-reply-flashcard-2',
+				authorId: SEED_USERS.demo,
+				after: 160,
+				body: 'Mình chia từ theo chủ đề thành từng bộ nhỏ (IELTS học thuật, TOEIC văn phòng, collocation), mỗi bộ 5–6 thẻ, nên ôn nhanh và dễ nhớ hơn hẳn.',
+			},
 		],
 	},
 	{
@@ -485,6 +491,12 @@ export const SEED_BLOG_COMMENTS: Record<string, SeedBlogComment[]> = {
 			id: 'seed-comment-task2-1',
 			authorId: SEED_USERS.minh,
 			content: 'Bảng so sánh band 6 và 7 giúp mình hiểu vì sao mãi kẹt ở 6.0. Cảm ơn chị!',
+		},
+		{
+			id: 'seed-comment-task2-demo',
+			authorId: SEED_USERS.demo,
+			content:
+				'Bài Task 2 gần nhất của mình được 6.0, nhận xét đúng là ý chưa được phát triển đủ. Mình sẽ thử thêm ví dụ cụ thể cho mỗi đoạn như bài viết gợi ý.',
 		},
 	],
 };

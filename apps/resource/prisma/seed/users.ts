@@ -1,6 +1,8 @@
 /** Accounts created by the auth seed (apps/auth/prisma/seed.ts), so authors hydrate to real names. */
 export const SEED_USERS = {
 	admin: 'admin',
+	/** the shared demo account (demo@lingriser.test) */
+	demo: 'demo',
 	minh: '8ac3508e-d8bc-425f-9b4d-04461d9bd0ec',
 	linh: '4292d890-805f-4fca-b007-8ce887d87f3d',
 	duc: 'f5553ed6-6eac-4be8-af62-fbb4226f2e9f',

@@ -1,5 +1,6 @@
 import { childPath } from '../src/domain/comments/comment-path';
 import { SEED_BLOGS } from './seed/blogs';
+import { DEMO_FLASHCARD_LISTS } from './seed/demo-flashcards';
 import {
 	SEED_BLOG_COMMENTS,
 	SEED_FORUM_CATEGORIES,
@@ -224,6 +225,45 @@ async function seedForum(): Promise<void> {
 	);
 }
 
+/**
+ * The demo account's own lists, with fixed ids. Missing lists and cards are (re)created; ones that
+ * exist are left as testers changed them.
+ */
+async function seedDemoFlashCards(): Promise<void> {
+	for (const list of DEMO_FLASHCARD_LISTS) {
+		const createdAt = new Date(Date.now() - list.daysAgo * DAY);
+		await prisma.flashCardList.upsert({
+			where: { id: list.id },
+			update: {},
+			create: {
+				id: list.id,
+				name: list.name,
+				description: list.description,
+				authorId: list.authorId,
+				isPublic: list.isPublic,
+				tags: list.tags,
+				createdAt: createdAt,
+				updatedAt: createdAt,
+			},
+		});
+		for (const card of list.cards) {
+			await prisma.flashCard.upsert({
+				where: { id: card.id },
+				update: {},
+				create: {
+					...card,
+					authorId: list.authorId,
+					listId: list.id,
+					tags: [],
+					createdAt: createdAt,
+					updatedAt: createdAt,
+				},
+			});
+		}
+	}
+	console.warn(`Seeded ${DEMO_FLASHCARD_LISTS.length} flashcard lists for the demo account`);
+}
+
 async function main() {
 	const blogIds = await seedBlogs();
 	await seedBlogComments(blogIds);
@@ -258,6 +298,8 @@ async function main() {
 	}
 
 	console.warn(`Seeded ${FLASHCARD_LISTS.length} flashcard lists`);
+
+	await seedDemoFlashCards();
 }
 
 main()
