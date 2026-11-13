@@ -58,6 +58,7 @@ export class ReportService {
 		return report;
 	}
 
+	@Transactional()
 	async createReport(data: CreateReportInput): Promise<ReportReadModel> {
 		const fileIds = [...new Set(data.fileIds)];
 		await this.fileOwnership.assertOwnedBy(fileIds, data.reportedBy);
@@ -73,6 +74,14 @@ export class ReportService {
 					fileIds.length > 0 ? { create: fileIds.map(fileId => ({ fileId: fileId })) } : undefined,
 			},
 			include: withFiles,
+		});
+		await this.events.reportCreated({
+			reportId: report.id,
+			reportedBy: report.reportedBy,
+			type: report.type,
+			title: report.title,
+			targetType: report.targetType,
+			targetId: report.targetId,
 		});
 		return this.toReadModel(report);
 	}

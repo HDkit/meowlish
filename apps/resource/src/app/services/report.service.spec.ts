@@ -44,7 +44,7 @@ const setup = () => {
 		},
 		reportFile: { upsert: jest.fn(), deleteMany: jest.fn() },
 	};
-	const events = { reportStatusChanged: jest.fn() };
+	const events = { reportStatusChanged: jest.fn(), reportCreated: jest.fn() };
 	const files = { assertOwnedBy: jest.fn().mockResolvedValue(undefined) };
 	const service = new ReportService(
 		{ tx: tx } as never,
@@ -145,6 +145,28 @@ describe('ReportService file ownership', () => {
 		await service.createReport({ ...newReport, fileIds: ['mine', 'mine'] });
 		expect(files.assertOwnedBy).toHaveBeenCalledWith(['mine'], 'owner');
 		expect(tx.report.create).toHaveBeenCalledTimes(1);
+	});
+
+	it('announces a new report so admins get notified', async () => {
+		const { tx, events, service } = setup();
+		tx.report.create.mockResolvedValue({
+			...report(),
+			id: 'r1',
+			reportedBy: 'owner',
+			type: 'content',
+			title: 'Sai đáp án',
+			targetType: 'exam',
+			targetId: 'e1',
+		});
+		await service.createReport({ ...newReport, fileIds: [] });
+		expect(events.reportCreated).toHaveBeenCalledWith({
+			reportId: 'r1',
+			reportedBy: 'owner',
+			type: 'content',
+			title: 'Sai đáp án',
+			targetType: 'exam',
+			targetId: 'e1',
+		});
 	});
 
 	it('report files reject attaching a foreign file (403)', async () => {

@@ -11,6 +11,15 @@ export interface ReportStatusChangedEvent {
 	title: string;
 }
 
+export interface ReportCreatedEvent {
+	reportId: string;
+	reportedBy: string;
+	type: string;
+	title: string;
+	targetType: string | null;
+	targetId: string | null;
+}
+
 /**
  * Writes integration events to the outbox; the relay publishes them on the `eventbus` exchange.
  * Call these inside the `@Transactional()` method that writes the data they describe.
@@ -39,6 +48,11 @@ export class ResourceEventsPublisher {
 				resourceId: resourceId,
 			});
 		}
+	}
+
+	/** A new report to review (notification tells the admins). */
+	async reportCreated(event: ReportCreatedEvent): Promise<void> {
+		await this.outbox.add('resource.report.created', event);
 	}
 
 	async reportStatusChanged(event: ReportStatusChangedEvent): Promise<void> {
