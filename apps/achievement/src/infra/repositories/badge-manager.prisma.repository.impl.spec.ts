@@ -10,11 +10,11 @@ jest.mock('@prisma-client/achievement', () => ({
 
 describe('BadgeManagerPrismaRepositoryImpl badge award', () => {
 	const setup = () => {
-		const userBadgeCreate = jest.fn().mockResolvedValue({});
+		const userBadgeCreate = jest.fn().mockResolvedValue({ count: 1 });
 		const outbox = { add: jest.fn().mockResolvedValue({}) };
 		const tx = {
 			loginCriteria: { update: jest.fn().mockResolvedValue({}) },
-			userBadge: { create: userBadgeCreate },
+			userBadge: { createMany: userBadgeCreate },
 		};
 		const txHost = { tx: tx, withTransaction: (fn: () => Promise<void>) => fn() };
 		const repo = new BadgeManagerPrismaRepositoryImpl(txHost as never, outbox as never);
@@ -41,6 +41,17 @@ describe('BadgeManagerPrismaRepositoryImpl badge award', () => {
 			uid: 'u1',
 			badgeName: BADGE_INFORMATION[Badge.LoginSevenDays].displayName,
 		});
+	});
+
+	it('skips a badge already awarded without aborting the transaction, and publishes nothing', async () => {
+		const { repo, manager, outbox, userBadgeCreate } = setup();
+		userBadgeCreate.mockResolvedValueOnce({ count: 0 });
+		await repo.saveLoginBadgeManager(manager);
+		expect(userBadgeCreate).toHaveBeenCalledWith({
+			data: [{ badgeName: Badge.LoginSevenDays, uid: 'u1' }],
+			skipDuplicates: true,
+		});
+		expect(outbox.add).not.toHaveBeenCalled();
 	});
 
 	it('publishes nothing when the award fails, so a retry cannot double-publish', async () => {
