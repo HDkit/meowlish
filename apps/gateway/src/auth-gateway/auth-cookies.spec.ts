@@ -54,6 +54,12 @@ describe('auth cookies', () => {
 		logOutAll: jest.fn(() => of({})),
 	};
 	const redis = { get: jest.fn(), del: jest.fn() };
+	const exchange = (loginToken: string) =>
+		fetch(`${base}/google/tokens`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ loginToken: loginToken }),
+		});
 	const config: Record<string, unknown> = {
 		jwt: { publicKey: publicKey },
 		env: 'development',
@@ -155,17 +161,47 @@ describe('auth cookies', () => {
 		redis.get.mockResolvedValueOnce(
 			JSON.stringify({ accessToken: accessToken, refreshToken: refreshToken }),
 		);
-		const res = await fetch(`${base}/google/tokens?loginToken=abc`);
-		expect(res.status).toBe(200);
+		const res = await exchange('abc');
+		expect(res.status).toBe(201);
 		expect(((await res.json()) as { data: unknown }).data).toBeNull();
 		expect(Object.keys(setCookies(res)).sort()).toEqual(['access_token', 'refresh_token']);
 		expect(redis.del).toHaveBeenCalledWith('oauth2:google:loginToken:abc');
 	});
 
+	it('google/tokens refuses a form post, so a cross-site form cannot log a victim in', async () => {
+		redis.get.mockResolvedValue(
+			JSON.stringify({ accessToken: accessToken, refreshToken: refreshToken }),
+		);
+		const res = await fetch(`${base}/google/tokens`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+			body: 'loginToken=abc',
+		});
+		expect(res.status).toBe(415);
+		expect(res.headers.getSetCookie()).toEqual([]);
+		redis.get.mockReset();
+	});
+
+	it('google/tokens rejects a body without a login token', async () => {
+		const res = await fetch(`${base}/google/tokens`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: '{}',
+		});
+		// 400 from the global ValidationPipe in the app; this test module has no pipe, so the
+		// handler sees no token and finds nothing in Redis.
+		expect(res.status).toBe(401);
+		expect(res.headers.getSetCookie()).toEqual([]);
+	});
+
+	it('google/tokens no longer answers GET', async () => {
+		expect((await fetch(`${base}/google/tokens?loginToken=abc`)).status).toBe(404);
+	});
+
 	it('google/tokens sets no cookie after a linking flow', async () => {
 		redis.get.mockResolvedValueOnce('true');
-		const res = await fetch(`${base}/google/tokens?loginToken=link`);
-		expect(res.status).toBe(200);
+		const res = await exchange('link');
+		expect(res.status).toBe(201);
 		expect(res.headers.getSetCookie()).toEqual([]);
 	});
 
@@ -202,7 +238,7 @@ describe('auth cookies', () => {
 		});
 
 		it.each([
-			['GET', '/google/tokens?loginToken=x'],
+			['POST', '/google/tokens'],
 			['POST', '/register'],
 			['POST', '/refresh'],
 			['POST', '/logout'],

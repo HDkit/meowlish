@@ -8,12 +8,6 @@ Findings from the November 2026 audit that are **not fixed yet**. Fixed items we
 
 When you fix an item, delete it here in the same commit.
 
-## Security
-
-| #   | Status   | Where                                                      | Problem                                                                                                                                                                                                                                                                                                                      | Suggested fix                                                                                                                            |
-| --- | -------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| S15 | Decision | Cookie sessions (`CookieIssuanceGuard`, `auth-cookies.ts`) | Two limits remain. (1) Cross-site frontends are unsupported: the frontend and API must be same-site. (2) Browsers that send neither `Sec-Fetch-Site` nor `Origin` on a top-level GET (e.g. Safari before 16.4) aren't stopped by the guard, so `GET /auth/google/tokens?loginToken=` can still be used for login CSRF there. | Decide whether same-site is a hard requirement. For (2), move the exchange to `POST` with a JSON body, so a navigation can't trigger it. |
-
 ## Conventions (see AGENTS.md)
 
 - Gateway `exam-gateway/dtos/req/**` DTOs don't `implements` the generated messages.

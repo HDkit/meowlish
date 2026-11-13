@@ -11,26 +11,35 @@ Covers cookie sessions, requester-scoped authorization on exam/live/files, consu
 The HTTP contract changed in ways an old frontend can't handle, and an old backend can't serve the new frontend:
 
 - **Cookie auth**: login, register, refresh and Google token exchange return `data: null` and set HttpOnly `access_token` / `refresh_token` cookies. The frontend must send credentials (`credentials: 'include'` / `withCredentials`), refresh with `POST /auth/refresh` and no body, and log out with `POST /auth/logout`. `POST /auth/logout` only clears this browser's cookies: the refresh token stays valid until it expires. `POST /auth/logout-all` revokes every token of the identity (use it for "log out everywhere" or a suspected token leak).
+- **Google login exchange** is `POST /auth/google/tokens` with a JSON body `{ "loginToken": "…" }` (was `GET ?loginToken=`). Non-JSON bodies get 415, so a cross-site form can't trigger it.
 - **Password change** requires `currentPassword` (401 "Wrong password" otherwise).
 - **Exam tags** are added and removed by tag **ID**, not name.
 - **Google Calendar**: `GET .../google/calendar/token` returns `{ accessToken, expiresAt }`; connect/exchange return `{ connected, expiresAt }`. Refresh tokens no longer leave the server.
 
 Also deploy **gateway and auth together**: the three Google Calendar RPCs changed their return types, so a mixed-version pair fails those routes.
 
-### 2. Frontend and API must be same-site (proxy `/api` and `/socket.io` through the frontend)
+### 2. The browser talks only to the frontend origin (proxy `/api` and `/socket.io`)
 
-Cookies are `SameSite=Lax`, so the browser must see the frontend and the API as one site. A cross-site frontend can't store the cookies, `CookieIssuanceGuard` refuses its cookie-issuing requests with 403, and the socket handshake arrives without the access cookie. Note that hosts under a public suffix such as `servebeer.com` or `ddns.net` are **different sites** even when they share that suffix (`app.servebeer.com` and `meowlish.servebeer.com` are cross-site).
+The frontend and the API **may be on different sites** (e.g. `app.servebeer.com` and `meowlish.servebeer.com`, which are cross-site because `servebeer.com` is a public suffix, or two unrelated domains). This works because the browser never calls the API host directly: the frontend proxies to the gateway, so the session cookies are first-party cookies of the **frontend host**, and `SameSite=Lax` never comes into play.
 
-The supported setup: the frontend calls the API on **its own origin** and proxies to the gateway:
+- `/api/*` -> gateway `/api/*`. This also carries `GET /api/v1/auth/google/callback`, so set `BASE_URL` to the **frontend's** public origin: Google must redirect back through the proxy, where the `oauth2_state` cookie of the linking flow lives.
+- `/socket.io/*` -> gateway `/api/v1/chat/ws/socket.io/*`. WebSocket upgrades need a proxy that forwards them (nginx/Envoy, or `next start` itself); without one socket.io falls back to long-polling.
 
-- `/api/*` -> gateway `/api/*` (this also carries `GET /api/v1/auth/google/callback`, so set `BASE_URL` to the **frontend's** public origin: Google must redirect back through the proxy, where the `oauth2_state` cookie of the linking flow lives);
-- `/socket.io/*` -> gateway `/api/v1/chat/ws/socket.io/*`. WebSocket upgrades need a reverse proxy that forwards them (nginx/Envoy, or `next start` itself); without one socket.io falls back to long-polling.
+The frontend's Next.js config does both rewrites (target: `NEXT_PUBLIC_API_URL`, which may be any host). Calling the API host directly from the browser is **not supported** when it is cross-site: the cookies would be third-party, which Safari and Firefox block and `SameSite=Lax` refuses on fetch. (Same-site direct calls, e.g. `app.example.com` -> `api.example.com`, still work.)
 
-The frontend's Next.js config does both rewrites (target: `NEXT_PUBLIC_API_URL`). In production, prefer a reverse proxy in front of both that routes these paths straight to the gateway: Next's built-in proxy does not add `X-Forwarded-For`, so the gateway sees the Next server as every client's address (shared rate-limit buckets) unless a proxy in front sets it and `TRUST_PROXY` counts both hops. That matters more on the strict auth routes (login, register, refresh, add mail credential, change password): besides 10/min per IP and account, each is capped at 100/min per client IP, so with one shared address all users together get 100 logins a minute.
+**`CORS_ORIGINS` (gateway and live) must include the frontend origin.** Behind the proxy the browser still sends `Origin: <frontend>`, which `CookieIssuanceGuard` and live's socket handshake check against that list.
 
-Alternatively serve frontend and API on hosts of one registrable domain (`app.example.com` + `api.example.com`) and let the frontend call the API directly.
+**Client IPs and `TRUST_PROXY`.** Rate limits key on the client IP (strict auth routes: 10/min per IP and account, plus 100/min per IP). Next's rewrite proxy forwards the incoming `X-Forwarded-For` unchanged and does not append its own entry, so set `TRUST_PROXY` to the number of proxies that **append** to `X-Forwarded-For` (nginx, Envoy, Caddy, a load balancer); Next does not count:
 
-Either way, **`CORS_ORIGINS` (gateway and live) must include the frontend origin**: when the frontend calls the API directly for CORS, and behind the proxy too, because the browser still sends `Origin: <frontend>`, which `CookieIssuanceGuard` and live's socket handshake check against that list. See backlog S15 for the remaining limits.
+| Path from the browser                                                      | `TRUST_PROXY` | Gateway sees                    |
+| -------------------------------------------------------------------------- | ------------- | ------------------------------- |
+| reverse proxy (routes `/api`, `/socket.io` straight to gateway) -> gateway | `1`           | the real client                 |
+| reverse proxy -> Next -> gateway                                           | `1`           | the real client                 |
+| reverse proxy -> Next -> bundled Envoy -> gateway                          | `2`           | the real client                 |
+| Next -> bundled Envoy -> gateway (nothing in front of Next)                | `1`           | the Next server, for every user |
+| Next -> gateway (nothing in front of Next)                                 | `false`       | the Next server, for every user |
+
+Never set it higher than the number of appending proxies: the gateway would then believe an `X-Forwarded-For` the client wrote itself, and anyone could pick their own rate-limit bucket. When every user shows up as the Next server, all of them share one bucket (100 logins a minute in total), so put a reverse proxy in front of Next in production.
 
 ### 3. Configuration
 
@@ -39,7 +48,7 @@ Set these before starting the new build (`docker/.env.services`, or each app's `
 | Variable                 | Where                         | Value                                                                                                                                                                                                                                      |
 | ------------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `CORS_ORIGINS`           | gateway, live                 | Comma-separated frontend origins (no `*`, credentials are on). **Unset in production means no cross-origin access**, so the frontend is refused, and live refuses socket handshakes from other origins.                                    |
-| `TRUST_PROXY`            | gateway                       | `1` behind the bundled Envoy (one trusted hop; Envoy sets `X-Forwarded-For`). With `false` behind a proxy, every client shares one rate-limit bucket.                                                                                      |
+| `TRUST_PROXY`            | gateway                       | The number of proxies that append to `X-Forwarded-For` (Next's rewrite proxy doesn't); see the table in section 2. `1` behind the bundled Envoy alone. Too high lets clients spoof their IP; too low makes clients share one bucket.       |
 | `CURSOR_SECRET`          | auth, exam, achievement, live | At least 32 chars (`openssl rand -hex 32`). Unset means a random key per process, so pagination cursors break on restart and differ between replicas.                                                                                      |
 | `JWT_PUBLIC_KEY`         | live (new), gateway           | The RS256 public key. live now verifies socket tokens itself and refuses every connection without it.                                                                                                                                      |
 | `FE_LOGIN_REDIRECT_URL`  | gateway                       | The frontend's Google login callback page, e.g. `https://app.example.com/auth/callback` (locally `http://localhost:6767/auth/callback`). The frontend root redirects and drops `?loginToken`, so Google login fails if this points at `/`. |
@@ -49,11 +58,11 @@ Set these before starting the new build (`docker/.env.services`, or each app's `
 
 `apps/mock-ai-scorer` is a stand-in for the external AI writing scorer. It consumes `exam.writing.submitted` from the `mock-ai-scorer.writing.submitted` queue and publishes random IELTS scores (4.0-8.5, no real AI) on `exam.writing.scored` after a random delay. Docker starts it only with `--profile mock-ai`.
 
-| Variable                   | Default | Meaning                                                        |
-| -------------------------- | ------- | -------------------------------------------------------------- |
-| `MOCK_SCORER_MIN_DELAY_MS` | `2000`  | Lower bound of the random delay before scoring (<= max).       |
-| `MOCK_SCORER_MAX_DELAY_MS` | `8000`  | Upper bound of the random delay.                               |
-| `RMQ_*`, `HEALTH_PORT`     | -       | Same as the other services; health is served on `HEALTH_PORT`. |
+| Variable                   | Default  | Meaning                                                        |
+| -------------------------- | -------- | -------------------------------------------------------------- |
+| `MOCK_SCORER_MIN_DELAY_MS` | `60000`  | Lower bound of the random delay before scoring (<= max).       |
+| `MOCK_SCORER_MAX_DELAY_MS` | `180000` | Upper bound of the random delay.                               |
+| `RMQ_*`, `HEALTH_PORT`     | -        | Same as the other services; health is served on `HEALTH_PORT`. |
 
 **Never run it in production or alongside the real AI scorer.** Both would consume `exam.writing.submitted` (each with its own queue, so every submission is scored twice and the later result overwrites the earlier one).
 

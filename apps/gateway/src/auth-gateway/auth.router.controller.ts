@@ -17,6 +17,7 @@ import { AddMailCredDto } from './dtos/req/add-mail-cred.req.dto';
 import { AssignRoleToDto } from './dtos/req/assign-role-to.req.dto';
 import { ConnectGoogleCalendarDto } from './dtos/req/connect-google-calendar.req.dto';
 import { ExchangeGoogleCalendarCodeDto } from './dtos/req/exchange-google-calendar-code.req.dto';
+import { ExchangeGoogleLoginTokenDto } from './dtos/req/exchange-google-login-token.req.dto';
 import { FindIdentitiesLimitedDto } from './dtos/req/find-identities-limited.req.dto';
 import { FindIdentitiesDto } from './dtos/req/find-identities.req.dto';
 import { FindIdentityIdsDto } from './dtos/req/find-identity-ids.req.dto';
@@ -56,6 +57,7 @@ import {
 	Res,
 	SerializeOptions,
 	UnauthorizedException,
+	UnsupportedMediaTypeException,
 	UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -196,19 +198,25 @@ export class AuthGatewayController implements OnModuleInit {
 		return res.redirect(url.toString());
 	}
 
-	@Get('google/tokens')
+	@Post('google/tokens')
 	@UseGuards(CookieIssuanceGuard)
 	@IsPublic()
 	@ApiEmptyResponseEntity()
 	@ApiOperation({
 		summary: 'Exchange the one-time login token for session cookies',
-		description: `Call with the \`loginToken\` that /google/callback put on the frontend redirect URL. ${SETS_COOKIES}`,
+		description: `Send the \`loginToken\` that /google/callback put on the frontend redirect URL as a JSON body. ${SETS_COOKIES}`,
 	})
 	async getGoogleTokens(
-		@Query('loginToken') loginToken: string,
+		@Body() body: ExchangeGoogleLoginTokenDto,
 		@Req() req: Request,
 		@Res({ passthrough: true }) res: Response,
 	) {
+		// JSON only: a cross-site <form> can't send it, so even a browser that sends neither
+		// Sec-Fetch-Site nor Origin can't be made to log in as someone else (login CSRF).
+		if (!req.is('application/json')) {
+			throw new UnsupportedMediaTypeException('Send the login token as application/json');
+		}
+		const loginToken = body.loginToken;
 		const data = await this.redis.get(`oauth2:google:loginToken:${loginToken}`);
 		if (!data) {
 			throw new UnauthorizedException('Invalid or expired login token');
