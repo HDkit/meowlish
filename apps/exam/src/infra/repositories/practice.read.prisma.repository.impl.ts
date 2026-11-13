@@ -411,6 +411,8 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 		};
 		limit?: number;
 		direction?: number;
+		/** 1-based page: OFFSET pagination; `lastCursor`/`direction` are ignored. */
+		page?: number;
 	}): Promise<MinimalExamInfo[]> {
 		if (options?.limit && options.limit < 0)
 			throw new BadRequestException('Limit must be positive');
@@ -438,11 +440,106 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
         `
 			:	Prisma.sql`e.id ${Prisma.raw(idOrder)}`;
 
+		const filterSql = this.examFilterSql(options?.filter);
+
+		const cursorWhereSql =
+			options?.sortBy?.key === 'updatedAt' && options?.lastCursor?.updatedAt ?
+				options.sortBy.direction === SortDirection.ASC ?
+					isForward ?
+						Prisma.sql`(e.updated_at, e.id) > (${options.lastCursor.updatedAt}, ${options.lastCursor.id})`
+					:	Prisma.sql`(e.updated_at, e.id) < (${options.lastCursor.updatedAt}, ${options.lastCursor.id})`
+				: isForward ?
+					Prisma.sql`(e.updated_at < ${options.lastCursor.updatedAt} OR (e.updated_at = ${options.lastCursor.updatedAt} AND e.id > ${options.lastCursor.id}))`
+				:	Prisma.sql`(e.updated_at > ${options.lastCursor.updatedAt} OR (e.updated_at = ${options.lastCursor.updatedAt} AND e.id < ${options.lastCursor.id}))`
+			: options?.lastCursor?.id ?
+				isForward ? Prisma.sql`e.id > ${options.lastCursor.id}`
+				:	Prisma.sql`e.id < ${options.lastCursor.id}`
+			:	Prisma.sql`TRUE`;
+
+		const cursorHavingSql =
+			options?.sortBy?.key === 'attemptsCount' && options?.lastCursor?.attemptsCount !== undefined ?
+				options.sortBy.direction === SortDirection.ASC ?
+					isForward ?
+						Prisma.sql`(COUNT(DISTINCT a.id), e.id) > (${options.lastCursor.attemptsCount}, ${options.lastCursor.id})`
+					:	Prisma.sql`(COUNT(DISTINCT a.id), e.id) < (${options.lastCursor.attemptsCount}, ${options.lastCursor.id})`
+				: isForward ?
+					Prisma.sql`(COUNT(DISTINCT a.id) < ${options.lastCursor.attemptsCount} OR (COUNT(DISTINCT a.id) = ${options.lastCursor.attemptsCount} AND e.id > ${options.lastCursor.id}))`
+				:	Prisma.sql`(COUNT(DISTINCT a.id) > ${options.lastCursor.attemptsCount} OR (COUNT(DISTINCT a.id) = ${options.lastCursor.attemptsCount} AND e.id < ${options.lastCursor.id}))`
+			:	Prisma.sql`TRUE`;
+
+		const pageMode = options?.page !== undefined;
+		const offset = pageMode ? (Math.max(1, options.page ?? 1) - 1) * (options.limit ?? 10) : 0;
+		const rows = await this.txHost.tx.$queryRaw<
+			{
+				id: string;
+				name: string;
+				description: string | null;
+				attemptsCount: number;
+				duration: number;
+				updatedAt: Date;
+				tags: string[];
+			}[]
+		>(
+			Prisma.sql`
+
+      SELECT
+        e.id,
+        e.title AS name,
+        e.description,
+        e.duration,
+        e.updated_at AS "updatedAt",
+        -- cast type to int, count distinct because join causes duplicate
+        COUNT(DISTINCT a.id)::int AS "attemptsCount",
+        -- return tags from exam directly
+        COALESCE(
+          ARRAY_AGG(DISTINCT t.name)
+            FILTER (WHERE t.name IS NOT NULL),
+          '{}'
+        ) AS tags
+
+      FROM exams e
+
+      LEFT JOIN attempts a
+        ON a.exam_id = e.id
+
+      LEFT JOIN exam_tags et
+        ON et.exam_id = e.id
+
+      LEFT JOIN tags t
+        ON t.id = et.tag_id
+
+      WHERE
+        e.status = ${ExamStatus.Approved}
+        AND ${filterSql}
+        AND ${pageMode ? Prisma.sql`TRUE` : cursorWhereSql}
+
+      GROUP BY e.id
+
+      HAVING
+        ${pageMode ? Prisma.sql`TRUE` : cursorHavingSql}
+
+      ORDER BY ${sortSql}
+
+      LIMIT ${options?.limit ?? 10}
+      OFFSET ${offset}
+    `,
+		);
+
+		if (dir === -1) rows.reverse();
+		return rows.map(r => ({ ...r, description: r.description ?? undefined }));
+	}
+
+	/** Name and tag conditions on `e` (exams), shared by the list and its count. */
+	private examFilterSql(filter?: {
+		name?: string;
+		tags?: string[];
+		requiredTags?: string[];
+	}): Prisma.Sql {
 		// filter by name
 		const nameFilterSql =
-			options?.filter?.name ?
+			filter?.name ?
 				Prisma.sql`
-        e.title ILIKE '%' || ${options.filter.name} || '%'
+        e.title ILIKE '%' || ${filter.name} || '%'
       `
 				// fallback take all
 			:	Prisma.sql`TRUE`;
@@ -502,102 +599,31 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 
 		// filter by tag: ANY of `tags`, and EVERY one of `requiredTags`
 		const tagFilterSql =
-			options?.filter?.tags?.length ?
-				anyTagSql(options.filter.tags)
+			filter?.tags?.length ?
+				anyTagSql(filter.tags)
 				// fallback take all
 			:	Prisma.sql`TRUE`;
 		const requiredTagsSql =
-			options?.filter?.requiredTags?.length ?
+			filter?.requiredTags?.length ?
 				Prisma.join(
-					options.filter.requiredTags.map(tag => anyTagSql([tag])),
+					filter.requiredTags.map(tag => anyTagSql([tag])),
 					' AND ',
 				)
 			:	Prisma.sql`TRUE`;
 
-		const cursorWhereSql =
-			options?.sortBy?.key === 'updatedAt' && options?.lastCursor?.updatedAt ?
-				options.sortBy.direction === SortDirection.ASC ?
-					isForward ?
-						Prisma.sql`(e.updated_at, e.id) > (${options.lastCursor.updatedAt}, ${options.lastCursor.id})`
-					:	Prisma.sql`(e.updated_at, e.id) < (${options.lastCursor.updatedAt}, ${options.lastCursor.id})`
-				: isForward ?
-					Prisma.sql`(e.updated_at < ${options.lastCursor.updatedAt} OR (e.updated_at = ${options.lastCursor.updatedAt} AND e.id > ${options.lastCursor.id}))`
-				:	Prisma.sql`(e.updated_at > ${options.lastCursor.updatedAt} OR (e.updated_at = ${options.lastCursor.updatedAt} AND e.id < ${options.lastCursor.id}))`
-			: options?.lastCursor?.id ?
-				isForward ? Prisma.sql`e.id > ${options.lastCursor.id}`
-				:	Prisma.sql`e.id < ${options.lastCursor.id}`
-			:	Prisma.sql`TRUE`;
+		return Prisma.sql`${nameFilterSql} AND ${tagFilterSql} AND ${requiredTagsSql}`;
+	}
 
-		const cursorHavingSql =
-			options?.sortBy?.key === 'attemptsCount' && options?.lastCursor?.attemptsCount !== undefined ?
-				options.sortBy.direction === SortDirection.ASC ?
-					isForward ?
-						Prisma.sql`(COUNT(DISTINCT a.id), e.id) > (${options.lastCursor.attemptsCount}, ${options.lastCursor.id})`
-					:	Prisma.sql`(COUNT(DISTINCT a.id), e.id) < (${options.lastCursor.attemptsCount}, ${options.lastCursor.id})`
-				: isForward ?
-					Prisma.sql`(COUNT(DISTINCT a.id) < ${options.lastCursor.attemptsCount} OR (COUNT(DISTINCT a.id) = ${options.lastCursor.attemptsCount} AND e.id > ${options.lastCursor.id}))`
-				:	Prisma.sql`(COUNT(DISTINCT a.id) > ${options.lastCursor.attemptsCount} OR (COUNT(DISTINCT a.id) = ${options.lastCursor.attemptsCount} AND e.id < ${options.lastCursor.id}))`
-			:	Prisma.sql`TRUE`;
-
-		const rows = await this.txHost.tx.$queryRaw<
-			{
-				id: string;
-				name: string;
-				description: string | null;
-				attemptsCount: number;
-				duration: number;
-				updatedAt: Date;
-				tags: string[];
-			}[]
-		>(
-			Prisma.sql`
-
-      SELECT
-        e.id,
-        e.title AS name,
-        e.description,
-        e.duration,
-        e.updated_at AS "updatedAt",
-        -- cast type to int, count distinct because join causes duplicate
-        COUNT(DISTINCT a.id)::int AS "attemptsCount",
-        -- return tags from exam directly
-        COALESCE(
-          ARRAY_AGG(DISTINCT t.name)
-            FILTER (WHERE t.name IS NOT NULL),
-          '{}'
-        ) AS tags
-
-      FROM exams e
-
-      LEFT JOIN attempts a
-        ON a.exam_id = e.id
-
-      LEFT JOIN exam_tags et
-        ON et.exam_id = e.id
-
-      LEFT JOIN tags t
-        ON t.id = et.tag_id
-
-      WHERE
-        e.status = ${ExamStatus.Approved}
-        AND ${nameFilterSql}
-        AND ${tagFilterSql}
-        AND ${requiredTagsSql}
-        AND ${cursorWhereSql}
-
-      GROUP BY e.id
-
-      HAVING
-        ${cursorHavingSql}
-
-      ORDER BY ${sortSql}
-
-      LIMIT ${options?.limit ?? 10}
-    `,
+	async countExams(filter?: {
+		name?: string;
+		tags?: string[];
+		requiredTags?: string[];
+	}): Promise<number> {
+		const where = this.examFilterSql(filter);
+		const [row] = await this.txHost.tx.$queryRaw<{ count: number }[]>(
+			Prisma.sql`SELECT COUNT(*)::int AS count FROM exams e WHERE e.status = ${ExamStatus.Approved} AND ${where}`,
 		);
-
-		if (dir === -1) rows.reverse();
-		return rows.map(r => ({ ...r, description: r.description ?? undefined }));
+		return row?.count ?? 0;
 	}
 
 	async getExamDetail(examId: string): Promise<DetailedExamInfo | null> {

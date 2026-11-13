@@ -428,6 +428,8 @@ message FindExamsDto {
 	optional SortOption                  sort_by = 2;
 	optional google.protobuf.StringValue cursor  = 3;
 	optional google.protobuf.Int32Value  limit   = 4;
+	// page number (1-based): offset pagination with a total count; the cursor is ignored
+	optional google.protobuf.Int32Value  page    = 5;
 
 	message FilterOption {
 		optional google.protobuf.StringValue name = 1;
@@ -447,6 +449,8 @@ message Exams {
 	repeated MinimalExamInfo exams       = 1;
 	string                   next_cursor = 2;
 	string                   prev_cursor = 3;
+	// set in page mode (FindExamsDto.page): every matching exam
+	optional int32           total_count = 4;
 
 	message MinimalExamInfo {
 		string                    id             = 1;

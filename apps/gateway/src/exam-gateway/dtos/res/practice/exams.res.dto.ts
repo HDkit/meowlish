@@ -44,4 +44,8 @@ export class ExamsInfoDto {
 	@Expose()
 	@ApiProperty()
 	prevCursor!: string;
+
+	@Expose()
+	@ApiPropertyOptional({ description: 'Page mode only: every matching exam' })
+	totalCount?: number;
 }

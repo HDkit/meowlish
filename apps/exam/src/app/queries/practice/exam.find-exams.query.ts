@@ -6,10 +6,14 @@ export type FindExamsQueryResult = {
 	exams: MinimalExamInfo[];
 	nextCursor: string;
 	prevCursor: string;
+	/** Page mode only: every matching exam. */
+	totalCount?: number;
 };
 
 export type FindExamsQueryPayload = {
 	cursor?: string;
+	/** 1-based page number: offset pagination (the cursor is ignored). */
+	page?: number;
 } & Omit<FindExamsCursor, 'lastCursor'>;
 
 export type FindExamsCursor = {

@@ -405,7 +405,11 @@ export interface FindExamsDto {
   filter?: FindExamsDto_FilterOption | undefined;
   sortBy?: FindExamsDto_SortOption | undefined;
   cursor?: string | undefined;
-  limit?: number | undefined;
+  limit?:
+    | number
+    | undefined;
+  /** page number (1-based): offset pagination with a total count; the cursor is ignored */
+  page?: number | undefined;
 }
 
 export interface FindExamsDto_FilterOption {
@@ -427,6 +431,8 @@ export interface Exams {
   exams: Exams_MinimalExamInfo[];
   nextCursor: string;
   prevCursor: string;
+  /** set in page mode (FindExamsDto.page): every matching exam */
+  totalCount?: number | undefined;
 }
 
 export interface Exams_MinimalExamInfo {
@@ -4703,6 +4709,9 @@ export const FindExamsDto: MessageFns<FindExamsDto> = {
     if (message.limit !== undefined) {
       Int32Value.encode({ value: message.limit! }, writer.uint32(34).fork()).join();
     }
+    if (message.page !== undefined) {
+      Int32Value.encode({ value: message.page! }, writer.uint32(42).fork()).join();
+    }
     return writer;
   },
 
@@ -4749,6 +4758,14 @@ export const FindExamsDto: MessageFns<FindExamsDto> = {
             }
 
             message.limit = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.page = Int32Value.decode(reader, reader.uint32()).value;
             continue;
           }
         }
@@ -4904,6 +4921,9 @@ export const Exams: MessageFns<Exams> = {
     if (message.prevCursor !== "") {
       writer.uint32(26).string(message.prevCursor);
     }
+    if (message.totalCount !== undefined) {
+      writer.uint32(32).int32(message.totalCount);
+    }
     return writer;
   },
 
@@ -4942,6 +4962,14 @@ export const Exams: MessageFns<Exams> = {
             }
 
             message.prevCursor = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 32) {
+              break;
+            }
+
+            message.totalCount = reader.int32();
             continue;
           }
         }

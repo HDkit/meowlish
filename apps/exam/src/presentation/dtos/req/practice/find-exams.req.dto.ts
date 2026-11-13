@@ -55,4 +55,9 @@ export class FindExamsDto implements exam.FindExamsDto {
 	@IsOptional()
 	@IsPositive()
 	limit?: number;
+
+	@IsInt()
+	@IsOptional()
+	@IsPositive()
+	page?: number;
 }

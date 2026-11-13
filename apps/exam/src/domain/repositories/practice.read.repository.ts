@@ -44,7 +44,11 @@ export interface IPracticeReadRepository {
 		};
 		limit?: number;
 		direction?: number;
+		/** 1-based page: OFFSET pagination; `lastCursor`/`direction` are ignored. */
+		page?: number;
 	}): Promise<MinimalExamInfo[]>;
+	/** How many approved exams match the filter (page mode's total). */
+	countExams(filter?: { name?: string; tags?: string[]; requiredTags?: string[] }): Promise<number>;
 	getExamDetail(examId: string): Promise<DetailedExamInfo | null>;
 	getExamStats(examId: string): Promise<ExamStatistics | null>;
 	getAttemptSavedData(attemptId: string): Promise<AttemptSavedData | null>;

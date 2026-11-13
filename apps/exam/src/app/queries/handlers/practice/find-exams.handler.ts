@@ -25,6 +25,20 @@ export class FindExamsHandler implements IQueryHandler<FindExamsQuery> {
 
 	async execute(query: FindExamsQuery): Promise<FindExamsQueryResult> {
 		const payload = query.payload;
+		if (payload.page !== undefined) {
+			// page mode: numbered pages over the catalogue, with a total for the page links
+			const limit = payload.limit ?? 10;
+			const [exams, totalCount] = await Promise.all([
+				this.practiceReadRepository.findExams({
+					filter: payload.filter,
+					sortBy: payload.sortBy,
+					limit: limit,
+					page: payload.page,
+				}),
+				this.practiceReadRepository.countExams(payload.filter),
+			]);
+			return { exams: exams, nextCursor: '', prevCursor: '', totalCount: totalCount };
+		}
 		const decodedCursor =
 			payload.cursor ?
 				this.cursorPaginationHelper.decodeCursor<FindExamsCursor>(payload.cursor)

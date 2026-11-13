@@ -10,6 +10,7 @@ import {
 	IsOptional,
 	IsPositive,
 	IsString,
+	Max,
 	ValidateNested,
 } from 'class-validator';
 
@@ -77,4 +78,15 @@ export class FindExamsDto {
 	@IsPositive()
 	@ApiPropertyOptional({ type: Number })
 	limit?: number;
+
+	@Type(() => Number)
+	@IsInt()
+	@IsOptional()
+	@IsPositive()
+	@Max(10_000)
+	@ApiPropertyOptional({
+		type: Number,
+		description: 'Page number (1-based): page pagination with `totalCount`; `cursor` is ignored',
+	})
+	page?: number;
 }
