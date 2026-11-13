@@ -15,12 +15,12 @@ describe('config', () => {
 		process.env = { ...saved };
 	});
 
-	it('defaults the delay to 2000-8000 ms', () => {
-		expect(config().scorer).toEqual({ minDelayMs: 2000, maxDelayMs: 8000 });
+	it('defaults the delay to 1-3 minutes', () => {
+		expect(config().scorer).toEqual({ minDelayMs: 60_000, maxDelayMs: 180_000 });
 	});
 
 	it('rejects min > max', () => {
-		process.env.MOCK_SCORER_MIN_DELAY_MS = '9000';
+		process.env.MOCK_SCORER_MIN_DELAY_MS = '200000';
 		expect(() => config()).toThrow();
 	});
 });

@@ -239,7 +239,7 @@ Keep the double quotes so the multi-line value survives `.env` parsing.
 Dev stand-in for the external AI writing scorer. It consumes `exam.writing.submitted` and, after a random delay, publishes `exam.writing.scored` with random IELTS bands (4.0-8.5 in 0.5 steps, no real AI, feedback text says it is a mock). It has no database and no gRPC API.
 
 - `RMQ_HOST`, `RMQ_PORT`, `RMQ_USER`, `RMQ_PASS` — RabbitMQ, same as the other apps
-- `MOCK_SCORER_MIN_DELAY_MS` / `MOCK_SCORER_MAX_DELAY_MS` — uniform random delay per submission (defaults `2000` / `8000`; min must be <= max)
+- `MOCK_SCORER_MIN_DELAY_MS` / `MOCK_SCORER_MAX_DELAY_MS` — uniform random delay per submission (defaults `60000` / `180000`, i.e. 1-3 minutes; min must be <= max)
 - `HOST`, `HEALTH_PORT` — bind address and port for `/health/live` and `/health/ready`
 
 Run it with `nx serve mock-ai-scorer` (also started by `nx run-many -t serve`), or in Docker with `docker compose --profile mock-ai up`. **Do not run it next to the real AI scorer**: both would consume `exam.writing.submitted` and race to score each submission.

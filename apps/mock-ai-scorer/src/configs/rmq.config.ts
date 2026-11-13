@@ -8,7 +8,7 @@ import { defaultRmqExchanges } from '@server/utils';
 export const WRITING_SUBMITTED_QUEUE = defineConsumerQueue('mock-ai-scorer.writing.submitted');
 
 /** Messages in flight at once; each one sleeps for its random delay before it is acked. */
-export const PREFETCH_COUNT = 10;
+export const PREFETCH_COUNT = 200;
 
 export const rmqConfig = (configService: ConfigService<IEnvVars>): RabbitMQConfig => {
 	const mq = configService.getOrThrow('messageQueue', { infer: true });

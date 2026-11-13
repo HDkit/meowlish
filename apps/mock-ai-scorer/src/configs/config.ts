@@ -10,8 +10,8 @@ const mqSchema = z.object({
 
 const scorerSchema = z
 	.object({
-		minDelayMs: z.coerce.number().int().min(0).default(2000),
-		maxDelayMs: z.coerce.number().int().min(0).default(8000),
+		minDelayMs: z.coerce.number().int().min(0).default(60_000),
+		maxDelayMs: z.coerce.number().int().min(0).default(180_000),
 	})
 	.refine(v => v.minDelayMs <= v.maxDelayMs, {
 		message: 'MOCK_SCORER_MIN_DELAY_MS must be <= MOCK_SCORER_MAX_DELAY_MS',
