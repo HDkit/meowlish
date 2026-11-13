@@ -8,7 +8,14 @@ import bcrypt from 'bcrypt';
 
 const setup = () => {
 	const credential = { id: 'c1', secretHash: bcrypt.hashSync('Old-Pass-1!', 4) };
-	const identity = { credentials: [credential], updateCredential: jest.fn() };
+	const identity = {
+		isDemo: false,
+		credentials: [credential],
+		updateCredential: jest.fn(),
+		assertNotDemo: function (action: string) {
+			Identity.prototype.assertNotDemo.call(this, action);
+		},
+	};
 	const repo = {
 		findOneById: jest.fn().mockResolvedValue(identity),
 		save: jest.fn(),
@@ -56,6 +63,15 @@ describe('UpdatePasswordCommandHandler', () => {
 		const handler = new UpdatePasswordCommandHandler(repo as never, tokens as never);
 		await expect(handler.execute(cmd('Demo@12345'))).rejects.toBeInstanceOf(ForbiddenException);
 		expect(identity.credentials[0].secretHash).toBe(hash);
+		expect(repo.save).not.toHaveBeenCalled();
+		expect(tokens.revokeUser).not.toHaveBeenCalled();
+	});
+
+	it('the demo account is 403 before the current password is checked', async () => {
+		const { handler, repo, identity, tokens } = setup();
+		Object.assign(identity, { isDemo: true });
+		await expect(handler.execute(cmd('nope'))).rejects.toBeInstanceOf(ForbiddenException);
+		expect(identity.updateCredential).not.toHaveBeenCalled();
 		expect(repo.save).not.toHaveBeenCalled();
 		expect(tokens.revokeUser).not.toHaveBeenCalled();
 	});

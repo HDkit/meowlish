@@ -19,6 +19,8 @@ export class UpdatePasswordCommandHandler implements ICommandHandler<UpdatePassw
 		const payload = command.payload;
 		const identity = await this.identityRepository.findOneById(payload.identityId);
 		if (!identity) throw new NotFoundException('Identity not found');
+		// Refuse before checking the current password, so a demo request is always 403, never 401.
+		identity.assertNotDemo('change its password');
 		const credential = identity.credentials.find(cred => cred.id === payload.id);
 		if (!credential) throw new NotFoundException('Credential not found');
 		if (
