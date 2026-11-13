@@ -38,6 +38,8 @@ service ExamPracticeService {
 	rpc GetUserStats(GetUserStatsDto) returns(UserStats) {}
 	rpc GetUsersAttemptSummary(GetUsersAttemptSummaryDto) returns(AttemptHistorySummary) {}
 	rpc GetUsersAttemptHistory(GetUsersAttemptHistoryDto) returns(UsersAttemptHistory) {}
+	rpc GetUserActivity(GetUserActivityDto) returns(UserActivity) {}
+	rpc GetUserSkillStats(GetUserSkillStatsDto) returns(UserSkillStats) {}
 	rpc FindExams(FindExamsDto) returns (Exams) {}
 	rpc GetExamDetails(GetExamDetailsDto) returns (DetailedExamInfo) {}
 	rpc GetExamStats(GetExamStatsDto) returns (ExamStatistics) {}
@@ -535,6 +537,66 @@ message UserStats {
 	message TagInfo {
 		string name               = 1;
 		double correct_percentage = 2;
+	}
+}
+
+message GetUserActivityDto {
+	google.protobuf.StringValue          uid  = 1;
+	// how many UTC days back from today to return (default 182)
+	optional google.protobuf.Int32Value days = 2;
+}
+
+// Finished attempts per UTC day. Streaks count consecutive UTC days with at least one finished
+// attempt, over the user's whole history.
+message UserActivity {
+	string       from           = 1; // first day of the range, YYYY-MM-DD (UTC)
+	string       to             = 2; // today, YYYY-MM-DD (UTC)
+	repeated Day days           = 3; // only days with activity, ascending
+	int32        current_streak = 4;
+	int32        longest_streak = 5;
+	int32        active_days    = 6; // all-time
+	int32        total_attempts = 7; // all-time
+
+	message Day {
+		string date     = 1;
+		int32  attempts = 2;
+		int32  minutes  = 3;
+	}
+}
+
+message GetUserSkillStatsDto {
+	google.protobuf.StringValue uid = 1;
+}
+
+// Per-skill scores and per-tag accuracy over the user's most recent finished attempts.
+message UserSkillStats {
+	repeated SkillStats  skills              = 1;
+	repeated TagAccuracy tags                = 2;
+	int32                attempts_considered = 3;
+
+	message SkillStats {
+		string              skill           = 1; // LISTENING | READING | WRITING | SPEAKING
+		int32               attempts        = 2;
+		optional double     average_percent = 3;
+		optional double     last_percent    = 4;
+		optional double     best_percent    = 5;
+		optional double     average_band    = 6;
+		repeated ScorePoint recent          = 7; // oldest first
+	}
+
+	message ScorePoint {
+		string                    attempt_id = 1;
+		string                    exam_title = 2;
+		google.protobuf.Timestamp ended_at   = 3;
+		double                    percent    = 4;
+		optional double           band       = 5;
+	}
+
+	message TagAccuracy {
+		string name      = 1;
+		int32  correct   = 2;
+		int32  incorrect = 3;
+		int32  skipped   = 4;
 	}
 }
 

@@ -6,6 +6,8 @@ import { DetailedQuestionInfo } from '../read-models/practice/detailed-question.
 import { ExamStatistics } from '../read-models/practice/exam-statistics.read-model';
 import { MinimalAttemptInfo } from '../read-models/practice/minimal-attempt.read-model';
 import { MinimalExamInfo } from '../read-models/practice/minimal-exam.read-model';
+import { ActivityDayRow } from '../read-models/practice/user-activity.read-model';
+import { SkillStatsSource } from '../read-models/practice/user-skill-stats.read-model';
 import { UserStats } from '../read-models/practice/user-stats.read-model';
 import { SortDirection } from '@server/typing';
 
@@ -18,6 +20,10 @@ export interface IPracticeReadRepository {
 		uid: string,
 		range?: { from: Date; to: Date },
 	): Promise<AttemptHistorySummary>;
+	/** Finished attempts (and capped practice time) per UTC day, over the user's whole history. */
+	getUserActivityDays(uid: string): Promise<ActivityDayRow[]>;
+	/** What the skill stats are built from, for the user's `limit` most recent finished attempts. */
+	getUserSkillStatsSource(uid: string, limit: number): Promise<SkillStatsSource>;
 	getUsersAttemptHistory(
 		uid: string,
 		options?: {

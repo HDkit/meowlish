@@ -12,15 +12,91 @@ import { DetailedQuestionInfo } from '../../domain/read-models/practice/detailed
 import { ExamStatistics } from '../../domain/read-models/practice/exam-statistics.read-model';
 import { MinimalAttemptInfo } from '../../domain/read-models/practice/minimal-attempt.read-model';
 import { MinimalExamInfo } from '../../domain/read-models/practice/minimal-exam.read-model';
+import { ActivityDayRow } from '../../domain/read-models/practice/user-activity.read-model';
+import {
+	SkillStatsAttemptRow,
+	SkillStatsObjectiveRow,
+	SkillStatsSource,
+	SkillStatsWritingRow,
+	TagAccuracy,
+} from '../../domain/read-models/practice/user-skill-stats.read-model';
 import { UserStats } from '../../domain/read-models/practice/user-stats.read-model';
 import { type IPracticeReadRepository } from '../../domain/repositories/practice.read.repository';
 import { ExamStatus } from '../../enums/exam-status.enum';
 import { QuestionType, questionTypesThatShowChoices } from '../../enums/question-type.enum';
+import { Skill } from '../../enums/skill.enum';
+import { toWritingBand } from './writing-band';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma-client/exam';
 import { SortDirection } from '@server/typing';
+
+/** Longest stretch one attempt counts towards practice time (3 h), whatever its limit says. */
+const maxPracticeSecondsPerAttempt = 3 * 60 * 60;
+
+/** Tags whose own or an ancestor's name mentions a skill as a whole word, mapped to that skill. */
+const tagSkillsCte = Prisma.sql`
+	tag_skills AS (
+		SELECT DISTINCT tag_id, skill FROM (
+			SELECT t.id AS tag_id,
+				CASE
+					WHEN anc.name ~* ${'\\mlistening\\M'} THEN ${Skill.Listening}
+					WHEN anc.name ~* ${'\\mreading\\M'} THEN ${Skill.Reading}
+					WHEN anc.name ~* ${'\\mwriting\\M'} THEN ${Skill.Writing}
+					WHEN anc.name ~* ${'\\mspeaking\\M'} THEN ${Skill.Speaking}
+				END AS skill
+			FROM tags t
+			JOIN tags anc ON anc.lft <= t.lft AND anc.rgt >= t.rgt
+		) named
+		WHERE skill IS NOT NULL
+	)`;
+
+/**
+ * The questions each attempt covered: those under the sections it picked, or the whole exam when
+ * it picked none (the same rule the attempt aggregate uses). Writing questions or the others.
+ */
+function attemptQuestionsCte(attemptIds: string[], writing: boolean): Prisma.Sql {
+	const typeFilter =
+		writing ?
+			Prisma.sql`q.type = ${QuestionType.Writing}`
+		:	Prisma.sql`q.type <> ${QuestionType.Writing}`;
+	return Prisma.sql`
+	aq AS (
+		SELECT a.id AS attempt_id, q.id AS question_id, q.section_id
+		FROM attempts a
+		JOIN attempt_sections ats ON ats.attempt_id = a.id
+		JOIN section_closures sc ON sc.ancestor_id = ats.section_id
+		JOIN questions q ON q.section_id = sc.descendant_id AND ${typeFilter}
+		WHERE a.id IN (${Prisma.join(attemptIds)})
+		UNION
+		SELECT a.id, q.id, q.section_id
+		FROM attempts a
+		JOIN sections s ON s.exam_id = a.exam_id
+		JOIN questions q ON q.section_id = s.id AND ${typeFilter}
+		WHERE a.id IN (${Prisma.join(attemptIds)})
+			AND NOT EXISTS (SELECT 1 FROM attempt_sections x WHERE x.attempt_id = a.id)
+	)`;
+}
+
+/** Each covered objective question with its outcome: correct, answered wrong, or skipped. */
+const outcomeCte = Prisma.sql`
+	outcome AS (
+		SELECT aq.attempt_id, aq.question_id, aq.section_id,
+			CASE
+				WHEN ar.is_correct IS TRUE THEN 'correct'
+				WHEN ar.id IS NOT NULL AND cardinality(ar.answers) > 0 THEN 'incorrect'
+				ELSE 'skipped'
+			END AS outcome
+		FROM aq
+		LEFT JOIN attempt_responses ar
+			ON ar.attempt_id = aq.attempt_id AND ar.question_id = aq.question_id
+	)`;
+
+const outcomeCounts = Prisma.sql`
+	COUNT(*) FILTER (WHERE o.outcome = 'correct')::int AS correct,
+	COUNT(*) FILTER (WHERE o.outcome = 'incorrect')::int AS incorrect,
+	COUNT(*) FILTER (WHERE o.outcome = 'skipped')::int AS skipped`;
 
 @Injectable()
 export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository {
@@ -124,6 +200,146 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 		}
 
 		return summary;
+	}
+
+	async getUserActivityDays(uid: string): Promise<ActivityDayRow[]> {
+		const rows = await this.txHost.tx.$queryRaw<
+			{ date: string; attempts: number; seconds: number }[]
+		>`
+      SELECT
+        TO_CHAR(DATE_TRUNC('day', ended_at), 'YYYY-MM-DD') AS date,
+        COUNT(*)::int AS attempts,
+        COALESCE(SUM(LEAST(
+          GREATEST(EXTRACT(EPOCH FROM (ended_at - started_at)), 0),
+          CASE WHEN duration_limit > 0 THEN duration_limit ELSE ${maxPracticeSecondsPerAttempt} END,
+          ${maxPracticeSecondsPerAttempt}
+        )), 0)::float AS seconds
+      FROM attempts
+      WHERE attempted_by = ${uid}
+        AND ended_at IS NOT NULL
+      GROUP BY 1
+      ORDER BY 1
+    `;
+		return rows.map(r => ({
+			date: r.date,
+			attempts: Number(r.attempts),
+			seconds: Number(r.seconds),
+		}));
+	}
+
+	async getUserSkillStatsSource(uid: string, limit: number): Promise<SkillStatsSource> {
+		const recent = await this.txHost.tx.attempt.findMany({
+			where: { attemptedBy: uid, endedAt: { not: null } },
+			orderBy: [{ endedAt: 'desc' }, { id: 'desc' }],
+			take: limit,
+			select: { id: true, examId: true, endedAt: true, exam: { select: { title: true } } },
+		});
+		if (recent.length === 0) return { attempts: [], objective: [], writing: [], tags: [] };
+
+		const attemptIds = recent.map(a => a.id);
+		const examIds = [...new Set(recent.map(a => a.examId))];
+
+		const examSkills = await this.txHost.tx.$queryRaw<
+			{ examId: string; examSkills: string[]; claimedSkills: string[] }[]
+		>(Prisma.sql`
+      WITH ${tagSkillsCte}
+      SELECT
+        e.id AS "examId",
+        COALESCE((
+          SELECT ARRAY_AGG(DISTINCT ts.skill)
+          FROM exam_tags et JOIN tag_skills ts ON ts.tag_id = et.tag_id
+          WHERE et.exam_id = e.id
+        ), '{}') AS "examSkills",
+        COALESCE((
+          SELECT ARRAY_AGG(DISTINCT ts.skill)
+          FROM sections s
+          JOIN section_tags st ON st.section_id = s.id
+          JOIN tag_skills ts ON ts.tag_id = st.tag_id
+          WHERE s.exam_id = e.id
+        ), '{}') AS "claimedSkills"
+      FROM exams e
+      WHERE e.id IN (${Prisma.join(examIds)})
+    `);
+		const skillsByExam = new Map(examSkills.map(e => [e.examId, e]));
+
+		const objective = await this.txHost.tx.$queryRaw<SkillStatsObjectiveRow[]>(Prisma.sql`
+      WITH ${tagSkillsCte}, ${attemptQuestionsCte(attemptIds, false)}, ${outcomeCte},
+      qs AS (
+        SELECT qt.question_id, ARRAY_AGG(DISTINCT ts.skill ORDER BY ts.skill) AS skills
+        FROM question_tags qt JOIN tag_skills ts ON ts.tag_id = qt.tag_id
+        WHERE qt.question_id IN (SELECT question_id FROM aq)
+        GROUP BY qt.question_id
+      ),
+      ss AS (
+        SELECT sc.descendant_id AS section_id, ARRAY_AGG(DISTINCT ts.skill ORDER BY ts.skill) AS skills
+        FROM section_closures sc
+        JOIN section_tags st ON st.section_id = sc.ancestor_id
+        JOIN tag_skills ts ON ts.tag_id = st.tag_id
+        WHERE sc.descendant_id IN (SELECT section_id FROM aq)
+        GROUP BY sc.descendant_id
+      )
+      SELECT
+        o.attempt_id AS "attemptId",
+        COALESCE(qs.skills, '{}') AS "questionSkills",
+        COALESCE(ss.skills, '{}') AS "sectionSkills",
+        ${outcomeCounts}
+      FROM outcome o
+      LEFT JOIN qs ON qs.question_id = o.question_id
+      LEFT JOIN ss ON ss.section_id = o.section_id
+      GROUP BY o.attempt_id, qs.skills, ss.skills
+    `);
+
+		const writing = await this.txHost.tx.$queryRaw<
+			{ attemptId: string; answered: boolean; comment: Prisma.JsonValue | null }[]
+		>(Prisma.sql`
+      WITH ${attemptQuestionsCte(attemptIds, true)}
+      SELECT
+        aq.attempt_id AS "attemptId",
+        (ar.id IS NOT NULL AND cardinality(ar.answers) > 0) AS answered,
+        sd.comment
+      FROM aq
+      LEFT JOIN attempt_responses ar
+        ON ar.attempt_id = aq.attempt_id AND ar.question_id = aq.question_id
+      LEFT JOIN scorer_data sd ON sd.response_id = ar.id
+    `);
+
+		const tags = await this.txHost.tx.$queryRaw<TagAccuracy[]>(Prisma.sql`
+      WITH ${attemptQuestionsCte(attemptIds, false)}, ${outcomeCte}
+      SELECT t.name, ${outcomeCounts}
+      FROM outcome o
+      JOIN question_tags qt ON qt.question_id = o.question_id
+      JOIN tags t ON t.id = qt.tag_id
+      GROUP BY t.name
+    `);
+
+		const attempts: SkillStatsAttemptRow[] = recent.map(a => ({
+			attemptId: a.id,
+			examTitle: a.exam.title,
+			endedAt: a.endedAt ?? new Date(0),
+			examSkills: skillsByExam.get(a.examId)?.examSkills ?? [],
+			claimedSkills: skillsByExam.get(a.examId)?.claimedSkills ?? [],
+		}));
+		const writingRows: SkillStatsWritingRow[] = writing.map(w => ({
+			attemptId: w.attemptId,
+			answered: w.answered,
+			band: w.comment === null ? null : toWritingBand([{ comment: w.comment }]),
+		}));
+		const counts = (r: { correct: number; incorrect: number; skipped: number }) => ({
+			correct: Number(r.correct),
+			incorrect: Number(r.incorrect),
+			skipped: Number(r.skipped),
+		});
+		return {
+			attempts: attempts,
+			objective: objective.map(o => ({
+				attemptId: o.attemptId,
+				questionSkills: o.questionSkills,
+				sectionSkills: o.sectionSkills,
+				...counts(o),
+			})),
+			writing: writingRows,
+			tags: tags.map(t => ({ name: t.name, ...counts(t) })),
+		};
 	}
 
 	async getUsersAttemptHistory(

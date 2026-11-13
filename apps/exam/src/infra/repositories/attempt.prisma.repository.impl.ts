@@ -14,6 +14,7 @@ import {
 	IAttemptRepository,
 } from '../../domain/repositories/attempt.repository';
 import { QuestionType } from '../../enums/question-type.enum';
+import { toWritingBand } from './writing-band';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { Injectable, MethodNotAllowedException } from '@nestjs/common';
@@ -52,25 +53,6 @@ class AttemptPrismaMapper {
 		};
 	}
 
-	/**
-	 * The AI feedback is stored as the JSON-encoded `WritingScoreDataDto` (a JSON string value);
-	 * returns its `overall_score`, or null when there is no usable feedback.
-	 */
-	static toWritingBand(scorerDatas: { comment: Prisma.JsonValue }[]): number | null {
-		let comment: unknown = scorerDatas[0]?.comment;
-		if (typeof comment === 'string') {
-			try {
-				comment = JSON.parse(comment);
-			} catch {
-				return null;
-			}
-		}
-		if (typeof comment !== 'object' || comment === null || !('overall_score' in comment))
-			return null;
-		const band = comment.overall_score;
-		return typeof band === 'number' && Number.isFinite(band) ? band : null;
-	}
-
 	static toScoredAttemptOrm(from: AttemptEvaluator): RepoScoredAttempt {
 		return { score: from.score, totalPoints: from.totalPoints };
 	}
@@ -107,7 +89,7 @@ class AttemptPrismaMapper {
 					r.questionId,
 					r.answers,
 					r.isCorrect,
-					this.toWritingBand(r.scorerDatas),
+					toWritingBand(r.scorerDatas),
 				),
 		);
 
