@@ -15,6 +15,7 @@ import jwt from 'jsonwebtoken';
 const MINUTE = 60_000;
 const STRICT_LIMIT = 10;
 const IP_LIMIT = 100;
+const ANSWER_LIMIT = 300;
 
 /** Health probes (`/health/*`, outside the `/api` prefix) must never be throttled. */
 export const isHealthRoute = (context: ExecutionContext): boolean => {
@@ -113,3 +114,17 @@ export const StrictThrottleByRefreshToken = () => strict(tokenSubject(REFRESH_TO
  * other signed-in strict routes.
  */
 export const StrictThrottleBySession = () => strict(tokenSubject(ACCESS_TOKEN_COOKIE));
+
+/**
+ * Answer autosave (save/remove an answer, note, flag): 300/min per IP and signed-in account
+ * instead of 100/min per IP, so a fast typist or a classroom behind one NAT can't run out of
+ * budget mid-exam and silently lose answers.
+ */
+export const AnswerThrottle = () =>
+	Throttle({
+		default: {
+			limit: ANSWER_LIMIT,
+			ttl: MINUTE,
+			getTracker: accountTracker(tokenSubject(ACCESS_TOKEN_COOKIE)),
+		},
+	});

@@ -1,4 +1,5 @@
 import { IsPublic } from '../auth/decorators/public.decorator';
+import { AnswerThrottle } from '../throttle';
 import { type AuthenticatedRequest } from '../types/authenticated-request';
 import { EXAM_CLIENT } from './constants/exam';
 import { AddNoteDto } from './dtos/req/practice/add-note.req.dto';
@@ -70,6 +71,7 @@ export class ExamPracticeGatewayController implements OnModuleInit {
 	}
 
 	@Post('attempt/:id/answers/:questionId')
+	@AnswerThrottle()
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Answer a question in an attempt' })
 	answer(
@@ -88,6 +90,7 @@ export class ExamPracticeGatewayController implements OnModuleInit {
 	}
 
 	@Delete('attempt/:id/answers/:questionId')
+	@AnswerThrottle()
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Remove an answer from a question in an attempt' })
 	removeAnswer(
@@ -106,6 +109,7 @@ export class ExamPracticeGatewayController implements OnModuleInit {
 	}
 
 	@Patch('attempt/:id/answers/:questionId/flag')
+	@AnswerThrottle()
 	@ApiOperation({ summary: 'Toggle question flag state' })
 	@ApiResponseEntity(FlagStateDto)
 	@SerializeOptions({ type: FlagStateDto })
@@ -123,6 +127,7 @@ export class ExamPracticeGatewayController implements OnModuleInit {
 	}
 
 	@Patch('attempt/:id/answers/:questionId/note')
+	@AnswerThrottle()
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Add or update a note for a question' })
 	addNote(
