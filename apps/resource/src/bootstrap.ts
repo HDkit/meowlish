@@ -29,6 +29,8 @@ async function bootstrap() {
 					[`resource.${resource.FLASH_CARD_LIST_SERVICE_NAME}`]:
 						resource.FlashCardListServiceService,
 					[`resource.${resource.REPORT_SERVICE_NAME}`]: resource.ReportServiceService,
+					[`resource.${resource.FORUM_SERVICE_NAME}`]: resource.ForumServiceService,
+					[`resource.${resource.BLOG_COMMENT_SERVICE_NAME}`]: resource.BlogCommentServiceService,
 				} satisfies PackageDefinition,
 			},
 		},
