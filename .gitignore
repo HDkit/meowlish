@@ -42,6 +42,13 @@ lerna-debug.log*
 **/*.env.test.local
 **/*.env.local
 **/.env.services
+# any other variant or copy of an env file (.env.services.bak, .env.old, app.env.orig, ...):
+# backups hold the same secrets. Only the *.example templates are tracked.
+**/.env.*
+**/*.env.*
+!**/.env.example
+!**/.env.*.example
+!**/*.env.example
 
 # temp directory
 .temp
