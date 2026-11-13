@@ -20,6 +20,8 @@ export interface ListFlashCardListsInput extends PageInput {
 	authorId?: string;
 	isPublic?: boolean;
 	tags: string[];
+	/** Case-insensitive substring of the list name. */
+	name?: string;
 }
 
 export interface ListCardsInListInput extends PageInput {

@@ -223,6 +223,8 @@ message ListFlashCardListsRequest {
 	google.protobuf.StringValue          requester_id   = 6;
 	// Requester may bypass ownership/visibility (role decided by the gateway).
 	optional google.protobuf.BoolValue   privileged     = 7;
+	// lists whose name contains this text (case-insensitive)
+	optional google.protobuf.StringValue name           = 8;
 }
 
 message ListFlashCardListsResponse {

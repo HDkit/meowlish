@@ -215,7 +215,11 @@ export interface ListFlashCardListsRequest {
     | string
     | undefined;
   /** Requester may bypass ownership/visibility (role decided by the gateway). */
-  privileged?: boolean | undefined;
+  privileged?:
+    | boolean
+    | undefined;
+  /** lists whose name contains this text (case-insensitive) */
+  name?: string | undefined;
 }
 
 export interface ListFlashCardListsResponse {
@@ -2213,6 +2217,9 @@ export const ListFlashCardListsRequest: MessageFns<ListFlashCardListsRequest> = 
     if (message.privileged !== undefined) {
       BoolValue.encode({ value: message.privileged! }, writer.uint32(58).fork()).join();
     }
+    if (message.name !== undefined) {
+      StringValue.encode({ value: message.name! }, writer.uint32(66).fork()).join();
+    }
     return writer;
   },
 
@@ -2283,6 +2290,14 @@ export const ListFlashCardListsRequest: MessageFns<ListFlashCardListsRequest> = 
             }
 
             message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 8: {
+            if (tag !== 66) {
+              break;
+            }
+
+            message.name = StringValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }

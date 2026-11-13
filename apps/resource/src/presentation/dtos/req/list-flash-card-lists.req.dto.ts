@@ -1,7 +1,7 @@
 import { RequesterReqDto } from './requester.req.dto';
 import { resource } from '@server/generated';
 import { Type } from 'class-transformer';
-import { IsArray, IsBoolean, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsArray, IsBoolean, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 
 export class ListFlashCardListsReqDto
 	extends RequesterReqDto
@@ -18,6 +18,11 @@ export class ListFlashCardListsReqDto
 	@IsArray()
 	@IsString({ each: true })
 	tags!: string[];
+
+	@IsOptional()
+	@IsString()
+	@MaxLength(100)
+	name?: string;
 
 	@Type(() => Number)
 	@IsInt()

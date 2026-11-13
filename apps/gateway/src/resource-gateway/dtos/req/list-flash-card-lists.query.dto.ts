@@ -2,7 +2,7 @@ import { PageQueryDto } from './page.query.dto';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ToStringArray, str2bool } from '@server/utils';
 import { Transform } from 'class-transformer';
-import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class ListFlashCardListsQueryDto extends PageQueryDto {
 	@IsOptional()
@@ -23,4 +23,10 @@ export class ListFlashCardListsQueryDto extends PageQueryDto {
 	@ApiPropertyOptional({ type: [String] })
 	@ToStringArray()
 	tags: string[] = [];
+
+	@IsOptional()
+	@IsString()
+	@MaxLength(100)
+	@ApiPropertyOptional({ description: 'Lists whose name contains this text (case-insensitive)' })
+	name?: string;
 }

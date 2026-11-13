@@ -72,6 +72,22 @@ describe('FlashcardListService access rules', () => {
 		expect(where).toEqual({ AND: [{}, {}] });
 	});
 
+	it('searches lists by name (case-insensitive substring) and tags', async () => {
+		const { tx, service } = setup();
+		await service.listFlashCardLists(
+			{ tags: ['toeic'], name: '  Từ vựng ', isPublic: true },
+			{ id: 'me', privileged: false },
+		);
+		const { where } = (tx.flashCardList.findMany.mock.calls as unknown[][])[0][0] as {
+			where: { AND: unknown[] };
+		};
+		expect(where.AND[0]).toEqual({
+			isPublic: true,
+			tags: { hasSome: ['toeic'] },
+			name: { contains: 'Từ vựng', mode: 'insensitive' },
+		});
+	});
+
 	it('hides a private list from other users as 404 on update', async () => {
 		const { tx, service } = setup();
 		tx.flashCardList.findUnique.mockResolvedValue(list());

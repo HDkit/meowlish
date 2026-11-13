@@ -112,6 +112,8 @@ export class FlashcardListService {
 		if (data.authorId) filters.authorId = data.authorId;
 		if (data.isPublic !== undefined) filters.isPublic = data.isPublic;
 		if (data.tags.length > 0) filters.tags = { hasSome: data.tags };
+		const name = data.name?.trim();
+		if (name) filters.name = { contains: name, mode: 'insensitive' };
 		const where: Prisma.FlashCardListWhereInput = {
 			AND: [filters, visibleListsWhere(requester)],
 		};
