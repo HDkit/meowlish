@@ -29,7 +29,15 @@ export interface Rooms_Room {
   id: string;
   name: string;
   scheduledLiveUrl?: string | undefined;
-  scheduledDate?: Date | undefined;
+  scheduledDate?:
+    | Date
+    | undefined;
+  /** who created the room (null for rooms from before it was recorded: admin-only) */
+  createdBy?:
+    | string
+    | undefined;
+  /** newest message in the room, for previews (unset when the room has none) */
+  lastMessage?: Chat | undefined;
 }
 
 export interface Chat {
@@ -252,6 +260,12 @@ export const Rooms_Room: MessageFns<Rooms_Room> = {
     if (message.scheduledDate !== undefined) {
       Timestamp.encode(toTimestamp(message.scheduledDate), writer.uint32(34).fork()).join();
     }
+    if (message.createdBy !== undefined) {
+      writer.uint32(42).string(message.createdBy);
+    }
+    if (message.lastMessage !== undefined) {
+      Chat.encode(message.lastMessage, writer.uint32(50).fork()).join();
+    }
     return writer;
   },
 
@@ -298,6 +312,22 @@ export const Rooms_Room: MessageFns<Rooms_Room> = {
             }
 
             message.scheduledDate = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.createdBy = reader.string();
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
+
+            message.lastMessage = Chat.decode(reader, reader.uint32());
             continue;
           }
         }

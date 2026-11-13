@@ -1,3 +1,4 @@
+import { type ChatLog } from '../../../domain/read-model/chat-log.read-model';
 import { Room } from '../../../domain/read-model/room.read-model';
 import { IRoomReadRepository } from '../../../domain/repositories/room.read.repository';
 import { TransactionHost } from '@nestjs-cls/transactional';
@@ -11,7 +12,10 @@ class RoomReadPrismaMapper {
 			id: from.id,
 			name: from.name,
 			scheduledLiveUrl: from.scheduledLiveUrl ?? undefined,
-			scheduledTime: from.scheduledTime ?? undefined,
+			// named like the API field (`scheduledDate`); it used to be `scheduledTime` here and was
+			// silently dropped by the response DTO
+			scheduledDate: from.scheduledTime ?? undefined,
+			createdBy: from.createdBy ?? undefined,
 		};
 	}
 }
@@ -39,6 +43,27 @@ export class RoomReadPrismaRepositoryImpl implements IRoomReadRepository {
 			take: direction * limit,
 		});
 
-		return rooms.map(RoomReadPrismaMapper.toReadModel);
+		const lastMessages = await this.lastMessagesOf(rooms.map(r => r.id));
+		return rooms.map(room => ({
+			...RoomReadPrismaMapper.toReadModel(room),
+			lastMessage: lastMessages.get(room.id),
+		}));
+	}
+
+	/** The newest message of each room, in one query (Prisma `distinct` keeps the first per room). */
+	private async lastMessagesOf(roomIds: string[]): Promise<Map<string, ChatLog>> {
+		if (roomIds.length === 0) return new Map();
+		const logs = await this.txHost.tx.log.findMany({
+			where: { roomId: { in: roomIds } },
+			orderBy: [{ roomId: 'asc' }, { createdAt: 'desc' }, { id: 'desc' }],
+			distinct: ['roomId'],
+			select: { id: true, roomId: true, fromId: true, message: true, createdAt: true },
+		});
+		return new Map(
+			logs.map(log => [
+				log.roomId,
+				{ id: log.id, uid: log.fromId, message: log.message, createdAt: log.createdAt },
+			]),
+		);
 	}
 }

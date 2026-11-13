@@ -31,6 +31,10 @@ message Rooms {
 		string                             name               = 2;
 		optional string                    scheduled_live_url = 3;
 		optional google.protobuf.Timestamp scheduled_date     = 4;
+		// who created the room (null for rooms from before it was recorded: admin-only)
+		optional string                    created_by         = 5;
+		// newest message in the room, for previews (unset when the room has none)
+		optional Chat                      last_message       = 6;
 	}
 }
 
