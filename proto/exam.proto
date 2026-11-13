@@ -429,7 +429,10 @@ message FindExamsDto {
 
 	message FilterOption {
 		optional google.protobuf.StringValue name = 1;
+		// exams carrying ANY of these tags (or a descendant tag)
 		repeated google.protobuf.StringValue tags = 2;
+		// exams carrying EVERY one of these tags (or a descendant of each), e.g. the exam type
+		repeated google.protobuf.StringValue required_tags = 3;
 	}
 
 	message SortOption {

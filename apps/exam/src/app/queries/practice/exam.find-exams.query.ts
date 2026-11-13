@@ -14,7 +14,7 @@ export type FindExamsQueryPayload = {
 
 export type FindExamsCursor = {
 	// high prec
-	filter?: { name?: string; tags?: string[] };
+	filter?: { name?: string; tags?: string[]; requiredTags?: string[] };
 	sortBy?: { key: 'attemptsCount' | 'updatedAt'; direction: SortDirection };
 	lastCursor?: {
 		id: string;

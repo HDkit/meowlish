@@ -29,7 +29,7 @@ export interface IPracticeReadRepository {
 		},
 	): Promise<MinimalAttemptInfo[]>;
 	findExams(options?: {
-		filter?: { name?: string; tags?: string[] };
+		filter?: { name?: string; tags?: string[]; requiredTags?: string[] };
 		sortBy?: { key: 'attemptsCount' | 'updatedAt'; direction: SortDirection };
 		lastCursor?: {
 			id: string;

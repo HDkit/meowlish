@@ -409,8 +409,13 @@ export interface FindExamsDto {
 }
 
 export interface FindExamsDto_FilterOption {
-  name?: string | undefined;
+  name?:
+    | string
+    | undefined;
+  /** exams carrying ANY of these tags (or a descendant tag) */
   tags: string[];
+  /** exams carrying EVERY one of these tags (or a descendant of each), e.g. the exam type */
+  requiredTags: string[];
 }
 
 export interface FindExamsDto_SortOption {
@@ -4687,7 +4692,7 @@ export const FindExamsDto: MessageFns<FindExamsDto> = {
 };
 
 function createBaseFindExamsDto_FilterOption(): FindExamsDto_FilterOption {
-  return { tags: [] };
+  return { tags: [], requiredTags: [] };
 }
 
 export const FindExamsDto_FilterOption: MessageFns<FindExamsDto_FilterOption> = {
@@ -4697,6 +4702,9 @@ export const FindExamsDto_FilterOption: MessageFns<FindExamsDto_FilterOption> = 
     }
     for (const v of message.tags) {
       StringValue.encode({ value: v!! }, writer.uint32(18).fork()).join();
+    }
+    for (const v of message.requiredTags) {
+      StringValue.encode({ value: v!! }, writer.uint32(26).fork()).join();
     }
     return writer;
   },
@@ -4728,6 +4736,14 @@ export const FindExamsDto_FilterOption: MessageFns<FindExamsDto_FilterOption> = 
             }
 
             message.tags.push(StringValue.decode(reader, reader.uint32()).value);
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.requiredTags.push(StringValue.decode(reader, reader.uint32()).value);
             continue;
           }
         }

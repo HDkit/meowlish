@@ -21,6 +21,11 @@ class FilterOptionsDto implements exam.FindExamsDto_FilterOption {
 	@IsOptional()
 	@IsString({ each: true })
 	tags: string[] = [];
+
+	@IsArray()
+	@IsOptional()
+	@IsString({ each: true })
+	requiredTags: string[] = [];
 }
 
 class SortOptionsDto implements exam.FindExamsDto_SortOption {

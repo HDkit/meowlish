@@ -186,7 +186,7 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 	}
 
 	async findExams(options?: {
-		filter?: { name?: string; tags?: string[] };
+		filter?: { name?: string; tags?: string[]; requiredTags?: string[] };
 		sortBy?: { key: 'attemptsCount' | 'updatedAt'; direction: SortDirection };
 		lastCursor?: {
 			id: string;
@@ -231,10 +231,9 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 				// fallback take all
 			:	Prisma.sql`TRUE`;
 
-		// filter by tag (any tags in exam, sections or questions)
-		const tagFilterSql =
-			options?.filter?.tags?.length ?
-				Prisma.sql`
+		// An exam matches a tag when the exam, one of its sections or one of its questions carries
+		// that tag or a descendant of it (nested set: lft/rgt).
+		const anyTagSql = (tags: string[]) => Prisma.sql`
 
         EXISTS (
 
@@ -242,7 +241,7 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
           FROM tags filter_t
 
           WHERE filter_t.name IN (
-            ${Prisma.join(options.filter.tags)}
+            ${Prisma.join(tags)}
           )
 
           AND EXISTS (
@@ -283,8 +282,20 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 
         )
 
-      `
+      `;
+
+		// filter by tag: ANY of `tags`, and EVERY one of `requiredTags`
+		const tagFilterSql =
+			options?.filter?.tags?.length ?
+				anyTagSql(options.filter.tags)
 				// fallback take all
+			:	Prisma.sql`TRUE`;
+		const requiredTagsSql =
+			options?.filter?.requiredTags?.length ?
+				Prisma.join(
+					options.filter.requiredTags.map(tag => anyTagSql([tag])),
+					' AND ',
+				)
 			:	Prisma.sql`TRUE`;
 
 		const cursorWhereSql =
@@ -355,6 +366,7 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
         e.status = ${ExamStatus.Approved}
         AND ${nameFilterSql}
         AND ${tagFilterSql}
+        AND ${requiredTagsSql}
         AND ${cursorWhereSql}
 
       GROUP BY e.id

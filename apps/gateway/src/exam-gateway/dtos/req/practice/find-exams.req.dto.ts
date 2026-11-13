@@ -21,8 +21,21 @@ class FilterOptionsDto {
 	@IsArray()
 	@IsOptional()
 	@IsString({ each: true })
-	@ApiPropertyOptional({ type: [String] })
+	@ApiPropertyOptional({
+		type: [String],
+		description: 'Exams with ANY of these tag names (a descendant tag also matches)',
+	})
 	tags: string[] = [];
+
+	@IsArray()
+	@IsOptional()
+	@IsString({ each: true })
+	@ApiPropertyOptional({
+		type: [String],
+		description:
+			'Exams with EVERY one of these tag names (or a descendant of each), e.g. ["TOEIC"]',
+	})
+	requiredTags: string[] = [];
 }
 
 class SortOptionsDto {
