@@ -41,6 +41,23 @@ service FlashCardListService {
 	rpc ListCardsInList(ListCardsInListRequest) returns (ListFlashCardsResponse) {}
 }
 
+// Forum: categories (seeded), threads and flat replies. Ownership and moderation are decided here
+// from the forwarded requester; "not yours" is answered with NOT_FOUND.
+service ForumService {
+	rpc ListForumCategories(ListForumCategoriesRequest) returns (ListForumCategoriesResponse) {}
+	rpc GetForumCategory(GetForumCategoryRequest) returns (ForumCategoryResponse) {}
+	rpc ListForumThreads(ListForumThreadsRequest) returns (ListForumThreadsResponse) {}
+	rpc CreateForumThread(CreateForumThreadRequest) returns (ForumThreadResponse) {}
+	rpc GetForumThread(GetForumThreadRequest) returns (ForumThreadResponse) {}
+	rpc UpdateForumThread(UpdateForumThreadRequest) returns (ForumThreadResponse) {}
+	rpc ModerateForumThread(ModerateForumThreadRequest) returns (ForumThreadResponse) {}
+	rpc DeleteForumThread(DeleteForumThreadRequest) returns (google.protobuf.Empty) {}
+	rpc ListForumReplies(ListForumRepliesRequest) returns (ListForumRepliesResponse) {}
+	rpc CreateForumReply(CreateForumReplyRequest) returns (ForumReplyResponse) {}
+	rpc UpdateForumReply(UpdateForumReplyRequest) returns (ForumReplyResponse) {}
+	rpc DeleteForumReply(DeleteForumReplyRequest) returns (google.protobuf.Empty) {}
+}
+
 message BlogResponse {
 	string          id         = 1;
 	string          title      = 2;
@@ -336,4 +353,176 @@ message RemoveFileFromReportRequest {
 	google.protobuf.StringValue          requester_id   = 3;
 	// Requester may bypass ownership/visibility (role decided by the gateway).
 	optional google.protobuf.BoolValue   privileged     = 4;
+}
+
+// Forum messages
+
+message ForumThreadSummaryResponse {
+	string          id                   = 1;
+	string          category_id          = 2;
+	string          author_id            = 3;
+	string          title                = 4;
+	// plain-text start of the body
+	string          excerpt              = 5;
+	bool            is_pinned            = 6;
+	bool            is_locked            = 7;
+	int32           reply_count          = 8;
+	int32           view_count           = 9;
+	string          last_activity_at     = 10;
+	optional string last_reply_author_id = 11;
+	string          created_at           = 12;
+	string          updated_at           = 13;
+}
+
+message ForumCategoryResponse {
+	string                              id              = 1;
+	string                              name            = 2;
+	string                              description     = 3;
+	int32                               position        = 4;
+	// only moderators may open threads here (e.g. announcements)
+	bool                                moderators_only = 5;
+	int32                               thread_count    = 6;
+	int32                               reply_count     = 7;
+	optional ForumThreadSummaryResponse latest_thread   = 8;
+}
+
+message ListForumCategoriesRequest {}
+
+message ListForumCategoriesResponse {
+	repeated ForumCategoryResponse categories = 1;
+}
+
+message GetForumCategoryRequest {
+	google.protobuf.StringValue id = 1;
+}
+
+message ForumThreadResponse {
+	string          id                   = 1;
+	string          category_id          = 2;
+	string          category_name        = 3;
+	string          author_id            = 4;
+	string          title                = 5;
+	string          body                 = 6;
+	bool            is_pinned            = 7;
+	bool            is_locked            = 8;
+	int32           reply_count          = 9;
+	int32           view_count           = 10;
+	string          last_activity_at     = 11;
+	optional string last_reply_author_id = 12;
+	optional string edited_at            = 13;
+	string          created_at           = 14;
+	string          updated_at           = 15;
+}
+
+message ListForumThreadsRequest {
+	google.protobuf.StringValue          category_id = 1;
+	// threads whose title contains this text (case-insensitive)
+	optional google.protobuf.StringValue search      = 2;
+	optional google.protobuf.Int32Value  page        = 3;
+	optional google.protobuf.Int32Value  limit       = 4;
+}
+
+message ListForumThreadsResponse {
+	repeated ForumThreadSummaryResponse threads     = 1;
+	int32                               total_count = 2;
+}
+
+message CreateForumThreadRequest {
+	google.protobuf.StringValue        category_id  = 1;
+	google.protobuf.StringValue        title        = 2;
+	google.protobuf.StringValue        body         = 3;
+	// Set by the gateway from the JWT; never from client input. Becomes the author.
+	google.protobuf.StringValue        requester_id = 4;
+	// Requester is a forum moderator (role decided by the gateway).
+	optional google.protobuf.BoolValue privileged   = 5;
+}
+
+message GetForumThreadRequest {
+	google.protobuf.StringValue id = 1;
+}
+
+message UpdateForumThreadRequest {
+	google.protobuf.StringValue          id           = 1;
+	optional google.protobuf.StringValue title        = 2;
+	optional google.protobuf.StringValue body         = 3;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue          requester_id = 4;
+	// Requester is a forum moderator (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged   = 5;
+}
+
+message ModerateForumThreadRequest {
+	google.protobuf.StringValue        id           = 1;
+	optional google.protobuf.BoolValue is_pinned    = 2;
+	optional google.protobuf.BoolValue is_locked    = 3;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue        requester_id = 4;
+	// Requester is a forum moderator (role decided by the gateway).
+	optional google.protobuf.BoolValue privileged   = 5;
+}
+
+message DeleteForumThreadRequest {
+	google.protobuf.StringValue        id           = 1;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue        requester_id = 2;
+	// Requester is a forum moderator (role decided by the gateway).
+	optional google.protobuf.BoolValue privileged   = 3;
+}
+
+message ForumQuoteResponse {
+	string id        = 1;
+	string author_id = 2;
+	// plain-text start of the quoted reply
+	string excerpt   = 3;
+}
+
+message ForumReplyResponse {
+	string                      id           = 1;
+	string                      thread_id    = 2;
+	string                      author_id    = 3;
+	string                      body         = 4;
+	// 1-based position in the thread (oldest first)
+	int32                       position     = 5;
+	optional ForumQuoteResponse quoted_reply = 6;
+	optional string             edited_at    = 7;
+	string                      created_at   = 8;
+	string                      updated_at   = 9;
+}
+
+message ListForumRepliesRequest {
+	google.protobuf.StringValue         thread_id = 1;
+	optional google.protobuf.Int32Value page      = 2;
+	optional google.protobuf.Int32Value limit     = 3;
+}
+
+message ListForumRepliesResponse {
+	repeated ForumReplyResponse replies     = 1;
+	int32                       total_count = 2;
+}
+
+message CreateForumReplyRequest {
+	google.protobuf.StringValue          thread_id       = 1;
+	google.protobuf.StringValue          body            = 2;
+	optional google.protobuf.StringValue quoted_reply_id = 3;
+	// Set by the gateway from the JWT; never from client input. Becomes the author.
+	google.protobuf.StringValue          requester_id    = 4;
+	// Requester is a forum moderator (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged      = 5;
+}
+
+message UpdateForumReplyRequest {
+	google.protobuf.StringValue        id           = 1;
+	google.protobuf.StringValue        body         = 2;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue        requester_id = 3;
+	// Requester is a forum moderator (role decided by the gateway).
+	optional google.protobuf.BoolValue privileged   = 4;
+}
+
+message DeleteForumReplyRequest {
+	google.protobuf.StringValue        id           = 1;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue        requester_id = 2;
+	// Requester is a forum moderator (role decided by the gateway).
+	optional google.protobuf.BoolValue privileged   = 3;
 }

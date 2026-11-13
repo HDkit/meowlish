@@ -357,6 +357,207 @@ export interface RemoveFileFromReportRequest {
   privileged?: boolean | undefined;
 }
 
+export interface ForumThreadSummaryResponse {
+  id: string;
+  categoryId: string;
+  authorId: string;
+  title: string;
+  /** plain-text start of the body */
+  excerpt: string;
+  isPinned: boolean;
+  isLocked: boolean;
+  replyCount: number;
+  viewCount: number;
+  lastActivityAt: string;
+  lastReplyAuthorId?: string | undefined;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ForumCategoryResponse {
+  id: string;
+  name: string;
+  description: string;
+  position: number;
+  /** only moderators may open threads here (e.g. announcements) */
+  moderatorsOnly: boolean;
+  threadCount: number;
+  replyCount: number;
+  latestThread?: ForumThreadSummaryResponse | undefined;
+}
+
+export interface ListForumCategoriesRequest {
+}
+
+export interface ListForumCategoriesResponse {
+  categories: ForumCategoryResponse[];
+}
+
+export interface GetForumCategoryRequest {
+  id: string | undefined;
+}
+
+export interface ForumThreadResponse {
+  id: string;
+  categoryId: string;
+  categoryName: string;
+  authorId: string;
+  title: string;
+  body: string;
+  isPinned: boolean;
+  isLocked: boolean;
+  replyCount: number;
+  viewCount: number;
+  lastActivityAt: string;
+  lastReplyAuthorId?: string | undefined;
+  editedAt?: string | undefined;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ListForumThreadsRequest {
+  categoryId:
+    | string
+    | undefined;
+  /** threads whose title contains this text (case-insensitive) */
+  search?: string | undefined;
+  page?: number | undefined;
+  limit?: number | undefined;
+}
+
+export interface ListForumThreadsResponse {
+  threads: ForumThreadSummaryResponse[];
+  totalCount: number;
+}
+
+export interface CreateForumThreadRequest {
+  categoryId: string | undefined;
+  title: string | undefined;
+  body:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. Becomes the author. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester is a forum moderator (role decided by the gateway). */
+  privileged?: boolean | undefined;
+}
+
+export interface GetForumThreadRequest {
+  id: string | undefined;
+}
+
+export interface UpdateForumThreadRequest {
+  id: string | undefined;
+  title?: string | undefined;
+  body?:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester is a forum moderator (role decided by the gateway). */
+  privileged?: boolean | undefined;
+}
+
+export interface ModerateForumThreadRequest {
+  id: string | undefined;
+  isPinned?: boolean | undefined;
+  isLocked?:
+    | boolean
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester is a forum moderator (role decided by the gateway). */
+  privileged?: boolean | undefined;
+}
+
+export interface DeleteForumThreadRequest {
+  id:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester is a forum moderator (role decided by the gateway). */
+  privileged?: boolean | undefined;
+}
+
+export interface ForumQuoteResponse {
+  id: string;
+  authorId: string;
+  /** plain-text start of the quoted reply */
+  excerpt: string;
+}
+
+export interface ForumReplyResponse {
+  id: string;
+  threadId: string;
+  authorId: string;
+  body: string;
+  /** 1-based position in the thread (oldest first) */
+  position: number;
+  quotedReply?: ForumQuoteResponse | undefined;
+  editedAt?: string | undefined;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ListForumRepliesRequest {
+  threadId: string | undefined;
+  page?: number | undefined;
+  limit?: number | undefined;
+}
+
+export interface ListForumRepliesResponse {
+  replies: ForumReplyResponse[];
+  totalCount: number;
+}
+
+export interface CreateForumReplyRequest {
+  threadId: string | undefined;
+  body: string | undefined;
+  quotedReplyId?:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. Becomes the author. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester is a forum moderator (role decided by the gateway). */
+  privileged?: boolean | undefined;
+}
+
+export interface UpdateForumReplyRequest {
+  id: string | undefined;
+  body:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester is a forum moderator (role decided by the gateway). */
+  privileged?: boolean | undefined;
+}
+
+export interface DeleteForumReplyRequest {
+  id:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester is a forum moderator (role decided by the gateway). */
+  privileged?: boolean | undefined;
+}
+
 function createBaseBlogResponse(): BlogResponse {
   return { id: "", title: "", content: "", authorId: "", tags: [], createdAt: "", updatedAt: "" };
 }
@@ -3403,6 +3604,1745 @@ export const RemoveFileFromReportRequest: MessageFns<RemoveFileFromReportRequest
   },
 };
 
+function createBaseForumThreadSummaryResponse(): ForumThreadSummaryResponse {
+  return {
+    id: "",
+    categoryId: "",
+    authorId: "",
+    title: "",
+    excerpt: "",
+    isPinned: false,
+    isLocked: false,
+    replyCount: 0,
+    viewCount: 0,
+    lastActivityAt: "",
+    createdAt: "",
+    updatedAt: "",
+  };
+}
+
+export const ForumThreadSummaryResponse: MessageFns<ForumThreadSummaryResponse> = {
+  encode(message: ForumThreadSummaryResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.categoryId !== "") {
+      writer.uint32(18).string(message.categoryId);
+    }
+    if (message.authorId !== "") {
+      writer.uint32(26).string(message.authorId);
+    }
+    if (message.title !== "") {
+      writer.uint32(34).string(message.title);
+    }
+    if (message.excerpt !== "") {
+      writer.uint32(42).string(message.excerpt);
+    }
+    if (message.isPinned !== false) {
+      writer.uint32(48).bool(message.isPinned);
+    }
+    if (message.isLocked !== false) {
+      writer.uint32(56).bool(message.isLocked);
+    }
+    if (message.replyCount !== 0) {
+      writer.uint32(64).int32(message.replyCount);
+    }
+    if (message.viewCount !== 0) {
+      writer.uint32(72).int32(message.viewCount);
+    }
+    if (message.lastActivityAt !== "") {
+      writer.uint32(82).string(message.lastActivityAt);
+    }
+    if (message.lastReplyAuthorId !== undefined) {
+      writer.uint32(90).string(message.lastReplyAuthorId);
+    }
+    if (message.createdAt !== "") {
+      writer.uint32(98).string(message.createdAt);
+    }
+    if (message.updatedAt !== "") {
+      writer.uint32(106).string(message.updatedAt);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ForumThreadSummaryResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseForumThreadSummaryResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.categoryId = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.authorId = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.title = reader.string();
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.excerpt = reader.string();
+            continue;
+          }
+          case 6: {
+            if (tag !== 48) {
+              break;
+            }
+
+            message.isPinned = reader.bool();
+            continue;
+          }
+          case 7: {
+            if (tag !== 56) {
+              break;
+            }
+
+            message.isLocked = reader.bool();
+            continue;
+          }
+          case 8: {
+            if (tag !== 64) {
+              break;
+            }
+
+            message.replyCount = reader.int32();
+            continue;
+          }
+          case 9: {
+            if (tag !== 72) {
+              break;
+            }
+
+            message.viewCount = reader.int32();
+            continue;
+          }
+          case 10: {
+            if (tag !== 82) {
+              break;
+            }
+
+            message.lastActivityAt = reader.string();
+            continue;
+          }
+          case 11: {
+            if (tag !== 90) {
+              break;
+            }
+
+            message.lastReplyAuthorId = reader.string();
+            continue;
+          }
+          case 12: {
+            if (tag !== 98) {
+              break;
+            }
+
+            message.createdAt = reader.string();
+            continue;
+          }
+          case 13: {
+            if (tag !== 106) {
+              break;
+            }
+
+            message.updatedAt = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseForumCategoryResponse(): ForumCategoryResponse {
+  return { id: "", name: "", description: "", position: 0, moderatorsOnly: false, threadCount: 0, replyCount: 0 };
+}
+
+export const ForumCategoryResponse: MessageFns<ForumCategoryResponse> = {
+  encode(message: ForumCategoryResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.name !== "") {
+      writer.uint32(18).string(message.name);
+    }
+    if (message.description !== "") {
+      writer.uint32(26).string(message.description);
+    }
+    if (message.position !== 0) {
+      writer.uint32(32).int32(message.position);
+    }
+    if (message.moderatorsOnly !== false) {
+      writer.uint32(40).bool(message.moderatorsOnly);
+    }
+    if (message.threadCount !== 0) {
+      writer.uint32(48).int32(message.threadCount);
+    }
+    if (message.replyCount !== 0) {
+      writer.uint32(56).int32(message.replyCount);
+    }
+    if (message.latestThread !== undefined) {
+      ForumThreadSummaryResponse.encode(message.latestThread, writer.uint32(66).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ForumCategoryResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseForumCategoryResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.name = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.description = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 32) {
+              break;
+            }
+
+            message.position = reader.int32();
+            continue;
+          }
+          case 5: {
+            if (tag !== 40) {
+              break;
+            }
+
+            message.moderatorsOnly = reader.bool();
+            continue;
+          }
+          case 6: {
+            if (tag !== 48) {
+              break;
+            }
+
+            message.threadCount = reader.int32();
+            continue;
+          }
+          case 7: {
+            if (tag !== 56) {
+              break;
+            }
+
+            message.replyCount = reader.int32();
+            continue;
+          }
+          case 8: {
+            if (tag !== 66) {
+              break;
+            }
+
+            message.latestThread = ForumThreadSummaryResponse.decode(reader, reader.uint32());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseListForumCategoriesRequest(): ListForumCategoriesRequest {
+  return {};
+}
+
+export const ListForumCategoriesRequest: MessageFns<ListForumCategoriesRequest> = {
+  encode(_: ListForumCategoriesRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListForumCategoriesRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseListForumCategoriesRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseListForumCategoriesResponse(): ListForumCategoriesResponse {
+  return { categories: [] };
+}
+
+export const ListForumCategoriesResponse: MessageFns<ListForumCategoriesResponse> = {
+  encode(message: ListForumCategoriesResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.categories) {
+      ForumCategoryResponse.encode(v!, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListForumCategoriesResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseListForumCategoriesResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.categories.push(ForumCategoryResponse.decode(reader, reader.uint32()));
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseGetForumCategoryRequest(): GetForumCategoryRequest {
+  return { id: undefined };
+}
+
+export const GetForumCategoryRequest: MessageFns<GetForumCategoryRequest> = {
+  encode(message: GetForumCategoryRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetForumCategoryRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGetForumCategoryRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseForumThreadResponse(): ForumThreadResponse {
+  return {
+    id: "",
+    categoryId: "",
+    categoryName: "",
+    authorId: "",
+    title: "",
+    body: "",
+    isPinned: false,
+    isLocked: false,
+    replyCount: 0,
+    viewCount: 0,
+    lastActivityAt: "",
+    createdAt: "",
+    updatedAt: "",
+  };
+}
+
+export const ForumThreadResponse: MessageFns<ForumThreadResponse> = {
+  encode(message: ForumThreadResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.categoryId !== "") {
+      writer.uint32(18).string(message.categoryId);
+    }
+    if (message.categoryName !== "") {
+      writer.uint32(26).string(message.categoryName);
+    }
+    if (message.authorId !== "") {
+      writer.uint32(34).string(message.authorId);
+    }
+    if (message.title !== "") {
+      writer.uint32(42).string(message.title);
+    }
+    if (message.body !== "") {
+      writer.uint32(50).string(message.body);
+    }
+    if (message.isPinned !== false) {
+      writer.uint32(56).bool(message.isPinned);
+    }
+    if (message.isLocked !== false) {
+      writer.uint32(64).bool(message.isLocked);
+    }
+    if (message.replyCount !== 0) {
+      writer.uint32(72).int32(message.replyCount);
+    }
+    if (message.viewCount !== 0) {
+      writer.uint32(80).int32(message.viewCount);
+    }
+    if (message.lastActivityAt !== "") {
+      writer.uint32(90).string(message.lastActivityAt);
+    }
+    if (message.lastReplyAuthorId !== undefined) {
+      writer.uint32(98).string(message.lastReplyAuthorId);
+    }
+    if (message.editedAt !== undefined) {
+      writer.uint32(106).string(message.editedAt);
+    }
+    if (message.createdAt !== "") {
+      writer.uint32(114).string(message.createdAt);
+    }
+    if (message.updatedAt !== "") {
+      writer.uint32(122).string(message.updatedAt);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ForumThreadResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseForumThreadResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.categoryId = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.categoryName = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.authorId = reader.string();
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.title = reader.string();
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
+
+            message.body = reader.string();
+            continue;
+          }
+          case 7: {
+            if (tag !== 56) {
+              break;
+            }
+
+            message.isPinned = reader.bool();
+            continue;
+          }
+          case 8: {
+            if (tag !== 64) {
+              break;
+            }
+
+            message.isLocked = reader.bool();
+            continue;
+          }
+          case 9: {
+            if (tag !== 72) {
+              break;
+            }
+
+            message.replyCount = reader.int32();
+            continue;
+          }
+          case 10: {
+            if (tag !== 80) {
+              break;
+            }
+
+            message.viewCount = reader.int32();
+            continue;
+          }
+          case 11: {
+            if (tag !== 90) {
+              break;
+            }
+
+            message.lastActivityAt = reader.string();
+            continue;
+          }
+          case 12: {
+            if (tag !== 98) {
+              break;
+            }
+
+            message.lastReplyAuthorId = reader.string();
+            continue;
+          }
+          case 13: {
+            if (tag !== 106) {
+              break;
+            }
+
+            message.editedAt = reader.string();
+            continue;
+          }
+          case 14: {
+            if (tag !== 114) {
+              break;
+            }
+
+            message.createdAt = reader.string();
+            continue;
+          }
+          case 15: {
+            if (tag !== 122) {
+              break;
+            }
+
+            message.updatedAt = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseListForumThreadsRequest(): ListForumThreadsRequest {
+  return { categoryId: undefined };
+}
+
+export const ListForumThreadsRequest: MessageFns<ListForumThreadsRequest> = {
+  encode(message: ListForumThreadsRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.categoryId !== undefined) {
+      StringValue.encode({ value: message.categoryId! }, writer.uint32(10).fork()).join();
+    }
+    if (message.search !== undefined) {
+      StringValue.encode({ value: message.search! }, writer.uint32(18).fork()).join();
+    }
+    if (message.page !== undefined) {
+      Int32Value.encode({ value: message.page! }, writer.uint32(26).fork()).join();
+    }
+    if (message.limit !== undefined) {
+      Int32Value.encode({ value: message.limit! }, writer.uint32(34).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListForumThreadsRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseListForumThreadsRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.categoryId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.search = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.page = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.limit = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseListForumThreadsResponse(): ListForumThreadsResponse {
+  return { threads: [], totalCount: 0 };
+}
+
+export const ListForumThreadsResponse: MessageFns<ListForumThreadsResponse> = {
+  encode(message: ListForumThreadsResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.threads) {
+      ForumThreadSummaryResponse.encode(v!, writer.uint32(10).fork()).join();
+    }
+    if (message.totalCount !== 0) {
+      writer.uint32(16).int32(message.totalCount);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListForumThreadsResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseListForumThreadsResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.threads.push(ForumThreadSummaryResponse.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 2: {
+            if (tag !== 16) {
+              break;
+            }
+
+            message.totalCount = reader.int32();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseCreateForumThreadRequest(): CreateForumThreadRequest {
+  return { categoryId: undefined, title: undefined, body: undefined, requesterId: undefined };
+}
+
+export const CreateForumThreadRequest: MessageFns<CreateForumThreadRequest> = {
+  encode(message: CreateForumThreadRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.categoryId !== undefined) {
+      StringValue.encode({ value: message.categoryId! }, writer.uint32(10).fork()).join();
+    }
+    if (message.title !== undefined) {
+      StringValue.encode({ value: message.title! }, writer.uint32(18).fork()).join();
+    }
+    if (message.body !== undefined) {
+      StringValue.encode({ value: message.body! }, writer.uint32(26).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(34).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(42).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CreateForumThreadRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseCreateForumThreadRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.categoryId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.title = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.body = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseGetForumThreadRequest(): GetForumThreadRequest {
+  return { id: undefined };
+}
+
+export const GetForumThreadRequest: MessageFns<GetForumThreadRequest> = {
+  encode(message: GetForumThreadRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetForumThreadRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGetForumThreadRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseUpdateForumThreadRequest(): UpdateForumThreadRequest {
+  return { id: undefined, requesterId: undefined };
+}
+
+export const UpdateForumThreadRequest: MessageFns<UpdateForumThreadRequest> = {
+  encode(message: UpdateForumThreadRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.title !== undefined) {
+      StringValue.encode({ value: message.title! }, writer.uint32(18).fork()).join();
+    }
+    if (message.body !== undefined) {
+      StringValue.encode({ value: message.body! }, writer.uint32(26).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(34).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(42).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UpdateForumThreadRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseUpdateForumThreadRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.title = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.body = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseModerateForumThreadRequest(): ModerateForumThreadRequest {
+  return { id: undefined, requesterId: undefined };
+}
+
+export const ModerateForumThreadRequest: MessageFns<ModerateForumThreadRequest> = {
+  encode(message: ModerateForumThreadRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.isPinned !== undefined) {
+      BoolValue.encode({ value: message.isPinned! }, writer.uint32(18).fork()).join();
+    }
+    if (message.isLocked !== undefined) {
+      BoolValue.encode({ value: message.isLocked! }, writer.uint32(26).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(34).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(42).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ModerateForumThreadRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseModerateForumThreadRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.isPinned = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.isLocked = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseDeleteForumThreadRequest(): DeleteForumThreadRequest {
+  return { id: undefined, requesterId: undefined };
+}
+
+export const DeleteForumThreadRequest: MessageFns<DeleteForumThreadRequest> = {
+  encode(message: DeleteForumThreadRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(26).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): DeleteForumThreadRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseDeleteForumThreadRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseForumQuoteResponse(): ForumQuoteResponse {
+  return { id: "", authorId: "", excerpt: "" };
+}
+
+export const ForumQuoteResponse: MessageFns<ForumQuoteResponse> = {
+  encode(message: ForumQuoteResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.authorId !== "") {
+      writer.uint32(18).string(message.authorId);
+    }
+    if (message.excerpt !== "") {
+      writer.uint32(26).string(message.excerpt);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ForumQuoteResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseForumQuoteResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.authorId = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.excerpt = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseForumReplyResponse(): ForumReplyResponse {
+  return { id: "", threadId: "", authorId: "", body: "", position: 0, createdAt: "", updatedAt: "" };
+}
+
+export const ForumReplyResponse: MessageFns<ForumReplyResponse> = {
+  encode(message: ForumReplyResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.threadId !== "") {
+      writer.uint32(18).string(message.threadId);
+    }
+    if (message.authorId !== "") {
+      writer.uint32(26).string(message.authorId);
+    }
+    if (message.body !== "") {
+      writer.uint32(34).string(message.body);
+    }
+    if (message.position !== 0) {
+      writer.uint32(40).int32(message.position);
+    }
+    if (message.quotedReply !== undefined) {
+      ForumQuoteResponse.encode(message.quotedReply, writer.uint32(50).fork()).join();
+    }
+    if (message.editedAt !== undefined) {
+      writer.uint32(58).string(message.editedAt);
+    }
+    if (message.createdAt !== "") {
+      writer.uint32(66).string(message.createdAt);
+    }
+    if (message.updatedAt !== "") {
+      writer.uint32(74).string(message.updatedAt);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ForumReplyResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseForumReplyResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.threadId = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.authorId = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.body = reader.string();
+            continue;
+          }
+          case 5: {
+            if (tag !== 40) {
+              break;
+            }
+
+            message.position = reader.int32();
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
+
+            message.quotedReply = ForumQuoteResponse.decode(reader, reader.uint32());
+            continue;
+          }
+          case 7: {
+            if (tag !== 58) {
+              break;
+            }
+
+            message.editedAt = reader.string();
+            continue;
+          }
+          case 8: {
+            if (tag !== 66) {
+              break;
+            }
+
+            message.createdAt = reader.string();
+            continue;
+          }
+          case 9: {
+            if (tag !== 74) {
+              break;
+            }
+
+            message.updatedAt = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseListForumRepliesRequest(): ListForumRepliesRequest {
+  return { threadId: undefined };
+}
+
+export const ListForumRepliesRequest: MessageFns<ListForumRepliesRequest> = {
+  encode(message: ListForumRepliesRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.threadId !== undefined) {
+      StringValue.encode({ value: message.threadId! }, writer.uint32(10).fork()).join();
+    }
+    if (message.page !== undefined) {
+      Int32Value.encode({ value: message.page! }, writer.uint32(18).fork()).join();
+    }
+    if (message.limit !== undefined) {
+      Int32Value.encode({ value: message.limit! }, writer.uint32(26).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListForumRepliesRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseListForumRepliesRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.threadId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.page = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.limit = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseListForumRepliesResponse(): ListForumRepliesResponse {
+  return { replies: [], totalCount: 0 };
+}
+
+export const ListForumRepliesResponse: MessageFns<ListForumRepliesResponse> = {
+  encode(message: ListForumRepliesResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.replies) {
+      ForumReplyResponse.encode(v!, writer.uint32(10).fork()).join();
+    }
+    if (message.totalCount !== 0) {
+      writer.uint32(16).int32(message.totalCount);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListForumRepliesResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseListForumRepliesResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.replies.push(ForumReplyResponse.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 2: {
+            if (tag !== 16) {
+              break;
+            }
+
+            message.totalCount = reader.int32();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseCreateForumReplyRequest(): CreateForumReplyRequest {
+  return { threadId: undefined, body: undefined, requesterId: undefined };
+}
+
+export const CreateForumReplyRequest: MessageFns<CreateForumReplyRequest> = {
+  encode(message: CreateForumReplyRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.threadId !== undefined) {
+      StringValue.encode({ value: message.threadId! }, writer.uint32(10).fork()).join();
+    }
+    if (message.body !== undefined) {
+      StringValue.encode({ value: message.body! }, writer.uint32(18).fork()).join();
+    }
+    if (message.quotedReplyId !== undefined) {
+      StringValue.encode({ value: message.quotedReplyId! }, writer.uint32(26).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(34).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(42).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CreateForumReplyRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseCreateForumReplyRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.threadId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.body = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.quotedReplyId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseUpdateForumReplyRequest(): UpdateForumReplyRequest {
+  return { id: undefined, body: undefined, requesterId: undefined };
+}
+
+export const UpdateForumReplyRequest: MessageFns<UpdateForumReplyRequest> = {
+  encode(message: UpdateForumReplyRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.body !== undefined) {
+      StringValue.encode({ value: message.body! }, writer.uint32(18).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(26).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(34).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UpdateForumReplyRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseUpdateForumReplyRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.body = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseDeleteForumReplyRequest(): DeleteForumReplyRequest {
+  return { id: undefined, requesterId: undefined };
+}
+
+export const DeleteForumReplyRequest: MessageFns<DeleteForumReplyRequest> = {
+  encode(message: DeleteForumReplyRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(26).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): DeleteForumReplyRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseDeleteForumReplyRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
 export interface BlogServiceClient {
   createBlog(request: CreateBlogRequest, metadata?: Metadata): Observable<BlogResponse>;
 
@@ -3948,6 +5888,280 @@ export interface FlashCardListServiceServer extends UntypedServiceImplementation
   listFlashCardLists: handleUnaryCall<ListFlashCardListsRequest, ListFlashCardListsResponse>;
   addCardToList: handleUnaryCall<AddCardToListRequest, Empty>;
   listCardsInList: handleUnaryCall<ListCardsInListRequest, ListFlashCardsResponse>;
+}
+
+/**
+ * Forum: categories (seeded), threads and flat replies. Ownership and moderation are decided here
+ * from the forwarded requester; "not yours" is answered with NOT_FOUND.
+ */
+
+export interface ForumServiceClient {
+  listForumCategories(
+    request: ListForumCategoriesRequest,
+    metadata?: Metadata,
+  ): Observable<ListForumCategoriesResponse>;
+
+  getForumCategory(request: GetForumCategoryRequest, metadata?: Metadata): Observable<ForumCategoryResponse>;
+
+  listForumThreads(request: ListForumThreadsRequest, metadata?: Metadata): Observable<ListForumThreadsResponse>;
+
+  createForumThread(request: CreateForumThreadRequest, metadata?: Metadata): Observable<ForumThreadResponse>;
+
+  getForumThread(request: GetForumThreadRequest, metadata?: Metadata): Observable<ForumThreadResponse>;
+
+  updateForumThread(request: UpdateForumThreadRequest, metadata?: Metadata): Observable<ForumThreadResponse>;
+
+  moderateForumThread(request: ModerateForumThreadRequest, metadata?: Metadata): Observable<ForumThreadResponse>;
+
+  deleteForumThread(request: DeleteForumThreadRequest, metadata?: Metadata): Observable<Empty>;
+
+  listForumReplies(request: ListForumRepliesRequest, metadata?: Metadata): Observable<ListForumRepliesResponse>;
+
+  createForumReply(request: CreateForumReplyRequest, metadata?: Metadata): Observable<ForumReplyResponse>;
+
+  updateForumReply(request: UpdateForumReplyRequest, metadata?: Metadata): Observable<ForumReplyResponse>;
+
+  deleteForumReply(request: DeleteForumReplyRequest, metadata?: Metadata): Observable<Empty>;
+}
+
+/**
+ * Forum: categories (seeded), threads and flat replies. Ownership and moderation are decided here
+ * from the forwarded requester; "not yours" is answered with NOT_FOUND.
+ */
+
+export interface ForumServiceController {
+  listForumCategories(
+    request: ListForumCategoriesRequest,
+    metadata?: Metadata,
+  ): Promise<ListForumCategoriesResponse> | Observable<ListForumCategoriesResponse> | ListForumCategoriesResponse;
+
+  getForumCategory(
+    request: GetForumCategoryRequest,
+    metadata?: Metadata,
+  ): Promise<ForumCategoryResponse> | Observable<ForumCategoryResponse> | ForumCategoryResponse;
+
+  listForumThreads(
+    request: ListForumThreadsRequest,
+    metadata?: Metadata,
+  ): Promise<ListForumThreadsResponse> | Observable<ListForumThreadsResponse> | ListForumThreadsResponse;
+
+  createForumThread(
+    request: CreateForumThreadRequest,
+    metadata?: Metadata,
+  ): Promise<ForumThreadResponse> | Observable<ForumThreadResponse> | ForumThreadResponse;
+
+  getForumThread(
+    request: GetForumThreadRequest,
+    metadata?: Metadata,
+  ): Promise<ForumThreadResponse> | Observable<ForumThreadResponse> | ForumThreadResponse;
+
+  updateForumThread(
+    request: UpdateForumThreadRequest,
+    metadata?: Metadata,
+  ): Promise<ForumThreadResponse> | Observable<ForumThreadResponse> | ForumThreadResponse;
+
+  moderateForumThread(
+    request: ModerateForumThreadRequest,
+    metadata?: Metadata,
+  ): Promise<ForumThreadResponse> | Observable<ForumThreadResponse> | ForumThreadResponse;
+
+  deleteForumThread(request: DeleteForumThreadRequest, metadata?: Metadata): void | Promise<void>;
+
+  listForumReplies(
+    request: ListForumRepliesRequest,
+    metadata?: Metadata,
+  ): Promise<ListForumRepliesResponse> | Observable<ListForumRepliesResponse> | ListForumRepliesResponse;
+
+  createForumReply(
+    request: CreateForumReplyRequest,
+    metadata?: Metadata,
+  ): Promise<ForumReplyResponse> | Observable<ForumReplyResponse> | ForumReplyResponse;
+
+  updateForumReply(
+    request: UpdateForumReplyRequest,
+    metadata?: Metadata,
+  ): Promise<ForumReplyResponse> | Observable<ForumReplyResponse> | ForumReplyResponse;
+
+  deleteForumReply(request: DeleteForumReplyRequest, metadata?: Metadata): void | Promise<void>;
+}
+
+export function ForumServiceControllerMethods() {
+  return function (constructor: Function) {
+    const grpcMethods: string[] = [
+      "listForumCategories",
+      "getForumCategory",
+      "listForumThreads",
+      "createForumThread",
+      "getForumThread",
+      "updateForumThread",
+      "moderateForumThread",
+      "deleteForumThread",
+      "listForumReplies",
+      "createForumReply",
+      "updateForumReply",
+      "deleteForumReply",
+    ];
+    for (const method of grpcMethods) {
+      const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
+      GrpcMethod("ForumService", method)(constructor.prototype[method], method, descriptor);
+      Object.defineProperty(constructor.prototype, method, descriptor);
+    }
+    const grpcStreamMethods: string[] = [];
+    for (const method of grpcStreamMethods) {
+      const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
+      GrpcStreamMethod("ForumService", method)(constructor.prototype[method], method, descriptor);
+      Object.defineProperty(constructor.prototype, method, descriptor);
+    }
+  };
+}
+
+export const FORUM_SERVICE_NAME = "ForumService";
+
+/**
+ * Forum: categories (seeded), threads and flat replies. Ownership and moderation are decided here
+ * from the forwarded requester; "not yours" is answered with NOT_FOUND.
+ */
+export type ForumServiceService = typeof ForumServiceService;
+export const ForumServiceService = {
+  listForumCategories: {
+    path: "/resource.ForumService/ListForumCategories" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: ListForumCategoriesRequest): Buffer =>
+      Buffer.from(ListForumCategoriesRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ListForumCategoriesRequest => ListForumCategoriesRequest.decode(value),
+    responseSerialize: (value: ListForumCategoriesResponse): Buffer =>
+      Buffer.from(ListForumCategoriesResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ListForumCategoriesResponse => ListForumCategoriesResponse.decode(value),
+  },
+  getForumCategory: {
+    path: "/resource.ForumService/GetForumCategory" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: GetForumCategoryRequest): Buffer =>
+      Buffer.from(GetForumCategoryRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetForumCategoryRequest => GetForumCategoryRequest.decode(value),
+    responseSerialize: (value: ForumCategoryResponse): Buffer =>
+      Buffer.from(ForumCategoryResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ForumCategoryResponse => ForumCategoryResponse.decode(value),
+  },
+  listForumThreads: {
+    path: "/resource.ForumService/ListForumThreads" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: ListForumThreadsRequest): Buffer =>
+      Buffer.from(ListForumThreadsRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ListForumThreadsRequest => ListForumThreadsRequest.decode(value),
+    responseSerialize: (value: ListForumThreadsResponse): Buffer =>
+      Buffer.from(ListForumThreadsResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ListForumThreadsResponse => ListForumThreadsResponse.decode(value),
+  },
+  createForumThread: {
+    path: "/resource.ForumService/CreateForumThread" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: CreateForumThreadRequest): Buffer =>
+      Buffer.from(CreateForumThreadRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): CreateForumThreadRequest => CreateForumThreadRequest.decode(value),
+    responseSerialize: (value: ForumThreadResponse): Buffer => Buffer.from(ForumThreadResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ForumThreadResponse => ForumThreadResponse.decode(value),
+  },
+  getForumThread: {
+    path: "/resource.ForumService/GetForumThread" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: GetForumThreadRequest): Buffer =>
+      Buffer.from(GetForumThreadRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetForumThreadRequest => GetForumThreadRequest.decode(value),
+    responseSerialize: (value: ForumThreadResponse): Buffer => Buffer.from(ForumThreadResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ForumThreadResponse => ForumThreadResponse.decode(value),
+  },
+  updateForumThread: {
+    path: "/resource.ForumService/UpdateForumThread" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: UpdateForumThreadRequest): Buffer =>
+      Buffer.from(UpdateForumThreadRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): UpdateForumThreadRequest => UpdateForumThreadRequest.decode(value),
+    responseSerialize: (value: ForumThreadResponse): Buffer => Buffer.from(ForumThreadResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ForumThreadResponse => ForumThreadResponse.decode(value),
+  },
+  moderateForumThread: {
+    path: "/resource.ForumService/ModerateForumThread" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: ModerateForumThreadRequest): Buffer =>
+      Buffer.from(ModerateForumThreadRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ModerateForumThreadRequest => ModerateForumThreadRequest.decode(value),
+    responseSerialize: (value: ForumThreadResponse): Buffer => Buffer.from(ForumThreadResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ForumThreadResponse => ForumThreadResponse.decode(value),
+  },
+  deleteForumThread: {
+    path: "/resource.ForumService/DeleteForumThread" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: DeleteForumThreadRequest): Buffer =>
+      Buffer.from(DeleteForumThreadRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): DeleteForumThreadRequest => DeleteForumThreadRequest.decode(value),
+    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+  },
+  listForumReplies: {
+    path: "/resource.ForumService/ListForumReplies" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: ListForumRepliesRequest): Buffer =>
+      Buffer.from(ListForumRepliesRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ListForumRepliesRequest => ListForumRepliesRequest.decode(value),
+    responseSerialize: (value: ListForumRepliesResponse): Buffer =>
+      Buffer.from(ListForumRepliesResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ListForumRepliesResponse => ListForumRepliesResponse.decode(value),
+  },
+  createForumReply: {
+    path: "/resource.ForumService/CreateForumReply" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: CreateForumReplyRequest): Buffer =>
+      Buffer.from(CreateForumReplyRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): CreateForumReplyRequest => CreateForumReplyRequest.decode(value),
+    responseSerialize: (value: ForumReplyResponse): Buffer => Buffer.from(ForumReplyResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ForumReplyResponse => ForumReplyResponse.decode(value),
+  },
+  updateForumReply: {
+    path: "/resource.ForumService/UpdateForumReply" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: UpdateForumReplyRequest): Buffer =>
+      Buffer.from(UpdateForumReplyRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): UpdateForumReplyRequest => UpdateForumReplyRequest.decode(value),
+    responseSerialize: (value: ForumReplyResponse): Buffer => Buffer.from(ForumReplyResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ForumReplyResponse => ForumReplyResponse.decode(value),
+  },
+  deleteForumReply: {
+    path: "/resource.ForumService/DeleteForumReply" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: DeleteForumReplyRequest): Buffer =>
+      Buffer.from(DeleteForumReplyRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): DeleteForumReplyRequest => DeleteForumReplyRequest.decode(value),
+    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+  },
+} as const;
+
+export interface ForumServiceServer extends UntypedServiceImplementation {
+  listForumCategories: handleUnaryCall<ListForumCategoriesRequest, ListForumCategoriesResponse>;
+  getForumCategory: handleUnaryCall<GetForumCategoryRequest, ForumCategoryResponse>;
+  listForumThreads: handleUnaryCall<ListForumThreadsRequest, ListForumThreadsResponse>;
+  createForumThread: handleUnaryCall<CreateForumThreadRequest, ForumThreadResponse>;
+  getForumThread: handleUnaryCall<GetForumThreadRequest, ForumThreadResponse>;
+  updateForumThread: handleUnaryCall<UpdateForumThreadRequest, ForumThreadResponse>;
+  moderateForumThread: handleUnaryCall<ModerateForumThreadRequest, ForumThreadResponse>;
+  deleteForumThread: handleUnaryCall<DeleteForumThreadRequest, Empty>;
+  listForumReplies: handleUnaryCall<ListForumRepliesRequest, ListForumRepliesResponse>;
+  createForumReply: handleUnaryCall<CreateForumReplyRequest, ForumReplyResponse>;
+  updateForumReply: handleUnaryCall<UpdateForumReplyRequest, ForumReplyResponse>;
+  deleteForumReply: handleUnaryCall<DeleteForumReplyRequest, Empty>;
 }
 
 interface MessageFns<T> {

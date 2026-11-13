@@ -3,6 +3,7 @@ import { BlogService } from './app/services/blog.service';
 import { FileOwnershipService } from './app/services/file-ownership.service';
 import { FlashcardListService } from './app/services/flashcard-list.service';
 import { FlashcardService } from './app/services/flashcard.service';
+import { ForumService } from './app/services/forum.service';
 import { ReportService } from './app/services/report.service';
 import { IEnvVars, config } from './configs/config';
 import { rmqPubConfig } from './configs/rmq.pub.config';
@@ -10,6 +11,7 @@ import { FILE_CLIENT } from './constants/file';
 import { BlogController } from './presentation/controllers/blog.controller';
 import { FlashcardListController } from './presentation/controllers/flashcard-list.controller';
 import { FlashcardController } from './presentation/controllers/flashcard.controller';
+import { ForumController } from './presentation/controllers/forum.controller';
 import { ReportController } from './presentation/controllers/report.controller';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { PackageDefinition } from '@grpc/grpc-js/build/src/make-client';
@@ -42,7 +44,13 @@ const rmqPubModule = RabbitMQModule.forRootAsync({
 });
 
 @Module({
-	controllers: [BlogController, FlashcardController, FlashcardListController, ReportController],
+	controllers: [
+		BlogController,
+		FlashcardController,
+		FlashcardListController,
+		ForumController,
+		ReportController,
+	],
 	imports: [
 		MessagingModule.forRoot({
 			serviceName: 'resource',
@@ -84,6 +92,7 @@ const rmqPubModule = RabbitMQModule.forRootAsync({
 		BlogService,
 		FlashcardService,
 		FlashcardListService,
+		ForumService,
 		ReportService,
 		ResourceEventsPublisher,
 		FileOwnershipService,

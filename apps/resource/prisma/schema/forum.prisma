@@ -1,0 +1,60 @@
+/// Forum section ("IELTS", "Hỏi đáp", ...). Seeded; ids are stable slugs.
+model ForumCategory {
+  id             String  @id
+  name           String
+  description    String
+  position       Int     @default(0)
+  /// Only moderators may open threads here (announcements).
+  moderatorsOnly Boolean @default(false) @map("moderators_only")
+
+  threads ForumThread[]
+
+  @@map("forum_categories")
+}
+
+model ForumThread {
+  id                String    @id @default(uuid())
+  categoryId        String    @map("category_id")
+  authorId          String    @map("author_id")
+  title             String
+  /// Markdown
+  body              String
+  isPinned          Boolean   @default(false) @map("is_pinned")
+  isLocked          Boolean   @default(false) @map("is_locked")
+  /// Denormalised so category/thread lists need no aggregate per row.
+  replyCount        Int       @default(0) @map("reply_count")
+  viewCount         Int       @default(0) @map("view_count")
+  /// Creation time, then bumped by every new reply: the list order.
+  lastActivityAt    DateTime  @default(now()) @map("last_activity_at")
+  lastReplyAuthorId String?   @map("last_reply_author_id")
+  /// Set when the author edits title/body (updatedAt also moves on counters and moderation).
+  editedAt          DateTime? @map("edited_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  category ForumCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  replies  ForumReply[]
+
+  @@index([categoryId, isPinned(sort: Desc), lastActivityAt(sort: Desc)])
+  @@map("forum_threads")
+}
+
+model ForumReply {
+  id            String    @id @default(uuid())
+  threadId      String    @map("thread_id")
+  authorId      String    @map("author_id")
+  /// Markdown
+  body          String
+  /// Reply this one quotes (same thread); cleared if that reply is deleted.
+  quotedReplyId String?   @map("quoted_reply_id")
+  editedAt      DateTime? @map("edited_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  thread      ForumThread  @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  quotedReply ForumReply?  @relation("ForumReplyQuote", fields: [quotedReplyId], references: [id], onDelete: SetNull)
+  quotedBy    ForumReply[] @relation("ForumReplyQuote")
+
+  @@index([threadId, createdAt])
+  @@map("forum_replies")
+}
