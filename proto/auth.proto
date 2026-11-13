@@ -227,6 +227,7 @@ message HydratedIdentities {
 		optional string avatar_url = 5;
 		optional string phone_number = 6;
 		repeated string roles      = 7;
+		bool            is_demo    = 8;
 	}
 }
 

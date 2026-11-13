@@ -64,6 +64,12 @@ export class HydratedIdentityDto {
 	@Expose()
 	@ApiProperty({ type: [String] })
 	roles!: string[];
+
+	@Expose()
+	@ApiProperty({
+		description: 'Shared demo account: password, sign-in methods, username and phone are read-only',
+	})
+	isDemo!: boolean;
 }
 
 export class HydratedIdentitiesDto {

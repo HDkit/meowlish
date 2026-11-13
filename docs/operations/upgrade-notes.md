@@ -71,7 +71,7 @@ Set these before starting the new build (`docker/.env.services`, or each app's `
 Run in this order:
 
 1. **Stop the achievement consumers** (the achievement container). Migration `20261112152409_count_first_login_day` adds +1 to every `login_criteria` row's `total` and `longest_streak` (the first login day was never counted). Logins processed by the old consumer while or after it runs use the old counting rules on corrected rows, so stop it first. Queued `user.login` events wait in RabbitMQ and are processed by the new build.
-2. `prisma migrate deploy` for **achievement**, **exam** (`attempt_version_scorer_data_cascade`: attempt version column, cascading scorer data) and **file-service** (`add_file_uploaded_by`, `add_file_is_system`). `pnpm db:setup` does all of it locally.
+2. `prisma migrate deploy` for **achievement**, **exam** (`attempt_version_scorer_data_cascade`: attempt version column, cascading scorer data), **file-service** (`add_file_uploaded_by`, `add_file_is_system`) and **auth** (`add_identity_is_demo`: additive `identities.is_demo` flag, default `false`; re-run the auth seed afterwards to create the shared demo account). `pnpm db:setup` does all of it locally.
 3. `prisma db push` for **live** (`Room.createdBy`), then re-run the **authorization seed**, which backfills `createdBy` from the authorization service's room ownership rows. Rooms without an ownership row stay `NULL`, so only admins can moderate them.
 4. Start the new build.
 

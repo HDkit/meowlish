@@ -22,6 +22,9 @@ export class HydratedIdentityDto implements auth.HydratedIdentities_HydratedIden
 
 	@Expose()
 	roles!: string[];
+
+	@Expose()
+	isDemo!: boolean;
 }
 
 export class HydratedIdentitiesDto implements auth.HydratedIdentities {

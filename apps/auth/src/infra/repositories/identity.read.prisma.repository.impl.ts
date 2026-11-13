@@ -218,6 +218,7 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 				avatarFileId: true,
 				bio: true,
 				phoneNumber: true,
+				isDemo: true,
 				identityRoles: {
 					select: {
 						role: { select: { name: true } },
@@ -233,6 +234,7 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 					avatarUrl: foundIdentity.avatarFileId ?? undefined,
 					bio: foundIdentity.bio ?? undefined,
 					phoneNumber: foundIdentity.phoneNumber ?? undefined,
+					isDemo: foundIdentity.isDemo,
 					roles: foundIdentity.identityRoles.map(r => r.role.name),
 				}
 			:	null;
@@ -248,6 +250,7 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 				avatarFileId: true,
 				bio: true,
 				phoneNumber: true,
+				isDemo: true,
 				identityRoles: {
 					select: {
 						role: { select: { name: true } },
@@ -263,6 +266,7 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 			avatarUrl: i.avatarFileId ?? undefined,
 			bio: i.bio ?? undefined,
 			phoneNumber: i.phoneNumber ?? undefined,
+			isDemo: i.isDemo,
 			roles: i.identityRoles.map(r => r.role.name),
 		}));
 	}

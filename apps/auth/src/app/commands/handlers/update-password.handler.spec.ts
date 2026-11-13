@@ -1,6 +1,9 @@
+import { Credential } from '../../../domain/entities/credential.entity';
+import { Identity } from '../../../domain/entities/identity.entity';
+import { LoginType } from '../../../enums/login-type.enum';
 import { UpdatePasswordCommand } from '../auth.update-password.command';
 import { UpdatePasswordCommandHandler } from './update-password.handler';
-import { UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import bcrypt from 'bcrypt';
 
 const setup = () => {
@@ -28,6 +31,31 @@ describe('UpdatePasswordCommandHandler', () => {
 		const { handler, repo, identity, tokens } = setup();
 		await expect(handler.execute(cmd('nope'))).rejects.toBeInstanceOf(UnauthorizedException);
 		expect(identity.updateCredential).not.toHaveBeenCalled();
+		expect(repo.save).not.toHaveBeenCalled();
+		expect(tokens.revokeUser).not.toHaveBeenCalled();
+	});
+
+	it('the demo account is 403 even with the correct current password', async () => {
+		const hash = bcrypt.hashSync('Demo@12345', 4);
+		const identity = new Identity({
+			id: 'i1',
+			username: 'demo',
+			isDemo: true,
+			credentials: [
+				new Credential({
+					id: 'c1',
+					identifier: 'demo@lingriser.test',
+					loginType: LoginType.Mail,
+					secretHash: hash,
+					isHashed: true,
+				}),
+			],
+		});
+		const repo = { findOneById: jest.fn().mockResolvedValue(identity), save: jest.fn() };
+		const tokens = { revokeUser: jest.fn() };
+		const handler = new UpdatePasswordCommandHandler(repo as never, tokens as never);
+		await expect(handler.execute(cmd('Demo@12345'))).rejects.toBeInstanceOf(ForbiddenException);
+		expect(identity.credentials[0].secretHash).toBe(hash);
 		expect(repo.save).not.toHaveBeenCalled();
 		expect(tokens.revokeUser).not.toHaveBeenCalled();
 	});

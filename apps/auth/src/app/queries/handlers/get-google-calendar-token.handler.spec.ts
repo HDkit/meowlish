@@ -1,3 +1,4 @@
+import { Identity } from '../../../domain/entities/identity.entity';
 import {
 	GoogleCalendarAccessTokenDto,
 	GoogleCalendarConnectionDto,
@@ -75,7 +76,10 @@ describe('Google Calendar token', () => {
 			findByIdentityId: jest.fn().mockResolvedValue(stored(0)),
 			upsert: jest.fn(),
 		};
-		const handler = new ConnectGoogleCalendarCommandHandler(repo as never);
+		const identities = {
+			findOneById: jest.fn().mockResolvedValue(new Identity({ id: 'i1', username: 'u' })),
+		};
+		const handler = new ConnectGoogleCalendarCommandHandler(repo as never, identities as never);
 		const expiresAt = Date.now() + 3_600_000;
 		const result = await handler.execute(
 			new ConnectGoogleCalendarCommand({

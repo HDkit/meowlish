@@ -10,7 +10,12 @@ import {
 	RoleDeletedEvent,
 } from '../events/identity-update.events';
 import { Credential, type CredentialUpdatableProperties } from './credential.entity';
-import { ConflictException, MethodNotAllowedException, NotFoundException } from '@nestjs/common';
+import {
+	ConflictException,
+	ForbiddenException,
+	MethodNotAllowedException,
+	NotFoundException,
+} from '@nestjs/common';
 import { AggregateRoot } from '@nestjs/cqrs';
 import { Event, IAggregate } from '@server/utils';
 
@@ -29,6 +34,8 @@ export class Identity extends AggregateRoot<Event<any>> implements IAggregate<Id
 	public isLocked: boolean;
 	public lockedAt: Date | null;
 	public lockedBy: string | null;
+	/** Shared demo account: credentials, username and phone are read-only. */
+	public readonly isDemo: boolean;
 	public roleIds: Set<string>;
 	public credentials: Credential[];
 	public readonly createdAt: Date;
@@ -46,6 +53,7 @@ export class Identity extends AggregateRoot<Event<any>> implements IAggregate<Id
 		isLocked?: boolean;
 		lockedAt?: Date | null;
 		lockedBy?: string | null;
+		isDemo?: boolean;
 		createdAt?: Date;
 		updatedAt?: Date;
 		deletedAt?: Date | null;
@@ -63,6 +71,7 @@ export class Identity extends AggregateRoot<Event<any>> implements IAggregate<Id
 		this.isLocked = constructorOptions.isLocked ?? false;
 		this.lockedAt = constructorOptions.lockedAt ?? null;
 		this.lockedBy = constructorOptions.lockedBy ?? null;
+		this.isDemo = constructorOptions.isDemo ?? false;
 		this.createdAt = constructorOptions.createdAt ?? new Date();
 		this.updatedAt = constructorOptions.updatedAt ?? new Date();
 		this.deletedAt = constructorOptions.deletedAt ?? null;
@@ -70,7 +79,19 @@ export class Identity extends AggregateRoot<Event<any>> implements IAggregate<Id
 		this.credentials = constructorOptions.credentials ?? [];
 	}
 
+	/** Rejects actions that would let one tester lock others out of the shared demo account. */
+	public assertNotDemo(action: string): void {
+		if (this.isDemo) throw new ForbiddenException(`The demo account can't ${action}`);
+	}
+
 	public updateDetails(options: IdentityUpdatableProperties): void {
+		if (options.username && options.username !== this.username)
+			this.assertNotDemo('change its username');
+		if (
+			(options.phoneNumber || options.phoneNumber === null) &&
+			options.phoneNumber !== this.phoneNumber
+		)
+			this.assertNotDemo('change its phone number');
 		if (options.username) this.username = options.username;
 		if (options.fullName || options.fullName === null) this.fullName = options.fullName;
 		if (options.bio || options.bio === null) this.bio = options.bio;
@@ -116,6 +137,7 @@ export class Identity extends AggregateRoot<Event<any>> implements IAggregate<Id
 	}
 
 	public addCredential(cred: Credential): void {
+		this.assertNotDemo('add sign-in methods');
 		for (const x of this.credentials) {
 			if (x.id === cred.id) throw new ConflictException("Credential's id must be unique");
 			if (x.identifier === cred.identifier && x.loginType === cred.loginType)
@@ -128,6 +150,7 @@ export class Identity extends AggregateRoot<Event<any>> implements IAggregate<Id
 	}
 
 	public deleteCredential(id: string): void {
+		this.assertNotDemo('remove sign-in methods');
 		const idx = this.credentials.findIndex(cred => cred.id === id);
 		if (idx === -1) throw new NotFoundException('Credential not found');
 		if (this.credentials.length === 1)
@@ -137,6 +160,7 @@ export class Identity extends AggregateRoot<Event<any>> implements IAggregate<Id
 	}
 
 	public updateCredential(credId: string, updateOptions: CredentialUpdatableProperties): void {
+		this.assertNotDemo('change its sign-in methods or password');
 		const credential = this.credentials.find(cred => cred.id === credId);
 		if (!credential) throw new NotFoundException('Credential not found');
 		credential.update(updateOptions);

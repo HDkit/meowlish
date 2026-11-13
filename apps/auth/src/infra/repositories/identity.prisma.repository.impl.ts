@@ -47,6 +47,7 @@ class IdentityPrismaMapper {
 			isLocked: from.isLocked,
 			lockedAt: from.lockedAt,
 			lockedBy: from.lockedBy,
+			isDemo: from.isDemo,
 			deletedAt: from.deletedAt,
 		};
 	}
@@ -73,6 +74,7 @@ class IdentityPrismaMapper {
 			isLocked: from.isLocked,
 			lockedAt: from.lockedAt,
 			lockedBy: from.lockedBy,
+			isDemo: from.isDemo,
 			createdAt: from.createdAt,
 			deletedAt: from.deletedAt,
 			updatedAt: from.updatedAt,

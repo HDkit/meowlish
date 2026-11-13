@@ -199,6 +199,7 @@ export interface HydratedIdentities_HydratedIdentity {
   avatarUrl?: string | undefined;
   phoneNumber?: string | undefined;
   roles: string[];
+  isDemo: boolean;
 }
 
 export interface Credentials {
@@ -2207,7 +2208,7 @@ export const HydratedIdentities: MessageFns<HydratedIdentities> = {
 };
 
 function createBaseHydratedIdentities_HydratedIdentity(): HydratedIdentities_HydratedIdentity {
-  return { id: "", username: "", roles: [] };
+  return { id: "", username: "", roles: [], isDemo: false };
 }
 
 export const HydratedIdentities_HydratedIdentity: MessageFns<HydratedIdentities_HydratedIdentity> = {
@@ -2232,6 +2233,9 @@ export const HydratedIdentities_HydratedIdentity: MessageFns<HydratedIdentities_
     }
     for (const v of message.roles) {
       writer.uint32(58).string(v!);
+    }
+    if (message.isDemo !== false) {
+      writer.uint32(64).bool(message.isDemo);
     }
     return writer;
   },
@@ -2303,6 +2307,14 @@ export const HydratedIdentities_HydratedIdentity: MessageFns<HydratedIdentities_
             }
 
             message.roles.push(reader.string());
+            continue;
+          }
+          case 8: {
+            if (tag !== 64) {
+              break;
+            }
+
+            message.isDemo = reader.bool();
             continue;
           }
         }
