@@ -44,6 +44,8 @@ const servicesSchema = z.object({
 		httpPort: z.coerce.number(),
 	}),
 	resource: z.object({
+		/** Full `host:port`; overrides host/port when set. */
+		url: z.string().optional(),
 		port: z.coerce.number(),
 		host: z.string(),
 	}),
@@ -155,6 +157,7 @@ const loadEnv = (): DeepStringify<IEnvVars> => ({
 			httpPort: process.env.NOTIFICATION_SERVICE_HTTP_PORT,
 		},
 		resource: {
+			url: process.env.RESOURCE_SERVICE_URL,
 			port: process.env.RESOURCE_SERVICE_PORT,
 			host: process.env.RESOURCE_SERVICE_HOST,
 		},
