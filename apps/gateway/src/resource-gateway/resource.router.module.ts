@@ -1,5 +1,6 @@
 import { IEnvVars } from '../configs/config';
 import { RESOURCE_CLIENT } from './constants/resource';
+import { FlashCardProposalGatewayController } from './flash-card-proposal.router.controller';
 import { ForumGatewayController } from './forum.router.controller';
 import { ResourceGatewayController } from './resource.router.controller';
 import { PackageDefinition } from '@grpc/grpc-js/build/src/make-client';
@@ -9,7 +10,11 @@ import { resource } from '@server/generated';
 import { ErrorHandlingGrpcProxy } from '@server/utils';
 
 @Module({
-	controllers: [ResourceGatewayController, ForumGatewayController],
+	controllers: [
+		ResourceGatewayController,
+		ForumGatewayController,
+		FlashCardProposalGatewayController,
+	],
 	providers: [
 		{
 			provide: RESOURCE_CLIENT,
@@ -25,6 +30,8 @@ import { ErrorHandlingGrpcProxy } from '@server/utils';
 						[`resource.${resource.FLASH_CARD_SERVICE_NAME}`]: resource.FlashCardServiceService,
 						[`resource.${resource.FLASH_CARD_LIST_SERVICE_NAME}`]:
 							resource.FlashCardListServiceService,
+						[`resource.${resource.FLASH_CARD_PROPOSAL_SERVICE_NAME}`]:
+							resource.FlashCardProposalServiceService,
 						[`resource.${resource.REPORT_SERVICE_NAME}`]: resource.ReportServiceService,
 						[`resource.${resource.FORUM_SERVICE_NAME}`]: resource.ForumServiceService,
 					} satisfies PackageDefinition,
