@@ -20,6 +20,29 @@ export interface ReportCreatedEvent {
 	targetId: string | null;
 }
 
+/** A proposal to change a list (notification tells the list owner). */
+export interface FlashCardProposalCreatedEvent {
+	proposalId: string;
+	targetListId: string;
+	targetListName: string;
+	targetOwnerId: string;
+	authorId: string;
+	title: string;
+}
+
+/** A proposal was accepted or rejected (notification tells the proposer). */
+export interface FlashCardProposalDecidedEvent {
+	proposalId: string;
+	targetListId: string;
+	targetListName: string;
+	authorId: string;
+	title: string;
+	/** ACCEPTED | REJECTED */
+	status: string;
+	decidedBy: string;
+	decisionNote: string | null;
+}
+
 /**
  * Writes integration events to the outbox; the relay publishes them on the `eventbus` exchange.
  * Call these inside the `@Transactional()` method that writes the data they describe.
@@ -53,6 +76,14 @@ export class ResourceEventsPublisher {
 	/** A new report to review (notification tells the admins). */
 	async reportCreated(event: ReportCreatedEvent): Promise<void> {
 		await this.outbox.add('resource.report.created', event);
+	}
+
+	async flashCardProposalCreated(event: FlashCardProposalCreatedEvent): Promise<void> {
+		await this.outbox.add('resource.flashcard-proposal.created', event);
+	}
+
+	async flashCardProposalDecided(event: FlashCardProposalDecidedEvent): Promise<void> {
+		await this.outbox.add('resource.flashcard-proposal.decided', event);
 	}
 
 	async reportStatusChanged(event: ReportStatusChangedEvent): Promise<void> {

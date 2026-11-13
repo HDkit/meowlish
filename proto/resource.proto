@@ -39,6 +39,23 @@ service FlashCardListService {
 	rpc ListFlashCardLists(ListFlashCardListsRequest) returns (ListFlashCardListsResponse) {}
 	rpc AddCardToList(AddCardToListRequest) returns (google.protobuf.Empty) {}
 	rpc ListCardsInList(ListCardsInListRequest) returns (ListFlashCardsResponse) {}
+	// Saves a private copy of someone else's public list (and its cards) for the requester.
+	rpc ForkFlashCardList(ForkFlashCardListRequest) returns (FlashCardListResponse) {}
+	// The requester's copy compared with its original: cards added, modified and removed in the copy.
+	rpc GetFlashCardListDiff(GetFlashCardListDiffRequest) returns (FlashCardListDiffResponse) {}
+	// Brings the original's changes into the requester's copy, skipping cards changed in the copy.
+	rpc PullFlashCardListUpstream(PullFlashCardListUpstreamRequest) returns (PullFlashCardListUpstreamResponse) {}
+}
+
+// Proposals to apply a copy's card changes to its original list (like pull requests). Visible to
+// the proposer, the original's owner and admins; everyone else gets NOT_FOUND.
+service FlashCardProposalService {
+	rpc CreateFlashCardProposal(CreateFlashCardProposalRequest) returns (FlashCardProposalResponse) {}
+	rpc ListFlashCardProposals(ListFlashCardProposalsRequest) returns (ListFlashCardProposalsResponse) {}
+	rpc GetFlashCardProposal(GetFlashCardProposalRequest) returns (FlashCardProposalDetailResponse) {}
+	rpc AcceptFlashCardProposal(AcceptFlashCardProposalRequest) returns (FlashCardProposalResponse) {}
+	rpc RejectFlashCardProposal(RejectFlashCardProposalRequest) returns (FlashCardProposalResponse) {}
+	rpc WithdrawFlashCardProposal(WithdrawFlashCardProposalRequest) returns (FlashCardProposalResponse) {}
 }
 
 // Nested comments under a blog post. Top-level comments are paginated (newest first); each comes
@@ -180,14 +197,20 @@ message ListFlashCardsResponse {
 }
 
 message FlashCardListResponse {
-	string          id          = 1;
-	string          name        = 2;
-	string          description = 3;
-	string          author_id   = 4;
-	bool            is_public   = 5;
-	repeated string tags        = 6;
-	string          created_at  = 7;
-	string          updated_at  = 8;
+	string          id                    = 1;
+	string          name                  = 2;
+	string          description           = 3;
+	string          author_id             = 4;
+	bool            is_public             = 5;
+	repeated string tags                  = 6;
+	string          created_at            = 7;
+	string          updated_at            = 8;
+	// Set on a copy: the original list (absent once it is deleted) and a snapshot of its name/author.
+	optional string forked_from_id        = 9;
+	optional string forked_from_name      = 10;
+	optional string forked_from_author_id = 11;
+	// How many copies were made of this list.
+	int32           fork_count            = 12;
 }
 
 message FlashCardListDetailResponse {
@@ -199,8 +222,16 @@ message FlashCardListDetailResponse {
 	repeated string            tags        = 6;
 	string                     created_at  = 7;
 	string                     updated_at  = 8;
-	repeated FlashCardResponse flash_cards = 9;
-	int32                      total_cards = 10;
+	repeated FlashCardResponse flash_cards           = 9;
+	int32                      total_cards           = 10;
+	optional string            forked_from_id        = 11;
+	optional string            forked_from_name      = 12;
+	optional string            forked_from_author_id = 13;
+	int32                      fork_count            = 14;
+	// Open proposals on this list; counted only for its owner and admins (0 for everyone else).
+	int32                      open_proposal_count   = 15;
+	// The original of this copy still exists and the requester can see it.
+	bool                       upstream_available    = 16;
 }
 
 message CreateFlashCardListRequest {
@@ -276,6 +307,217 @@ message ListCardsInListRequest {
 	google.protobuf.StringValue          requester_id   = 4;
 	// Requester may bypass ownership/visibility (role decided by the gateway).
 	optional google.protobuf.BoolValue   privileged     = 5;
+}
+
+message ForkFlashCardListRequest {
+	google.protobuf.StringValue        id           = 1;
+	// Set by the gateway from the JWT; never from client input. Becomes the copy's owner.
+	google.protobuf.StringValue        requester_id = 2;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue privileged   = 3;
+}
+
+// The editable content of a card, as copied, compared and proposed.
+message FlashCardContent {
+	string          word           = 1;
+	string          definition     = 2;
+	optional string part_of_speech = 3;
+	optional string pronunciation  = 4;
+	repeated string examples       = 5;
+	optional string notes          = 6;
+	repeated string tags           = 7;
+	optional string image          = 8;
+}
+
+message AddedCardChange {
+	// The card in the copy.
+	string           source_card_id = 1;
+	FlashCardContent card           = 2;
+}
+
+message ModifiedCardChange {
+	// The card in the original.
+	string           target_card_id = 1;
+	string           source_card_id = 2;
+	// Changed fields: word, definition, partOfSpeech, pronunciation, examples, notes, tags.
+	repeated string  fields         = 3;
+	// The original's values when the change was computed (proposal time).
+	FlashCardContent base           = 4;
+	FlashCardContent proposed       = 5;
+	// On a proposal: the original card now (absent if it was deleted since).
+	optional FlashCardContent current = 6;
+	// The original card changed the same fields since the proposal: the owner must choose.
+	bool             conflict       = 7;
+	bool             target_missing = 8;
+}
+
+message RemovedCardChange {
+	string           target_card_id = 1;
+	FlashCardContent base           = 2;
+	optional FlashCardContent current = 3;
+	bool             conflict       = 4;
+	bool             target_missing = 5;
+}
+
+message FlashCardListChanges {
+	repeated AddedCardChange    added    = 1;
+	repeated ModifiedCardChange modified = 2;
+	repeated RemovedCardChange  removed  = 3;
+}
+
+message GetFlashCardListDiffRequest {
+	// The requester's copy.
+	google.protobuf.StringValue        id           = 1;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue        requester_id = 2;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue privileged   = 3;
+}
+
+message FlashCardListDiffResponse {
+	string               source_list_id    = 1;
+	string               target_list_id    = 2;
+	string               target_list_name  = 3;
+	string               target_owner_id   = 4;
+	FlashCardListChanges changes           = 5;
+	// An open proposal from this copy, if any (only one may be open at a time).
+	optional string      open_proposal_id  = 6;
+}
+
+message PullFlashCardListUpstreamRequest {
+	// The requester's copy.
+	google.protobuf.StringValue        id           = 1;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue        requester_id = 2;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue privileged   = 3;
+}
+
+message PullFlashCardListUpstreamResponse {
+	int32 updated = 1;
+	int32 added   = 2;
+	int32 removed = 3;
+	// Cards changed both in the copy and in the original: left as they are in the copy.
+	int32 skipped = 4;
+}
+
+message FlashCardProposalResponse {
+	string          id               = 1;
+	optional string source_list_id   = 2;
+	optional string source_list_name = 3;
+	string          target_list_id   = 4;
+	string          target_list_name = 5;
+	string          target_owner_id  = 6;
+	string          author_id        = 7;
+	string          title            = 8;
+	string          message          = 9;
+	// OPEN | ACCEPTED | REJECTED | WITHDRAWN
+	string          status           = 10;
+	int32           added_count      = 11;
+	int32           modified_count   = 12;
+	int32           removed_count    = 13;
+	optional string decided_at       = 14;
+	optional string decided_by       = 15;
+	optional string decision_note    = 16;
+	string          created_at       = 17;
+	string          updated_at       = 18;
+}
+
+message FlashCardProposalDetailResponse {
+	string               id               = 1;
+	optional string      source_list_id   = 2;
+	optional string      source_list_name = 3;
+	string               target_list_id   = 4;
+	string               target_list_name = 5;
+	string               target_owner_id  = 6;
+	string               author_id        = 7;
+	string               title            = 8;
+	string               message          = 9;
+	string               status           = 10;
+	int32                added_count      = 11;
+	int32                modified_count   = 12;
+	int32                removed_count    = 13;
+	optional string      decided_at       = 14;
+	optional string      decided_by       = 15;
+	optional string      decision_note    = 16;
+	string               created_at       = 17;
+	string               updated_at       = 18;
+	// Conflicts are computed against the original's cards now (open proposals only).
+	FlashCardListChanges changes          = 19;
+	int32                conflict_count   = 20;
+	bool                 can_decide       = 21;
+	bool                 can_withdraw     = 22;
+}
+
+message CreateFlashCardProposalRequest {
+	// The requester's copy; the proposal targets its original.
+	google.protobuf.StringValue          source_list_id = 1;
+	google.protobuf.StringValue          title          = 2;
+	optional google.protobuf.StringValue message        = 3;
+	// Set by the gateway from the JWT; never from client input. Becomes the proposer.
+	google.protobuf.StringValue          requester_id   = 4;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged     = 5;
+}
+
+message ListFlashCardProposalsRequest {
+	optional google.protobuf.StringValue target_list_id = 1;
+	optional google.protobuf.StringValue source_list_id = 2;
+	// Only proposals the requester made.
+	optional google.protobuf.BoolValue   mine           = 3;
+	optional google.protobuf.StringValue status         = 4;
+	optional google.protobuf.Int32Value  page           = 5;
+	optional google.protobuf.Int32Value  limit          = 6;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue          requester_id   = 7;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged     = 8;
+}
+
+message ListFlashCardProposalsResponse {
+	repeated FlashCardProposalResponse proposals   = 1;
+	int32                              total_count = 2;
+}
+
+message GetFlashCardProposalRequest {
+	google.protobuf.StringValue        id           = 1;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue        requester_id = 2;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue privileged   = 3;
+}
+
+// The owner's choice for one conflicting card: apply the proposal's version, or keep theirs.
+message ProposalConflictResolution {
+	string target_card_id = 1;
+	bool   apply          = 2;
+}
+
+message AcceptFlashCardProposalRequest {
+	google.protobuf.StringValue          id            = 1;
+	repeated ProposalConflictResolution  resolutions   = 2;
+	optional google.protobuf.StringValue decision_note = 3;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue          requester_id  = 4;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged    = 5;
+}
+
+message RejectFlashCardProposalRequest {
+	google.protobuf.StringValue          id            = 1;
+	optional google.protobuf.StringValue decision_note = 2;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue          requester_id  = 3;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged    = 4;
+}
+
+message WithdrawFlashCardProposalRequest {
+	google.protobuf.StringValue        id           = 1;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue        requester_id = 2;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue privileged   = 3;
 }
 
 // Report messages

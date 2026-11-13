@@ -18,7 +18,14 @@ export const toFlashCardReadModel = (entity: FlashCard): FlashCardReadModel => (
 	updatedAt: entity.updatedAt.toISOString(),
 });
 
-export const toFlashCardListReadModel = (entity: FlashCardList): FlashCardListReadModel => ({
+/** Include this on list queries so the read model carries the fork count. */
+export const WITH_FORK_COUNT = {
+	_count: { select: { forks: true } },
+} satisfies Prisma.FlashCardListInclude;
+
+export const toFlashCardListReadModel = (
+	entity: FlashCardList & { _count?: { forks: number } },
+): FlashCardListReadModel => ({
 	id: entity.id,
 	name: entity.name,
 	description: entity.description ?? '',
@@ -27,6 +34,10 @@ export const toFlashCardListReadModel = (entity: FlashCardList): FlashCardListRe
 	tags: entity.tags,
 	createdAt: entity.createdAt.toISOString(),
 	updatedAt: entity.updatedAt.toISOString(),
+	forkedFromId: entity.forkedFromId ?? undefined,
+	forkedFromName: entity.forkedFromName ?? undefined,
+	forkedFromAuthorId: entity.forkedFromAuthorId ?? undefined,
+	forkCount: entity._count?.forks ?? 0,
 });
 
 /** Lists the requester may read: public ones, their own, or all when privileged. */

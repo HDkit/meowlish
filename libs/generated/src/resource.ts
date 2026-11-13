@@ -141,6 +141,14 @@ export interface FlashCardListResponse {
   tags: string[];
   createdAt: string;
   updatedAt: string;
+  /** Set on a copy: the original list (absent once it is deleted) and a snapshot of its name/author. */
+  forkedFromId?: string | undefined;
+  forkedFromName?: string | undefined;
+  forkedFromAuthorId?:
+    | string
+    | undefined;
+  /** How many copies were made of this list. */
+  forkCount: number;
 }
 
 export interface FlashCardListDetailResponse {
@@ -154,6 +162,14 @@ export interface FlashCardListDetailResponse {
   updatedAt: string;
   flashCards: FlashCardResponse[];
   totalCards: number;
+  forkedFromId?: string | undefined;
+  forkedFromName?: string | undefined;
+  forkedFromAuthorId?: string | undefined;
+  forkCount: number;
+  /** Open proposals on this list; counted only for its owner and admins (0 for everyone else). */
+  openProposalCount: number;
+  /** The original of this copy still exists and the requester can see it. */
+  upstreamAvailable: boolean;
 }
 
 export interface CreateFlashCardListRequest {
@@ -246,6 +262,261 @@ export interface ListCardsInListRequest {
   page?: number | undefined;
   limit?:
     | number
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester may bypass ownership/visibility (role decided by the gateway). */
+  privileged?: boolean | undefined;
+}
+
+export interface ForkFlashCardListRequest {
+  id:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. Becomes the copy's owner. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester may bypass ownership/visibility (role decided by the gateway). */
+  privileged?: boolean | undefined;
+}
+
+/** The editable content of a card, as copied, compared and proposed. */
+export interface FlashCardContent {
+  word: string;
+  definition: string;
+  partOfSpeech?: string | undefined;
+  pronunciation?: string | undefined;
+  examples: string[];
+  notes?: string | undefined;
+  tags: string[];
+  image?: string | undefined;
+}
+
+export interface AddedCardChange {
+  /** The card in the copy. */
+  sourceCardId: string;
+  card: FlashCardContent | undefined;
+}
+
+export interface ModifiedCardChange {
+  /** The card in the original. */
+  targetCardId: string;
+  sourceCardId: string;
+  /** Changed fields: word, definition, partOfSpeech, pronunciation, examples, notes, tags. */
+  fields: string[];
+  /** The original's values when the change was computed (proposal time). */
+  base: FlashCardContent | undefined;
+  proposed:
+    | FlashCardContent
+    | undefined;
+  /** On a proposal: the original card now (absent if it was deleted since). */
+  current?:
+    | FlashCardContent
+    | undefined;
+  /** The original card changed the same fields since the proposal: the owner must choose. */
+  conflict: boolean;
+  targetMissing: boolean;
+}
+
+export interface RemovedCardChange {
+  targetCardId: string;
+  base: FlashCardContent | undefined;
+  current?: FlashCardContent | undefined;
+  conflict: boolean;
+  targetMissing: boolean;
+}
+
+export interface FlashCardListChanges {
+  added: AddedCardChange[];
+  modified: ModifiedCardChange[];
+  removed: RemovedCardChange[];
+}
+
+export interface GetFlashCardListDiffRequest {
+  /** The requester's copy. */
+  id:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester may bypass ownership/visibility (role decided by the gateway). */
+  privileged?: boolean | undefined;
+}
+
+export interface FlashCardListDiffResponse {
+  sourceListId: string;
+  targetListId: string;
+  targetListName: string;
+  targetOwnerId: string;
+  changes:
+    | FlashCardListChanges
+    | undefined;
+  /** An open proposal from this copy, if any (only one may be open at a time). */
+  openProposalId?: string | undefined;
+}
+
+export interface PullFlashCardListUpstreamRequest {
+  /** The requester's copy. */
+  id:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester may bypass ownership/visibility (role decided by the gateway). */
+  privileged?: boolean | undefined;
+}
+
+export interface PullFlashCardListUpstreamResponse {
+  updated: number;
+  added: number;
+  removed: number;
+  /** Cards changed both in the copy and in the original: left as they are in the copy. */
+  skipped: number;
+}
+
+export interface FlashCardProposalResponse {
+  id: string;
+  sourceListId?: string | undefined;
+  sourceListName?: string | undefined;
+  targetListId: string;
+  targetListName: string;
+  targetOwnerId: string;
+  authorId: string;
+  title: string;
+  message: string;
+  /** OPEN | ACCEPTED | REJECTED | WITHDRAWN */
+  status: string;
+  addedCount: number;
+  modifiedCount: number;
+  removedCount: number;
+  decidedAt?: string | undefined;
+  decidedBy?: string | undefined;
+  decisionNote?: string | undefined;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FlashCardProposalDetailResponse {
+  id: string;
+  sourceListId?: string | undefined;
+  sourceListName?: string | undefined;
+  targetListId: string;
+  targetListName: string;
+  targetOwnerId: string;
+  authorId: string;
+  title: string;
+  message: string;
+  status: string;
+  addedCount: number;
+  modifiedCount: number;
+  removedCount: number;
+  decidedAt?: string | undefined;
+  decidedBy?: string | undefined;
+  decisionNote?: string | undefined;
+  createdAt: string;
+  updatedAt: string;
+  /** Conflicts are computed against the original's cards now (open proposals only). */
+  changes: FlashCardListChanges | undefined;
+  conflictCount: number;
+  canDecide: boolean;
+  canWithdraw: boolean;
+}
+
+export interface CreateFlashCardProposalRequest {
+  /** The requester's copy; the proposal targets its original. */
+  sourceListId: string | undefined;
+  title: string | undefined;
+  message?:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. Becomes the proposer. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester may bypass ownership/visibility (role decided by the gateway). */
+  privileged?: boolean | undefined;
+}
+
+export interface ListFlashCardProposalsRequest {
+  targetListId?: string | undefined;
+  sourceListId?:
+    | string
+    | undefined;
+  /** Only proposals the requester made. */
+  mine?: boolean | undefined;
+  status?: string | undefined;
+  page?: number | undefined;
+  limit?:
+    | number
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester may bypass ownership/visibility (role decided by the gateway). */
+  privileged?: boolean | undefined;
+}
+
+export interface ListFlashCardProposalsResponse {
+  proposals: FlashCardProposalResponse[];
+  totalCount: number;
+}
+
+export interface GetFlashCardProposalRequest {
+  id:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester may bypass ownership/visibility (role decided by the gateway). */
+  privileged?: boolean | undefined;
+}
+
+/** The owner's choice for one conflicting card: apply the proposal's version, or keep theirs. */
+export interface ProposalConflictResolution {
+  targetCardId: string;
+  apply: boolean;
+}
+
+export interface AcceptFlashCardProposalRequest {
+  id: string | undefined;
+  resolutions: ProposalConflictResolution[];
+  decisionNote?:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester may bypass ownership/visibility (role decided by the gateway). */
+  privileged?: boolean | undefined;
+}
+
+export interface RejectFlashCardProposalRequest {
+  id: string | undefined;
+  decisionNote?:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester may bypass ownership/visibility (role decided by the gateway). */
+  privileged?: boolean | undefined;
+}
+
+export interface WithdrawFlashCardProposalRequest {
+  id:
+    | string
     | undefined;
   /** Set by the gateway from the JWT; never from client input. */
   requesterId:
@@ -1852,7 +2123,17 @@ export const ListFlashCardsResponse: MessageFns<ListFlashCardsResponse> = {
 };
 
 function createBaseFlashCardListResponse(): FlashCardListResponse {
-  return { id: "", name: "", description: "", authorId: "", isPublic: false, tags: [], createdAt: "", updatedAt: "" };
+  return {
+    id: "",
+    name: "",
+    description: "",
+    authorId: "",
+    isPublic: false,
+    tags: [],
+    createdAt: "",
+    updatedAt: "",
+    forkCount: 0,
+  };
 }
 
 export const FlashCardListResponse: MessageFns<FlashCardListResponse> = {
@@ -1880,6 +2161,18 @@ export const FlashCardListResponse: MessageFns<FlashCardListResponse> = {
     }
     if (message.updatedAt !== "") {
       writer.uint32(66).string(message.updatedAt);
+    }
+    if (message.forkedFromId !== undefined) {
+      writer.uint32(74).string(message.forkedFromId);
+    }
+    if (message.forkedFromName !== undefined) {
+      writer.uint32(82).string(message.forkedFromName);
+    }
+    if (message.forkedFromAuthorId !== undefined) {
+      writer.uint32(90).string(message.forkedFromAuthorId);
+    }
+    if (message.forkCount !== 0) {
+      writer.uint32(96).int32(message.forkCount);
     }
     return writer;
   },
@@ -1961,6 +2254,38 @@ export const FlashCardListResponse: MessageFns<FlashCardListResponse> = {
             message.updatedAt = reader.string();
             continue;
           }
+          case 9: {
+            if (tag !== 74) {
+              break;
+            }
+
+            message.forkedFromId = reader.string();
+            continue;
+          }
+          case 10: {
+            if (tag !== 82) {
+              break;
+            }
+
+            message.forkedFromName = reader.string();
+            continue;
+          }
+          case 11: {
+            if (tag !== 90) {
+              break;
+            }
+
+            message.forkedFromAuthorId = reader.string();
+            continue;
+          }
+          case 12: {
+            if (tag !== 96) {
+              break;
+            }
+
+            message.forkCount = reader.int32();
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -1986,6 +2311,9 @@ function createBaseFlashCardListDetailResponse(): FlashCardListDetailResponse {
     updatedAt: "",
     flashCards: [],
     totalCards: 0,
+    forkCount: 0,
+    openProposalCount: 0,
+    upstreamAvailable: false,
   };
 }
 
@@ -2020,6 +2348,24 @@ export const FlashCardListDetailResponse: MessageFns<FlashCardListDetailResponse
     }
     if (message.totalCards !== 0) {
       writer.uint32(80).int32(message.totalCards);
+    }
+    if (message.forkedFromId !== undefined) {
+      writer.uint32(90).string(message.forkedFromId);
+    }
+    if (message.forkedFromName !== undefined) {
+      writer.uint32(98).string(message.forkedFromName);
+    }
+    if (message.forkedFromAuthorId !== undefined) {
+      writer.uint32(106).string(message.forkedFromAuthorId);
+    }
+    if (message.forkCount !== 0) {
+      writer.uint32(112).int32(message.forkCount);
+    }
+    if (message.openProposalCount !== 0) {
+      writer.uint32(120).int32(message.openProposalCount);
+    }
+    if (message.upstreamAvailable !== false) {
+      writer.uint32(128).bool(message.upstreamAvailable);
     }
     return writer;
   },
@@ -2115,6 +2461,54 @@ export const FlashCardListDetailResponse: MessageFns<FlashCardListDetailResponse
             }
 
             message.totalCards = reader.int32();
+            continue;
+          }
+          case 11: {
+            if (tag !== 90) {
+              break;
+            }
+
+            message.forkedFromId = reader.string();
+            continue;
+          }
+          case 12: {
+            if (tag !== 98) {
+              break;
+            }
+
+            message.forkedFromName = reader.string();
+            continue;
+          }
+          case 13: {
+            if (tag !== 106) {
+              break;
+            }
+
+            message.forkedFromAuthorId = reader.string();
+            continue;
+          }
+          case 14: {
+            if (tag !== 112) {
+              break;
+            }
+
+            message.forkCount = reader.int32();
+            continue;
+          }
+          case 15: {
+            if (tag !== 120) {
+              break;
+            }
+
+            message.openProposalCount = reader.int32();
+            continue;
+          }
+          case 16: {
+            if (tag !== 128) {
+              break;
+            }
+
+            message.upstreamAvailable = reader.bool();
             continue;
           }
         }
@@ -2809,6 +3203,2033 @@ export const ListCardsInListRequest: MessageFns<ListCardsInListRequest> = {
           }
           case 5: {
             if (tag !== 42) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseForkFlashCardListRequest(): ForkFlashCardListRequest {
+  return { id: undefined, requesterId: undefined };
+}
+
+export const ForkFlashCardListRequest: MessageFns<ForkFlashCardListRequest> = {
+  encode(message: ForkFlashCardListRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(26).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ForkFlashCardListRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseForkFlashCardListRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseFlashCardContent(): FlashCardContent {
+  return { word: "", definition: "", examples: [], tags: [] };
+}
+
+export const FlashCardContent: MessageFns<FlashCardContent> = {
+  encode(message: FlashCardContent, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.word !== "") {
+      writer.uint32(10).string(message.word);
+    }
+    if (message.definition !== "") {
+      writer.uint32(18).string(message.definition);
+    }
+    if (message.partOfSpeech !== undefined) {
+      writer.uint32(26).string(message.partOfSpeech);
+    }
+    if (message.pronunciation !== undefined) {
+      writer.uint32(34).string(message.pronunciation);
+    }
+    for (const v of message.examples) {
+      writer.uint32(42).string(v!);
+    }
+    if (message.notes !== undefined) {
+      writer.uint32(50).string(message.notes);
+    }
+    for (const v of message.tags) {
+      writer.uint32(58).string(v!);
+    }
+    if (message.image !== undefined) {
+      writer.uint32(66).string(message.image);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): FlashCardContent {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseFlashCardContent();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.word = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.definition = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.partOfSpeech = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.pronunciation = reader.string();
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.examples.push(reader.string());
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
+
+            message.notes = reader.string();
+            continue;
+          }
+          case 7: {
+            if (tag !== 58) {
+              break;
+            }
+
+            message.tags.push(reader.string());
+            continue;
+          }
+          case 8: {
+            if (tag !== 66) {
+              break;
+            }
+
+            message.image = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseAddedCardChange(): AddedCardChange {
+  return { sourceCardId: "", card: undefined };
+}
+
+export const AddedCardChange: MessageFns<AddedCardChange> = {
+  encode(message: AddedCardChange, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.sourceCardId !== "") {
+      writer.uint32(10).string(message.sourceCardId);
+    }
+    if (message.card !== undefined) {
+      FlashCardContent.encode(message.card, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): AddedCardChange {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseAddedCardChange();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.sourceCardId = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.card = FlashCardContent.decode(reader, reader.uint32());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseModifiedCardChange(): ModifiedCardChange {
+  return {
+    targetCardId: "",
+    sourceCardId: "",
+    fields: [],
+    base: undefined,
+    proposed: undefined,
+    conflict: false,
+    targetMissing: false,
+  };
+}
+
+export const ModifiedCardChange: MessageFns<ModifiedCardChange> = {
+  encode(message: ModifiedCardChange, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.targetCardId !== "") {
+      writer.uint32(10).string(message.targetCardId);
+    }
+    if (message.sourceCardId !== "") {
+      writer.uint32(18).string(message.sourceCardId);
+    }
+    for (const v of message.fields) {
+      writer.uint32(26).string(v!);
+    }
+    if (message.base !== undefined) {
+      FlashCardContent.encode(message.base, writer.uint32(34).fork()).join();
+    }
+    if (message.proposed !== undefined) {
+      FlashCardContent.encode(message.proposed, writer.uint32(42).fork()).join();
+    }
+    if (message.current !== undefined) {
+      FlashCardContent.encode(message.current, writer.uint32(50).fork()).join();
+    }
+    if (message.conflict !== false) {
+      writer.uint32(56).bool(message.conflict);
+    }
+    if (message.targetMissing !== false) {
+      writer.uint32(64).bool(message.targetMissing);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ModifiedCardChange {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseModifiedCardChange();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.targetCardId = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.sourceCardId = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.fields.push(reader.string());
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.base = FlashCardContent.decode(reader, reader.uint32());
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.proposed = FlashCardContent.decode(reader, reader.uint32());
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
+
+            message.current = FlashCardContent.decode(reader, reader.uint32());
+            continue;
+          }
+          case 7: {
+            if (tag !== 56) {
+              break;
+            }
+
+            message.conflict = reader.bool();
+            continue;
+          }
+          case 8: {
+            if (tag !== 64) {
+              break;
+            }
+
+            message.targetMissing = reader.bool();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseRemovedCardChange(): RemovedCardChange {
+  return { targetCardId: "", base: undefined, conflict: false, targetMissing: false };
+}
+
+export const RemovedCardChange: MessageFns<RemovedCardChange> = {
+  encode(message: RemovedCardChange, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.targetCardId !== "") {
+      writer.uint32(10).string(message.targetCardId);
+    }
+    if (message.base !== undefined) {
+      FlashCardContent.encode(message.base, writer.uint32(18).fork()).join();
+    }
+    if (message.current !== undefined) {
+      FlashCardContent.encode(message.current, writer.uint32(26).fork()).join();
+    }
+    if (message.conflict !== false) {
+      writer.uint32(32).bool(message.conflict);
+    }
+    if (message.targetMissing !== false) {
+      writer.uint32(40).bool(message.targetMissing);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RemovedCardChange {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseRemovedCardChange();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.targetCardId = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.base = FlashCardContent.decode(reader, reader.uint32());
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.current = FlashCardContent.decode(reader, reader.uint32());
+            continue;
+          }
+          case 4: {
+            if (tag !== 32) {
+              break;
+            }
+
+            message.conflict = reader.bool();
+            continue;
+          }
+          case 5: {
+            if (tag !== 40) {
+              break;
+            }
+
+            message.targetMissing = reader.bool();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseFlashCardListChanges(): FlashCardListChanges {
+  return { added: [], modified: [], removed: [] };
+}
+
+export const FlashCardListChanges: MessageFns<FlashCardListChanges> = {
+  encode(message: FlashCardListChanges, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.added) {
+      AddedCardChange.encode(v!, writer.uint32(10).fork()).join();
+    }
+    for (const v of message.modified) {
+      ModifiedCardChange.encode(v!, writer.uint32(18).fork()).join();
+    }
+    for (const v of message.removed) {
+      RemovedCardChange.encode(v!, writer.uint32(26).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): FlashCardListChanges {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseFlashCardListChanges();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.added.push(AddedCardChange.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.modified.push(ModifiedCardChange.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.removed.push(RemovedCardChange.decode(reader, reader.uint32()));
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseGetFlashCardListDiffRequest(): GetFlashCardListDiffRequest {
+  return { id: undefined, requesterId: undefined };
+}
+
+export const GetFlashCardListDiffRequest: MessageFns<GetFlashCardListDiffRequest> = {
+  encode(message: GetFlashCardListDiffRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(26).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetFlashCardListDiffRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGetFlashCardListDiffRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseFlashCardListDiffResponse(): FlashCardListDiffResponse {
+  return { sourceListId: "", targetListId: "", targetListName: "", targetOwnerId: "", changes: undefined };
+}
+
+export const FlashCardListDiffResponse: MessageFns<FlashCardListDiffResponse> = {
+  encode(message: FlashCardListDiffResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.sourceListId !== "") {
+      writer.uint32(10).string(message.sourceListId);
+    }
+    if (message.targetListId !== "") {
+      writer.uint32(18).string(message.targetListId);
+    }
+    if (message.targetListName !== "") {
+      writer.uint32(26).string(message.targetListName);
+    }
+    if (message.targetOwnerId !== "") {
+      writer.uint32(34).string(message.targetOwnerId);
+    }
+    if (message.changes !== undefined) {
+      FlashCardListChanges.encode(message.changes, writer.uint32(42).fork()).join();
+    }
+    if (message.openProposalId !== undefined) {
+      writer.uint32(50).string(message.openProposalId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): FlashCardListDiffResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseFlashCardListDiffResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.sourceListId = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.targetListId = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.targetListName = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.targetOwnerId = reader.string();
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.changes = FlashCardListChanges.decode(reader, reader.uint32());
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
+
+            message.openProposalId = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBasePullFlashCardListUpstreamRequest(): PullFlashCardListUpstreamRequest {
+  return { id: undefined, requesterId: undefined };
+}
+
+export const PullFlashCardListUpstreamRequest: MessageFns<PullFlashCardListUpstreamRequest> = {
+  encode(message: PullFlashCardListUpstreamRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(26).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): PullFlashCardListUpstreamRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBasePullFlashCardListUpstreamRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBasePullFlashCardListUpstreamResponse(): PullFlashCardListUpstreamResponse {
+  return { updated: 0, added: 0, removed: 0, skipped: 0 };
+}
+
+export const PullFlashCardListUpstreamResponse: MessageFns<PullFlashCardListUpstreamResponse> = {
+  encode(message: PullFlashCardListUpstreamResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.updated !== 0) {
+      writer.uint32(8).int32(message.updated);
+    }
+    if (message.added !== 0) {
+      writer.uint32(16).int32(message.added);
+    }
+    if (message.removed !== 0) {
+      writer.uint32(24).int32(message.removed);
+    }
+    if (message.skipped !== 0) {
+      writer.uint32(32).int32(message.skipped);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): PullFlashCardListUpstreamResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBasePullFlashCardListUpstreamResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 8) {
+              break;
+            }
+
+            message.updated = reader.int32();
+            continue;
+          }
+          case 2: {
+            if (tag !== 16) {
+              break;
+            }
+
+            message.added = reader.int32();
+            continue;
+          }
+          case 3: {
+            if (tag !== 24) {
+              break;
+            }
+
+            message.removed = reader.int32();
+            continue;
+          }
+          case 4: {
+            if (tag !== 32) {
+              break;
+            }
+
+            message.skipped = reader.int32();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseFlashCardProposalResponse(): FlashCardProposalResponse {
+  return {
+    id: "",
+    targetListId: "",
+    targetListName: "",
+    targetOwnerId: "",
+    authorId: "",
+    title: "",
+    message: "",
+    status: "",
+    addedCount: 0,
+    modifiedCount: 0,
+    removedCount: 0,
+    createdAt: "",
+    updatedAt: "",
+  };
+}
+
+export const FlashCardProposalResponse: MessageFns<FlashCardProposalResponse> = {
+  encode(message: FlashCardProposalResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.sourceListId !== undefined) {
+      writer.uint32(18).string(message.sourceListId);
+    }
+    if (message.sourceListName !== undefined) {
+      writer.uint32(26).string(message.sourceListName);
+    }
+    if (message.targetListId !== "") {
+      writer.uint32(34).string(message.targetListId);
+    }
+    if (message.targetListName !== "") {
+      writer.uint32(42).string(message.targetListName);
+    }
+    if (message.targetOwnerId !== "") {
+      writer.uint32(50).string(message.targetOwnerId);
+    }
+    if (message.authorId !== "") {
+      writer.uint32(58).string(message.authorId);
+    }
+    if (message.title !== "") {
+      writer.uint32(66).string(message.title);
+    }
+    if (message.message !== "") {
+      writer.uint32(74).string(message.message);
+    }
+    if (message.status !== "") {
+      writer.uint32(82).string(message.status);
+    }
+    if (message.addedCount !== 0) {
+      writer.uint32(88).int32(message.addedCount);
+    }
+    if (message.modifiedCount !== 0) {
+      writer.uint32(96).int32(message.modifiedCount);
+    }
+    if (message.removedCount !== 0) {
+      writer.uint32(104).int32(message.removedCount);
+    }
+    if (message.decidedAt !== undefined) {
+      writer.uint32(114).string(message.decidedAt);
+    }
+    if (message.decidedBy !== undefined) {
+      writer.uint32(122).string(message.decidedBy);
+    }
+    if (message.decisionNote !== undefined) {
+      writer.uint32(130).string(message.decisionNote);
+    }
+    if (message.createdAt !== "") {
+      writer.uint32(138).string(message.createdAt);
+    }
+    if (message.updatedAt !== "") {
+      writer.uint32(146).string(message.updatedAt);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): FlashCardProposalResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseFlashCardProposalResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.sourceListId = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.sourceListName = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.targetListId = reader.string();
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.targetListName = reader.string();
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
+
+            message.targetOwnerId = reader.string();
+            continue;
+          }
+          case 7: {
+            if (tag !== 58) {
+              break;
+            }
+
+            message.authorId = reader.string();
+            continue;
+          }
+          case 8: {
+            if (tag !== 66) {
+              break;
+            }
+
+            message.title = reader.string();
+            continue;
+          }
+          case 9: {
+            if (tag !== 74) {
+              break;
+            }
+
+            message.message = reader.string();
+            continue;
+          }
+          case 10: {
+            if (tag !== 82) {
+              break;
+            }
+
+            message.status = reader.string();
+            continue;
+          }
+          case 11: {
+            if (tag !== 88) {
+              break;
+            }
+
+            message.addedCount = reader.int32();
+            continue;
+          }
+          case 12: {
+            if (tag !== 96) {
+              break;
+            }
+
+            message.modifiedCount = reader.int32();
+            continue;
+          }
+          case 13: {
+            if (tag !== 104) {
+              break;
+            }
+
+            message.removedCount = reader.int32();
+            continue;
+          }
+          case 14: {
+            if (tag !== 114) {
+              break;
+            }
+
+            message.decidedAt = reader.string();
+            continue;
+          }
+          case 15: {
+            if (tag !== 122) {
+              break;
+            }
+
+            message.decidedBy = reader.string();
+            continue;
+          }
+          case 16: {
+            if (tag !== 130) {
+              break;
+            }
+
+            message.decisionNote = reader.string();
+            continue;
+          }
+          case 17: {
+            if (tag !== 138) {
+              break;
+            }
+
+            message.createdAt = reader.string();
+            continue;
+          }
+          case 18: {
+            if (tag !== 146) {
+              break;
+            }
+
+            message.updatedAt = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseFlashCardProposalDetailResponse(): FlashCardProposalDetailResponse {
+  return {
+    id: "",
+    targetListId: "",
+    targetListName: "",
+    targetOwnerId: "",
+    authorId: "",
+    title: "",
+    message: "",
+    status: "",
+    addedCount: 0,
+    modifiedCount: 0,
+    removedCount: 0,
+    createdAt: "",
+    updatedAt: "",
+    changes: undefined,
+    conflictCount: 0,
+    canDecide: false,
+    canWithdraw: false,
+  };
+}
+
+export const FlashCardProposalDetailResponse: MessageFns<FlashCardProposalDetailResponse> = {
+  encode(message: FlashCardProposalDetailResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.sourceListId !== undefined) {
+      writer.uint32(18).string(message.sourceListId);
+    }
+    if (message.sourceListName !== undefined) {
+      writer.uint32(26).string(message.sourceListName);
+    }
+    if (message.targetListId !== "") {
+      writer.uint32(34).string(message.targetListId);
+    }
+    if (message.targetListName !== "") {
+      writer.uint32(42).string(message.targetListName);
+    }
+    if (message.targetOwnerId !== "") {
+      writer.uint32(50).string(message.targetOwnerId);
+    }
+    if (message.authorId !== "") {
+      writer.uint32(58).string(message.authorId);
+    }
+    if (message.title !== "") {
+      writer.uint32(66).string(message.title);
+    }
+    if (message.message !== "") {
+      writer.uint32(74).string(message.message);
+    }
+    if (message.status !== "") {
+      writer.uint32(82).string(message.status);
+    }
+    if (message.addedCount !== 0) {
+      writer.uint32(88).int32(message.addedCount);
+    }
+    if (message.modifiedCount !== 0) {
+      writer.uint32(96).int32(message.modifiedCount);
+    }
+    if (message.removedCount !== 0) {
+      writer.uint32(104).int32(message.removedCount);
+    }
+    if (message.decidedAt !== undefined) {
+      writer.uint32(114).string(message.decidedAt);
+    }
+    if (message.decidedBy !== undefined) {
+      writer.uint32(122).string(message.decidedBy);
+    }
+    if (message.decisionNote !== undefined) {
+      writer.uint32(130).string(message.decisionNote);
+    }
+    if (message.createdAt !== "") {
+      writer.uint32(138).string(message.createdAt);
+    }
+    if (message.updatedAt !== "") {
+      writer.uint32(146).string(message.updatedAt);
+    }
+    if (message.changes !== undefined) {
+      FlashCardListChanges.encode(message.changes, writer.uint32(154).fork()).join();
+    }
+    if (message.conflictCount !== 0) {
+      writer.uint32(160).int32(message.conflictCount);
+    }
+    if (message.canDecide !== false) {
+      writer.uint32(168).bool(message.canDecide);
+    }
+    if (message.canWithdraw !== false) {
+      writer.uint32(176).bool(message.canWithdraw);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): FlashCardProposalDetailResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseFlashCardProposalDetailResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.sourceListId = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.sourceListName = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.targetListId = reader.string();
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.targetListName = reader.string();
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
+
+            message.targetOwnerId = reader.string();
+            continue;
+          }
+          case 7: {
+            if (tag !== 58) {
+              break;
+            }
+
+            message.authorId = reader.string();
+            continue;
+          }
+          case 8: {
+            if (tag !== 66) {
+              break;
+            }
+
+            message.title = reader.string();
+            continue;
+          }
+          case 9: {
+            if (tag !== 74) {
+              break;
+            }
+
+            message.message = reader.string();
+            continue;
+          }
+          case 10: {
+            if (tag !== 82) {
+              break;
+            }
+
+            message.status = reader.string();
+            continue;
+          }
+          case 11: {
+            if (tag !== 88) {
+              break;
+            }
+
+            message.addedCount = reader.int32();
+            continue;
+          }
+          case 12: {
+            if (tag !== 96) {
+              break;
+            }
+
+            message.modifiedCount = reader.int32();
+            continue;
+          }
+          case 13: {
+            if (tag !== 104) {
+              break;
+            }
+
+            message.removedCount = reader.int32();
+            continue;
+          }
+          case 14: {
+            if (tag !== 114) {
+              break;
+            }
+
+            message.decidedAt = reader.string();
+            continue;
+          }
+          case 15: {
+            if (tag !== 122) {
+              break;
+            }
+
+            message.decidedBy = reader.string();
+            continue;
+          }
+          case 16: {
+            if (tag !== 130) {
+              break;
+            }
+
+            message.decisionNote = reader.string();
+            continue;
+          }
+          case 17: {
+            if (tag !== 138) {
+              break;
+            }
+
+            message.createdAt = reader.string();
+            continue;
+          }
+          case 18: {
+            if (tag !== 146) {
+              break;
+            }
+
+            message.updatedAt = reader.string();
+            continue;
+          }
+          case 19: {
+            if (tag !== 154) {
+              break;
+            }
+
+            message.changes = FlashCardListChanges.decode(reader, reader.uint32());
+            continue;
+          }
+          case 20: {
+            if (tag !== 160) {
+              break;
+            }
+
+            message.conflictCount = reader.int32();
+            continue;
+          }
+          case 21: {
+            if (tag !== 168) {
+              break;
+            }
+
+            message.canDecide = reader.bool();
+            continue;
+          }
+          case 22: {
+            if (tag !== 176) {
+              break;
+            }
+
+            message.canWithdraw = reader.bool();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseCreateFlashCardProposalRequest(): CreateFlashCardProposalRequest {
+  return { sourceListId: undefined, title: undefined, requesterId: undefined };
+}
+
+export const CreateFlashCardProposalRequest: MessageFns<CreateFlashCardProposalRequest> = {
+  encode(message: CreateFlashCardProposalRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.sourceListId !== undefined) {
+      StringValue.encode({ value: message.sourceListId! }, writer.uint32(10).fork()).join();
+    }
+    if (message.title !== undefined) {
+      StringValue.encode({ value: message.title! }, writer.uint32(18).fork()).join();
+    }
+    if (message.message !== undefined) {
+      StringValue.encode({ value: message.message! }, writer.uint32(26).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(34).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(42).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CreateFlashCardProposalRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseCreateFlashCardProposalRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.sourceListId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.title = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.message = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseListFlashCardProposalsRequest(): ListFlashCardProposalsRequest {
+  return { requesterId: undefined };
+}
+
+export const ListFlashCardProposalsRequest: MessageFns<ListFlashCardProposalsRequest> = {
+  encode(message: ListFlashCardProposalsRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.targetListId !== undefined) {
+      StringValue.encode({ value: message.targetListId! }, writer.uint32(10).fork()).join();
+    }
+    if (message.sourceListId !== undefined) {
+      StringValue.encode({ value: message.sourceListId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.mine !== undefined) {
+      BoolValue.encode({ value: message.mine! }, writer.uint32(26).fork()).join();
+    }
+    if (message.status !== undefined) {
+      StringValue.encode({ value: message.status! }, writer.uint32(34).fork()).join();
+    }
+    if (message.page !== undefined) {
+      Int32Value.encode({ value: message.page! }, writer.uint32(42).fork()).join();
+    }
+    if (message.limit !== undefined) {
+      Int32Value.encode({ value: message.limit! }, writer.uint32(50).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(58).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(66).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListFlashCardProposalsRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseListFlashCardProposalsRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.targetListId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.sourceListId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.mine = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.status = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.page = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
+
+            message.limit = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 7: {
+            if (tag !== 58) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 8: {
+            if (tag !== 66) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseListFlashCardProposalsResponse(): ListFlashCardProposalsResponse {
+  return { proposals: [], totalCount: 0 };
+}
+
+export const ListFlashCardProposalsResponse: MessageFns<ListFlashCardProposalsResponse> = {
+  encode(message: ListFlashCardProposalsResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.proposals) {
+      FlashCardProposalResponse.encode(v!, writer.uint32(10).fork()).join();
+    }
+    if (message.totalCount !== 0) {
+      writer.uint32(16).int32(message.totalCount);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListFlashCardProposalsResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseListFlashCardProposalsResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.proposals.push(FlashCardProposalResponse.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 2: {
+            if (tag !== 16) {
+              break;
+            }
+
+            message.totalCount = reader.int32();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseGetFlashCardProposalRequest(): GetFlashCardProposalRequest {
+  return { id: undefined, requesterId: undefined };
+}
+
+export const GetFlashCardProposalRequest: MessageFns<GetFlashCardProposalRequest> = {
+  encode(message: GetFlashCardProposalRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(26).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetFlashCardProposalRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGetFlashCardProposalRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseProposalConflictResolution(): ProposalConflictResolution {
+  return { targetCardId: "", apply: false };
+}
+
+export const ProposalConflictResolution: MessageFns<ProposalConflictResolution> = {
+  encode(message: ProposalConflictResolution, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.targetCardId !== "") {
+      writer.uint32(10).string(message.targetCardId);
+    }
+    if (message.apply !== false) {
+      writer.uint32(16).bool(message.apply);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ProposalConflictResolution {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseProposalConflictResolution();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.targetCardId = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 16) {
+              break;
+            }
+
+            message.apply = reader.bool();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseAcceptFlashCardProposalRequest(): AcceptFlashCardProposalRequest {
+  return { id: undefined, resolutions: [], requesterId: undefined };
+}
+
+export const AcceptFlashCardProposalRequest: MessageFns<AcceptFlashCardProposalRequest> = {
+  encode(message: AcceptFlashCardProposalRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    for (const v of message.resolutions) {
+      ProposalConflictResolution.encode(v!, writer.uint32(18).fork()).join();
+    }
+    if (message.decisionNote !== undefined) {
+      StringValue.encode({ value: message.decisionNote! }, writer.uint32(26).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(34).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(42).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): AcceptFlashCardProposalRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseAcceptFlashCardProposalRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.resolutions.push(ProposalConflictResolution.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.decisionNote = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseRejectFlashCardProposalRequest(): RejectFlashCardProposalRequest {
+  return { id: undefined, requesterId: undefined };
+}
+
+export const RejectFlashCardProposalRequest: MessageFns<RejectFlashCardProposalRequest> = {
+  encode(message: RejectFlashCardProposalRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.decisionNote !== undefined) {
+      StringValue.encode({ value: message.decisionNote! }, writer.uint32(18).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(26).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(34).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RejectFlashCardProposalRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseRejectFlashCardProposalRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.decisionNote = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseWithdrawFlashCardProposalRequest(): WithdrawFlashCardProposalRequest {
+  return { id: undefined, requesterId: undefined };
+}
+
+export const WithdrawFlashCardProposalRequest: MessageFns<WithdrawFlashCardProposalRequest> = {
+  encode(message: WithdrawFlashCardProposalRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(26).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): WithdrawFlashCardProposalRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseWithdrawFlashCardProposalRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
               break;
             }
 
@@ -6358,6 +8779,24 @@ export interface FlashCardListServiceClient {
   addCardToList(request: AddCardToListRequest, metadata?: Metadata): Observable<Empty>;
 
   listCardsInList(request: ListCardsInListRequest, metadata?: Metadata): Observable<ListFlashCardsResponse>;
+
+  /** Saves a private copy of someone else's public list (and its cards) for the requester. */
+
+  forkFlashCardList(request: ForkFlashCardListRequest, metadata?: Metadata): Observable<FlashCardListResponse>;
+
+  /** The requester's copy compared with its original: cards added, modified and removed in the copy. */
+
+  getFlashCardListDiff(
+    request: GetFlashCardListDiffRequest,
+    metadata?: Metadata,
+  ): Observable<FlashCardListDiffResponse>;
+
+  /** Brings the original's changes into the requester's copy, skipping cards changed in the copy. */
+
+  pullFlashCardListUpstream(
+    request: PullFlashCardListUpstreamRequest,
+    metadata?: Metadata,
+  ): Observable<PullFlashCardListUpstreamResponse>;
 }
 
 export interface FlashCardListServiceController {
@@ -6389,6 +8828,30 @@ export interface FlashCardListServiceController {
     request: ListCardsInListRequest,
     metadata?: Metadata,
   ): Promise<ListFlashCardsResponse> | Observable<ListFlashCardsResponse> | ListFlashCardsResponse;
+
+  /** Saves a private copy of someone else's public list (and its cards) for the requester. */
+
+  forkFlashCardList(
+    request: ForkFlashCardListRequest,
+    metadata?: Metadata,
+  ): Promise<FlashCardListResponse> | Observable<FlashCardListResponse> | FlashCardListResponse;
+
+  /** The requester's copy compared with its original: cards added, modified and removed in the copy. */
+
+  getFlashCardListDiff(
+    request: GetFlashCardListDiffRequest,
+    metadata?: Metadata,
+  ): Promise<FlashCardListDiffResponse> | Observable<FlashCardListDiffResponse> | FlashCardListDiffResponse;
+
+  /** Brings the original's changes into the requester's copy, skipping cards changed in the copy. */
+
+  pullFlashCardListUpstream(
+    request: PullFlashCardListUpstreamRequest,
+    metadata?: Metadata,
+  ):
+    | Promise<PullFlashCardListUpstreamResponse>
+    | Observable<PullFlashCardListUpstreamResponse>
+    | PullFlashCardListUpstreamResponse;
 }
 
 export function FlashCardListServiceControllerMethods() {
@@ -6401,6 +8864,9 @@ export function FlashCardListServiceControllerMethods() {
       "listFlashCardLists",
       "addCardToList",
       "listCardsInList",
+      "forkFlashCardList",
+      "getFlashCardListDiff",
+      "pullFlashCardListUpstream",
     ];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
@@ -6494,6 +8960,44 @@ export const FlashCardListServiceService = {
       Buffer.from(ListFlashCardsResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): ListFlashCardsResponse => ListFlashCardsResponse.decode(value),
   },
+  /** Saves a private copy of someone else's public list (and its cards) for the requester. */
+  forkFlashCardList: {
+    path: "/resource.FlashCardListService/ForkFlashCardList" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: ForkFlashCardListRequest): Buffer =>
+      Buffer.from(ForkFlashCardListRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ForkFlashCardListRequest => ForkFlashCardListRequest.decode(value),
+    responseSerialize: (value: FlashCardListResponse): Buffer =>
+      Buffer.from(FlashCardListResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): FlashCardListResponse => FlashCardListResponse.decode(value),
+  },
+  /** The requester's copy compared with its original: cards added, modified and removed in the copy. */
+  getFlashCardListDiff: {
+    path: "/resource.FlashCardListService/GetFlashCardListDiff" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: GetFlashCardListDiffRequest): Buffer =>
+      Buffer.from(GetFlashCardListDiffRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetFlashCardListDiffRequest => GetFlashCardListDiffRequest.decode(value),
+    responseSerialize: (value: FlashCardListDiffResponse): Buffer =>
+      Buffer.from(FlashCardListDiffResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): FlashCardListDiffResponse => FlashCardListDiffResponse.decode(value),
+  },
+  /** Brings the original's changes into the requester's copy, skipping cards changed in the copy. */
+  pullFlashCardListUpstream: {
+    path: "/resource.FlashCardListService/PullFlashCardListUpstream" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: PullFlashCardListUpstreamRequest): Buffer =>
+      Buffer.from(PullFlashCardListUpstreamRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): PullFlashCardListUpstreamRequest =>
+      PullFlashCardListUpstreamRequest.decode(value),
+    responseSerialize: (value: PullFlashCardListUpstreamResponse): Buffer =>
+      Buffer.from(PullFlashCardListUpstreamResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): PullFlashCardListUpstreamResponse =>
+      PullFlashCardListUpstreamResponse.decode(value),
+  },
 } as const;
 
 export interface FlashCardListServiceServer extends UntypedServiceImplementation {
@@ -6504,6 +9008,204 @@ export interface FlashCardListServiceServer extends UntypedServiceImplementation
   listFlashCardLists: handleUnaryCall<ListFlashCardListsRequest, ListFlashCardListsResponse>;
   addCardToList: handleUnaryCall<AddCardToListRequest, Empty>;
   listCardsInList: handleUnaryCall<ListCardsInListRequest, ListFlashCardsResponse>;
+  /** Saves a private copy of someone else's public list (and its cards) for the requester. */
+  forkFlashCardList: handleUnaryCall<ForkFlashCardListRequest, FlashCardListResponse>;
+  /** The requester's copy compared with its original: cards added, modified and removed in the copy. */
+  getFlashCardListDiff: handleUnaryCall<GetFlashCardListDiffRequest, FlashCardListDiffResponse>;
+  /** Brings the original's changes into the requester's copy, skipping cards changed in the copy. */
+  pullFlashCardListUpstream: handleUnaryCall<PullFlashCardListUpstreamRequest, PullFlashCardListUpstreamResponse>;
+}
+
+/**
+ * Proposals to apply a copy's card changes to its original list (like pull requests). Visible to
+ * the proposer, the original's owner and admins; everyone else gets NOT_FOUND.
+ */
+
+export interface FlashCardProposalServiceClient {
+  createFlashCardProposal(
+    request: CreateFlashCardProposalRequest,
+    metadata?: Metadata,
+  ): Observable<FlashCardProposalResponse>;
+
+  listFlashCardProposals(
+    request: ListFlashCardProposalsRequest,
+    metadata?: Metadata,
+  ): Observable<ListFlashCardProposalsResponse>;
+
+  getFlashCardProposal(
+    request: GetFlashCardProposalRequest,
+    metadata?: Metadata,
+  ): Observable<FlashCardProposalDetailResponse>;
+
+  acceptFlashCardProposal(
+    request: AcceptFlashCardProposalRequest,
+    metadata?: Metadata,
+  ): Observable<FlashCardProposalResponse>;
+
+  rejectFlashCardProposal(
+    request: RejectFlashCardProposalRequest,
+    metadata?: Metadata,
+  ): Observable<FlashCardProposalResponse>;
+
+  withdrawFlashCardProposal(
+    request: WithdrawFlashCardProposalRequest,
+    metadata?: Metadata,
+  ): Observable<FlashCardProposalResponse>;
+}
+
+/**
+ * Proposals to apply a copy's card changes to its original list (like pull requests). Visible to
+ * the proposer, the original's owner and admins; everyone else gets NOT_FOUND.
+ */
+
+export interface FlashCardProposalServiceController {
+  createFlashCardProposal(
+    request: CreateFlashCardProposalRequest,
+    metadata?: Metadata,
+  ): Promise<FlashCardProposalResponse> | Observable<FlashCardProposalResponse> | FlashCardProposalResponse;
+
+  listFlashCardProposals(
+    request: ListFlashCardProposalsRequest,
+    metadata?: Metadata,
+  ):
+    | Promise<ListFlashCardProposalsResponse>
+    | Observable<ListFlashCardProposalsResponse>
+    | ListFlashCardProposalsResponse;
+
+  getFlashCardProposal(
+    request: GetFlashCardProposalRequest,
+    metadata?: Metadata,
+  ):
+    | Promise<FlashCardProposalDetailResponse>
+    | Observable<FlashCardProposalDetailResponse>
+    | FlashCardProposalDetailResponse;
+
+  acceptFlashCardProposal(
+    request: AcceptFlashCardProposalRequest,
+    metadata?: Metadata,
+  ): Promise<FlashCardProposalResponse> | Observable<FlashCardProposalResponse> | FlashCardProposalResponse;
+
+  rejectFlashCardProposal(
+    request: RejectFlashCardProposalRequest,
+    metadata?: Metadata,
+  ): Promise<FlashCardProposalResponse> | Observable<FlashCardProposalResponse> | FlashCardProposalResponse;
+
+  withdrawFlashCardProposal(
+    request: WithdrawFlashCardProposalRequest,
+    metadata?: Metadata,
+  ): Promise<FlashCardProposalResponse> | Observable<FlashCardProposalResponse> | FlashCardProposalResponse;
+}
+
+export function FlashCardProposalServiceControllerMethods() {
+  return function (constructor: Function) {
+    const grpcMethods: string[] = [
+      "createFlashCardProposal",
+      "listFlashCardProposals",
+      "getFlashCardProposal",
+      "acceptFlashCardProposal",
+      "rejectFlashCardProposal",
+      "withdrawFlashCardProposal",
+    ];
+    for (const method of grpcMethods) {
+      const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
+      GrpcMethod("FlashCardProposalService", method)(constructor.prototype[method], method, descriptor);
+      Object.defineProperty(constructor.prototype, method, descriptor);
+    }
+    const grpcStreamMethods: string[] = [];
+    for (const method of grpcStreamMethods) {
+      const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
+      GrpcStreamMethod("FlashCardProposalService", method)(constructor.prototype[method], method, descriptor);
+      Object.defineProperty(constructor.prototype, method, descriptor);
+    }
+  };
+}
+
+export const FLASH_CARD_PROPOSAL_SERVICE_NAME = "FlashCardProposalService";
+
+/**
+ * Proposals to apply a copy's card changes to its original list (like pull requests). Visible to
+ * the proposer, the original's owner and admins; everyone else gets NOT_FOUND.
+ */
+export type FlashCardProposalServiceService = typeof FlashCardProposalServiceService;
+export const FlashCardProposalServiceService = {
+  createFlashCardProposal: {
+    path: "/resource.FlashCardProposalService/CreateFlashCardProposal" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: CreateFlashCardProposalRequest): Buffer =>
+      Buffer.from(CreateFlashCardProposalRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): CreateFlashCardProposalRequest => CreateFlashCardProposalRequest.decode(value),
+    responseSerialize: (value: FlashCardProposalResponse): Buffer =>
+      Buffer.from(FlashCardProposalResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): FlashCardProposalResponse => FlashCardProposalResponse.decode(value),
+  },
+  listFlashCardProposals: {
+    path: "/resource.FlashCardProposalService/ListFlashCardProposals" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: ListFlashCardProposalsRequest): Buffer =>
+      Buffer.from(ListFlashCardProposalsRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ListFlashCardProposalsRequest => ListFlashCardProposalsRequest.decode(value),
+    responseSerialize: (value: ListFlashCardProposalsResponse): Buffer =>
+      Buffer.from(ListFlashCardProposalsResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ListFlashCardProposalsResponse =>
+      ListFlashCardProposalsResponse.decode(value),
+  },
+  getFlashCardProposal: {
+    path: "/resource.FlashCardProposalService/GetFlashCardProposal" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: GetFlashCardProposalRequest): Buffer =>
+      Buffer.from(GetFlashCardProposalRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetFlashCardProposalRequest => GetFlashCardProposalRequest.decode(value),
+    responseSerialize: (value: FlashCardProposalDetailResponse): Buffer =>
+      Buffer.from(FlashCardProposalDetailResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): FlashCardProposalDetailResponse =>
+      FlashCardProposalDetailResponse.decode(value),
+  },
+  acceptFlashCardProposal: {
+    path: "/resource.FlashCardProposalService/AcceptFlashCardProposal" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: AcceptFlashCardProposalRequest): Buffer =>
+      Buffer.from(AcceptFlashCardProposalRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): AcceptFlashCardProposalRequest => AcceptFlashCardProposalRequest.decode(value),
+    responseSerialize: (value: FlashCardProposalResponse): Buffer =>
+      Buffer.from(FlashCardProposalResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): FlashCardProposalResponse => FlashCardProposalResponse.decode(value),
+  },
+  rejectFlashCardProposal: {
+    path: "/resource.FlashCardProposalService/RejectFlashCardProposal" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: RejectFlashCardProposalRequest): Buffer =>
+      Buffer.from(RejectFlashCardProposalRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): RejectFlashCardProposalRequest => RejectFlashCardProposalRequest.decode(value),
+    responseSerialize: (value: FlashCardProposalResponse): Buffer =>
+      Buffer.from(FlashCardProposalResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): FlashCardProposalResponse => FlashCardProposalResponse.decode(value),
+  },
+  withdrawFlashCardProposal: {
+    path: "/resource.FlashCardProposalService/WithdrawFlashCardProposal" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: WithdrawFlashCardProposalRequest): Buffer =>
+      Buffer.from(WithdrawFlashCardProposalRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): WithdrawFlashCardProposalRequest =>
+      WithdrawFlashCardProposalRequest.decode(value),
+    responseSerialize: (value: FlashCardProposalResponse): Buffer =>
+      Buffer.from(FlashCardProposalResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): FlashCardProposalResponse => FlashCardProposalResponse.decode(value),
+  },
+} as const;
+
+export interface FlashCardProposalServiceServer extends UntypedServiceImplementation {
+  createFlashCardProposal: handleUnaryCall<CreateFlashCardProposalRequest, FlashCardProposalResponse>;
+  listFlashCardProposals: handleUnaryCall<ListFlashCardProposalsRequest, ListFlashCardProposalsResponse>;
+  getFlashCardProposal: handleUnaryCall<GetFlashCardProposalRequest, FlashCardProposalDetailResponse>;
+  acceptFlashCardProposal: handleUnaryCall<AcceptFlashCardProposalRequest, FlashCardProposalResponse>;
+  rejectFlashCardProposal: handleUnaryCall<RejectFlashCardProposalRequest, FlashCardProposalResponse>;
+  withdrawFlashCardProposal: handleUnaryCall<WithdrawFlashCardProposalRequest, FlashCardProposalResponse>;
 }
 
 /**

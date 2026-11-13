@@ -2,7 +2,9 @@ import { ResourceEventsPublisher } from './app/events/resource-events.publisher'
 import { BlogCommentService } from './app/services/blog-comment.service';
 import { BlogService } from './app/services/blog.service';
 import { FileOwnershipService } from './app/services/file-ownership.service';
+import { FlashcardForkService } from './app/services/flashcard-fork.service';
 import { FlashcardListService } from './app/services/flashcard-list.service';
+import { FlashcardProposalService } from './app/services/flashcard-proposal.service';
 import { FlashcardService } from './app/services/flashcard.service';
 import { ForumService } from './app/services/forum.service';
 import { ReportService } from './app/services/report.service';
@@ -12,6 +14,7 @@ import { FILE_CLIENT } from './constants/file';
 import { BlogCommentController } from './presentation/controllers/blog-comment.controller';
 import { BlogController } from './presentation/controllers/blog.controller';
 import { FlashcardListController } from './presentation/controllers/flashcard-list.controller';
+import { FlashcardProposalController } from './presentation/controllers/flashcard-proposal.controller';
 import { FlashcardController } from './presentation/controllers/flashcard.controller';
 import { ForumController } from './presentation/controllers/forum.controller';
 import { ReportController } from './presentation/controllers/report.controller';
@@ -51,6 +54,7 @@ const rmqPubModule = RabbitMQModule.forRootAsync({
 		BlogCommentController,
 		FlashcardController,
 		FlashcardListController,
+		FlashcardProposalController,
 		ForumController,
 		ReportController,
 	],
@@ -96,6 +100,8 @@ const rmqPubModule = RabbitMQModule.forRootAsync({
 		BlogCommentService,
 		FlashcardService,
 		FlashcardListService,
+		FlashcardForkService,
+		FlashcardProposalService,
 		ForumService,
 		ReportService,
 		ResourceEventsPublisher,

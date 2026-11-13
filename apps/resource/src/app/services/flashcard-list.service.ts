@@ -4,8 +4,10 @@ import {
 	type FlashCardListsPageReadModel,
 } from '../../domain/read-models/flash-card-list.read-model';
 import { type FlashCardListPageReadModel } from '../../domain/read-models/flash-card.read-model';
+import { FlashCardProposalStatus } from '@server/typing';
 import { ResourceEventsPublisher } from '../events/resource-events.publisher';
 import {
+	WITH_FORK_COUNT,
 	toFlashCardListReadModel,
 	toFlashCardReadModel,
 	visibleListsWhere,
@@ -59,14 +61,31 @@ export class FlashcardListService {
 	async getFlashCardList(id: string, requester: Requester): Promise<FlashCardListDetailReadModel> {
 		const entity = await this.txHost.tx.flashCardList.findFirst({
 			where: { id: id, ...visibleListsWhere(requester) },
-			include: { cards: true },
+			include: { cards: true, ...WITH_FORK_COUNT },
 		});
 		if (!entity) throw new NotFoundException('FlashCardList not found');
+
+		const mayReview = requester.privileged || entity.authorId === requester.id;
+		const [openProposalCount, upstream] = await Promise.all([
+			mayReview ?
+				this.txHost.tx.flashCardListProposal.count({
+					where: { targetListId: id, status: FlashCardProposalStatus.Open },
+				})
+			:	0,
+			entity.forkedFromId ?
+				this.txHost.tx.flashCardList.findFirst({
+					where: { id: entity.forkedFromId, ...visibleListsWhere(requester) },
+					select: { id: true },
+				})
+			:	null,
+		]);
 
 		return {
 			...toFlashCardListReadModel(entity),
 			flashCards: entity.cards.map(toFlashCardReadModel),
 			totalCards: entity.cards.length,
+			openProposalCount: openProposalCount,
+			upstreamAvailable: upstream !== null,
 		};
 	}
 
@@ -84,6 +103,7 @@ export class FlashcardListService {
 				isPublic: data.isPublic,
 				tags: data.tags.length > 0 ? data.tags : undefined,
 			},
+			include: WITH_FORK_COUNT,
 		});
 		return toFlashCardListReadModel(updated);
 	}
@@ -121,6 +141,7 @@ export class FlashcardListService {
 		const [lists, totalCount] = await Promise.all([
 			this.txHost.tx.flashCardList.findMany({
 				where: where,
+				include: WITH_FORK_COUNT,
 				...toSkipTake(data),
 				orderBy: { createdAt: 'desc' },
 			}),
