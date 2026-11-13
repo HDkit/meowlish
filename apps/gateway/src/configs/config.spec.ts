@@ -19,4 +19,16 @@ describe('gateway config', () => {
 		]);
 		expect(parseOrigins('')).toEqual([]);
 	});
+
+	it('parses GOOGLE_OAUTH_FRONTENDS as bare origins', () => {
+		const parseFrontends = (v: string | undefined) =>
+			envFileSchema.shape.vps.shape.googleOAuthFrontends.parse(v);
+		expect(parseFrontends(undefined)).toEqual([]);
+		expect(parseFrontends(' https://a.example.com/, http://localhost:6767 ')).toEqual([
+			'https://a.example.com',
+			'http://localhost:6767',
+		]);
+		expect(() => parseFrontends('https://a.example.com/auth/callback')).toThrow();
+		expect(() => parseFrontends('not-a-url')).toThrow();
+	});
 });

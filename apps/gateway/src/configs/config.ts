@@ -49,9 +49,29 @@ const servicesSchema = z.object({
 	}),
 });
 
+/** Comma-separated bare origins (`https://host[:port]`, no path) -> list. */
+const originListSchema = z.preprocess(
+	v =>
+		typeof v === 'string' ?
+			v
+				.split(',')
+				.map(o => o.trim().replace(/\/+$/, ''))
+				.filter(Boolean)
+		:	[],
+	z.array(
+		z.url().refine(o => new URL(o).origin === o, { message: 'Expected a bare origin, no path' }),
+	),
+);
+
 const vpsEnvSchema = z.object({
 	baseUrl: z.url(),
 	feLoginRedirectUrl: z.url(),
+	/**
+	 * Extra frontends that may run the Google flow (`?frontend=<origin>`). Each proxies `/api/*`
+	 * to this gateway, so Google calls back to `<origin>/api/v1/auth/google/callback` and the user
+	 * lands on `<origin>` + the path of FE_LOGIN_REDIRECT_URL.
+	 */
+	googleOAuthFrontends: originListSchema,
 });
 
 const DEV_CORS_ORIGINS = 'http://localhost:6767,http://localhost:5173';
@@ -142,6 +162,7 @@ const loadEnv = (): DeepStringify<IEnvVars> => ({
 	vps: {
 		baseUrl: process.env.BASE_URL?.trim().replace(/\/+$/, ''),
 		feLoginRedirectUrl: process.env.FE_LOGIN_REDIRECT_URL?.trim().replace(/\/+$/, ''),
+		googleOAuthFrontends: process.env.GOOGLE_OAUTH_FRONTENDS,
 	},
 });
 

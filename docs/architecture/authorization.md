@@ -78,6 +78,7 @@ So the session cookies are set by, and sent to, the frontend origin: they are fi
 
 - `CORS_ORIGINS` (gateway and live) must list the frontend origin, because the browser's `Origin` header is checked by `CookieIssuanceGuard` and by live's handshake `allowRequest` (`apps/live/src/app/infra/adapter/redis-io.adapter.ts`).
 - `BASE_URL` is the frontend's public origin, so Google redirects back through the proxy (where `oauth2_state` lives).
+- More than one frontend: list the others in `GOOGLE_OAUTH_FRONTENDS` and have each open `/auth/google` and `/auth/credentials/google` with `?frontend=${location.origin}`. The start guard (`GoogleOAuth2Guard`) stores that origin in the state and sends Google `<origin>/api/v1/auth/google/callback`; the callback guard (`GoogleOAuth2CallbackGuard`) reads it back, repeats the same `redirect_uri` in the code exchange, and the user lands on `<origin>` + the path of `FE_LOGIN_REDIRECT_URL`. An unlisted origin is 400, so the redirect can't be pointed elsewhere. No `frontend` (or the default frontend's own origin) keeps the single-frontend behaviour below.
 - Next's built-in proxy doesn't add `X-Forwarded-For`; see [operations.md](operations.md) (`TRUST_PROXY`) and `docs/operations/upgrade-notes.md`.
 
 ### Live sockets
@@ -99,7 +100,7 @@ sequenceDiagram
   Note over B,A: Login / register
   B->>FE: navigate GET /api/v1/auth/google
   FE->>G: proxied
-  G-->>B: 302 to Google (no state: not logged in)
+  G-->>B: 302 to Google (no state; with ?frontend=<listed origin>: state=nonce, SET state = {frontend})
   B->>Go: consent
   Go-->>B: 302 BASE_URL/api/v1/auth/google/callback?code=...
   B->>FE: GET callback
@@ -117,20 +118,20 @@ sequenceDiagram
   Note over B,A: Linking (already logged in)
   B->>FE: top-level navigation GET /api/v1/auth/credentials/google (sends access_token cookie)
   FE->>G: proxied, JwtAuthGuard ok
-  G->>R: SET gateway:oauth2:state:nonce = sub, EX 300
+  G->>R: SET gateway:oauth2:state:nonce = {identityId, frontend?}, EX 300
   G-->>B: Set-Cookie oauth2_state=nonce, 302 to Google with state=nonce
   B->>Go: consent
   Go-->>B: 302 callback?code&state
   B->>FE: GET callback (oauth2_state cookie comes back)
   FE->>G: proxied
-  G->>G: state == cookie? GETDEL state key -> identityId
+  G->>G: GET state key, state == cookie?, DEL (single use) -> identityId, frontend
   G->>A: AddGoogleCredential(googleId, identityId)
   G->>R: SETEX loginToken = true
   G-->>B: 302 FE_LOGIN_REDIRECT_URL?loginToken=...
   B->>G: POST /auth/google/tokens -> nothing to set (value is true)
 ```
 
-Sources: `apps/gateway/src/auth/guards/google-oauth2.guard.ts`, `apps/gateway/src/auth-gateway/strategies/google-oauth2.strategy.ts`, `auth.router.controller.ts` (`googleCallback`, `getGoogleTokens`). `FE_LOGIN_REDIRECT_URL` must be the frontend's callback page, not `/` (`docs/operations/upgrade-notes.md`).
+Sources: `apps/gateway/src/auth/guards/google-oauth2.guard.ts`, `apps/gateway/src/auth-gateway/google-oauth-frontends.ts`, `apps/gateway/src/auth-gateway/strategies/google-oauth2.strategy.ts`, `auth.router.controller.ts` (`googleCallback`, `getGoogleTokens`). `FE_LOGIN_REDIRECT_URL` must be the frontend's callback page, not `/` (`docs/operations/upgrade-notes.md`).
 
 ## 4. Role and permission gates
 

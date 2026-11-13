@@ -2,7 +2,11 @@ import { HasPermissions } from '../auth/decorators/permissions.decorator';
 import { IsPublic } from '../auth/decorators/public.decorator';
 import { HasRoles } from '../auth/decorators/roles.decorator';
 import { CookieIssuanceGuard } from '../auth/guards/cookie-issuance.guard';
-import { GoogleOAuth2Guard } from '../auth/guards/google-oauth2.guard';
+import {
+	GoogleOAuth2CallbackGuard,
+	GoogleOAuth2Guard,
+	type GoogleOAuthFlow,
+} from '../auth/guards/google-oauth2.guard';
 import { JwtRefreshAuthGuard } from '../auth/guards/jwt-refresh-auth.guard';
 import { IEnvVars } from '../configs/config';
 import {
@@ -62,7 +66,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { type ClientGrpc } from '@nestjs/microservices';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { auth } from '@server/generated';
 import { Permission, Role } from '@server/typing';
 import { ApiEmptyResponseEntity, ApiResponseEntity } from '@server/utils';
@@ -72,6 +76,9 @@ import { Observable, lastValueFrom } from 'rxjs';
 
 const SETS_COOKIES =
 	'Sets the `access_token` (Path=/) and `refresh_token` (Path=/api/v1/auth) HttpOnly cookies; `data` is null.';
+
+const FRONTEND_QUERY_DESCRIPTION =
+	'Origin of the frontend starting the flow (`location.origin`). Google calls back through that frontend and the user lands on its login callback page. Must be the default frontend or listed in GOOGLE_OAUTH_FRONTENDS (400 otherwise); omit it for the default.';
 
 @ApiBearerAuth()
 @ApiTags('Auth')
@@ -177,23 +184,33 @@ export class AuthGatewayController implements OnModuleInit {
 	@IsPublic()
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Get Google redirect to login/register with OAuth2' })
+	@ApiQuery({
+		name: 'frontend',
+		required: false,
+		description: FRONTEND_QUERY_DESCRIPTION,
+		example: 'https://meowlish-fe-share.vercel.app',
+	})
 	loginOrRegisterGoogle() {
 		return;
 	}
 
 	@Get('google/callback')
-	@UseGuards(GoogleOAuth2Guard)
+	@UseGuards(GoogleOAuth2CallbackGuard)
 	@IsPublic()
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Callback url for OAuth2' })
-	async googleCallback(@Req() request: { user: auth.Tokens | boolean }, @Res() res: Response) {
+	async googleCallback(
+		@Req() request: { user: auth.Tokens | boolean; googleOAuth: GoogleOAuthFlow },
+		@Res() res: Response,
+	) {
 		const loginToken = crypto.randomUUID();
 		await this.redis.setex(
 			`oauth2:google:loginToken:${loginToken}`,
 			60,
 			JSON.stringify(request.user),
 		);
-		const url = new URL(this.configService.getOrThrow('vps', { infer: true }).feLoginRedirectUrl);
+		// GoogleOAuth2CallbackGuard resolved which frontend this flow started on
+		const url = new URL(request.googleOAuth.frontend.loginRedirectUrl);
 		url.searchParams.set('loginToken', loginToken);
 		return res.redirect(url.toString());
 	}
@@ -237,6 +254,12 @@ export class AuthGatewayController implements OnModuleInit {
 		summary: 'Add Google credential to existing account',
 		description:
 			'Open with a top-level navigation (not fetch/XHR): the `access_token` cookie authenticates it and the `oauth2_state` cookie set here must come back on /google/callback.',
+	})
+	@ApiQuery({
+		name: 'frontend',
+		required: false,
+		description: FRONTEND_QUERY_DESCRIPTION,
+		example: 'https://meowlish-fe-share.vercel.app',
 	})
 	addGoogleCred() {
 		return;
