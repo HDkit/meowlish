@@ -208,6 +208,20 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 		}));
 	}
 
+	async findIdentityIdsByRole(role: string, limit: number): Promise<string[]> {
+		const identities = await this.txHost.tx.identity.findMany({
+			where: {
+				deletedAt: null,
+				isLocked: false,
+				identityRoles: { some: { role: { name: role } } },
+			},
+			select: { id: true },
+			orderBy: { id: 'asc' },
+			take: limit,
+		});
+		return identities.map(i => i.id);
+	}
+
 	async hydrate(id: string): Promise<HydratedIdentityReadModel | null> {
 		const foundIdentity = await this.txHost.tx.identity.findUnique({
 			where: { id: id },

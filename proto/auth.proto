@@ -39,6 +39,8 @@ service AuthService {
 	rpc RefreshGoogleCalendarToken(RefreshGoogleCalendarTokenDto) returns (GoogleCalendarAccessToken) {}
     // qol
 	rpc FindIdentityIds(FindIdentityIdsDto) returns (IdentityIds){}
+	// Active identities holding a role (e.g. every admin, to notify them). Service-to-service only.
+	rpc FindIdentityIdsByRole(FindIdentityIdsByRoleDto) returns (RoleMemberIds) {}
 	rpc FindIdentities(FindIdentitiesDto) returns (Identities) {}
 	rpc FindIdentitiesByPhone(FindIdentitiesByPhoneDto) returns (Identities) {}
 	rpc HydrateIdentities(HydrateIdentitiesDto) returns (HydratedIdentities) {}
@@ -195,6 +197,15 @@ message RoleList {
 
 message PermList {
 	repeated string perms = 1;
+}
+
+message FindIdentityIdsByRoleDto {
+	google.protobuf.StringValue role = 1;
+}
+
+// Ids of the active (not locked, not deleted) identities that hold the role.
+message RoleMemberIds {
+	repeated string ids = 1;
 }
 
 message IdentityIds {

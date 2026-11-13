@@ -25,6 +25,8 @@ export interface IIdentityReadRepository {
 		limit?: number;
 		direction?: number;
 	}): Promise<IdentityReadModel[]>;
+	/** Active (not locked, not deleted) identities holding the role, at most `limit`. */
+	findIdentityIdsByRole(role: string, limit: number): Promise<string[]>;
 	hydrate(id: string): Promise<HydratedIdentityReadModel | null>;
 	hydrateMany(ids: string[]): Promise<HydratedIdentityReadModel[]>;
 }

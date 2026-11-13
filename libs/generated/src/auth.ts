@@ -174,6 +174,15 @@ export interface PermList {
   perms: string[];
 }
 
+export interface FindIdentityIdsByRoleDto {
+  role: string | undefined;
+}
+
+/** Ids of the active (not locked, not deleted) identities that hold the role. */
+export interface RoleMemberIds {
+  ids: string[];
+}
+
 export interface IdentityIds {
   ids: string[];
   nextCursor: string;
@@ -1926,6 +1935,98 @@ export const PermList: MessageFns<PermList> = {
   },
 };
 
+function createBaseFindIdentityIdsByRoleDto(): FindIdentityIdsByRoleDto {
+  return { role: undefined };
+}
+
+export const FindIdentityIdsByRoleDto: MessageFns<FindIdentityIdsByRoleDto> = {
+  encode(message: FindIdentityIdsByRoleDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.role !== undefined) {
+      StringValue.encode({ value: message.role! }, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): FindIdentityIdsByRoleDto {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseFindIdentityIdsByRoleDto();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.role = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseRoleMemberIds(): RoleMemberIds {
+  return { ids: [] };
+}
+
+export const RoleMemberIds: MessageFns<RoleMemberIds> = {
+  encode(message: RoleMemberIds, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.ids) {
+      writer.uint32(10).string(v!);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RoleMemberIds {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseRoleMemberIds();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.ids.push(reader.string());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
 function createBaseIdentityIds(): IdentityIds {
   return { ids: [], nextCursor: "", prevCursor: "" };
 }
@@ -3150,6 +3251,10 @@ export interface AuthServiceClient {
 
   findIdentityIds(request: FindIdentityIdsDto, metadata?: Metadata): Observable<IdentityIds>;
 
+  /** Active identities holding a role (e.g. every admin, to notify them). Service-to-service only. */
+
+  findIdentityIdsByRole(request: FindIdentityIdsByRoleDto, metadata?: Metadata): Observable<RoleMemberIds>;
+
   findIdentities(request: FindIdentitiesDto, metadata?: Metadata): Observable<Identities>;
 
   findIdentitiesByPhone(request: FindIdentitiesByPhoneDto, metadata?: Metadata): Observable<Identities>;
@@ -3244,6 +3349,13 @@ export interface AuthServiceController {
     metadata?: Metadata,
   ): Promise<IdentityIds> | Observable<IdentityIds> | IdentityIds;
 
+  /** Active identities holding a role (e.g. every admin, to notify them). Service-to-service only. */
+
+  findIdentityIdsByRole(
+    request: FindIdentityIdsByRoleDto,
+    metadata?: Metadata,
+  ): Promise<RoleMemberIds> | Observable<RoleMemberIds> | RoleMemberIds;
+
   findIdentities(
     request: FindIdentitiesDto,
     metadata?: Metadata,
@@ -3295,6 +3407,7 @@ export function AuthServiceControllerMethods() {
       "getGoogleCalendarToken",
       "refreshGoogleCalendarToken",
       "findIdentityIds",
+      "findIdentityIdsByRole",
       "findIdentities",
       "findIdentitiesByPhone",
       "hydrateIdentities",
@@ -3552,6 +3665,17 @@ export const AuthServiceService = {
     responseSerialize: (value: IdentityIds): Buffer => Buffer.from(IdentityIds.encode(value).finish()),
     responseDeserialize: (value: Buffer): IdentityIds => IdentityIds.decode(value),
   },
+  /** Active identities holding a role (e.g. every admin, to notify them). Service-to-service only. */
+  findIdentityIdsByRole: {
+    path: "/auth.AuthService/FindIdentityIdsByRole" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: FindIdentityIdsByRoleDto): Buffer =>
+      Buffer.from(FindIdentityIdsByRoleDto.encode(value).finish()),
+    requestDeserialize: (value: Buffer): FindIdentityIdsByRoleDto => FindIdentityIdsByRoleDto.decode(value),
+    responseSerialize: (value: RoleMemberIds): Buffer => Buffer.from(RoleMemberIds.encode(value).finish()),
+    responseDeserialize: (value: Buffer): RoleMemberIds => RoleMemberIds.decode(value),
+  },
   findIdentities: {
     path: "/auth.AuthService/FindIdentities" as const,
     requestStream: false as const,
@@ -3627,6 +3751,8 @@ export interface AuthServiceServer extends UntypedServiceImplementation {
   refreshGoogleCalendarToken: handleUnaryCall<RefreshGoogleCalendarTokenDto, GoogleCalendarAccessToken>;
   /** qol */
   findIdentityIds: handleUnaryCall<FindIdentityIdsDto, IdentityIds>;
+  /** Active identities holding a role (e.g. every admin, to notify them). Service-to-service only. */
+  findIdentityIdsByRole: handleUnaryCall<FindIdentityIdsByRoleDto, RoleMemberIds>;
   findIdentities: handleUnaryCall<FindIdentitiesDto, Identities>;
   findIdentitiesByPhone: handleUnaryCall<FindIdentitiesByPhoneDto, Identities>;
   hydrateIdentities: handleUnaryCall<HydrateIdentitiesDto, HydratedIdentities>;

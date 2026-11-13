@@ -36,6 +36,7 @@ import {
 } from '../../app/commands/auth.validate-refresh.command';
 import { FindIdentitiesByPhoneQuery } from '../../app/queries/auth.find-identities-by-phone.query';
 import { FindIdentitiesQuery } from '../../app/queries/auth.find-identities.query';
+import { FindIdentityIdsByRoleQuery } from '../../app/queries/auth.find-identity-ids-by-role.query';
 import { FindIdentityIdsQuery } from '../../app/queries/auth.find-identity-ids.query';
 import { GetCredentialsQuery } from '../../app/queries/auth.get-credentials.query';
 import { GetGoogleCalendarTokenQuery } from '../../app/queries/auth.get-google-calendar-token.query';
@@ -50,6 +51,7 @@ import { ConnectGoogleCalendarDto } from '../dtos/req/connect-google-calendar.re
 import { DisconnectGoogleCalendarDto } from '../dtos/req/disconnect-google-calendar.req.dto';
 import { FindIdentitiesByPhoneDto } from '../dtos/req/find-identities-by-phone.req.dto';
 import { FindIdentitiesDto } from '../dtos/req/find-identities.req.dto';
+import { FindIdentityIdsByRoleDto } from '../dtos/req/find-identity-ids-by-role.req.dto';
 import { FindIdentityIdsDto } from '../dtos/req/find-identity-ids.req.dto';
 import { GetCredsDto } from '../dtos/req/get-creds.req.dto';
 import { GetGoogleCalendarTokenDto } from '../dtos/req/get-google-calendar-token.req.dto';
@@ -78,6 +80,7 @@ import { HydratedIdentitiesDto, HydratedIdentityDto } from '../dtos/res/hydrated
 import { IdentitiesDto } from '../dtos/res/identities.res.dto';
 import { IdentityIdsDto } from '../dtos/res/identity-ids.res.dto';
 import { PermissionsDto } from '../dtos/res/permissions.res.dto';
+import { RoleMemberIdsDto } from '../dtos/res/role-member-ids.res.dto';
 import { RolesDto } from '../dtos/res/roles.res.dto';
 import { TokensDto } from '../dtos/res/tokens.res.dto';
 import { Controller, SerializeOptions, UseFilters } from '@nestjs/common';
@@ -189,6 +192,15 @@ export class AuthController implements auth.AuthServiceController {
 				limit: request.limit,
 			}),
 		);
+	}
+
+	@SerializeOptions({ type: RoleMemberIdsDto })
+	async findIdentityIdsByRole(
+		@Payload() request: FindIdentityIdsByRoleDto,
+	): Promise<RoleMemberIdsDto> {
+		return {
+			ids: await this.queryBus.execute(new FindIdentityIdsByRoleQuery({ role: request.role })),
+		};
 	}
 
 	@SerializeOptions({ type: IdentityIdsDto })
