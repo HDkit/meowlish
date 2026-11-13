@@ -1,4 +1,5 @@
 import { ResourceEventsPublisher } from './app/events/resource-events.publisher';
+import { BlogCommentService } from './app/services/blog-comment.service';
 import { BlogService } from './app/services/blog.service';
 import { FileOwnershipService } from './app/services/file-ownership.service';
 import { FlashcardListService } from './app/services/flashcard-list.service';
@@ -8,6 +9,7 @@ import { ReportService } from './app/services/report.service';
 import { IEnvVars, config } from './configs/config';
 import { rmqPubConfig } from './configs/rmq.pub.config';
 import { FILE_CLIENT } from './constants/file';
+import { BlogCommentController } from './presentation/controllers/blog-comment.controller';
 import { BlogController } from './presentation/controllers/blog.controller';
 import { FlashcardListController } from './presentation/controllers/flashcard-list.controller';
 import { FlashcardController } from './presentation/controllers/flashcard.controller';
@@ -46,6 +48,7 @@ const rmqPubModule = RabbitMQModule.forRootAsync({
 @Module({
 	controllers: [
 		BlogController,
+		BlogCommentController,
 		FlashcardController,
 		FlashcardListController,
 		ForumController,
@@ -90,6 +93,7 @@ const rmqPubModule = RabbitMQModule.forRootAsync({
 	],
 	providers: [
 		BlogService,
+		BlogCommentService,
 		FlashcardService,
 		FlashcardListService,
 		ForumService,

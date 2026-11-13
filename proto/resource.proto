@@ -41,6 +41,15 @@ service FlashCardListService {
 	rpc ListCardsInList(ListCardsInListRequest) returns (ListFlashCardsResponse) {}
 }
 
+// Nested comments under a blog post. Top-level comments are paginated (newest first); each comes
+// with its whole reply tree (oldest first at every level).
+service BlogCommentService {
+	rpc ListBlogComments(ListBlogCommentsRequest) returns (ListBlogCommentsResponse) {}
+	rpc CreateBlogComment(CreateBlogCommentRequest) returns (BlogCommentResponse) {}
+	rpc UpdateBlogComment(UpdateBlogCommentRequest) returns (BlogCommentResponse) {}
+	rpc DeleteBlogComment(DeleteBlogCommentRequest) returns (google.protobuf.Empty) {}
+}
+
 // Forum: categories (seeded), threads and flat replies. Ownership and moderation are decided here
 // from the forwarded requester; "not yours" is answered with NOT_FOUND.
 service ForumService {
@@ -524,5 +533,68 @@ message DeleteForumReplyRequest {
 	// Set by the gateway from the JWT; never from client input.
 	google.protobuf.StringValue        requester_id = 2;
 	// Requester is a forum moderator (role decided by the gateway).
+	optional google.protobuf.BoolValue privileged   = 3;
+}
+
+// Blog comment messages
+
+message BlogCommentResponse {
+	string                       id         = 1;
+	string                       blog_id    = 2;
+	optional string              parent_id  = 3;
+	// empty once deleted
+	string                       author_id  = 4;
+	// Markdown; empty once deleted
+	string                       content    = 5;
+	// 0 for top-level comments
+	int32                        depth      = 6;
+	// deleted but kept because it still has replies (shown as "[deleted]")
+	bool                         deleted    = 7;
+	optional string              edited_at  = 8;
+	string                       created_at = 9;
+	string                       updated_at = 10;
+	repeated BlogCommentResponse replies    = 11;
+}
+
+message ListBlogCommentsRequest {
+	google.protobuf.StringValue         blog_id = 1;
+	optional google.protobuf.Int32Value page    = 2;
+	optional google.protobuf.Int32Value limit   = 3;
+}
+
+message ListBlogCommentsResponse {
+	// top-level comments of the page, each with its reply tree
+	repeated BlogCommentResponse comments       = 1;
+	// top-level comments in total (for paging)
+	int32                        total_threads  = 2;
+	// visible (not deleted) comments at any depth
+	int32                        total_comments = 3;
+}
+
+message CreateBlogCommentRequest {
+	google.protobuf.StringValue          blog_id      = 1;
+	google.protobuf.StringValue          content      = 2;
+	// comment being replied to (same blog); top-level when unset
+	optional google.protobuf.StringValue parent_id    = 3;
+	// Set by the gateway from the JWT; never from client input. Becomes the author.
+	google.protobuf.StringValue          requester_id = 4;
+	// Requester is a moderator (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged   = 5;
+}
+
+message UpdateBlogCommentRequest {
+	google.protobuf.StringValue        id           = 1;
+	google.protobuf.StringValue        content      = 2;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue        requester_id = 3;
+	// Requester is a moderator (role decided by the gateway).
+	optional google.protobuf.BoolValue privileged   = 4;
+}
+
+message DeleteBlogCommentRequest {
+	google.protobuf.StringValue        id           = 1;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue        requester_id = 2;
+	// Requester is a moderator (role decided by the gateway).
 	optional google.protobuf.BoolValue privileged   = 3;
 }

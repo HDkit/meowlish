@@ -558,6 +558,83 @@ export interface DeleteForumReplyRequest {
   privileged?: boolean | undefined;
 }
 
+export interface BlogCommentResponse {
+  id: string;
+  blogId: string;
+  parentId?:
+    | string
+    | undefined;
+  /** empty once deleted */
+  authorId: string;
+  /** Markdown; empty once deleted */
+  content: string;
+  /** 0 for top-level comments */
+  depth: number;
+  /** deleted but kept because it still has replies (shown as "[deleted]") */
+  deleted: boolean;
+  editedAt?: string | undefined;
+  createdAt: string;
+  updatedAt: string;
+  replies: BlogCommentResponse[];
+}
+
+export interface ListBlogCommentsRequest {
+  blogId: string | undefined;
+  page?: number | undefined;
+  limit?: number | undefined;
+}
+
+export interface ListBlogCommentsResponse {
+  /** top-level comments of the page, each with its reply tree */
+  comments: BlogCommentResponse[];
+  /** top-level comments in total (for paging) */
+  totalThreads: number;
+  /** visible (not deleted) comments at any depth */
+  totalComments: number;
+}
+
+export interface CreateBlogCommentRequest {
+  blogId: string | undefined;
+  content:
+    | string
+    | undefined;
+  /** comment being replied to (same blog); top-level when unset */
+  parentId?:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. Becomes the author. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester is a moderator (role decided by the gateway). */
+  privileged?: boolean | undefined;
+}
+
+export interface UpdateBlogCommentRequest {
+  id: string | undefined;
+  content:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester is a moderator (role decided by the gateway). */
+  privileged?: boolean | undefined;
+}
+
+export interface DeleteBlogCommentRequest {
+  id:
+    | string
+    | undefined;
+  /** Set by the gateway from the JWT; never from client input. */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester is a moderator (role decided by the gateway). */
+  privileged?: boolean | undefined;
+}
+
 function createBaseBlogResponse(): BlogResponse {
   return { id: "", title: "", content: "", authorId: "", tags: [], createdAt: "", updatedAt: "" };
 }
@@ -5343,6 +5420,545 @@ export const DeleteForumReplyRequest: MessageFns<DeleteForumReplyRequest> = {
   },
 };
 
+function createBaseBlogCommentResponse(): BlogCommentResponse {
+  return {
+    id: "",
+    blogId: "",
+    authorId: "",
+    content: "",
+    depth: 0,
+    deleted: false,
+    createdAt: "",
+    updatedAt: "",
+    replies: [],
+  };
+}
+
+export const BlogCommentResponse: MessageFns<BlogCommentResponse> = {
+  encode(message: BlogCommentResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.blogId !== "") {
+      writer.uint32(18).string(message.blogId);
+    }
+    if (message.parentId !== undefined) {
+      writer.uint32(26).string(message.parentId);
+    }
+    if (message.authorId !== "") {
+      writer.uint32(34).string(message.authorId);
+    }
+    if (message.content !== "") {
+      writer.uint32(42).string(message.content);
+    }
+    if (message.depth !== 0) {
+      writer.uint32(48).int32(message.depth);
+    }
+    if (message.deleted !== false) {
+      writer.uint32(56).bool(message.deleted);
+    }
+    if (message.editedAt !== undefined) {
+      writer.uint32(66).string(message.editedAt);
+    }
+    if (message.createdAt !== "") {
+      writer.uint32(74).string(message.createdAt);
+    }
+    if (message.updatedAt !== "") {
+      writer.uint32(82).string(message.updatedAt);
+    }
+    for (const v of message.replies) {
+      BlogCommentResponse.encode(v!, writer.uint32(90).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): BlogCommentResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseBlogCommentResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.blogId = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.parentId = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.authorId = reader.string();
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.content = reader.string();
+            continue;
+          }
+          case 6: {
+            if (tag !== 48) {
+              break;
+            }
+
+            message.depth = reader.int32();
+            continue;
+          }
+          case 7: {
+            if (tag !== 56) {
+              break;
+            }
+
+            message.deleted = reader.bool();
+            continue;
+          }
+          case 8: {
+            if (tag !== 66) {
+              break;
+            }
+
+            message.editedAt = reader.string();
+            continue;
+          }
+          case 9: {
+            if (tag !== 74) {
+              break;
+            }
+
+            message.createdAt = reader.string();
+            continue;
+          }
+          case 10: {
+            if (tag !== 82) {
+              break;
+            }
+
+            message.updatedAt = reader.string();
+            continue;
+          }
+          case 11: {
+            if (tag !== 90) {
+              break;
+            }
+
+            message.replies.push(BlogCommentResponse.decode(reader, reader.uint32()));
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseListBlogCommentsRequest(): ListBlogCommentsRequest {
+  return { blogId: undefined };
+}
+
+export const ListBlogCommentsRequest: MessageFns<ListBlogCommentsRequest> = {
+  encode(message: ListBlogCommentsRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.blogId !== undefined) {
+      StringValue.encode({ value: message.blogId! }, writer.uint32(10).fork()).join();
+    }
+    if (message.page !== undefined) {
+      Int32Value.encode({ value: message.page! }, writer.uint32(18).fork()).join();
+    }
+    if (message.limit !== undefined) {
+      Int32Value.encode({ value: message.limit! }, writer.uint32(26).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListBlogCommentsRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseListBlogCommentsRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.blogId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.page = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.limit = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseListBlogCommentsResponse(): ListBlogCommentsResponse {
+  return { comments: [], totalThreads: 0, totalComments: 0 };
+}
+
+export const ListBlogCommentsResponse: MessageFns<ListBlogCommentsResponse> = {
+  encode(message: ListBlogCommentsResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.comments) {
+      BlogCommentResponse.encode(v!, writer.uint32(10).fork()).join();
+    }
+    if (message.totalThreads !== 0) {
+      writer.uint32(16).int32(message.totalThreads);
+    }
+    if (message.totalComments !== 0) {
+      writer.uint32(24).int32(message.totalComments);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListBlogCommentsResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseListBlogCommentsResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.comments.push(BlogCommentResponse.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 2: {
+            if (tag !== 16) {
+              break;
+            }
+
+            message.totalThreads = reader.int32();
+            continue;
+          }
+          case 3: {
+            if (tag !== 24) {
+              break;
+            }
+
+            message.totalComments = reader.int32();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseCreateBlogCommentRequest(): CreateBlogCommentRequest {
+  return { blogId: undefined, content: undefined, requesterId: undefined };
+}
+
+export const CreateBlogCommentRequest: MessageFns<CreateBlogCommentRequest> = {
+  encode(message: CreateBlogCommentRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.blogId !== undefined) {
+      StringValue.encode({ value: message.blogId! }, writer.uint32(10).fork()).join();
+    }
+    if (message.content !== undefined) {
+      StringValue.encode({ value: message.content! }, writer.uint32(18).fork()).join();
+    }
+    if (message.parentId !== undefined) {
+      StringValue.encode({ value: message.parentId! }, writer.uint32(26).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(34).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(42).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CreateBlogCommentRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseCreateBlogCommentRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.blogId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.content = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.parentId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseUpdateBlogCommentRequest(): UpdateBlogCommentRequest {
+  return { id: undefined, content: undefined, requesterId: undefined };
+}
+
+export const UpdateBlogCommentRequest: MessageFns<UpdateBlogCommentRequest> = {
+  encode(message: UpdateBlogCommentRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.content !== undefined) {
+      StringValue.encode({ value: message.content! }, writer.uint32(18).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(26).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(34).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UpdateBlogCommentRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseUpdateBlogCommentRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.content = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseDeleteBlogCommentRequest(): DeleteBlogCommentRequest {
+  return { id: undefined, requesterId: undefined };
+}
+
+export const DeleteBlogCommentRequest: MessageFns<DeleteBlogCommentRequest> = {
+  encode(message: DeleteBlogCommentRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== undefined) {
+      StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(26).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): DeleteBlogCommentRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseDeleteBlogCommentRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
 export interface BlogServiceClient {
   createBlog(request: CreateBlogRequest, metadata?: Metadata): Observable<BlogResponse>;
 
@@ -5888,6 +6504,120 @@ export interface FlashCardListServiceServer extends UntypedServiceImplementation
   listFlashCardLists: handleUnaryCall<ListFlashCardListsRequest, ListFlashCardListsResponse>;
   addCardToList: handleUnaryCall<AddCardToListRequest, Empty>;
   listCardsInList: handleUnaryCall<ListCardsInListRequest, ListFlashCardsResponse>;
+}
+
+/**
+ * Nested comments under a blog post. Top-level comments are paginated (newest first); each comes
+ * with its whole reply tree (oldest first at every level).
+ */
+
+export interface BlogCommentServiceClient {
+  listBlogComments(request: ListBlogCommentsRequest, metadata?: Metadata): Observable<ListBlogCommentsResponse>;
+
+  createBlogComment(request: CreateBlogCommentRequest, metadata?: Metadata): Observable<BlogCommentResponse>;
+
+  updateBlogComment(request: UpdateBlogCommentRequest, metadata?: Metadata): Observable<BlogCommentResponse>;
+
+  deleteBlogComment(request: DeleteBlogCommentRequest, metadata?: Metadata): Observable<Empty>;
+}
+
+/**
+ * Nested comments under a blog post. Top-level comments are paginated (newest first); each comes
+ * with its whole reply tree (oldest first at every level).
+ */
+
+export interface BlogCommentServiceController {
+  listBlogComments(
+    request: ListBlogCommentsRequest,
+    metadata?: Metadata,
+  ): Promise<ListBlogCommentsResponse> | Observable<ListBlogCommentsResponse> | ListBlogCommentsResponse;
+
+  createBlogComment(
+    request: CreateBlogCommentRequest,
+    metadata?: Metadata,
+  ): Promise<BlogCommentResponse> | Observable<BlogCommentResponse> | BlogCommentResponse;
+
+  updateBlogComment(
+    request: UpdateBlogCommentRequest,
+    metadata?: Metadata,
+  ): Promise<BlogCommentResponse> | Observable<BlogCommentResponse> | BlogCommentResponse;
+
+  deleteBlogComment(request: DeleteBlogCommentRequest, metadata?: Metadata): void | Promise<void>;
+}
+
+export function BlogCommentServiceControllerMethods() {
+  return function (constructor: Function) {
+    const grpcMethods: string[] = ["listBlogComments", "createBlogComment", "updateBlogComment", "deleteBlogComment"];
+    for (const method of grpcMethods) {
+      const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
+      GrpcMethod("BlogCommentService", method)(constructor.prototype[method], method, descriptor);
+      Object.defineProperty(constructor.prototype, method, descriptor);
+    }
+    const grpcStreamMethods: string[] = [];
+    for (const method of grpcStreamMethods) {
+      const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
+      GrpcStreamMethod("BlogCommentService", method)(constructor.prototype[method], method, descriptor);
+      Object.defineProperty(constructor.prototype, method, descriptor);
+    }
+  };
+}
+
+export const BLOG_COMMENT_SERVICE_NAME = "BlogCommentService";
+
+/**
+ * Nested comments under a blog post. Top-level comments are paginated (newest first); each comes
+ * with its whole reply tree (oldest first at every level).
+ */
+export type BlogCommentServiceService = typeof BlogCommentServiceService;
+export const BlogCommentServiceService = {
+  listBlogComments: {
+    path: "/resource.BlogCommentService/ListBlogComments" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: ListBlogCommentsRequest): Buffer =>
+      Buffer.from(ListBlogCommentsRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ListBlogCommentsRequest => ListBlogCommentsRequest.decode(value),
+    responseSerialize: (value: ListBlogCommentsResponse): Buffer =>
+      Buffer.from(ListBlogCommentsResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ListBlogCommentsResponse => ListBlogCommentsResponse.decode(value),
+  },
+  createBlogComment: {
+    path: "/resource.BlogCommentService/CreateBlogComment" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: CreateBlogCommentRequest): Buffer =>
+      Buffer.from(CreateBlogCommentRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): CreateBlogCommentRequest => CreateBlogCommentRequest.decode(value),
+    responseSerialize: (value: BlogCommentResponse): Buffer => Buffer.from(BlogCommentResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): BlogCommentResponse => BlogCommentResponse.decode(value),
+  },
+  updateBlogComment: {
+    path: "/resource.BlogCommentService/UpdateBlogComment" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: UpdateBlogCommentRequest): Buffer =>
+      Buffer.from(UpdateBlogCommentRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): UpdateBlogCommentRequest => UpdateBlogCommentRequest.decode(value),
+    responseSerialize: (value: BlogCommentResponse): Buffer => Buffer.from(BlogCommentResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): BlogCommentResponse => BlogCommentResponse.decode(value),
+  },
+  deleteBlogComment: {
+    path: "/resource.BlogCommentService/DeleteBlogComment" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: DeleteBlogCommentRequest): Buffer =>
+      Buffer.from(DeleteBlogCommentRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): DeleteBlogCommentRequest => DeleteBlogCommentRequest.decode(value),
+    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
+  },
+} as const;
+
+export interface BlogCommentServiceServer extends UntypedServiceImplementation {
+  listBlogComments: handleUnaryCall<ListBlogCommentsRequest, ListBlogCommentsResponse>;
+  createBlogComment: handleUnaryCall<CreateBlogCommentRequest, BlogCommentResponse>;
+  updateBlogComment: handleUnaryCall<UpdateBlogCommentRequest, BlogCommentResponse>;
+  deleteBlogComment: handleUnaryCall<DeleteBlogCommentRequest, Empty>;
 }
 
 /**
