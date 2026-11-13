@@ -221,8 +221,10 @@ services:
     environment:
       - POSTGRES_DB=file_db
       - MINIO_USE_SSL=false
-      # min-io is only resolvable inside the compose network; browsers use the published port
-      - MINIO_PUBLIC_URL=http://localhost:${MINIO_PORT:-9000}
+      # Base URL browsers load files from (public URLs and presigned uploads). min-io is only
+      # resolvable inside the compose network; set MINIO_PUBLIC_URL in docker/.env when MinIO is
+      # served on a public host (e.g. behind the same reverse proxy as the API).
+      - MINIO_PUBLIC_URL=${MINIO_PUBLIC_URL:-http://localhost:9000}
       - HOST=0.0.0.0
       - HEALTH_PORT=9106
       - PORT=50050
