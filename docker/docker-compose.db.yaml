@@ -3,7 +3,7 @@ services:
     image: postgres:18-alpine
     restart: unless-stopped
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${INFRA_BIND_ADDRESS:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
     user: ${POSTGRES_USER:-postgres}
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -30,8 +30,8 @@ services:
     image: redis/redis-stack:7.4.0-v8
     restart: unless-stopped
     ports:
-      - "${REDIS_PORT:-6379}:6379"
-      - "${REDIS_INSIGHT_PORT:-8002}:8001"
+      - "${INFRA_BIND_ADDRESS:-127.0.0.1}:${REDIS_PORT:-6379}:6379"
+      - "${INFRA_BIND_ADDRESS:-127.0.0.1}:${REDIS_INSIGHT_PORT:-8002}:8001"
     networks:
       - api-network
     volumes:
@@ -41,7 +41,7 @@ services:
     image: adminer:5.4.2
     restart: unless-stopped
     ports:
-      - ${ADMINER_PORT:-8090}:8080
+      - ${INFRA_BIND_ADDRESS:-127.0.0.1}:${ADMINER_PORT:-8090}:8080
     networks:
       - api-network
 
@@ -56,8 +56,8 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio123}
       MINIO_BROWSER_REDIRECT_URL: https://meowlish.servebeer.com/minio
     ports:
-      - "${MINIO_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+      - "${INFRA_BIND_ADDRESS:-127.0.0.1}:${MINIO_PORT:-9000}:9000"
+      - "${INFRA_BIND_ADDRESS:-127.0.0.1}:${MINIO_CONSOLE_PORT:-9001}:9001"
     volumes:
       - minio-data:/data
     networks:
@@ -67,8 +67,8 @@ services:
     image: rabbitmq:4.2-management-alpine
     restart: unless-stopped
     ports:
-      - "${RABBITMQ_PORT:-5672}:5672"
-      - "${RABBITMQ_MNGMNT_PORT:-15672}:15672"
+      - "${INFRA_BIND_ADDRESS:-127.0.0.1}:${RABBITMQ_PORT:-5672}:5672"
+      - "${INFRA_BIND_ADDRESS:-127.0.0.1}:${RABBITMQ_MNGMNT_PORT:-15672}:15672"
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-user}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-password}

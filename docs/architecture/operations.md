@@ -70,7 +70,7 @@ No contact point is configured: alerts are visible in Grafana only.
 | Adminer                         | 8090                                                                                                                   |
 | Grafana / OTLP gRPC / OTLP HTTP | 3001 / 4317 / 4318                                                                                                     |
 
-All Envoy ports are published on `127.0.0.1` only (`ENVOY_GATEWAY_BIND_ADDRESS`, `ENVOY_SIDECAR_BIND_ADDRESS`; admin always localhost): the sidecars bypass the gateway's checks, so they must not be reachable from other machines (S16 in `docs/fixed-issues.md`). authorization has no Envoy sidecar.
+Every port in this table is published on `127.0.0.1` only (`INFRA_BIND_ADDRESS` for the infrastructure, S20). All Envoy ports are published on `127.0.0.1` only (`ENVOY_GATEWAY_BIND_ADDRESS`, `ENVOY_SIDECAR_BIND_ADDRESS`; admin always localhost): the sidecars bypass the gateway's checks, so they must not be reachable from other machines (S16 in `docs/fixed-issues.md`). authorization has no Envoy sidecar.
 
 ## Deploy-order reminders (details in upgrade-notes)
 

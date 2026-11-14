@@ -4,6 +4,12 @@ What was fixed from [`backlog.md`](backlog.md), and how. Newest first. Each entr
 
 ## November 2026
 
+### S20: Postgres, Redis, MinIO, RabbitMQ and Adminer were open to other machines
+
+- **Problem:** `docker-compose.db.yaml` (and the observability stack) published every infrastructure port on all interfaces: Postgres (5434 in production), Redis without a password (6381) and RedisInsight (8003), Adminer (8180), MinIO's API and console (9000, 9001), RabbitMQ and its management UI (5673, 15673), and Grafana/OTLP. Anything on the network could reach them directly.
+- **Fix:** all of these bind `${INFRA_BIND_ADDRESS:-127.0.0.1}` (`docker/docker-compose.db.yaml`, `docker/docker-compose.observability.yaml`, documented in `docker/.env.example`). What browsers need already goes through Caddy on the host: files and uploads via `MINIO_PUBLIC_URL` (the public domain, proxied to `localhost:9000`), the MinIO console via `/minio` (to `localhost:9001`).
+- **Running systems:** applied on 14 November 2026 by recreating the infrastructure containers one by one; every service reconnected (23 of 23 consumer queues had their consumer back), the API and public files kept answering, and from the LAN address every one of these ports (and the Envoy ones from S16) is closed. Remote tools now need an SSH tunnel, or `INFRA_BIND_ADDRESS=0.0.0.0` deliberately.
+
 ### S16: the Envoy gRPC-web sidecars were reachable from other machines
 
 - **Problem:** every gRPC service except authorization has an Envoy gRPC-web sidecar, and compose published their ports on all interfaces (`0.0.0.0:8081-8088`, `8095`, plus Envoy's admin port 9900). Services trust `requesterId`, `privileged`, `mayAttachAnyFile` and `recipientId` from the message, so anyone who could reach a sidecar skipped the gateway and its checks (for example `UpdateExam` with `privileged: true`).

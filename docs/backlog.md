@@ -10,9 +10,8 @@ When you fix an item, delete it here in the same commit and describe the fix in 
 
 ## Security
 
-| #   | Status   | Where                                          | Problem                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Suggested fix                                                                                              |
-| --- | -------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| S20 | Decision | `docker/docker-compose.db.yaml`, `docker/.env` | Postgres (`POSTGRES_PORT`, 5434 in production) and the MinIO API and console (9000, 9001) are published on all interfaces. Postgres is password-protected and MinIO's public URL goes through Caddy, but neither needs to be reachable from other machines unless someone uses them remotely (this host also runs headscale). Bind them to `127.0.0.1` (as Redis and RabbitMQ already are) once nobody relies on remote access; check MinIO's `MINIO_PUBLIC_URL` first. | Prefix the port mappings with a bind address defaulting to `127.0.0.1`, as done for the Envoy ports (S16). |
+| #   | Status | Where | Problem | Suggested fix |
+| --- | ------ | ----- | ------- | ------------- |
 
 ## Correctness
 
