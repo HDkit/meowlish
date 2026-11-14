@@ -1,7 +1,66 @@
 import { ExamStatus } from '../../src/enums/exam-status.enum';
 import { QuestionType } from '../../src/enums/question-type.enum';
 import { SectionType } from '../../src/enums/section-type.enum';
-import { Prisma } from '@prisma-client/exam';
+import { Prisma, PrismaClient } from '@prisma-client/exam';
+
+// TOEIC Reading Parts 5-7 only (32 questions, numbered 101-132 as in a real test). There is no
+// Listening part and no audio, so the exam is labelled and timed as a Reading test.
+const TITLE = 'TOEIC Reading 2 (Part 5–7)';
+const TAGS = ['TOEIC Reading'];
+// TOEIC Reading allows 75 minutes for 100 questions; 32 questions get 25 minutes.
+const DURATION_SECONDS = 25 * 60;
+
+const passage = (html: string) =>
+	`<div class="context-wrapper"><div class="context-content text-highlightable"><div>${html}</div></div></div>`;
+
+const PART5_DIRECTIVE = `<div><p><strong>Part 5</strong></p><p><em>A word or phrase is missing in each of the sentences below. Four answer choices are given below each sentence. Select the best answer to complete the sentence.</em></p></div>`;
+const PART6_DIRECTIVE = `<div><p><strong>Part 6</strong></p><p><em>Read the texts that follow. A word, phrase, or sentence is missing in parts of each text. Four answer choices for each question are given below the text. Select the best answer to complete the text.</em></p></div>`;
+const PART7_DIRECTIVE = `<div><p><strong>Part 7</strong></p><p><em>In this part you will read a selection of texts, such as emails, notices and advertisements. Each text is followed by several questions. Select the best answer for each question.</em></p></div>`;
+
+const PART6_TEXT_1 =
+	passage(`<p><strong>Questions 116-119</strong> refer to the following letter.</p>
+<p>Dear Valued Customers,</p>
+<p>We are writing to let you know about an update to our return policy. The 30-day return period has not changed, and you can still exchange items at any of our stores. The new policy ____116____ effective from June 1. ____117____, refunds will now be issued only to the original method of payment. This change was ____118____ by our customer service team after reviewing your feedback over the past year.</p>
+<p>____119____</p>
+<p>Sincerely,<br/>Martin Hale<br/>Store Manager, Brightway Home Goods</p>`);
+
+const PART6_TEXT_2 =
+	passage(`<p><strong>Questions 120-123</strong> refer to the following announcement.</p>
+<p>Greenfield Business Center will ____120____ a series of free marketing workshops next month. The sessions, whose content is ____121____ updated to reflect the latest trends, are designed for owners of small businesses. They are offered in partnership ____122____ the Greenfield Chamber of Commerce. Each workshop takes place on a Thursday evening from 6 to 8 p.m. ____123____ To reserve a seat, visit www.greenfieldbc.com/workshops by May 20.</p>`);
+
+const PART7_EMAIL = passage(`<p><strong>Questions 124-126</strong> refer to the following email.</p>
+<p><strong>To:</strong> All Downtown Branch Staff<br/><strong>From:</strong> Elena Park, Operations Manager<br/><strong>Subject:</strong> Proposed schedule change</p>
+<p>Dear team,</p>
+<p>Starting next quarter, I would like to move our opening hours from 9:00 a.m.–5:00 p.m. to 8:00 a.m.–4:00 p.m. Many of our clients have asked to meet before their own workday begins, and an earlier start would let us serve them better.</p>
+<p>This schedule was piloted at our Riverside and Northgate branches over the last three months. Both branches reported higher client satisfaction and no increase in costs.</p>
+<p>Before I submit the proposal, I would like to hear your views. Please reply to this email by Friday with any concerns.</p>
+<p>Best regards,<br/>Elena Park</p>`);
+
+const PART7_NOTICE =
+	passage(`<p><strong>Questions 127-129</strong> refer to the following notice.</p>
+<p><strong>Fresh Market: Our New Recycling Program</strong></p>
+<p>Beginning April 1, Fresh Market will collect glass, plastic and paper at the recycling station next to our main entrance. To reduce waste further, we encourage all customers to bring their own bags when they shop.</p>
+<p>As a thank-you, every customer who drops off recyclable items will receive a coupon for 10% off their next purchase. Coupons are available at the customer service desk.</p>`);
+
+const PART7_JOB_AD =
+	passage(`<p><strong>Questions 130-132</strong> refer to the following advertisement.</p>
+<p><strong>Software Developer – Bluewave Technologies</strong></p>
+<p>Bluewave Technologies is looking for a software developer to join its product team in Singapore. The successful candidate will design and maintain the web applications used by our clients.</p>
+<p><strong>Requirements:</strong> at least five years of experience in software development and strong communication skills. A degree in computer science is preferred but not required.</p>
+<p><strong>We offer:</strong> a competitive salary, flexible working hours and opportunities for professional training.</p>
+<p>To apply, send your résumé to careers@bluewave.example by June 30.</p>`);
+
+/** Section directives by id; also applied to databases seeded before they existed. */
+const DIRECTIVES: Record<string, string> = {
+	s55: PART5_DIRECTIVE,
+	s56: PART6_DIRECTIVE,
+	s57: PART7_DIRECTIVE,
+	s561: PART6_TEXT_1,
+	s562: PART6_TEXT_2,
+	s571: PART7_EMAIL,
+	s572: PART7_NOTICE,
+	s573: PART7_JOB_AD,
+};
 
 export class ToeicLr2ExamSeeder {
 	constructor(private readonly tagNamesToIdInputs: (names: string[]) => { tagId: string }[]) {}
@@ -10,12 +69,12 @@ export class ToeicLr2ExamSeeder {
 		return {
 			id: '5',
 			createdBy: 'admin',
-			title: 'TOEIC LR 2',
-			duration: 2 * 60 * 60,
+			title: TITLE,
+			duration: DURATION_SECONDS,
 			status: ExamStatus.Approved,
 			examTags: {
 				createMany: {
-					data: this.tagNamesToIdInputs(['TOEIC Listening', 'TOEIC Reading']),
+					data: this.tagNamesToIdInputs(TAGS),
 					skipDuplicates: true,
 				},
 			},
@@ -27,6 +86,7 @@ export class ToeicLr2ExamSeeder {
 		return [
 			{
 				id: 's55',
+				directive: DIRECTIVES.s55,
 				order: 5,
 				contentType: SectionType.Question,
 				questions: {
@@ -264,12 +324,14 @@ export class ToeicLr2ExamSeeder {
 		return [
 			{
 				id: 's56',
+				directive: DIRECTIVES.s56,
 				order: 6,
 				contentType: SectionType.Section,
 				childSections: {
 					create: [
 						{
 							id: 's561',
+							directive: DIRECTIVES.s561,
 							examId: '5',
 							order: 1,
 							contentType: SectionType.Question,
@@ -344,6 +406,7 @@ export class ToeicLr2ExamSeeder {
 						},
 						{
 							id: 's562',
+							directive: DIRECTIVES.s562,
 							examId: '5',
 							order: 2,
 							contentType: SectionType.Question,
@@ -422,12 +485,14 @@ export class ToeicLr2ExamSeeder {
 		return [
 			{
 				id: 's57',
+				directive: DIRECTIVES.s57,
 				order: 7,
 				contentType: SectionType.Section,
 				childSections: {
 					create: [
 						{
 							id: 's571',
+							directive: DIRECTIVES.s571,
 							examId: '5',
 							order: 1,
 							contentType: SectionType.Question,
@@ -496,6 +561,7 @@ export class ToeicLr2ExamSeeder {
 						},
 						{
 							id: 's572',
+							directive: DIRECTIVES.s572,
 							examId: '5',
 							order: 2,
 							contentType: SectionType.Question,
@@ -564,6 +630,7 @@ export class ToeicLr2ExamSeeder {
 						},
 						{
 							id: 's573',
+							directive: DIRECTIVES.s573,
 							examId: '5',
 							order: 3,
 							contentType: SectionType.Question,
@@ -631,4 +698,28 @@ export class ToeicLr2ExamSeeder {
 			},
 		];
 	}
+}
+
+/**
+ * The exam seed skips exams that already exist, so databases seeded before this fix keep the old
+ * "TOEIC LR 2": labelled Listening + Reading for 2 hours, with no Part 6/7 passages. Bring an
+ * existing exam 5 up to date in place (attempts keep pointing at the same sections and questions).
+ */
+export async function refreshToeicLr2(
+	prisma: PrismaClient,
+	tagNamesToIdInputs: (names: string[]) => { tagId: string }[],
+): Promise<void> {
+	const exam = await prisma.exam.findUnique({ where: { id: '5' }, select: { id: true } });
+	if (!exam) return;
+	await prisma.$transaction([
+		prisma.exam.update({ where: { id: '5' }, data: { title: TITLE, duration: DURATION_SECONDS } }),
+		prisma.examTag.deleteMany({ where: { examId: '5' } }),
+		prisma.examTag.createMany({
+			data: tagNamesToIdInputs(TAGS).map(t => ({ examId: '5', tagId: t.tagId })),
+			skipDuplicates: true,
+		}),
+		...Object.entries(DIRECTIVES).map(([id, directive]) =>
+			prisma.section.updateMany({ where: { id: id, examId: '5' }, data: { directive: directive } }),
+		),
+	]);
 }

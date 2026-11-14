@@ -6,7 +6,7 @@ import { IeltsLExamSeeder } from './exam-ielts-l';
 import { IeltsRExamSeeder } from './exam-ielts-r';
 import { IeltsR2ExamSeeder } from './exam-ielts-r-2';
 import { ToeicLrExamSeeder } from './exam-toeic-lr';
-import { ToeicLr2ExamSeeder } from './exam-toeic-lr-2';
+import { ToeicLr2ExamSeeder, refreshToeicLr2 } from './exam-toeic-lr-2';
 import { Prisma, PrismaClient } from '@prisma-client/exam';
 
 // i'm seeding it
@@ -753,4 +753,5 @@ Discuss both these views and give your own opinion. Give reasons for your answer
 			}
 		}
 	}
+	await refreshToeicLr2(prisma, tagNamesToIdInputs);
 }
