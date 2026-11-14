@@ -6,6 +6,7 @@ import { ExamEventHandlers, IntegrationEventHandlers } from './app/events/handle
 import { IntegrationEventPublishers } from './app/events/publishers';
 import { ExamManagementQueryHandlers } from './app/queries/handlers/management';
 import { ExamPracticeQueryHandler } from './app/queries/handlers/practice';
+import { ExamSlugBackfill } from './app/services/exam-slug-backfill.service';
 import { FileOwnershipService } from './app/services/file-ownership.service';
 import { GoalService } from './app/services/goal.service';
 import { TagService } from './app/services/tag.service';
@@ -15,6 +16,7 @@ import { rmqPubConfig } from './configs/rmq.pub.config';
 import { rmqSubConfig } from './configs/rmq.sub.config';
 import { FILE_CLIENT } from './constants/file';
 import { IAttemptRepositoryToken } from './domain/repositories/attempt.repository';
+import { IExamSlugRepositoryToken } from './domain/repositories/exam-slug.repository';
 import { IExamRepositoryToken } from './domain/repositories/exam.repository';
 import { IFileRepositoryToken } from './domain/repositories/file.repository';
 import { IGoalRepositoryToken } from './domain/repositories/goal.repository';
@@ -25,6 +27,7 @@ import { ISectionRepositoryToken } from './domain/repositories/section.repositor
 import { ITagReadRepositoryToken } from './domain/repositories/tag.read.repository';
 import { ITagRepositoryToken } from './domain/repositories/tag.repository';
 import { AttemptPrismaRepositoryImpl } from './infra/repositories/attempt.prisma.repository.impl';
+import { ExamSlugPrismaRepositoryImpl } from './infra/repositories/exam-slug.prisma.repository.impl';
 import { ExamPrismaRepositoryImpl } from './infra/repositories/exam.prisma.repository.impl';
 import { FilePrismaRepositoryImpl } from './infra/repositories/file.prisma.repository.impl';
 import { GoalPrismaRepositoryImpl } from './infra/repositories/goal.prisma.repository.impl';
@@ -143,6 +146,11 @@ const rmqPubModule = RabbitMQModule.forRootAsync({
 			provide: IExamRepositoryToken,
 			useClass: ExamPrismaRepositoryImpl,
 		},
+		{
+			provide: IExamSlugRepositoryToken,
+			useClass: ExamSlugPrismaRepositoryImpl,
+		},
+		ExamSlugBackfill,
 		{
 			provide: ISectionRepositoryToken,
 			useClass: SectionPrismaRepositoryImpl,

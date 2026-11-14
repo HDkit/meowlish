@@ -18,6 +18,9 @@ export class ExamDetailedManagementInfoDto implements exam.ExamManagementDetaile
 	id!: string;
 
 	@Expose()
+	slug?: string;
+
+	@Expose()
 	sectionIds!: string[];
 
 	@Expose()

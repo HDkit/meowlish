@@ -5,6 +5,8 @@ model Exam {
   updatedAt   DateTime @updatedAt @map("updated_at")
   version     Int      @default(1)
   title       String
+  /// Readable URL key from the title (`/test/<slug>`), unique; set on create and never changed.
+  slug        String?  @unique
   description String?
   status      String
   // duration in seconds

@@ -391,7 +391,11 @@ export interface DetailedExamInfo {
   duration: number;
   tags: string[];
   sections: DetailedExamInfo_DetailedExamSection[];
-  updatedAt: Date | undefined;
+  updatedAt:
+    | Date
+    | undefined;
+  /** readable URL key (`/test/<slug>`); lookups accept it in place of the id */
+  slug?: string | undefined;
 }
 
 export interface DetailedExamInfo_DetailedExamSection {
@@ -443,6 +447,7 @@ export interface Exams_MinimalExamInfo {
   duration: number;
   tags: string[];
   updatedAt: Date | undefined;
+  slug?: string | undefined;
 }
 
 export interface GetDetailedQuestionDto {
@@ -686,6 +691,7 @@ export interface FoundExamsForManagement_ExamManagementMinimalInfo {
   updatedAt: Date | undefined;
   title: string;
   status: string;
+  slug?: string | undefined;
 }
 
 export interface ExamManagementDetailedInfo {
@@ -699,6 +705,7 @@ export interface ExamManagementDetailedInfo {
   duration: number;
   sectionIds: string[];
   tags: string[];
+  slug?: string | undefined;
 }
 
 export interface TagList {
@@ -4519,6 +4526,9 @@ export const DetailedExamInfo: MessageFns<DetailedExamInfo> = {
     if (message.updatedAt !== undefined) {
       Timestamp.encode(toTimestamp(message.updatedAt), writer.uint32(66).fork()).join();
     }
+    if (message.slug !== undefined) {
+      writer.uint32(74).string(message.slug);
+    }
     return writer;
   },
 
@@ -4597,6 +4607,14 @@ export const DetailedExamInfo: MessageFns<DetailedExamInfo> = {
             }
 
             message.updatedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 9: {
+            if (tag !== 74) {
+              break;
+            }
+
+            message.slug = reader.string();
             continue;
           }
         }
@@ -5012,6 +5030,9 @@ export const Exams_MinimalExamInfo: MessageFns<Exams_MinimalExamInfo> = {
     if (message.updatedAt !== undefined) {
       Timestamp.encode(toTimestamp(message.updatedAt), writer.uint32(58).fork()).join();
     }
+    if (message.slug !== undefined) {
+      writer.uint32(66).string(message.slug);
+    }
     return writer;
   },
 
@@ -5082,6 +5103,14 @@ export const Exams_MinimalExamInfo: MessageFns<Exams_MinimalExamInfo> = {
             }
 
             message.updatedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 8: {
+            if (tag !== 66) {
+              break;
+            }
+
+            message.slug = reader.string();
             continue;
           }
         }
@@ -7582,6 +7611,9 @@ export const FoundExamsForManagement_ExamManagementMinimalInfo: MessageFns<
     if (message.status !== "") {
       writer.uint32(50).string(message.status);
     }
+    if (message.slug !== undefined) {
+      writer.uint32(58).string(message.slug);
+    }
     return writer;
   },
 
@@ -7646,6 +7678,14 @@ export const FoundExamsForManagement_ExamManagementMinimalInfo: MessageFns<
             message.status = reader.string();
             continue;
           }
+          case 7: {
+            if (tag !== 58) {
+              break;
+            }
+
+            message.slug = reader.string();
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -7704,6 +7744,9 @@ export const ExamManagementDetailedInfo: MessageFns<ExamManagementDetailedInfo> 
     }
     for (const v of message.tags) {
       writer.uint32(82).string(v!);
+    }
+    if (message.slug !== undefined) {
+      writer.uint32(90).string(message.slug);
     }
     return writer;
   },
@@ -7799,6 +7842,14 @@ export const ExamManagementDetailedInfo: MessageFns<ExamManagementDetailedInfo> 
             }
 
             message.tags.push(reader.string());
+            continue;
+          }
+          case 11: {
+            if (tag !== 90) {
+              break;
+            }
+
+            message.slug = reader.string();
             continue;
           }
         }

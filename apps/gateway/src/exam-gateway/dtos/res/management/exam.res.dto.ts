@@ -23,6 +23,10 @@ export class ExamDetailedManagementInfoDto {
 	id!: string;
 
 	@Expose()
+	@ApiPropertyOptional({ description: 'Readable URL key; lookups accept it in place of the id' })
+	slug?: string;
+
+	@Expose()
 	@ApiProperty({ type: [String] })
 	sectionIds!: string[];
 

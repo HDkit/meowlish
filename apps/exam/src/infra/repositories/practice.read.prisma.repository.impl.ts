@@ -472,6 +472,7 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 		const rows = await this.txHost.tx.$queryRaw<
 			{
 				id: string;
+				slug: string | null;
 				name: string;
 				description: string | null;
 				attemptsCount: number;
@@ -484,6 +485,7 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 
       SELECT
         e.id,
+        e.slug,
         e.title AS name,
         e.description,
         e.duration,
@@ -526,7 +528,11 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 		);
 
 		if (dir === -1) rows.reverse();
-		return rows.map(r => ({ ...r, description: r.description ?? undefined }));
+		return rows.map(r => ({
+			...r,
+			slug: r.slug ?? undefined,
+			description: r.description ?? undefined,
+		}));
 	}
 
 	/** Name and tag conditions on `e` (exams), shared by the list and its count. */
@@ -630,6 +636,7 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 		const [exam] = await this.txHost.tx.$queryRaw<
 			{
 				id: string;
+				slug: string | null;
 				name: string;
 				description: string | null;
 				duration: number;
@@ -641,6 +648,7 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 			Prisma.sql`
       SELECT
         e.id,
+        e.slug,
         e.title AS name,
         e.description,
         e.duration,
@@ -664,7 +672,7 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
         ON t.id = et.tag_id
 
       WHERE e.status = ${ExamStatus.Approved}
-      AND e.id = ${examId}
+      AND (e.id = ${examId} OR e.slug = ${examId})
 
       GROUP BY e.id
     `,
@@ -716,7 +724,7 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
         ON tag_names.id = st.tag_id
         OR tag_names.id = qt.tag_id
 
-      WHERE s.exam_id = ${examId}
+      WHERE s.exam_id = ${exam.id}
         AND s.parent_id IS NULL
 
       GROUP BY s.id
@@ -727,6 +735,7 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 
 		return {
 			id: exam.id,
+			slug: exam.slug ?? undefined,
 			name: exam.name,
 			description: exam.description ?? undefined,
 			duration: exam.duration,
@@ -738,8 +747,9 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 	}
 
 	async getExamStats(examId: string): Promise<ExamStatistics | null> {
-		const exam = await this.txHost.tx.exam.findUnique({
-			where: { id: examId, status: ExamStatus.Approved },
+		// the URL may carry the slug instead of the id
+		const exam = await this.txHost.tx.exam.findFirst({
+			where: { status: ExamStatus.Approved, OR: [{ id: examId }, { slug: examId }] },
 		});
 		if (!exam) return null;
 
@@ -763,7 +773,7 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
         ) AS "averageScoreInPercentage"
 
       FROM attempts
-      WHERE exam_id = ${examId}
+      WHERE exam_id = ${exam.id}
       AND ended_at IS NOT NULL
     `,
 		);

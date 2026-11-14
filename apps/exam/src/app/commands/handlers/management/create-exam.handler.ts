@@ -1,5 +1,9 @@
 import { Exam } from '../../../../domain/entities/exam.entity';
 import {
+	type IExamSlugRepository,
+	IExamSlugRepositoryToken,
+} from '../../../../domain/repositories/exam-slug.repository';
+import {
 	type IExamRepository,
 	IExamRepositoryToken,
 } from '../../../../domain/repositories/exam.repository';
@@ -15,6 +19,7 @@ export class CreateExamHandler implements ICommandHandler<CreateExamCommand> {
 	constructor(
 		@Inject(IExamRepositoryToken) private readonly examRepository: IExamRepository,
 		private readonly outbox: OutboxPublisher,
+		@Inject(IExamSlugRepositoryToken) private readonly slugRepository: IExamSlugRepository,
 	) {}
 
 	@Transactional()
@@ -27,6 +32,7 @@ export class CreateExamHandler implements ICommandHandler<CreateExamCommand> {
 			tags: [],
 		});
 		await this.examRepository.save(exam);
+		await this.slugRepository.assignSlug(exam.id.id, payload.title);
 
 		await this.outbox.add('exam.exam.created', {
 			resourceType: 'exam',

@@ -58,6 +58,7 @@ export class ManagementPrismaRepositoryImpl implements IManagementReadRepository
 				updatedAt: true,
 				title: true,
 				status: true,
+				slug: true,
 			},
 			orderBy: [
 				...(options?.sortBy ?
@@ -73,7 +74,7 @@ export class ManagementPrismaRepositoryImpl implements IManagementReadRepository
 			}),
 			take: dir * limit,
 		});
-		return foundExams;
+		return foundExams.map(e => ({ ...e, slug: e.slug ?? undefined }));
 	}
 
 	async getExamDetail(examId: string): Promise<ExamManagementDetailedInfo | null> {
@@ -86,6 +87,7 @@ export class ManagementPrismaRepositoryImpl implements IManagementReadRepository
 				updatedAt: true,
 				title: true,
 				status: true,
+				slug: true,
 				description: true,
 				duration: true,
 				sections: {
@@ -101,6 +103,7 @@ export class ManagementPrismaRepositoryImpl implements IManagementReadRepository
 
 		return {
 			...foundExam,
+			slug: foundExam.slug ?? undefined,
 			description: foundExam.description ?? undefined,
 			sectionIds: foundExam.sections.map(s => s.id),
 			tags: foundExam.examTags.map(t => t.tag.name),

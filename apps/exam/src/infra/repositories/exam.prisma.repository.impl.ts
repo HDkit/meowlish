@@ -158,7 +158,8 @@ type ExtendedExam = Prisma.ExamGetPayload<{
 	include: typeof examPrismaIncludeObj;
 }>;
 
-type RepoExam = Omit<PrismaExam, 'updatedAt' | 'createdAt'>;
+// slug is owned by ExamSlugPrismaRepositoryImpl: saving the aggregate never writes (or clears) it
+type RepoExam = Omit<PrismaExam, 'updatedAt' | 'createdAt' | 'slug'>;
 
 const examPrismaIncludeObj = {
 	sections: {

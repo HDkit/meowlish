@@ -414,6 +414,8 @@ message DetailedExamInfo {
 	repeated string              tags           = 6;
 	repeated DetailedExamSection sections       = 7;
 	google.protobuf.Timestamp    updated_at     = 8;
+	// readable URL key (`/test/<slug>`); lookups accept it in place of the id
+	optional string              slug           = 9;
 
 	message DetailedExamSection {
 		string          id              = 1;
@@ -460,6 +462,7 @@ message Exams {
 		int32                     duration       = 5;
 		repeated string           tags           = 6;
 		google.protobuf.Timestamp updated_at     = 7;
+		optional string           slug           = 8;
 	}
 }
 
@@ -692,6 +695,7 @@ message FoundExamsForManagement {
 		google.protobuf.Timestamp updated_at = 4;
 		string                    title      = 5;
 		string                    status     = 6;
+		optional string           slug       = 7;
 	}
 }
 
@@ -706,6 +710,7 @@ message ExamManagementDetailedInfo {
 	int32                     duration    = 8;
 	repeated string           section_ids = 9;
 	repeated string           tags        = 10;
+	optional string           slug        = 11;
 }
 
 message TagList {
