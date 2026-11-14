@@ -2,7 +2,7 @@ import { type ResourceEventsPublisher } from '../../../app/events/resource-event
 import { ReportService } from '../../../app/services/report.service';
 import { ReportStatus } from '../../../enums/report-status.enum';
 import { NoOpTransactionalAdapter, TransactionHost } from '@nestjs-cls/transactional';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 
 const report = (overrides: Record<string, unknown> = {}) => ({
 	id: 'r1',
@@ -35,6 +35,7 @@ new TransactionHost<NoOpTransactionalAdapter>({
 
 const setup = () => {
 	const tx = {
+		$queryRaw: jest.fn().mockResolvedValue([]),
 		report: {
 			findUnique: jest.fn(),
 			findMany: jest.fn().mockResolvedValue([]),
@@ -125,27 +126,6 @@ describe('ReportService access rules', () => {
 		tx.report.update.mockResolvedValue(report());
 		await service.updateReport({ id: 'r1', adminResponse: 'noted' });
 		expect(events.reportStatusChanged).not.toHaveBeenCalled();
-	});
-
-	it('keeps resolvedBy when an update changes neither status nor response', async () => {
-		const { tx, service } = setup();
-		const dataOf = (call: number) =>
-			(tx.report.update.mock.calls as [{ data: { resolvedBy: string | null } }][])[call][0].data;
-		tx.report.findUnique.mockResolvedValue(
-			report({ status: 'resolved', resolvedBy: 'mod1', adminResponse: 'done' }),
-		);
-		tx.report.update.mockResolvedValue(report());
-
-		await service.updateReport({
-			id: 'r1',
-			status: ReportStatus.Resolved,
-			adminResponse: 'done',
-			resolvedBy: 'mod2',
-		});
-		expect(dataOf(0).resolvedBy).toBe('mod1');
-
-		await service.updateReport({ id: 'r1', adminResponse: 'more detail', resolvedBy: 'mod2' });
-		expect(dataOf(1).resolvedBy).toBe('mod2');
 	});
 
 	it('returns 404 when removing a file that is not attached', async () => {
@@ -239,6 +219,112 @@ describe('ReportService file ownership', () => {
 		await service.addFileToReport('r1', 'theirs', { id: 'admin', privileged: true }, true);
 		expect(files.assertOwnedBy).not.toHaveBeenCalled();
 		expect(tx.reportFile.createMany).toHaveBeenCalledTimes(2);
+	});
+});
+
+describe('ReportService resolution (C30)', () => {
+	const owner = { id: 'owner', privileged: false };
+	const dataOf = (tx: ReturnType<typeof setup>['tx'], call = 0) =>
+		(tx.report.update.mock.calls as [{ data: { resolvedBy: string | null } }][])[call][0].data;
+	const finalStatuses = [
+		ReportStatus.Resolved,
+		ReportStatus.Rejected,
+		ReportStatus.Dismissed,
+		ReportStatus.Closed,
+	];
+
+	it('records who resolved the report when it moves to a final status', async () => {
+		const { tx, service } = setup();
+		tx.report.findUnique.mockResolvedValue(report({ status: 'reviewing' }));
+		tx.report.update.mockResolvedValue(report({ status: 'resolved', resolvedBy: 'mod' }));
+		const result = await service.updateReport({
+			id: 'r1',
+			status: ReportStatus.Resolved,
+			adminResponse: 'fixed',
+			resolvedBy: 'mod',
+		});
+		expect(dataOf(tx)).toEqual({ status: 'resolved', resolvedBy: 'mod', adminResponse: 'fixed' });
+		expect(result.resolvedBy).toBe('mod');
+	});
+
+	it('leaves resolvedBy empty on non-final changes, clearing a stale value', async () => {
+		const { tx, service } = setup();
+		tx.report.findUnique.mockResolvedValue(report({ status: 'pending', resolvedBy: 'old-mod' }));
+		tx.report.update.mockResolvedValue(report({ status: 'reviewing' }));
+		await service.updateReport({ id: 'r1', status: ReportStatus.Reviewing, resolvedBy: 'mod' });
+		expect(dataOf(tx).resolvedBy).toBeNull();
+
+		await service.updateReport({ id: 'r1', adminResponse: 'looking', resolvedBy: 'mod' });
+		expect(dataOf(tx, 1)).toMatchObject({ status: 'pending', resolvedBy: null });
+	});
+
+	it.each(finalStatuses)('refuses any update once the report is %s (409)', async status => {
+		const { tx, events, service } = setup();
+		tx.report.findUnique.mockResolvedValue(report({ status: status, resolvedBy: 'mod1' }));
+		await expect(
+			service.updateReport({ id: 'r1', adminResponse: 'more', resolvedBy: 'admin' }),
+		).rejects.toBeInstanceOf(ConflictException);
+		await expect(
+			service.updateReport({ id: 'r1', status: ReportStatus.Pending, resolvedBy: 'admin' }),
+		).rejects.toBeInstanceOf(ConflictException);
+		expect(tx.report.update).not.toHaveBeenCalled();
+		expect(events.reportStatusChanged).not.toHaveBeenCalled();
+	});
+
+	it('locks the report row before reading it, so a second resolver sees the first', async () => {
+		const { tx, service } = setup();
+		tx.report.findUnique.mockResolvedValue(report());
+		tx.report.update.mockResolvedValue(report({ status: 'resolved' }));
+		await service.updateReport({ id: 'r1', status: ReportStatus.Resolved, resolvedBy: 'mod' });
+		const [sql, id] = (tx.$queryRaw.mock.calls as [TemplateStringsArray, string][])[0];
+		expect(sql.join('?')).toMatch(/FROM reports WHERE id = \? FOR UPDATE/);
+		expect(id).toBe('r1');
+		expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+			tx.report.findUnique.mock.invocationCallOrder[0],
+		);
+	});
+
+	it('hides resolvedBy on open reports written before the rule', async () => {
+		const { tx, service } = setup();
+		tx.report.findUnique.mockResolvedValue(report({ status: 'reviewing', resolvedBy: 'old-mod' }));
+		await expect(service.getReport('r1', owner)).resolves.toMatchObject({
+			resolvedBy: undefined,
+		});
+	});
+
+	it.each(finalStatuses)('refuses to add or remove files once the report is %s', async status => {
+		const { tx, files, events, service } = setup();
+		tx.report.findUnique.mockResolvedValue(report({ status: status }));
+		await expect(service.addFileToReport('r1', 'f1', owner)).rejects.toBeInstanceOf(
+			ConflictException,
+		);
+		await expect(service.removeFileFromReport('r1', 'f1', owner)).rejects.toBeInstanceOf(
+			ConflictException,
+		);
+		expect(files.assertOwnedBy).not.toHaveBeenCalled();
+		expect(tx.reportFile.createMany).not.toHaveBeenCalled();
+		expect(tx.reportFile.deleteMany).not.toHaveBeenCalled();
+		expect(events.fileAdded).not.toHaveBeenCalled();
+		expect(events.filesRemoved).not.toHaveBeenCalled();
+	});
+
+	it('refuses an attachment when the report was resolved during the uploader check', async () => {
+		const { tx, service } = setup();
+		tx.report.findUnique
+			.mockResolvedValueOnce(report())
+			.mockResolvedValueOnce(report({ status: 'resolved' }));
+		await expect(service.addFileToReport('r1', 'f1', owner)).rejects.toBeInstanceOf(
+			ConflictException,
+		);
+		expect(tx.reportFile.createMany).not.toHaveBeenCalled();
+	});
+
+	it('still 404s on someone else’s report before saying it is closed', async () => {
+		const { tx, service } = setup();
+		tx.report.findUnique.mockResolvedValue(report({ status: 'resolved' }));
+		await expect(
+			service.removeFileFromReport('r1', 'f1', { id: 'stranger', privileged: false }),
+		).rejects.toBeInstanceOf(NotFoundException);
 	});
 });
 

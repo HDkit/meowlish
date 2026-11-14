@@ -561,7 +561,10 @@ export interface ReportResponse {
   title: string;
   description: string;
   targetType?: string | undefined;
-  targetId?: string | undefined;
+  targetId?:
+    | string
+    | undefined;
+  /** Who moved the report to a final status (resolved, rejected, dismissed, closed); absent while open. */
   resolvedBy?: string | undefined;
   adminResponse?: string | undefined;
   fileIds: string[];
@@ -595,7 +598,13 @@ export interface GetReportRequest {
 
 export interface UpdateReportRequest {
   id: string | undefined;
-  status?: string | undefined;
+  status?:
+    | string
+    | undefined;
+  /**
+   * The caller (set by the gateway); recorded only when this update moves the report to a final
+   * status. A report in a final status refuses every update (ALREADY_EXISTS, HTTP 409).
+   */
   resolvedBy?: string | undefined;
   adminResponse?: string | undefined;
 }

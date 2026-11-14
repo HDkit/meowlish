@@ -2,6 +2,7 @@ import {
 	type ReportListReadModel,
 	type ReportReadModel,
 } from '../../domain/read-models/report.read-model';
+import { isFinalReportStatus } from '../../enums/report-status.enum';
 import { ResourceEventsPublisher } from '../events/resource-events.publisher';
 import { toSkipTake } from '../types/pagination';
 import {
@@ -13,7 +14,7 @@ import { type Requester } from '../types/requester';
 import { FileOwnershipService } from './file-ownership.service';
 import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, PrismaClient, Report, ReportFile } from '@prisma-client/resource';
 
 type ReportWithFiles = Report & { files: Pick<ReportFile, 'fileId'>[] };
@@ -38,7 +39,8 @@ export class ReportService {
 			description: report.description,
 			targetType: report.targetType ?? undefined,
 			targetId: report.targetId ?? undefined,
-			resolvedBy: report.resolvedBy ?? undefined,
+			// Rows from before C30 may name a staff member on an open report: not a resolver.
+			resolvedBy: isFinalReportStatus(report.status) ? (report.resolvedBy ?? undefined) : undefined,
 			adminResponse: report.adminResponse ?? undefined,
 			fileIds: report.files.map(f => f.fileId),
 			createdAt: report.createdAt.toISOString(),
@@ -56,6 +58,20 @@ export class ReportService {
 			throw new NotFoundException('Report not found');
 		}
 		return report;
+	}
+
+	/** `SELECT … FOR UPDATE` on the report row, so a concurrent resolution waits for this change. */
+	private async lockReport(id: string): Promise<void> {
+		await this.txHost.tx.$queryRaw`SELECT id FROM reports WHERE id = ${id} FOR UPDATE`;
+	}
+
+	/** Resolved (or otherwise finished) reports are frozen: 409 for any change. */
+	private assertOpen(report: Pick<Report, 'status'>): void {
+		if (isFinalReportStatus(report.status)) {
+			throw new ConflictException(
+				`This report is already ${report.status} and can no longer be changed`,
+			);
+		}
 	}
 
 	/**
@@ -100,21 +116,25 @@ export class ReportService {
 		return this.toReadModel(await this.findVisibleReport(id, requester));
 	}
 
+	/**
+	 * A report is resolved once, by one person: after it reaches a final status (`isFinalReportStatus`)
+	 * every update is 409, staff included. The row is locked first, so of two staff members resolving
+	 * at once the second waits, then sees the final status and gets 409. `resolvedBy` is set only by
+	 * the move into a final status (to the caller); while the report is open it stays null.
+	 */
 	@Transactional()
 	async updateReport(data: UpdateReportInput): Promise<ReportReadModel> {
+		await this.lockReport(data.id);
 		const report = await this.txHost.tx.report.findUnique({ where: { id: data.id } });
 		if (!report) throw new NotFoundException('Report not found');
+		this.assertOpen(report);
 
-		// `resolvedBy` is the staff member who last changed the status or the response (the frontend
-		// shows it as the response's author), so an update that changes neither keeps it.
-		const changesSomething =
-			(data.status !== undefined && String(data.status) !== report.status) ||
-			(data.adminResponse !== undefined && data.adminResponse !== report.adminResponse);
+		const status = data.status ?? report.status;
 		const updated = await this.txHost.tx.report.update({
 			where: { id: data.id },
 			data: {
-				status: data.status ?? report.status,
-				resolvedBy: changesSomething ? (data.resolvedBy ?? report.resolvedBy) : report.resolvedBy,
+				status: status,
+				resolvedBy: isFinalReportStatus(status) ? (data.resolvedBy ?? null) : null,
 				adminResponse: data.adminResponse ?? report.adminResponse,
 			},
 			include: withFiles,
@@ -176,15 +196,16 @@ export class ReportService {
 		requester: Requester,
 		mayAttachAnyFile = false,
 	): Promise<void> {
-		await this.findVisibleReport(reportId, requester);
+		this.assertOpen(await this.findVisibleReport(reportId, requester));
 		if (!mayAttachAnyFile) await this.fileOwnership.assertOwnedBy([fileId], requester.id);
 		await this.attachFile(reportId, fileId, requester);
 	}
 
 	@Transactional()
 	private async attachFile(reportId: string, fileId: string, requester: Requester): Promise<void> {
-		// again inside the transaction: the report may have been deleted meanwhile
-		await this.findVisibleReport(reportId, requester);
+		// again inside the transaction, locked: the report may have been deleted or resolved meanwhile
+		await this.lockReport(reportId);
+		this.assertOpen(await this.findVisibleReport(reportId, requester));
 		const { count } = await this.txHost.tx.reportFile.createMany({
 			data: [{ reportId: reportId, fileId: fileId }],
 			skipDuplicates: true,
@@ -199,7 +220,8 @@ export class ReportService {
 		fileId: string,
 		requester: Requester,
 	): Promise<void> {
-		await this.findVisibleReport(reportId, requester);
+		await this.lockReport(reportId);
+		this.assertOpen(await this.findVisibleReport(reportId, requester));
 		const { count } = await this.txHost.tx.reportFile.deleteMany({
 			where: { reportId: reportId, fileId: fileId },
 		});

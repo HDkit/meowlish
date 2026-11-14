@@ -12,37 +12,37 @@ Common to every route below:
 
 ## Contents
 
-| Operation                                                                                   | Access                                 | Writes                          | Events                                               |
-| ------------------------------------------------------------------------------------------- | -------------------------------------- | ------------------------------- | ---------------------------------------------------- |
-| [POST /blogs](#post-apiv1resourcesblogs)                                                    | any user                               | `Blog`                          | `resource.resource.created`                          |
-| [GET /blogs/tags](#get-apiv1resourcesblogstags)                                             | any user                               | -                               | -                                                    |
-| [GET /blogs/:id](#get-apiv1resourcesblogsid)                                                | any user                               | -                               | -                                                    |
-| [PATCH /blogs/:id](#patch-apiv1resourcesblogsid)                                            | `@ResourceAccess` blog                 | `Blog`                          | -                                                    |
-| [DELETE /blogs/:id](#delete-apiv1resourcesblogsid)                                          | `@ResourceAccess` blog                 | `Blog` (cascade `BlogComment`)  | `resource.resource.deleted`                          |
-| [GET /blogs](#get-apiv1resourcesblogs)                                                      | any user                               | -                               | -                                                    |
-| [GET /blogs/:id/comments](#get-apiv1resourcesblogsidcomments)                               | any user                               | -                               | -                                                    |
-| [POST /blogs/:id/comments](#post-apiv1resourcesblogsidcomments)                             | any user                               | `BlogComment`                   | `resource.blog-comment.created`                      |
-| [PATCH /blog-comments/:commentId](#patch-apiv1resourcesblog-commentscommentid)              | author (service)                       | `BlogComment`                   | -                                                    |
-| [DELETE /blog-comments/:commentId](#delete-apiv1resourcesblog-commentscommentid)            | author or mod/admin (service)          | `BlogComment`                   | -                                                    |
-| [POST /flash-cards](#post-apiv1resourcesflash-cards)                                        | list owner (service)                   | `FlashCard`                     | `resource.resource.created`                          |
-| [GET /flash-cards/:id](#get-apiv1resourcesflash-cardsid)                                    | visible list (service)                 | -                               | -                                                    |
-| [PATCH /flash-cards/:id](#patch-apiv1resourcesflash-cardsid)                                | `@ResourceAccess` flashcard            | `FlashCard`                     | -                                                    |
-| [DELETE /flash-cards/:id](#delete-apiv1resourcesflash-cardsid)                              | `@ResourceAccess` flashcard            | `FlashCard`                     | `resource.resource.deleted`                          |
-| [GET /flash-cards](#get-apiv1resourcesflash-cards)                                          | visible lists (service)                | -                               | -                                                    |
-| [POST /flash-card-lists](#post-apiv1resourcesflash-card-lists)                              | any user                               | `FlashCardList`                 | -                                                    |
-| [GET /flash-card-lists/:id](#get-apiv1resourcesflash-card-listsid)                          | visible (service)                      | -                               | -                                                    |
-| [PATCH /flash-card-lists/:id](#patch-apiv1resourcesflash-card-listsid)                      | owner or admin (service)               | `FlashCardList`                 | -                                                    |
-| [DELETE /flash-card-lists/:id](#delete-apiv1resourcesflash-card-listsid)                    | owner or admin (service)               | `FlashCardList` (cascade cards) | `resource.resource.deleted` x cards                  |
-| [GET /flash-card-lists](#get-apiv1resourcesflash-card-lists)                                | visible (service)                      | -                               | -                                                    |
-| [POST /flash-card-lists/:id/cards](#post-apiv1resourcesflash-card-listsidcards)             | owner or admin (service)               | `FlashCard.listId`              | -                                                    |
-| [GET /flash-card-lists/:id/cards](#get-apiv1resourcesflash-card-listsidcards)               | visible (service)                      | -                               | -                                                    |
-| [POST /reports](#post-apiv1resourcesreports)                                                | any user                               | `Report`, `ReportFile`          | `resource.report.created`                            |
-| [GET /reports/:id](#get-apiv1resourcesreportsid)                                            | reporter or mod/admin (service)        | -                               | -                                                    |
-| [PATCH /reports/:id](#patch-apiv1resourcesreportsid)                                        | `@HasRoles(Mod, Admin)`                | `Report`                        | `resource.report.status-changed` (if status changed) |
-| [DELETE /reports/:id](#delete-apiv1resourcesreportsid)                                      | `@HasRoles(Mod, Admin)`                | `Report` (cascade files)        | -                                                    |
-| [GET /reports](#get-apiv1resourcesreports)                                                  | own; mod/admin all (service)           | -                               | -                                                    |
-| [POST /reports/:id/files](#post-apiv1resourcesreportsidfiles)                               | reporter or mod/admin + uploader check | `ReportFile`                    | -                                                    |
-| [DELETE /reports/:reportId/files/:fileId](#delete-apiv1resourcesreportsreportidfilesfileid) | reporter or mod/admin (service)        | `ReportFile`                    | -                                                    |
+| Operation                                                                                   | Access                                  | Writes                          | Events                                               |
+| ------------------------------------------------------------------------------------------- | --------------------------------------- | ------------------------------- | ---------------------------------------------------- |
+| [POST /blogs](#post-apiv1resourcesblogs)                                                    | any user                                | `Blog`                          | `resource.resource.created`                          |
+| [GET /blogs/tags](#get-apiv1resourcesblogstags)                                             | any user                                | -                               | -                                                    |
+| [GET /blogs/:id](#get-apiv1resourcesblogsid)                                                | any user                                | -                               | -                                                    |
+| [PATCH /blogs/:id](#patch-apiv1resourcesblogsid)                                            | `@ResourceAccess` blog                  | `Blog`                          | -                                                    |
+| [DELETE /blogs/:id](#delete-apiv1resourcesblogsid)                                          | `@ResourceAccess` blog                  | `Blog` (cascade `BlogComment`)  | `resource.resource.deleted`                          |
+| [GET /blogs](#get-apiv1resourcesblogs)                                                      | any user                                | -                               | -                                                    |
+| [GET /blogs/:id/comments](#get-apiv1resourcesblogsidcomments)                               | any user                                | -                               | -                                                    |
+| [POST /blogs/:id/comments](#post-apiv1resourcesblogsidcomments)                             | any user                                | `BlogComment`                   | `resource.blog-comment.created`                      |
+| [PATCH /blog-comments/:commentId](#patch-apiv1resourcesblog-commentscommentid)              | author (service)                        | `BlogComment`                   | -                                                    |
+| [DELETE /blog-comments/:commentId](#delete-apiv1resourcesblog-commentscommentid)            | author or mod/admin (service)           | `BlogComment`                   | -                                                    |
+| [POST /flash-cards](#post-apiv1resourcesflash-cards)                                        | list owner (service)                    | `FlashCard`                     | `resource.resource.created`                          |
+| [GET /flash-cards/:id](#get-apiv1resourcesflash-cardsid)                                    | visible list (service)                  | -                               | -                                                    |
+| [PATCH /flash-cards/:id](#patch-apiv1resourcesflash-cardsid)                                | `@ResourceAccess` flashcard             | `FlashCard`                     | -                                                    |
+| [DELETE /flash-cards/:id](#delete-apiv1resourcesflash-cardsid)                              | `@ResourceAccess` flashcard             | `FlashCard`                     | `resource.resource.deleted`                          |
+| [GET /flash-cards](#get-apiv1resourcesflash-cards)                                          | visible lists (service)                 | -                               | -                                                    |
+| [POST /flash-card-lists](#post-apiv1resourcesflash-card-lists)                              | any user                                | `FlashCardList`                 | -                                                    |
+| [GET /flash-card-lists/:id](#get-apiv1resourcesflash-card-listsid)                          | visible (service)                       | -                               | -                                                    |
+| [PATCH /flash-card-lists/:id](#patch-apiv1resourcesflash-card-listsid)                      | owner or admin (service)                | `FlashCardList`                 | -                                                    |
+| [DELETE /flash-card-lists/:id](#delete-apiv1resourcesflash-card-listsid)                    | owner or admin (service)                | `FlashCardList` (cascade cards) | `resource.resource.deleted` x cards                  |
+| [GET /flash-card-lists](#get-apiv1resourcesflash-card-lists)                                | visible (service)                       | -                               | -                                                    |
+| [POST /flash-card-lists/:id/cards](#post-apiv1resourcesflash-card-listsidcards)             | owner or admin (service)                | `FlashCard.listId`              | -                                                    |
+| [GET /flash-card-lists/:id/cards](#get-apiv1resourcesflash-card-listsidcards)               | visible (service)                       | -                               | -                                                    |
+| [POST /reports](#post-apiv1resourcesreports)                                                | any user                                | `Report`, `ReportFile`          | `resource.report.created`                            |
+| [GET /reports/:id](#get-apiv1resourcesreportsid)                                            | reporter or mod/admin (service)         | -                               | -                                                    |
+| [PATCH /reports/:id](#patch-apiv1resourcesreportsid)                                        | `@HasRoles(Mod, Admin)`; 409 once final | `Report`                        | `resource.report.status-changed` (if status changed) |
+| [DELETE /reports/:id](#delete-apiv1resourcesreportsid)                                      | `@HasRoles(Mod, Admin)`                 | `Report` (cascade files)        | -                                                    |
+| [GET /reports](#get-apiv1resourcesreports)                                                  | own; mod/admin all (service)            | -                               | -                                                    |
+| [POST /reports/:id/files](#post-apiv1resourcesreportsidfiles)                               | reporter or mod/admin + uploader check  | `ReportFile`                    | -                                                    |
+| [DELETE /reports/:reportId/files/:fileId](#delete-apiv1resourcesreportsreportidfilesfileid) | reporter or mod/admin (service)         | `ReportFile`                    | -                                                    |
 
 All paths in the table are relative to `/api/v1/resources`.
 
@@ -254,14 +254,16 @@ Triage a report.
 - **Access**: `@HasRoles(Mod, Admin)` (403 in the gateway otherwise); `resolvedBy = sub`.
 - **Flow**:
   1. Gateway: `UpdateReportDto` (`status?`: one of `pending`, `reviewing`, `in_progress`, `resolved`, `rejected`, `dismissed`, `closed`, the `ReportStatus` enum, else 400, checked again by resource's DTO; `adminResponse?` free string) → `resource.ReportService/UpdateReport { ...body, id, resolvedBy }`.
-  2. `ReportService.updateReport`, `@Transactional()`: `findUnique` (404) → update `status ?? old`, `adminResponse ?? old`, and `resolvedBy` = the caller only if the status or the response actually changes (else kept; the frontend shows it as the response's author).
+  2. `ReportService.updateReport`, `@Transactional()`: `SELECT id FROM reports WHERE id = $1 FOR UPDATE` → `findUnique` (404) → 409 `This report is already <status> and can no longer be changed` if the report is in a final status (`isFinalReportStatus`, `apps/resource/src/enums/report-status.enum.ts`: `resolved`, `rejected`, `dismissed`, `closed`, all treated the same), for everyone including admins → update `status ?? old`, `adminResponse ?? old`, and `resolvedBy` = the caller if the new status is final, else `null`.
   3. If the status changed: outbox `resource.report.status-changed` `{ reportId, reportedBy, status, title }`.
-  4. Response `ReportDto`.
+  4. Response `ReportDto`. `resolvedBy` means "who resolved it": it is returned only for reports in a final status (rows from before this rule that name someone on an open report are returned without it, and the next update clears the column).
+- **Concurrency**: the row lock makes resolution single-winner: when two staff members resolve at once, the second waits for the first's commit, then sees the final status and gets 409.
+- **Errors**: 404 missing; 409 already final; 400 unknown status.
 - **Async**: `notification.events.report.status-changed` → `ReportStatusChangedHandler` (inbox yes): notifies the reporter if their `report` preference is on, with a Vietnamese phrase for known statuses (`pending`, `reviewing`, `in_progress`, `resolved`, `rejected`, `dismissed`, `closed`) or the raw value.
 
 ### DELETE /api/v1/resources/reports/:id
 
-`@HasRoles(Mod, Admin)` → `resource.ReportService/DeleteReport` → `ReportService.deleteReport`, `@Transactional()`: read the report's `ReportFile` ids, `deleteMany({ id })` (404 if count is 0; `ReportFile` rows go by cascade), then outbox `resource.files.removed { files: [{ id, count: 1 }] }` for the attachments (file-service lowers `ref_count`).
+`@HasRoles(Mod, Admin)` → `resource.ReportService/DeleteReport` → `ReportService.deleteReport`, `@Transactional()`: read the report's `ReportFile` ids, `deleteMany({ id })` (404 if count is 0; `ReportFile` rows go by cascade), then outbox `resource.files.removed { files: [{ id, count: 1 }] }` for the attachments (file-service lowers `ref_count`). Staff may still delete a report in a final status (deleting removes the record; it does not change the resolution). Reporters cannot delete reports at all.
 
 ### GET /api/v1/resources/reports
 
@@ -270,11 +272,11 @@ Triage a report.
 ### POST /api/v1/resources/reports/:id/files
 
 - **Access**: reporter or mod/admin (`findVisibleReport`); uploader check skipped only when `mayAttachAnyFile = hasAnyRole(user, [Admin])`.
-- **Flow**: `AddFileToReportDto` (`fileId`) → `resource.ReportService/AddFileToReport` → `ReportService.addFileToReport`: `findVisibleReport` (404) → unless admin, `CheckFilesOwnedBy([fileId], requesterId)` (403), both outside any transaction → `@Transactional()` `attachFile`: `findVisibleReport` again, `ReportFile.createMany(skipDuplicates)`; only a new row writes outbox `resource.file.added { fileId }` (re-attaching is a no-op). Response empty. Worked example: [authorization.md §7(c)](../authorization.md#c-attaching-a-file-someone-else-uploaded).
+- **Flow**: `AddFileToReportDto` (`fileId`) → `resource.ReportService/AddFileToReport` → `ReportService.addFileToReport`: `findVisibleReport` (404), 409 if the report is in a final status → unless admin, `CheckFilesOwnedBy([fileId], requesterId)` (403), both outside any transaction → `@Transactional()` `attachFile`: lock the report row (`FOR UPDATE`), `findVisibleReport` and the final-status check again (it may have been resolved during the gRPC call), `ReportFile.createMany(skipDuplicates)`; only a new row writes outbox `resource.file.added { fileId }` (re-attaching is a no-op). Response empty. Worked example: [authorization.md §7(c)](../authorization.md#c-attaching-a-file-someone-else-uploaded).
 
 ### DELETE /api/v1/resources/reports/:reportId/files/:fileId
 
-`requesterOf(user, [Mod, Admin])` → `resource.ReportService/RemoveFileFromReport` → `findVisibleReport` (404) → `ReportFile.deleteMany({ reportId, fileId })`; 404 `File is not attached to this report` if nothing was deleted, else (same transaction) outbox `resource.files.removed { files: [{ id: fileId, count: 1 }] }`. The reporter may remove files from their own report regardless of status. Response empty.
+`requesterOf(user, [Mod, Admin])` → `resource.ReportService/RemoveFileFromReport`, `@Transactional()`: lock the report row (`FOR UPDATE`) → `findVisibleReport` (404) → 409 if the report is in a final status (for staff too) → `ReportFile.deleteMany({ reportId, fileId })`; 404 `File is not attached to this report` if nothing was deleted, else (same transaction) outbox `resource.files.removed { files: [{ id: fileId, count: 1 }] }`. Response empty.
 
 ## Background work
 
@@ -300,7 +302,7 @@ None of these consumers emits further events.
 - ~~`addCardToList` ignores `position` from `AddCardToListDto`~~: backlog X1 (cards have no order column).
 - ~~An empty `tags`/`examples` array meant "keep the old value", so a client could not clear them~~: fixed (see fixed-issues.md; `replaceTags`/`replaceExamples` on blogs, cards and lists).
 - ~~Report `status` is any string~~: fixed (see fixed-issues.md; `ReportStatus` checked in both DTOs, existing rows untouched).
-- ~~`resolvedBy` is overwritten by any update~~: fixed (see fixed-issues.md; kept unless the status or response changes). Whether a move back to `pending` should clear it: backlog X2.
+- ~~`resolvedBy` is overwritten by any update~~: fixed (see fixed-issues.md): a report is resolved once; `resolvedBy` is set by the move into a final status and the report is frozen (409) after it.
 - ~~`createReport` checks file ownership for admins too~~: fixed (see fixed-issues.md; `CreateReportRequest.may_attach_any_file`).
 - ~~The `CheckFilesOwnedBy` gRPC call runs inside the open DB transaction~~: fixed (see fixed-issues.md; create and attach both ask before the transaction).
 - ~~Soft delete keeps `authorId` while the class comment says it is cleared~~: comment corrected (keeping `authorId` is intended: the column is required and responses blank it).

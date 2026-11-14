@@ -422,7 +422,11 @@ export class ResourceGatewayController implements OnModuleInit {
 
 	@Patch('reports/:id')
 	@HasRoles(...REPORT_STAFF_ROLES)
-	@ApiOperation({ summary: 'Update a report (moderators/admins)' })
+	@ApiOperation({
+		summary: 'Update a report (moderators/admins)',
+		description:
+			'Once the report is resolved, rejected, dismissed or closed it is frozen: any further update (and adding or removing files) is 409.',
+	})
 	@ApiResponseEntity(ReportDto)
 	@SerializeOptions({ type: ReportDto, strategy: 'exposeAll' })
 	updateReport(

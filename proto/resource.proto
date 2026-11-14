@@ -554,6 +554,7 @@ message ReportResponse {
 	string          description    = 6;
 	optional string target_type    = 7;
 	optional string target_id      = 8;
+	// Who moved the report to a final status (resolved, rejected, dismissed, closed); absent while open.
 	optional string resolved_by    = 9;
 	optional string admin_response = 10;
 	repeated string file_ids       = 11;
@@ -584,6 +585,8 @@ message GetReportRequest {
 message UpdateReportRequest {
 	google.protobuf.StringValue          id             = 1;
 	optional google.protobuf.StringValue status         = 2;
+	// The caller (set by the gateway); recorded only when this update moves the report to a final
+	// status. A report in a final status refuses every update (ALREADY_EXISTS, HTTP 409).
 	optional google.protobuf.StringValue resolved_by    = 3;
 	optional google.protobuf.StringValue admin_response = 4;
 }
