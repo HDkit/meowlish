@@ -16,3 +16,34 @@ describe('BlogService listBlogTags', () => {
 		);
 	});
 });
+
+describe('BlogService.updateBlog tags', () => {
+	const blog = { id: 'b1', title: 'T', content: 'C', authorId: 'me', tags: ['old'] };
+	const setup = () => {
+		const tx = {
+			blog: {
+				findUnique: jest.fn().mockResolvedValue(blog),
+				update: jest
+					.fn()
+					.mockImplementation(({ data }: { data: object }) =>
+						Promise.resolve({ ...blog, ...data, createdAt: new Date(), updatedAt: new Date() }),
+					),
+			},
+		};
+		return { tx: tx, service: new BlogService({ tx: tx } as never, {} as never) };
+	};
+	const tagsSent = (tx: ReturnType<typeof setup>['tx']) =>
+		(tx.blog.update.mock.calls as [{ data: { tags: string[] } }][])[0][0].data.tags;
+
+	it('clears the tags when the request sets them to an empty list', async () => {
+		const { tx, service } = setup();
+		await service.updateBlog({ id: 'b1', tags: [], replaceTags: true });
+		expect(tagsSent(tx)).toEqual([]);
+	});
+
+	it('keeps the tags when the request did not send them', async () => {
+		const { tx, service } = setup();
+		await service.updateBlog({ id: 'b1', title: 'New', tags: [] });
+		expect(tagsSent(tx)).toEqual(['old']);
+	});
+});

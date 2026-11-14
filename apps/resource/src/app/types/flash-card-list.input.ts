@@ -14,6 +14,8 @@ export interface UpdateFlashCardListInput {
 	description?: string;
 	isPublic?: boolean;
 	tags: string[];
+	/** `tags` was sent: replace the list, even with an empty one. */
+	replaceTags?: boolean;
 }
 
 export interface ListFlashCardListsInput extends PageInput {

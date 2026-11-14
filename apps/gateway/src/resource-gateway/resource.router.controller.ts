@@ -134,6 +134,8 @@ export class ResourceGatewayController implements OnModuleInit {
 		return this.blogService.updateBlog({
 			...body,
 			tags: body.tags ?? [],
+			// tags in the body replace the post's, so [] clears them
+			replaceTags: body.tags !== undefined,
 			id: id,
 		});
 	}
@@ -330,6 +332,8 @@ export class ResourceGatewayController implements OnModuleInit {
 		return this.flashCardListService.updateFlashCardList({
 			...body,
 			tags: body.tags ?? [],
+			// tags in the body replace the list's, so [] clears them
+			replaceTags: body.tags !== undefined,
 			id: id,
 			...requesterOf(req.user, FLASH_CARD_ADMIN_ROLES),
 		});
@@ -398,6 +402,8 @@ export class ResourceGatewayController implements OnModuleInit {
 			...body,
 			fileIds: body.fileIds ?? [],
 			reportedBy: req.user.sub,
+			// Only admins may attach a file someone else uploaded.
+			mayAttachAnyFile: hasAnyRole(req.user, [Role.Admin]),
 		});
 	}
 

@@ -38,6 +38,11 @@ export interface UpdateBlogRequest {
   title?: string | undefined;
   content?: string | undefined;
   tags: string[];
+  /**
+   * A repeated field can't tell "not sent" from "empty": this says the request sets the tags,
+   * so an empty list clears them. False keeps the old behaviour (empty = unchanged).
+   */
+  replaceTags: boolean;
 }
 
 export interface DeleteBlogRequest {
@@ -218,7 +223,11 @@ export interface UpdateFlashCardListRequest {
     | string
     | undefined;
   /** Requester may bypass ownership/visibility (role decided by the gateway). */
-  privileged?: boolean | undefined;
+  privileged?:
+    | boolean
+    | undefined;
+  /** The request sets the tags, so an empty list clears them (see UpdateBlogRequest.replace_tags). */
+  replaceTags: boolean;
 }
 
 export interface DeleteFlashCardListRequest {
@@ -565,6 +574,8 @@ export interface CreateReportRequest {
   targetType?: string | undefined;
   targetId?: string | undefined;
   fileIds: string[];
+  /** Reporter may attach files uploaded by someone else (admins only; decided by the gateway). */
+  mayAttachAnyFile?: boolean | undefined;
 }
 
 export interface GetReportRequest {
@@ -1159,7 +1170,7 @@ export const GetBlogRequest: MessageFns<GetBlogRequest> = {
 };
 
 function createBaseUpdateBlogRequest(): UpdateBlogRequest {
-  return { id: undefined, tags: [] };
+  return { id: undefined, tags: [], replaceTags: false };
 }
 
 export const UpdateBlogRequest: MessageFns<UpdateBlogRequest> = {
@@ -1175,6 +1186,9 @@ export const UpdateBlogRequest: MessageFns<UpdateBlogRequest> = {
     }
     for (const v of message.tags) {
       StringValue.encode({ value: v!! }, writer.uint32(34).fork()).join();
+    }
+    if (message.replaceTags !== false) {
+      writer.uint32(40).bool(message.replaceTags);
     }
     return writer;
   },
@@ -1222,6 +1236,14 @@ export const UpdateBlogRequest: MessageFns<UpdateBlogRequest> = {
             }
 
             message.tags.push(StringValue.decode(reader, reader.uint32()).value);
+            continue;
+          }
+          case 5: {
+            if (tag !== 40) {
+              break;
+            }
+
+            message.replaceTags = reader.bool();
             continue;
           }
         }
@@ -2823,7 +2845,7 @@ export const GetFlashCardListRequest: MessageFns<GetFlashCardListRequest> = {
 };
 
 function createBaseUpdateFlashCardListRequest(): UpdateFlashCardListRequest {
-  return { id: undefined, tags: [], requesterId: undefined };
+  return { id: undefined, tags: [], requesterId: undefined, replaceTags: false };
 }
 
 export const UpdateFlashCardListRequest: MessageFns<UpdateFlashCardListRequest> = {
@@ -2848,6 +2870,9 @@ export const UpdateFlashCardListRequest: MessageFns<UpdateFlashCardListRequest> 
     }
     if (message.privileged !== undefined) {
       BoolValue.encode({ value: message.privileged! }, writer.uint32(58).fork()).join();
+    }
+    if (message.replaceTags !== false) {
+      writer.uint32(64).bool(message.replaceTags);
     }
     return writer;
   },
@@ -2919,6 +2944,14 @@ export const UpdateFlashCardListRequest: MessageFns<UpdateFlashCardListRequest> 
             }
 
             message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 8: {
+            if (tag !== 64) {
+              break;
+            }
+
+            message.replaceTags = reader.bool();
             continue;
           }
         }
@@ -5604,6 +5637,9 @@ export const CreateReportRequest: MessageFns<CreateReportRequest> = {
     for (const v of message.fileIds) {
       StringValue.encode({ value: v!! }, writer.uint32(58).fork()).join();
     }
+    if (message.mayAttachAnyFile !== undefined) {
+      BoolValue.encode({ value: message.mayAttachAnyFile! }, writer.uint32(66).fork()).join();
+    }
     return writer;
   },
 
@@ -5674,6 +5710,14 @@ export const CreateReportRequest: MessageFns<CreateReportRequest> = {
             }
 
             message.fileIds.push(StringValue.decode(reader, reader.uint32()).value);
+            continue;
+          }
+          case 8: {
+            if (tag !== 66) {
+              break;
+            }
+
+            message.mayAttachAnyFile = BoolValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }

@@ -1,12 +1,13 @@
+import { ReportStatus } from '../../../enums/report-status.enum';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { resource } from '@server/generated';
-import { IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsOptional, IsString } from 'class-validator';
 
 export class UpdateReportDto implements Omit<resource.UpdateReportRequest, 'id' | 'resolvedBy'> {
+	@IsEnum(ReportStatus)
 	@IsOptional()
-	@IsString()
-	@ApiPropertyOptional()
-	status?: string;
+	@ApiPropertyOptional({ enum: ReportStatus })
+	status?: ReportStatus;
 
 	@IsOptional()
 	@IsString()

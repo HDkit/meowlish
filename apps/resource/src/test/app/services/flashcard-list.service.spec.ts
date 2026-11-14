@@ -97,6 +97,21 @@ describe('FlashcardListService access rules', () => {
 		expect(tx.flashCardList.update).not.toHaveBeenCalled();
 	});
 
+	it('clears the tags only when the request sets them', async () => {
+		const { tx, service } = setup();
+		tx.flashCardList.findUnique.mockResolvedValue(list({ tags: ['old'] }));
+		tx.flashCardList.update.mockResolvedValue({ ...list(), _count: { forks: 0 } });
+		const me = { id: 'owner', privileged: false };
+		const tagsOf = (call: number) =>
+			(tx.flashCardList.update.mock.calls as [{ data: { tags?: string[] } }][])[call][0].data.tags;
+
+		await service.updateFlashCardList({ id: 'l1', tags: [], replaceTags: true }, me);
+		expect(tagsOf(0)).toEqual([]);
+
+		await service.updateFlashCardList({ id: 'l1', name: 'New', tags: [] }, me);
+		expect(tagsOf(1)).toBeUndefined();
+	});
+
 	it('forbids changing a public list you do not own', async () => {
 		const { tx, service } = setup();
 		tx.flashCardList.findUnique.mockResolvedValue(list({ isPublic: true }));

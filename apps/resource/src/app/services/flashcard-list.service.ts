@@ -101,7 +101,7 @@ export class FlashcardListService {
 				name: data.name,
 				description: data.description,
 				isPublic: data.isPublic,
-				tags: data.tags.length > 0 ? data.tags : undefined,
+				tags: data.replaceTags || data.tags.length > 0 ? data.tags : undefined,
 			},
 			include: WITH_FORK_COUNT,
 		});

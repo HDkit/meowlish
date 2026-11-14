@@ -1,3 +1,4 @@
+import { type ReportStatus } from '../../enums/report-status.enum';
 import { type PageInput } from './pagination';
 
 export interface CreateReportInput {
@@ -8,11 +9,13 @@ export interface CreateReportInput {
 	targetType?: string;
 	targetId?: string;
 	fileIds: string[];
+	/** Admins may attach files someone else uploaded (decided by the gateway). */
+	mayAttachAnyFile?: boolean;
 }
 
 export interface UpdateReportInput {
 	id: string;
-	status?: string;
+	status?: ReportStatus;
 	resolvedBy?: string;
 	adminResponse?: string;
 }

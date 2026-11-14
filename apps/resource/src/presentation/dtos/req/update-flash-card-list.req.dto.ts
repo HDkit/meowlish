@@ -24,4 +24,8 @@ export class UpdateFlashCardListReqDto
 	@IsArray()
 	@IsString({ each: true })
 	tags!: string[];
+
+	@IsBoolean()
+	@IsOptional()
+	replaceTags!: boolean;
 }

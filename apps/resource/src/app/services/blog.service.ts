@@ -63,7 +63,7 @@ export class BlogService {
 			data: {
 				title: data.title ?? entity.title,
 				content: data.content ?? entity.content,
-				tags: data.tags.length > 0 ? data.tags : entity.tags,
+				tags: data.replaceTags || data.tags.length > 0 ? data.tags : entity.tags,
 			},
 		});
 		return this.toReadModel(updated);

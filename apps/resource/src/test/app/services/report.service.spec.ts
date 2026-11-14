@@ -1,5 +1,6 @@
 import { type ResourceEventsPublisher } from '../../../app/events/resource-events.publisher';
 import { ReportService } from '../../../app/services/report.service';
+import { ReportStatus } from '../../../enums/report-status.enum';
 import { NoOpTransactionalAdapter, TransactionHost } from '@nestjs-cls/transactional';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 
@@ -113,7 +114,7 @@ describe('ReportService access rules', () => {
 		const { tx, events, service } = setup();
 		tx.report.findUnique.mockResolvedValue(report());
 		tx.report.update.mockResolvedValue(report({ status: 'resolved' }));
-		await service.updateReport({ id: 'r1', status: 'resolved', resolvedBy: 'mod' });
+		await service.updateReport({ id: 'r1', status: ReportStatus.Resolved, resolvedBy: 'mod' });
 		expect(firstArg(events.reportStatusChanged)).toMatchObject({
 			reportId: 'r1',
 			reportedBy: 'owner',
@@ -124,6 +125,27 @@ describe('ReportService access rules', () => {
 		tx.report.update.mockResolvedValue(report());
 		await service.updateReport({ id: 'r1', adminResponse: 'noted' });
 		expect(events.reportStatusChanged).not.toHaveBeenCalled();
+	});
+
+	it('keeps resolvedBy when an update changes neither status nor response', async () => {
+		const { tx, service } = setup();
+		const dataOf = (call: number) =>
+			(tx.report.update.mock.calls as [{ data: { resolvedBy: string | null } }][])[call][0].data;
+		tx.report.findUnique.mockResolvedValue(
+			report({ status: 'resolved', resolvedBy: 'mod1', adminResponse: 'done' }),
+		);
+		tx.report.update.mockResolvedValue(report());
+
+		await service.updateReport({
+			id: 'r1',
+			status: ReportStatus.Resolved,
+			adminResponse: 'done',
+			resolvedBy: 'mod2',
+		});
+		expect(dataOf(0).resolvedBy).toBe('mod1');
+
+		await service.updateReport({ id: 'r1', adminResponse: 'more detail', resolvedBy: 'mod2' });
+		expect(dataOf(1).resolvedBy).toBe('mod2');
 	});
 
 	it('returns 404 when removing a file that is not attached', async () => {
@@ -147,6 +169,24 @@ describe('ReportService file ownership', () => {
 		).rejects.toBeInstanceOf(ForbiddenException);
 		expect(files.assertOwnedBy).toHaveBeenCalledWith(['theirs'], 'owner');
 		expect(tx.report.create).not.toHaveBeenCalled();
+	});
+
+	it('lets admins attach files they did not upload on create', async () => {
+		const { tx, files, service } = setup();
+		await service.createReport({ ...newReport, fileIds: ['theirs'], mayAttachAnyFile: true });
+		expect(files.assertOwnedBy).not.toHaveBeenCalled();
+		expect(tx.report.create).toHaveBeenCalledTimes(1);
+	});
+
+	it('asks file-service before the transaction opens', async () => {
+		const { tx, files, service } = setup();
+		const inTx = jest.spyOn(TransactionHost.getInstance(), 'withTransaction');
+		await service.createReport({ ...newReport, fileIds: ['mine'] });
+		expect(files.assertOwnedBy.mock.invocationCallOrder[0]).toBeLessThan(
+			inTx.mock.invocationCallOrder[0],
+		);
+		expect(tx.report.create).toHaveBeenCalledTimes(1);
+		inTx.mockRestore();
 	});
 
 	it('creates a report with the reporter own files', async () => {

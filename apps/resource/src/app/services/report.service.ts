@@ -58,10 +58,18 @@ export class ReportService {
 		return report;
 	}
 
-	@Transactional()
+	/**
+	 * The uploader check (a gRPC call) runs before the transaction opens, so no DB transaction waits
+	 * on it. `mayAttachAnyFile` (admins) skips it, as on `addFileToReport`.
+	 */
 	async createReport(data: CreateReportInput): Promise<ReportReadModel> {
 		const fileIds = [...new Set(data.fileIds)];
-		await this.fileOwnership.assertOwnedBy(fileIds, data.reportedBy);
+		if (!data.mayAttachAnyFile) await this.fileOwnership.assertOwnedBy(fileIds, data.reportedBy);
+		return this.insertReport(data, fileIds);
+	}
+
+	@Transactional()
+	private async insertReport(data: CreateReportInput, fileIds: string[]): Promise<ReportReadModel> {
 		const report = await this.txHost.tx.report.create({
 			data: {
 				reportedBy: data.reportedBy,
@@ -97,11 +105,16 @@ export class ReportService {
 		const report = await this.txHost.tx.report.findUnique({ where: { id: data.id } });
 		if (!report) throw new NotFoundException('Report not found');
 
+		// `resolvedBy` is the staff member who last changed the status or the response (the frontend
+		// shows it as the response's author), so an update that changes neither keeps it.
+		const changesSomething =
+			(data.status !== undefined && String(data.status) !== report.status) ||
+			(data.adminResponse !== undefined && data.adminResponse !== report.adminResponse);
 		const updated = await this.txHost.tx.report.update({
 			where: { id: data.id },
 			data: {
 				status: data.status ?? report.status,
-				resolvedBy: data.resolvedBy ?? report.resolvedBy,
+				resolvedBy: changesSomething ? (data.resolvedBy ?? report.resolvedBy) : report.resolvedBy,
 				adminResponse: data.adminResponse ?? report.adminResponse,
 			},
 			include: withFiles,
@@ -153,8 +166,10 @@ export class ReportService {
 		return { reports: reports.map(r => this.toReadModel(r)), totalCount: totalCount };
 	}
 
-	/** `mayAttachAnyFile` (admins) skips the uploader check; everyone else attaches only their own uploads. */
-	@Transactional()
+	/**
+	 * `mayAttachAnyFile` (admins) skips the uploader check; everyone else attaches only their own
+	 * uploads. The check (a gRPC call) runs before the transaction opens.
+	 */
 	async addFileToReport(
 		reportId: string,
 		fileId: string,
@@ -163,6 +178,13 @@ export class ReportService {
 	): Promise<void> {
 		await this.findVisibleReport(reportId, requester);
 		if (!mayAttachAnyFile) await this.fileOwnership.assertOwnedBy([fileId], requester.id);
+		await this.attachFile(reportId, fileId, requester);
+	}
+
+	@Transactional()
+	private async attachFile(reportId: string, fileId: string, requester: Requester): Promise<void> {
+		// again inside the transaction: the report may have been deleted meanwhile
+		await this.findVisibleReport(reportId, requester);
 		const { count } = await this.txHost.tx.reportFile.createMany({
 			data: [{ reportId: reportId, fileId: fileId }],
 			skipDuplicates: true,

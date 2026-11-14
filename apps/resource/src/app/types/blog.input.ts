@@ -12,6 +12,8 @@ export interface UpdateBlogInput {
 	title?: string;
 	content?: string;
 	tags: string[];
+	/** `tags` was sent: replace the list, even with an empty one. */
+	replaceTags?: boolean;
 }
 
 export interface ListBlogsInput extends PageInput {

@@ -112,6 +112,9 @@ message UpdateBlogRequest {
 	optional google.protobuf.StringValue title   = 2;
 	optional google.protobuf.StringValue content = 3;
 	repeated google.protobuf.StringValue tags    = 4;
+	// A repeated field can't tell "not sent" from "empty": this says the request sets the tags,
+	// so an empty list clears them. False keeps the old behaviour (empty = unchanged).
+	bool                                 replace_tags = 5;
 }
 
 message DeleteBlogRequest {
@@ -275,6 +278,8 @@ message UpdateFlashCardListRequest {
 	google.protobuf.StringValue          requester_id   = 6;
 	// Requester may bypass ownership/visibility (role decided by the gateway).
 	optional google.protobuf.BoolValue   privileged     = 7;
+	// The request sets the tags, so an empty list clears them (see UpdateBlogRequest.replace_tags).
+	bool                                 replace_tags   = 8;
 }
 
 message DeleteFlashCardListRequest {
@@ -561,6 +566,8 @@ message CreateReportRequest {
 	optional google.protobuf.StringValue target_type    = 5;
 	optional google.protobuf.StringValue target_id      = 6;
 	repeated google.protobuf.StringValue file_ids       = 7;
+	// Reporter may attach files uploaded by someone else (admins only; decided by the gateway).
+	optional google.protobuf.BoolValue   may_attach_any_file = 8;
 }
 
 message GetReportRequest {

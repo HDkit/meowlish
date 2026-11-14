@@ -1,13 +1,14 @@
+import { ReportStatus } from '../../../enums/report-status.enum';
 import { resource } from '@server/generated';
-import { IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsOptional, IsString } from 'class-validator';
 
 export class UpdateReportReqDto implements resource.UpdateReportRequest {
 	@IsString()
 	id!: string;
 
+	@IsEnum(ReportStatus)
 	@IsOptional()
-	@IsString()
-	status?: string;
+	status?: ReportStatus;
 
 	@IsOptional()
 	@IsString()
