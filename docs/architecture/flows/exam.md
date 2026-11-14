@@ -65,7 +65,8 @@ Creates an exam in `PENDING`.
   1. Gateway `createExam` validates `CreateExamDto` (`title`, `description` strings; `duration` positive integer, in seconds) and calls `ExamManagementService/CreateExam` with `createdBy: req.user.sub`.
   2. `CreateExamHandler` (`apps/exam/src/app/commands/handlers/management/create-exam.handler.ts`, `@Transactional()`) builds an `Exam` with `status: PENDING`. `ExamPrismaRepositoryImpl.save` inserts the `exams` row with `version: 1`.
   3. Still in the same transaction, it writes outbox `exam.exam.created` (envelope) with `{ resourceType: 'exam', resourceId, ownerId }`.
-  4. Response: `CreatedExamDto { id }`.
+  4. It gives the exam its readable `slug` (`IExamSlugRepository.assignSlug`, `infra/repositories/exam-slug.prisma.repository.impl.ts`): `nextFreeSlug(title, taken, 'de-thi')` from `@server/utils` (`TOEIC LR 1` → `toeic-lr-1`, `-2` on a clash), written with `updateMany where { id, slug: null }`; a lost race (P2002) picks again, up to 5 times. The slug never changes afterwards, even when the title does.
+  5. Response: `CreatedExamDto { id }`.
 - **Async**: `exam.exam.created` → queue `authorization.events.exam.created` → `apps/authorization/src/app/events/handlers/exam-ownership.handler.ts` registers the ownership row (inbox: yes).
 
 ### PATCH /api/v1/exams/management/:id
@@ -402,8 +403,8 @@ All four are `@IsPublic()` and read approved exams only.
   - Filters: `name`, `tags` (any of, descendants match), `requiredTags` (each of).
   - It reads raw SQL over `exams` / `exam_tags` / `tags` with `status = 'APPROVED'`. `limit` is 1-100.
   - Response: `ExamsInfoDto`.
-- `GET /api/v1/exams/practice/info/:id/details`: `getExamDetail` (raw SQL, approved only, 404 otherwise). Returns `ExamDetailDto`.
-- `GET /api/v1/exams/practice/info/:id/stats`: `getExamStats`. Average duration and average score percentage over the exam's attempts; approved only. Returns `ExamStatsDto`.
+- `GET /api/v1/exams/practice/info/:id/details`: `:id` is the exam id **or** its slug (`e.id = $1 OR e.slug = $1`; sections are then read by the real id). `getExamDetail` (raw SQL, approved only, 404 otherwise). Returns `ExamDetailDto` with `id` and `slug`; the frontend uses `id` for everything after (attempt history, `POST practice/new/:id`).
+- `GET /api/v1/exams/practice/info/:id/stats`: id or slug. `getExamStats`. Average duration and average score percentage over the exam's attempts; approved only. Returns `ExamStatsDto`.
 - `GET /api/v1/exams/practice/questions/:id/details`:
   - `getDetailedQuestionInfo` returns the question of an approved exam with `content`, `points`, `type`, **`explanation`** and its ancestor section directives;
   - writing questions have their `#BEGIN_DESCRIPTION…#END_DESCRIPTION` block stripped;
@@ -457,6 +458,10 @@ No events are published for tag changes.
 `goals.target` is the `target_score` sent to the AI scorer (see [round trip](#writing-scoring-round-trip)).
 
 ## Background work
+
+### `ExamSlugBackfill`
+
+`app/services/exam-slug-backfill.service.ts`, on `OnApplicationBootstrap` (inside `@UseCls()`): exams created before slugs existed (`slug IS NULL`) get one, 100 at a time, through the same `assignSlug`. Logs `Exam slug backfill: N exams`. Re-runnable: rows that already have a slug are never touched.
 
 ### `WritingScoredHandler`
 
