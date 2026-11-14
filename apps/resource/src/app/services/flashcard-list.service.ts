@@ -6,6 +6,7 @@ import {
 import { type FlashCardListPageReadModel } from '../../domain/read-models/flash-card.read-model';
 import { ResourceEventsPublisher } from '../events/resource-events.publisher';
 import {
+	CARD_ORDER,
 	WITH_FORK_COUNT,
 	toFlashCardListReadModel,
 	toFlashCardReadModel,
@@ -61,7 +62,7 @@ export class FlashcardListService {
 	async getFlashCardList(id: string, requester: Requester): Promise<FlashCardListDetailReadModel> {
 		const entity = await this.txHost.tx.flashCardList.findFirst({
 			where: { id: id, ...visibleListsWhere(requester) },
-			include: { cards: true, ...WITH_FORK_COUNT },
+			include: { cards: { orderBy: CARD_ORDER }, ...WITH_FORK_COUNT },
 		});
 		if (!entity) throw new NotFoundException('FlashCardList not found');
 
@@ -151,7 +152,20 @@ export class FlashcardListService {
 		return { lists: lists.map(toFlashCardListReadModel), totalCount: totalCount };
 	}
 
-	async addCardToList(listId: string, flashCardId: string, requester: Requester): Promise<void> {
+	/**
+	 * Moves a card into this list (or within it) at `position`, a 0-based index in the list's current
+	 * order (`CARD_ORDER`), clamped to the end; no position appends. The list's cards are renumbered
+	 * 0..n-1 in their current order around it, so unplaced cards keep their place and the result is
+	 * gap-free. The list row is locked first, so concurrent moves into one list don't interleave.
+	 */
+	@Transactional()
+	async addCardToList(
+		listId: string,
+		flashCardId: string,
+		requester: Requester,
+		position?: number,
+	): Promise<void> {
+		await this.txHost.tx.$queryRaw`SELECT id FROM flash_card_lists WHERE id = ${listId} FOR UPDATE`;
 		const list = await this.findOwnedList(listId, requester);
 
 		const card = await this.txHost.tx.flashCard.findUnique({ where: { id: flashCardId } });
@@ -160,10 +174,28 @@ export class FlashcardListService {
 			throw new ForbiddenException('Only cards by the list author can be moved into it');
 		}
 
+		const others = await this.txHost.tx.flashCard.findMany({
+			where: { listId: listId, id: { not: flashCardId } },
+			orderBy: CARD_ORDER,
+			select: { id: true, position: true },
+		});
+		const index = Math.min(position ?? others.length, others.length);
+		const renumbered = others
+			.map((c, i) => ({ id: c.id, from: c.position, to: i < index ? i : i + 1 }))
+			.filter(c => c.from !== c.to);
+
 		await this.txHost.tx.flashCard.update({
 			where: { id: flashCardId },
-			data: { listId: listId },
+			data: { listId: listId, position: index },
 		});
+		if (renumbered.length > 0) {
+			// One statement for the rest; raw, so reordering doesn't bump their `updatedAt`.
+			await this.txHost.tx.$executeRaw`
+				UPDATE flash_cards AS c SET position = v.position
+				FROM unnest(${renumbered.map(c => c.id)}::text[], ${renumbered.map(c => c.to)}::int[])
+					AS v(id, position)
+				WHERE c.id = v.id`;
+		}
 	}
 
 	async listCardsInList(
@@ -181,7 +213,7 @@ export class FlashcardListService {
 			this.txHost.tx.flashCard.findMany({
 				where: where,
 				...toSkipTake(data),
-				orderBy: { createdAt: 'desc' },
+				orderBy: CARD_ORDER,
 			}),
 			this.txHost.tx.flashCard.count({ where: where }),
 		]);

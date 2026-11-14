@@ -86,6 +86,11 @@ export interface FlashCardResponse {
   tags: string[];
   createdAt: string;
   updatedAt: string;
+  /**
+   * 0-based place in its list, set by AddCardToList. Absent for cards never placed: they come
+   * first in a list (newest first), then placed cards by position.
+   */
+  position?: number | undefined;
 }
 
 export interface CreateFlashCardRequest {
@@ -272,7 +277,14 @@ export interface ListFlashCardListsResponse {
 
 export interface AddCardToListRequest {
   listId: string | undefined;
-  flashCardId: string | undefined;
+  flashCardId:
+    | string
+    | undefined;
+  /**
+   * 0-based index in the list's current order to put the card at (clamped to the end; a card
+   * already in this list is moved). Absent = append at the end. Every card of the list is
+   * numbered 0..n-1 in its current order first, so unplaced cards keep their place.
+   */
   position?:
     | number
     | undefined;
@@ -1614,6 +1626,9 @@ export const FlashCardResponse: MessageFns<FlashCardResponse> = {
     if (message.updatedAt !== "") {
       writer.uint32(98).string(message.updatedAt);
     }
+    if (message.position !== undefined) {
+      writer.uint32(104).int32(message.position);
+    }
     return writer;
   },
 
@@ -1724,6 +1739,14 @@ export const FlashCardResponse: MessageFns<FlashCardResponse> = {
             }
 
             message.updatedAt = reader.string();
+            continue;
+          }
+          case 13: {
+            if (tag !== 104) {
+              break;
+            }
+
+            message.position = reader.int32();
             continue;
           }
         }

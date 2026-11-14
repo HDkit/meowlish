@@ -158,6 +158,9 @@ message FlashCardResponse {
 	repeated string tags           = 10;
 	string          created_at     = 11;
 	string          updated_at     = 12;
+	// 0-based place in its list, set by AddCardToList. Absent for cards never placed: they come
+	// first in a list (newest first), then placed cards by position.
+	optional int32  position       = 13;
 }
 
 message CreateFlashCardRequest {
@@ -315,6 +318,9 @@ message ListFlashCardListsResponse {
 message AddCardToListRequest {
 	google.protobuf.StringValue         list_id       = 1;
 	google.protobuf.StringValue         flash_card_id = 2;
+	// 0-based index in the list's current order to put the card at (clamped to the end; a card
+	// already in this list is moved). Absent = append at the end. Every card of the list is
+	// numbered 0..n-1 in its current order first, so unplaced cards keep their place.
 	optional google.protobuf.Int32Value position      = 3;
 	// Set by the gateway from the JWT; never from client input.
 	google.protobuf.StringValue          requester_id   = 4;

@@ -9,6 +9,8 @@ export interface FlashCardReadModel {
 	notes?: string;
 	authorId: string;
 	tags: string[];
+	/** 0-based place in its list; absent until the card is placed (see `CARD_ORDER`). */
+	position?: number;
 	createdAt: string;
 	updatedAt: string;
 }

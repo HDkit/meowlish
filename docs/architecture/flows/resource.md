@@ -200,7 +200,7 @@ Service: `FlashcardListService` (`apps/resource/src/app/services/flashcard-list.
 ### GET /api/v1/resources/flash-card-lists/:id
 
 - **Flow**: `resource.FlashCardListService/GetFlashCardList` → `FlashcardListService.getFlashCardList`:
-  1. `findFirst({ id, ...visibleListsWhere })` including all `cards` and the fork count (`_count.forks`); 404 if not visible.
+  1. `findFirst({ id, ...visibleListsWhere })` including all `cards` (in `CARD_ORDER`, see [add a card](#post-apiv1resourcesflash-card-listsidcards)) and the fork count (`_count.forks`); 404 if not visible.
   2. In parallel: if owner or admin, count `FlashCardListProposal` with `targetListId = id` and status `OPEN` (else 0); if the list is a copy, check the upstream list is still visible to the requester.
   3. Response `FlashCardListDetailDto` (list fields + `flashCards` (all, unpaged), `totalCards`, `openProposalCount`, `upstreamAvailable`).
 
@@ -223,11 +223,15 @@ Service: `FlashcardListService` (`apps/resource/src/app/services/flashcard-list.
 Move an existing card into this list.
 
 - **Access**: owner or admin (service).
-- **Flow**: `AddCardToListDto` (`flashCardId`; `position?` int >= 0) → `resource.FlashCardListService/AddCardToList` → `FlashcardListService.addCardToList`: `findOwnedList` (404/403) → load card (404 `FlashCard not found`) → 403 `Only cards by the list author can be moved into it` unless `card.authorId === list.authorId` → `update FlashCard set listId`. `position` is ignored. Response empty.
+- **Flow**: `AddCardToListDto` (`flashCardId`; `position?` int >= 0) → `resource.FlashCardListService/AddCardToList` → `FlashcardListService.addCardToList`, `@Transactional()`:
+  1. `SELECT id FROM flash_card_lists WHERE id = $1 FOR UPDATE` (concurrent moves into one list wait for each other), `findOwnedList` (404/403) → load card (404 `FlashCard not found`) → 403 `Only cards by the list author can be moved into it` unless `card.authorId === list.authorId`.
+  2. Read the list's other cards in display order (`CARD_ORDER`, below). `index = min(position ?? n, n)`: no `position` appends; past the end means last; a card already in this list is moved.
+  3. `update FlashCard set listId, position = index`; then one raw `UPDATE flash_cards … FROM unnest(ids, positions)` numbers the other cards `0..n` around it, writing only the rows whose position changes (raw, so their `updatedAt` is untouched). Response empty.
+- **Card order** (`CARD_ORDER`, `apps/resource/src/app/mappers/flash-card.mapper.ts`): `position asc nulls first, createdAt desc, id asc`. `flash_cards.position` (nullable, added by `db push`) is null for every card from before the column and for cards created since (`POST /flash-cards`, accepted proposals, pulled cards): those come first, newest first, which is exactly the old order, so lists nobody reorders look as before. The first add/move into a list numbers all its cards, so `position` is then the card's 0-based index; a card created afterwards shows at the top until the next add/move. Moving a card out of a list leaves a gap in the old list's numbers (harmless: only the order counts). Used by `GET /flash-card-lists/:id` (its `flashCards`) and `GET /flash-card-lists/:id/cards`; `GET /flash-cards` (across lists) stays `createdAt desc`. `FlashCardDto.position` is returned when set.
 
 ### GET /api/v1/resources/flash-card-lists/:id/cards
 
-`PageQueryDto` → `resource.FlashCardListService/ListCardsInList` → `FlashcardListService.listCardsInList`: 404 unless the list is visible; then cards `where listId`, order `createdAt desc`, paged, plus count. Response `ListFlashCardsDto`.
+`PageQueryDto` → `resource.FlashCardListService/ListCardsInList` → `FlashcardListService.listCardsInList`: 404 unless the list is visible; then cards `where listId`, order `CARD_ORDER` (see above), paged, plus count. Response `ListFlashCardsDto`.
 
 ## Reports
 
@@ -299,7 +303,7 @@ None of these consumers emits further events.
 
 ## Findings
 
-- ~~`addCardToList` ignores `position` from `AddCardToListDto`~~: backlog X1 (cards have no order column).
+- ~~`addCardToList` ignores `position` from `AddCardToListDto`~~: fixed (see fixed-issues.md; `flash_cards.position`, `CARD_ORDER`).
 - ~~An empty `tags`/`examples` array meant "keep the old value", so a client could not clear them~~: fixed (see fixed-issues.md; `replaceTags`/`replaceExamples` on blogs, cards and lists).
 - ~~Report `status` is any string~~: fixed (see fixed-issues.md; `ReportStatus` checked in both DTOs, existing rows untouched).
 - ~~`resolvedBy` is overwritten by any update~~: fixed (see fixed-issues.md): a report is resolved once; `resolvedBy` is set by the move into a final status and the report is frozen (409) after it.

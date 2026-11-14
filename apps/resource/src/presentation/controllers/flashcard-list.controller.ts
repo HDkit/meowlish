@@ -62,7 +62,12 @@ export class FlashcardListController implements resource.FlashCardListServiceCon
 	}
 
 	async addCardToList(@Payload() data: AddCardToListReqDto): Promise<void> {
-		await this.flashcardListService.addCardToList(data.listId, data.flashCardId, toRequester(data));
+		await this.flashcardListService.addCardToList(
+			data.listId,
+			data.flashCardId,
+			toRequester(data),
+			data.position,
+		);
 	}
 
 	@SerializeOptions({ type: ListFlashCardsDto, strategy: 'exposeAll' })

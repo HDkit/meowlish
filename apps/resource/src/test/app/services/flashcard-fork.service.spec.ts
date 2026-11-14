@@ -113,6 +113,18 @@ describe('FlashcardForkService.forkFlashCardList', () => {
 		expect(events.resourceCreated).toHaveBeenCalledWith('flashcard', data[0].id, 'me');
 	});
 
+	it('copies each card position, so a placed list keeps its order (C29)', async () => {
+		const { tx, service } = setup();
+		tx.flashCardList.findUnique.mockResolvedValue(
+			list({ cards: [card({ position: 1 }), card({ id: 'o2', position: null })] }),
+		);
+		await service.forkFlashCardList('orig', me);
+		const { data } = (tx.flashCard.createMany.mock.calls as unknown[][])[0][0] as {
+			data: Record<string, unknown>[];
+		};
+		expect(data.map(d => d.position)).toEqual([1, null]);
+	});
+
 	it('names the copy "(bản sao)" when the user already has a list with that name', async () => {
 		const { tx, service } = setup();
 		tx.flashCardList.findUnique.mockResolvedValue(list());

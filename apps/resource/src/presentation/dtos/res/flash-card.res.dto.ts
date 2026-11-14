@@ -33,6 +33,9 @@ export class FlashCardDto implements resource.FlashCardResponse {
 	tags!: string[];
 
 	@Expose()
+	position?: number;
+
+	@Expose()
 	createdAt!: string;
 
 	@Expose()

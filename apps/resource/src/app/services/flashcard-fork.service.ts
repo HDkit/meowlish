@@ -55,7 +55,9 @@ export class FlashcardForkService {
 				listId: listId,
 				originCardId: card.id,
 				originSnapshot: toSnapshotJson(content),
-				// Keep the original's order (lists sort cards by creation time).
+				// Keep the original's order: same positions, and the same relative creation times
+				// for unplaced cards (`CARD_ORDER`).
+				position: card.position,
 				createdAt: new Date(now - cards.length + index),
 			};
 		});

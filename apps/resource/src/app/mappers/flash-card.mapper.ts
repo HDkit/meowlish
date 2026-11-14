@@ -14,9 +14,21 @@ export const toFlashCardReadModel = (entity: FlashCard): FlashCardReadModel => (
 	notes: entity.notes ?? undefined,
 	authorId: entity.authorId,
 	tags: entity.tags,
+	position: entity.position ?? undefined,
 	createdAt: entity.createdAt.toISOString(),
 	updatedAt: entity.updatedAt.toISOString(),
 });
+
+/**
+ * The order of cards inside a list. Cards never placed (`position` null: all cards from before the
+ * column, and cards created since) come first, newest first, which is exactly the order lists had
+ * before positions existed; placed cards follow by position. `id` breaks ties so pages are stable.
+ */
+export const CARD_ORDER = [
+	{ position: { sort: 'asc', nulls: 'first' } },
+	{ createdAt: 'desc' },
+	{ id: 'asc' },
+] satisfies Prisma.FlashCardOrderByWithRelationInput[];
 
 /** Include this on list queries so the read model carries the fork count. */
 export const WITH_FORK_COUNT = {

@@ -13,6 +13,10 @@ export class AddCardToListDto implements Omit<
 	@IsInt()
 	@IsOptional()
 	@Min(0)
-	@ApiPropertyOptional()
+	@ApiPropertyOptional({
+		description:
+			"0-based index in the list's current order to put the card at; past the end means last. Omit to append. A card already in the list is moved.",
+		example: 0,
+	})
 	position?: number;
 }

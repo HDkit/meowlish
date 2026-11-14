@@ -43,6 +43,13 @@ export class FlashCardDto {
 	tags!: string[];
 
 	@Expose()
+	@ApiPropertyOptional({
+		description:
+			'0-based place in its list, set by "add a card to a list". Absent for cards never placed: those come first in a list, newest first, then placed cards by position.',
+	})
+	position?: number;
+
+	@Expose()
 	@ApiProperty({ type: String, format: 'date-time' })
 	createdAt!: Date;
 

@@ -31,6 +31,10 @@ model FlashCard {
   originCardId   String?  @map("origin_card_id")
   /// The original card's content when it was last copied or synced (word, definition, …), the merge base.
   originSnapshot Json?    @map("origin_snapshot")
+  /// 0-based place in its list, set when a card is placed with "add card to list". Null = not
+  /// placed yet (every card from before the column, and new cards): these sort first, newest
+  /// first, then placed cards by position (`CARD_ORDER`).
+  position       Int?
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 

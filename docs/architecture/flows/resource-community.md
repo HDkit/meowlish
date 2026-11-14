@@ -133,7 +133,7 @@ These three routes live on the proposal controller but call `resource.FlashCardL
   1. Load source list with cards (`createdAt asc`). 404 if missing or private and not yours; 400 `You cannot save a copy of your own list`.
   2. Pick a free name via `copyName` (`domain/flash-card-fork/copy-name.ts`) among the caller's lists starting with the source name.
   3. Create `FlashCardList` (private, same description/tags, `forkedFromId/Name/AuthorId`, `forkSyncedAt = now`).
-  4. `copyCards`: `createMany` `FlashCard` rows owned by the caller with `originCardId` and `originSnapshot` (the merge base), `createdAt` spaced by 1 ms to keep order.
+  4. `copyCards`: `createMany` `FlashCard` rows owned by the caller with `originCardId` and `originSnapshot` (the merge base), `position` copied as is and `createdAt` spaced by 1 ms, so the copy keeps the original's order (`CARD_ORDER`, see [resource.md](resource.md#post-apiv1resourcesflash-card-listsidcards)). Pulling upstream does not sync the order.
   5. One `resource.resource.created` (`resourceType: 'flashcard'`) outbox row per copied card. The list itself publishes nothing.
 - **Async**: `resource.resource.created` → authorization ownership copy (see messaging.md section 7; not in this document's scope).
 - Response `FlashCardListDto`.
