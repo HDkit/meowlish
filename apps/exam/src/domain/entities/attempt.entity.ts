@@ -117,11 +117,15 @@ export class Attempt extends AggregateRoot<Event<any>> implements IEntity<Attemp
 			throw new ForbiddenException('Exam submission time has expired');
 	}
 
+	private assertQuestionIncluded(questionId: string): void {
+		if (!this.questions.has(questionId))
+			throw new ConflictException("Question isn't included in this attempt");
+	}
+
 	// check if the question exists in the section in the domain service layer
 	public answer(questionId: string, answer: string): void {
 		this.assertModifiable(new Date());
-		if (!this.questions.has(questionId))
-			throw new ConflictException("Question isn't included in this attempt");
+		this.assertQuestionIncluded(questionId);
 		const existingResponse = this.responses.find(r => r.questionId === questionId);
 		if (existingResponse) {
 			this.answerBasedOnQuestionType(existingResponse, answer);
@@ -169,6 +173,8 @@ export class Attempt extends AggregateRoot<Event<any>> implements IEntity<Attemp
 	}
 
 	public addNote(questionId: string, note: string): void {
+		this.assertModifiable(new Date());
+		this.assertQuestionIncluded(questionId);
 		const existingResponse = this.responses.find(r => r.questionId === questionId);
 		if (existingResponse) {
 			existingResponse.setNote(note);
@@ -188,6 +194,8 @@ export class Attempt extends AggregateRoot<Event<any>> implements IEntity<Attemp
 	}
 
 	public toggleFlag(questionId: string): boolean {
+		this.assertModifiable(new Date());
+		this.assertQuestionIncluded(questionId);
 		const existingResponse = this.responses.find(r => r.questionId === questionId);
 		if (existingResponse) {
 			const flagState = existingResponse.toggleFlag();
