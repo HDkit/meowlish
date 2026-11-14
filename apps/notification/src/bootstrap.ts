@@ -20,7 +20,9 @@ async function bootstrap() {
 	const server = notificationModule
 		.get<ConfigService<IEnvVars>>(ConfigService)
 		.getOrThrow('server', { infer: true });
-	notificationModule.enableCors();
+	// No CORS: browsers reach the SSE stream only through the gateway, which proxies it server-side
+	// after checking the recipient (an `Access-Control-Allow-Origin: *` from here would also replace
+	// the gateway's own CORS headers on the proxied response).
 
 	notificationModule.connectMicroservice<MicroserviceOptions>(
 		{
