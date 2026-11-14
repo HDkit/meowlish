@@ -9,6 +9,7 @@ import {
 	IsOptional,
 	IsPositive,
 	IsString,
+	Max,
 	ValidateNested,
 } from 'class-validator';
 
@@ -21,6 +22,8 @@ class SortOptionsDto implements exam.GetUsersAttemptHistoryDto_SortOption {
 	@ApiProperty({ enum: SortDirection })
 	direction!: SortDirection;
 }
+
+const MAX_PAGE_LIMIT = 100;
 
 export class GetUsersAttemptHistoryDto implements Omit<exam.GetUsersAttemptHistoryDto, 'uid'> {
 	@IsOptional()
@@ -37,7 +40,8 @@ export class GetUsersAttemptHistoryDto implements Omit<exam.GetUsersAttemptHisto
 	@IsInt()
 	@IsOptional()
 	@IsPositive()
-	@ApiPropertyOptional({ type: Number })
+	@Max(MAX_PAGE_LIMIT)
+	@ApiPropertyOptional({ type: Number, minimum: 1, maximum: 100 })
 	limit?: number;
 
 	@Type(() => SortOptionsDto)

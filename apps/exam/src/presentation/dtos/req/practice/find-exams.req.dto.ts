@@ -9,6 +9,7 @@ import {
 	IsOptional,
 	IsPositive,
 	IsString,
+	Max,
 	ValidateNested,
 } from 'class-validator';
 
@@ -36,6 +37,8 @@ class SortOptionsDto implements exam.FindExamsDto_SortOption {
 	direction!: SortDirection;
 }
 
+const MAX_PAGE_LIMIT = 100;
+
 export class FindExamsDto implements exam.FindExamsDto {
 	@Type(() => FilterOptionsDto)
 	@IsOptional()
@@ -54,6 +57,7 @@ export class FindExamsDto implements exam.FindExamsDto {
 	@IsInt()
 	@IsOptional()
 	@IsPositive()
+	@Max(MAX_PAGE_LIMIT)
 	limit?: number;
 
 	@IsInt()

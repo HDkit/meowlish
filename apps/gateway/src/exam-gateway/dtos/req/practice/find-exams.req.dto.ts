@@ -55,6 +55,8 @@ class SortOptionsDto implements exam.FindExamsDto_SortOption {
 	direction!: SortDirection;
 }
 
+const MAX_PAGE_LIMIT = 100;
+
 export class FindExamsDto implements exam.FindExamsDto {
 	@Type(() => FilterOptionsDto)
 	@IsOptional()
@@ -77,7 +79,8 @@ export class FindExamsDto implements exam.FindExamsDto {
 	@IsInt()
 	@IsOptional()
 	@IsPositive()
-	@ApiPropertyOptional({ type: Number })
+	@Max(MAX_PAGE_LIMIT)
+	@ApiPropertyOptional({ type: Number, minimum: 1, maximum: 100 })
 	limit?: number;
 
 	@Type(() => Number)
