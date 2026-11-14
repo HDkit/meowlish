@@ -62,19 +62,12 @@ async function seed() {
 		}
 		console.warn(`Seeded ${flashCards.length} flashcard ownership records`);
 
-		// Seed flashcard list ownership
-		const flashCardLists = await resourceDb.flashCardList.findMany({
-			select: { id: true, authorId: true },
+		// No route checks `flashcard-list` ownership (resource enforces it from its own rows) and no
+		// event keeps these rows current, so drop the ones earlier seeds wrote.
+		const { count: staleLists } = await authorizationDb.resourceOwnership.deleteMany({
+			where: { resourceType: 'flashcard-list' },
 		});
-		console.warn(`Found ${flashCardLists.length} flash card lists`);
-		for (const list of flashCardLists) {
-			await authorizationDb.resourceOwnership.upsert({
-				where: { resourceType_resourceId: { resourceType: 'flashcard-list', resourceId: list.id } },
-				update: { ownerId: list.authorId },
-				create: { resourceType: 'flashcard-list', resourceId: list.id, ownerId: list.authorId },
-			});
-		}
-		console.warn(`Seeded ${flashCardLists.length} flashcard list ownership records`);
+		console.warn(`Removed ${staleLists} stale flashcard list ownership records`);
 
 		// Backfill live rooms' createdBy from ownership rows registered via live.room.created.
 		// Idempotent: only rooms with no recorded owner are touched.
@@ -95,6 +88,24 @@ async function seed() {
 		console.warn(
 			`Backfilled createdBy on ${roomOwnerships.length}/${unownedRooms.length} rooms without an owner`,
 		);
+
+		// Seed room ownership from live's createdBy (now also filled in from the step above), for
+		// rooms whose live.room.created event was lost or predates the consumer.
+		const ownedRooms = await liveDb.room.findMany({
+			where: { createdBy: { not: null } },
+			select: { id: true, createdBy: true },
+		});
+		let seededRooms = 0;
+		for (const room of ownedRooms) {
+			if (!room.createdBy) continue;
+			await authorizationDb.resourceOwnership.upsert({
+				where: { resourceType_resourceId: { resourceType: 'room', resourceId: room.id } },
+				update: { ownerId: room.createdBy },
+				create: { resourceType: 'room', resourceId: room.id, ownerId: room.createdBy },
+			});
+			seededRooms++;
+		}
+		console.warn(`Seeded ${seededRooms} room ownership records`);
 
 		const totalCount = await authorizationDb.resourceOwnership.count();
 		console.warn(`\nSeeding complete. Total ownership records: ${totalCount}`);
