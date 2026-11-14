@@ -282,14 +282,23 @@ export class ForumService {
 		return this.toThread(created);
 	}
 
-	/** Reading a thread counts a view. */
+	/**
+	 * Reading a thread counts a view. `updateMany` matches nothing (instead of throwing P2025) when
+	 * the thread is gone, so a missing or concurrently deleted thread is a 404.
+	 */
 	async getThread(id: string): Promise<ForumThreadReadModel> {
-		await this.findThread(id);
-		const thread = await this.txHost.tx.forumThread.update({
+		const { count } = await this.txHost.tx.forumThread.updateMany({
 			where: { id: id },
 			data: { viewCount: { increment: 1 } },
-			include: { category: { select: { name: true } } },
 		});
+		const thread =
+			count > 0 ?
+				await this.txHost.tx.forumThread.findUnique({
+					where: { id: id },
+					include: { category: { select: { name: true } } },
+				})
+			:	null;
+		if (!thread) throw new NotFoundException('Thread not found');
 		return this.toThread(thread);
 	}
 
@@ -320,6 +329,9 @@ export class ForumService {
 		requester: Requester,
 	): Promise<ForumThreadReadModel> {
 		if (!requester.privileged) throw new ForbiddenException('Only moderators can do this');
+		if (data.isPinned === undefined && data.isLocked === undefined) {
+			throw new BadRequestException('Nothing to update');
+		}
 		const thread = await this.findThread(data.id);
 		const updated = await this.txHost.tx.forumThread.update({
 			where: { id: thread.id },

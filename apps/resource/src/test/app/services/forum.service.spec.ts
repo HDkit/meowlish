@@ -66,6 +66,7 @@ const setup = () => {
 			groupBy: jest.fn().mockResolvedValue([]),
 			create: jest.fn(),
 			update: jest.fn(),
+			updateMany: jest.fn().mockResolvedValue({ count: 1 }),
 			delete: jest.fn(),
 		},
 		forumReply: {
@@ -179,6 +180,15 @@ describe('ForumService threads', () => {
 		);
 	});
 
+	it('refuses a moderation request that changes nothing (400)', async () => {
+		const { tx, service } = setup();
+		tx.forumThread.findUnique.mockResolvedValue(thread());
+		await expect(service.moderateThread({ id: 't1' }, moderator)).rejects.toBeInstanceOf(
+			BadRequestException,
+		);
+		expect(tx.forumThread.update).not.toHaveBeenCalled();
+	});
+
 	it('lists threads pinned first, then by last activity, with a title search', async () => {
 		const { tx, service } = setup();
 		tx.forumCategory.findUnique.mockResolvedValue(category());
@@ -210,13 +220,23 @@ describe('ForumService threads', () => {
 
 	it('counts a view when a thread is read', async () => {
 		const { tx, service } = setup();
-		tx.forumThread.findUnique.mockResolvedValue(thread());
-		tx.forumThread.update.mockResolvedValue(thread({ viewCount: 1 }));
+		tx.forumThread.findUnique.mockResolvedValue(thread({ viewCount: 1 }));
 		const result = await service.getThread('t1');
-		expect(tx.forumThread.update).toHaveBeenCalledWith(
-			expect.objectContaining({ data: { viewCount: { increment: 1 } } }),
-		);
+		expect(tx.forumThread.updateMany).toHaveBeenCalledWith({
+			where: { id: 't1' },
+			data: { viewCount: { increment: 1 } },
+		});
 		expect(result).toMatchObject({ viewCount: 1, categoryName: 'IELTS' });
+	});
+
+	it('404s when the thread is missing or deleted while being read', async () => {
+		const { tx, service } = setup();
+		tx.forumThread.updateMany.mockResolvedValueOnce({ count: 0 });
+		await expect(service.getThread('gone')).rejects.toBeInstanceOf(NotFoundException);
+
+		// counted, then deleted before the read-back
+		tx.forumThread.findUnique.mockResolvedValue(null);
+		await expect(service.getThread('t1')).rejects.toBeInstanceOf(NotFoundException);
 	});
 
 	it('summarises categories with totals and their most active thread', async () => {

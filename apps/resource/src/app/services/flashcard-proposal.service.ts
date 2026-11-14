@@ -152,6 +152,13 @@ export class FlashcardProposalService {
 		if (pair.original.authorId === requester.id) {
 			throw new BadRequestException('You cannot propose changes to your own list');
 		}
+		// `@IsNotEmpty()` lets a whitespace-only title through
+		const title = data.title.trim();
+		if (!title) throw new BadRequestException('title must not be empty');
+		// Lock the copy's row until commit, so concurrent creates for it run one after the other and
+		// the second one sees the first one's open proposal (there is no unique index for it).
+		await this.txHost.tx
+			.$queryRaw`SELECT id FROM flash_card_lists WHERE id = ${pair.fork.id} FOR UPDATE`;
 		const open = await this.txHost.tx.flashCardListProposal.findFirst({
 			where: {
 				sourceListId: pair.fork.id,
@@ -172,7 +179,7 @@ export class FlashcardProposalService {
 				sourceListId: pair.fork.id,
 				targetListId: pair.original.id,
 				authorId: requester.id,
-				title: data.title.trim(),
+				title: title,
 				message: data.message?.trim() ?? '',
 				status: FlashCardProposalStatus.Open,
 				changes: toChangesJson(changes),

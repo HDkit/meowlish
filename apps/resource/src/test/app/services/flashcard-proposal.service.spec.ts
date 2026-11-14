@@ -77,6 +77,7 @@ const stranger = { id: 'stranger', privileged: false };
 const setup = (opts: { current?: ReturnType<typeof row>[] } = {}) => {
 	let stored = proposal();
 	const tx = {
+		$queryRaw: jest.fn().mockResolvedValue([]),
 		flashCardListProposal: {
 			findFirst: jest.fn(({ where }: { where: { OR?: [{ authorId: string }] } }) => {
 				// emulate visibleProposalsWhere: author, target owner, or privileged (no OR)
@@ -170,6 +171,27 @@ describe('FlashcardProposalService.createFlashCardProposal', () => {
 			service.createFlashCardProposal({ sourceListId: 'fork', title: 'x' }, proposer),
 		).rejects.toBeInstanceOf(BadRequestException);
 		expect(tx.flashCardListProposal.create).not.toHaveBeenCalled();
+	});
+
+	it('refuses a whitespace-only title', async () => {
+		const { tx, service } = setup();
+		tx.flashCardListProposal.findFirst.mockReturnValueOnce(null);
+		await expect(
+			service.createFlashCardProposal({ sourceListId: 'fork', title: '   ' }, proposer),
+		).rejects.toBeInstanceOf(BadRequestException);
+		expect(tx.flashCardListProposal.create).not.toHaveBeenCalled();
+	});
+
+	it('locks the copy before checking for an open proposal', async () => {
+		const { tx, service } = setup();
+		tx.flashCardListProposal.findFirst.mockReturnValueOnce(null);
+		await service.createFlashCardProposal({ sourceListId: 'fork', title: 'x' }, proposer);
+		const [sql, id] = (tx.$queryRaw.mock.calls as [TemplateStringsArray, string][])[0];
+		expect(sql.join('?')).toMatch(/FROM flash_card_lists WHERE id = \? FOR UPDATE/);
+		expect(id).toBe('fork');
+		expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+			tx.flashCardListProposal.findFirst.mock.invocationCallOrder[0],
+		);
 	});
 });
 
