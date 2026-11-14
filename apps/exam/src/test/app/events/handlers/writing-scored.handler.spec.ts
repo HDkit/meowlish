@@ -38,8 +38,14 @@ const setup = () => {
 		saveComment: jest.fn().mockResolvedValue('a1'),
 		getScoreEvaluator: jest.fn().mockImplementation(() => Promise.resolve(evaluator())),
 		save: jest.fn<Promise<void>, [AttemptEvaluator]>().mockResolvedValue(undefined),
+		saveScoringFailure: jest.fn().mockResolvedValue(true),
 	};
-	return { repo: repo, handler: new WritingScoredHandler(repo as never) };
+	const logger = { warn: jest.fn() };
+	return {
+		repo: repo,
+		logger: logger,
+		handler: new WritingScoredHandler(repo as never, logger as never),
+	};
 };
 
 describe('WritingScoredHandler (C9)', () => {
@@ -62,11 +68,40 @@ describe('WritingScoredHandler (C9)', () => {
 		expect(repo.save).toHaveBeenCalledTimes(2);
 	});
 
-	it('fails the message on a scoring error without saving anything', async () => {
+	it('records a scoring error instead of failing the message (C21)', async () => {
 		const { repo, handler } = setup();
-		await expect(
-			handler.handle(Object.assign(payload(), { status: 'error', error_message: 'boom' })),
-		).rejects.toThrow('boom');
+		await handler.handle(
+			Object.assign(payload(), {
+				status: 'error',
+				error_code: 'LLM_PARSE_ERROR',
+				error_message: 'no band',
+			}),
+		);
 		expect(repo.saveComment).not.toHaveBeenCalled();
+		expect(repo.save).not.toHaveBeenCalled();
+		const [responseId, stored] = repo.saveScoringFailure.mock.calls[0] as [string, string];
+		expect(responseId).toBe('r1');
+		expect(JSON.parse(stored)).toMatchObject({
+			status: 'error',
+			error_code: 'LLM_PARSE_ERROR',
+			error_message: 'no band',
+		});
+	});
+
+	it('treats a success without feedback as a failure', async () => {
+		const { repo, handler } = setup();
+		await handler.handle(Object.assign(payload(), { data: undefined }));
+		expect(
+			JSON.parse((repo.saveScoringFailure.mock.calls[0] as [string, string])[1]),
+		).toMatchObject({
+			error_code: 'INVALID_RESULT',
+		});
+	});
+
+	it('keeps a real band when a failure arrives after it', async () => {
+		const { repo, logger, handler } = setup();
+		repo.saveScoringFailure.mockResolvedValue(false);
+		await handler.handle(Object.assign(payload(), { status: 'error', error_code: 'LLM_TIMEOUT' }));
+		expect(logger.warn).toHaveBeenCalled();
 	});
 });

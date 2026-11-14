@@ -23,6 +23,11 @@ export interface IAttemptRepository {
 	} | null>;
 	/** Upserts the AI feedback of a response and returns the id of the attempt it belongs to. */
 	saveComment(responseId: string, comment: unknown): Promise<string>;
+	/**
+	 * Records that the AI scorer could not grade a response, unless it already has a band (a real
+	 * result is never replaced by a failure). Returns whether the failure was stored.
+	 */
+	saveScoringFailure(responseId: string, failure: unknown): Promise<boolean>;
 }
 
 export const IAttemptRepositoryToken = Symbol('IAttemptRepository');

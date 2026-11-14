@@ -22,6 +22,7 @@ const setup = (updatedRows = 1) => {
 		question: { findMany: jest.fn() },
 		scorerData: {
 			upsert: jest.fn().mockResolvedValue({ response: { attemptId: 'a1' } }),
+			findUnique: jest.fn().mockResolvedValue(null),
 		},
 	};
 	const txHost = { tx: tx, withTransaction: (fn: () => Promise<void>) => fn() };
@@ -105,5 +106,24 @@ describe('AttemptPrismaRepositoryImpl writing feedback (C9)', () => {
 			new AttemptQuestion('q1', QuestionType.Writing, [], 9),
 			new AttemptQuestion('q2', QuestionType.Writing, [], 9),
 		]);
+	});
+});
+
+describe('AttemptPrismaRepositoryImpl.saveScoringFailure (C21)', () => {
+	const failure = JSON.stringify({ status: 'error', error_code: 'LLM_TIMEOUT' });
+
+	it('stores the failure when the response has no feedback yet, or only an earlier failure', async () => {
+		const { tx, repo } = setup();
+		await expect(repo.saveScoringFailure('r1', failure)).resolves.toBe(true);
+		tx.scorerData.findUnique.mockResolvedValue({ comment: failure });
+		await expect(repo.saveScoringFailure('r1', failure)).resolves.toBe(true);
+		expect(tx.scorerData.upsert).toHaveBeenCalledTimes(2);
+	});
+
+	it('never replaces a real band', async () => {
+		const { tx, repo } = setup();
+		tx.scorerData.findUnique.mockResolvedValue({ comment: JSON.stringify({ overall_score: 6.5 }) });
+		await expect(repo.saveScoringFailure('r1', failure)).resolves.toBe(false);
+		expect(tx.scorerData.upsert).not.toHaveBeenCalled();
 	});
 });

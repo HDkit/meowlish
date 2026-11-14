@@ -4,6 +4,15 @@ What was fixed from [`backlog.md`](backlog.md), and how. Newest first. Each entr
 
 ## November 2026
 
+### C21: a scorer failure left the essay unscored with no trace
+
+- **Problem:** when the AI scorer gave up (`status: 'error'`, e.g. `LLM_PARSE_ERROR` or `LLM_TIMEOUT` after its own retries), `WritingScoredHandler` threw. The message was retried five times and dead-lettered, nothing was stored, and the results page polled for five minutes before giving up. A success without `data` failed the same way.
+- **Fix:**
+  - `WritingScoredHandler` (`apps/exam/src/app/events/handlers/writing-scored.handler.ts`) records the failure as the response's feedback, `{ status: 'error', error_code, error_message, failed_at }` (code `INVALID_RESULT` for a success without `data`), and acks the message. Retrying in exam could not change the scorer's answer.
+  - `IAttemptRepository.saveScoringFailure` (`attempt.prisma.repository.impl.ts`) never replaces a real band; a later successful result for the response still overwrites the failure through `saveComment`.
+  - Frontend (`meowlish-fe`): the results page and `/writing` recognise the failure record, stop waiting, label the essay "Chưa chấm được" with a plain explanation, and leave it out of the average band. A real band 0 is now shown instead of hidden.
+- **Tests:** `apps/exam/src/test/app/events/handlers/writing-scored.handler.spec.ts`, `apps/exam/src/test/infra/repositories/attempt.prisma.repository.impl.spec.ts` ("saveScoringFailure").
+
 ### C20: report attachments were never reference-counted
 
 - **Problem:** exam and auth tell file-service when a file becomes referenced (`*.file.added`) or released (`*.files.removed`), and file-service's orphan cleanup deletes files with `ref_count <= 0` an hour after upload. resource's reports did neither, so every report attachment looked orphaned and was deleted after an hour.

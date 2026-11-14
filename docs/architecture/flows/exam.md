@@ -369,7 +369,7 @@ sequenceDiagram
    - `responses[i].additionalData` stays absent until `scorer_data` exists for that response.
    - `totalPoints` and `isCorrect` are absent until the in-process scoring transaction of step 4 has committed.
    - The review does not carry the attempt `score`. The updated score shows up in `GET /exams/practice/my/history`.
-   - If scoring fails, `exam.writing.scored` with `status: 'error'` ends in `exam.events.writing.scored.dlq` and `additionalData` never appears. The client has no signal for this, so it should poll with a time limit (an essay takes about 1-2 min on CPU).
+   - If scoring fails (`status: 'error'`, or a success without `data`), exam stores the failure as the response's feedback (`{ status: 'error', error_code, error_message, failed_at }`), so `additionalData` appears and the client can stop polling and say the essay was not graded. A later successful result for the response replaces it; a failure never replaces a real band (C21, [fixed-issues.md](../../fixed-issues.md)).
 
 ### GET /api/v1/exams/practice/attempt/:id/saved
 
@@ -466,12 +466,12 @@ No events are published for tag changes.
 | Queue       | `exam.events.writing.scored` (`defineConsumerQueue`; retries `.retry.1..5` at 1-16 s, then `.dlq`)                                                                                                                           |
 | Inbox       | **no**. The input is a bare payload; a re-run re-saves the same feedback.                                                                                                                                                    |
 | Validation  | parameter type `WritingScoredEvent` (class-validator classes in the same file), via the global `GlobalValidationPipe` (`APP_PIPE` in `exam.module.ts`). Unclear: whether golevelup applies global pipes to `@RabbitPayload`. |
-| Tables      | `scorer_data` (upsert by `response_id`, `comment` = `JSON.stringify(payload.data)`), `attempts.score/total_points/version`, `attempt_responses.is_correct`                                                                   |
+| Tables      | `scorer_data` (upsert by `response_id`, `comment` = `JSON.stringify(payload.data)`, or the failure record), `attempts.score/total_points/version`, `attempt_responses.is_correct`                                            |
 | Events out  | none (`recomputeScore` raises none; `exam.attempt.scored` is not re-sent)                                                                                                                                                    |
 
 Flow:
 
-1. `status === 'error'`, `error_code` or `error_message` → it throws, and the message is retried 5 times and then dead-lettered.
+1. `status === 'error'`, `error_code`, `error_message`, or no `data` → `saveFailure`: `saveScoringFailure(response_id, JSON.stringify({ status: 'error', error_code, error_message, failed_at }))` in one transaction, skipped (warning logged) when the response already has a band; the attempt score is not recomputed (an ungraded essay adds no points either way). The message is acked, not retried: the scorer already retried on its side.
 2. Otherwise it runs `retryAttemptConflicts` around the `@Transactional()` `saveFeedbackAndRescore`:
    - `saveComment(response_id, …)` returns the attempt id; `attempt_id` from the payload is not used;
    - `getScoreEvaluator` → `AttemptEvaluator.recomputeScore()`. Writing points are `round(points × clamp(overall_score / 9, 0, 1))`, with the band read by `toWritingBand` (`infra/repositories/writing-band.ts`);

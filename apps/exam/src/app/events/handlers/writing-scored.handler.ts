@@ -7,6 +7,7 @@ import { retryAttemptConflicts } from '../../services/attempt-conflict-retry';
 import { RabbitPayload, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import { Transactional } from '@nestjs-cls/transactional';
 import { Inject, Injectable, NotFoundException, UseFilters } from '@nestjs/common';
+import { AppLoggerService } from '@server/logger';
 import { GlobalRmqExceptionFilter } from '@server/utils';
 import { Type } from 'class-transformer';
 import { IsArray, IsNumber, IsObject, IsOptional, IsString, ValidateNested } from 'class-validator';
@@ -79,6 +80,7 @@ export class WritingScoredEvent {
 export class WritingScoredHandler {
 	constructor(
 		@Inject(IAttemptRepositoryToken) private readonly attemptRepository: IAttemptRepository,
+		private readonly logger: AppLoggerService,
 	) {}
 
 	@UseFilters(GlobalRmqExceptionFilter)
@@ -92,11 +94,37 @@ export class WritingScoredHandler {
 		...WRITING_SCORED_QUEUE.subscribe,
 	})
 	async handle(@RabbitPayload() payload: WritingScoredEvent): Promise<void> {
-		if (payload.status === 'error' || payload.error_code || payload.error_message)
-			throw new Error(payload.error_message ?? payload.error_code ?? 'Writing scoring failed');
+		const failed = payload.status === 'error' || !!payload.error_code || !!payload.error_message;
+		if (failed || !payload.data) {
+			// The scorer has already retried on its side: retrying here cannot change the outcome, and
+			// throwing only dead-lettered the message and left the student waiting. Record the failure
+			// so the review shows it; a later successful result for the response replaces it.
+			await this.saveFailure(payload, failed ? undefined : 'INVALID_RESULT');
+			return;
+		}
 		// Two writings of one attempt scored at once: the later save conflicts on the attempt
 		// version and re-runs, now seeing both feedbacks. Redelivery just re-saves the same feedback.
 		await retryAttemptConflicts(() => this.saveFeedbackAndRescore(payload));
+	}
+
+	@Transactional()
+	private async saveFailure(payload: WritingScoredEvent, errorCode?: string): Promise<void> {
+		const failure = {
+			status: 'error',
+			error_code: errorCode ?? payload.error_code ?? 'SCORING_FAILED',
+			error_message:
+				errorCode ? 'The scorer sent a result without feedback' : (payload.error_message ?? null),
+			failed_at: new Date().toISOString(),
+		};
+		// stored like the feedback itself: a JSON string, read back through the review's additionalData
+		const stored = await this.attemptRepository.saveScoringFailure(
+			payload.response_id,
+			JSON.stringify(failure),
+		);
+		if (!stored)
+			this.logger.warn(
+				`Scoring failure for response ${payload.response_id} ignored: it already has a band`,
+			);
 	}
 
 	/** Saves the AI feedback and the attempt score that now includes its points, atomically. */

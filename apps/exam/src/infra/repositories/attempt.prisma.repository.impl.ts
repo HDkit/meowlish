@@ -317,6 +317,20 @@ export class AttemptPrismaRepositoryImpl implements IAttemptRepository {
 			:	null;
 	}
 
+	async saveScoringFailure(responseId: string, failure: unknown): Promise<boolean> {
+		const existing = await this.txHost.tx.scorerData.findUnique({
+			where: { responseId: responseId },
+			select: { comment: true },
+		});
+		if (existing && toWritingBand([existing]) !== null) return false;
+		await this.txHost.tx.scorerData.upsert({
+			where: { responseId: responseId },
+			create: { responseId: responseId, comment: failure as object },
+			update: { comment: failure as object },
+		});
+		return true;
+	}
+
 	async saveComment(responseId: string, comment: unknown): Promise<string> {
 		const saved = await this.txHost.tx.scorerData.upsert({
 			where: { responseId: responseId },

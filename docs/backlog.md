@@ -17,9 +17,8 @@ When you fix an item, delete it here in the same commit and describe the fix in 
 
 ## Correctness
 
-| #   | Status   | Where                                                                                       | Problem                                                                                                                                                                                                                                                                                                                                               | Suggested fix |
-| --- | -------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| C21 | Verified | exam `WritingScoredHandler` (`apps/exam/src/app/events/handlers/writing-scored.handler.ts`) | A scorer failure (`status: 'error'`, e.g. `LLM_PARSE_ERROR` or `LLM_TIMEOUT` after the worker's own retries) is thrown, retried 5 times and dead-lettered; the essay stays unscored with no feedback row, and the student only sees the results page give up after 5 minutes. Store the failure (or re-submit to the scorer) so the attempt shows it. |
+| #   | Status | Where | Problem | Suggested fix |
+| --- | ------ | ----- | ------- | ------------- |
 
 More candidate issues, noticed while writing the per-operation flows (November 2026) and **not yet re-checked**, are listed at the end of each page in [`architecture/flows/`](architecture/flows/README.md) under "Findings". Confirm one before fixing it, then add it here.
 
