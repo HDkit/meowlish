@@ -22,7 +22,7 @@ Also deploy **gateway and auth together**: the three Google Calendar RPCs change
 
 The frontend and the API **may be on different sites** (e.g. `app.servebeer.com` and `meowlish.servebeer.com`, which are cross-site because `servebeer.com` is a public suffix, or two unrelated domains). This works because the browser never calls the API host directly: the frontend proxies to the gateway, so the session cookies are first-party cookies of the **frontend host**, and `SameSite=Lax` never comes into play.
 
-- `/api/*` -> gateway `/api/*`. This also carries `GET /api/v1/auth/google/callback`, so set `BASE_URL` to the **frontend's** public origin: Google must redirect back through the proxy, where the `oauth2_state` cookie of the linking flow lives.
+- `/api/*` -> gateway `/api/*`. This also carries `GET /api/v1/auth/google/callback`, so set `BASE_URL` to the **frontend's** public origin: Google must redirect back through the proxy, where the `oauth2_state` cookie of every Google flow lives.
 - `/socket.io/*` -> gateway `/api/v1/chat/ws/socket.io/*`. WebSocket upgrades need a proxy that forwards them (nginx/Envoy, or `next start` itself); without one socket.io falls back to long-polling.
 
 The frontend's Next.js config does both rewrites (target: `NEXT_PUBLIC_API_URL`, which may be any host). Calling the API host directly from the browser is **not supported** when it is cross-site: the cookies would be third-party, which Safari and Firefox block and `SameSite=Lax` refuses on fetch. (Same-site direct calls, e.g. `app.example.com` -> `api.example.com`, still work.)

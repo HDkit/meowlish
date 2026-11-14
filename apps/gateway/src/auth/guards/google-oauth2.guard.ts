@@ -22,12 +22,26 @@ export const OAUTH_STATE_COOKIE = 'oauth2_state';
 export const OAUTH_STATE_TTL_SECONDS = 300;
 export const oauthStateKey = (nonce: string) => `gateway:oauth2:state:${nonce}`;
 
+/**
+ * Transition for flows started before every flow carried a browser-bound state: for this long
+ * after the gateway starts, a callback without a state (old default-frontend login) or with a
+ * state that predates the cookie (old listed-frontend login) is still accepted. A Google flow
+ * lasts minutes (the state itself expires after OAUTH_STATE_TTL_SECONDS), so 15 minutes covers
+ * any flow that was in progress at the deploy. Remove LEGACY_STATE_ACCEPTED_UNTIL and its two
+ * uses in the release after this one.
+ */
+export const LEGACY_STATE_GRACE_MS = 15 * 60 * 1000;
+const LEGACY_STATE_ACCEPTED_UNTIL = Date.now() + LEGACY_STATE_GRACE_MS;
+const acceptsLegacyState = () => Date.now() < LEGACY_STATE_ACCEPTED_UNTIL;
+
 /** What the OAuth state nonce points to in Redis. */
 const stateRecordSchema = z.object({
 	/** Linking flow: the identity that gets the Google credential. */
 	identityId: z.string().optional(),
 	/** Non-default frontend origin the flow started on. */
 	frontend: z.string().optional(),
+	/** Set on every state written since the transition: the `oauth2_state` cookie is required. */
+	bound: z.boolean().optional(),
 });
 type StateRecord = z.infer<typeof stateRecordSchema>;
 
@@ -109,11 +123,16 @@ export class GoogleOAuth2Guard extends GoogleOAuth2BaseGuard {
 		);
 		if (!frontend) throw new BadRequestException('Unknown frontend');
 
-		const record: StateRecord = { identityId: request.user?.sub, frontend: frontend.origin };
-		// Default-frontend login needs no state (unchanged behaviour).
-		if (!record.identityId && !record.frontend) return { state: undefined };
-
-		// The state is an opaque single-use nonce (the server adds the key prefix).
+		const record: StateRecord = {
+			identityId: request.user?.sub,
+			frontend: frontend.origin,
+			bound: true,
+		};
+		// Every flow (login too) gets an opaque single-use nonce bound to this browser by a cookie,
+		// so a callback URL carrying someone else's code and state is refused (login CSRF), and a
+		// consent link can't be replayed by someone else. The cookie lives on the frontend's host
+		// (BASE_URL is the frontend's origin), which is why the callback must come back through the
+		// frontend the flow started on. The server adds the key prefix.
 		const nonce = crypto.randomUUID();
 		await this.redis.set(
 			oauthStateKey(nonce),
@@ -121,15 +140,10 @@ export class GoogleOAuth2Guard extends GoogleOAuth2BaseGuard {
 			'EX',
 			OAUTH_STATE_TTL_SECONDS,
 		);
-		if (record.identityId) {
-			// Linking flow: bound to this browser by a cookie, so a consent link can't be replayed by
-			// someone else. The cookie lives on the frontend's host, which is why the callback must
-			// come back through the same frontend.
-			response.cookie(OAUTH_STATE_COOKIE, nonce, {
-				...this.stateCookieOptions(request),
-				maxAge: OAUTH_STATE_TTL_SECONDS * 1000,
-			});
-		}
+		response.cookie(OAUTH_STATE_COOKIE, nonce, {
+			...this.stateCookieOptions(request),
+			maxAge: OAUTH_STATE_TTL_SECONDS * 1000,
+		});
 		return { state: nonce, callbackURL: frontend.callbackUrl };
 	}
 }
@@ -156,7 +170,8 @@ export class GoogleOAuth2CallbackGuard extends GoogleOAuth2BaseGuard {
 	): Promise<GoogleOAuthFlow> {
 		const state = request.query['state'];
 		if (state === undefined) {
-			// Default-frontend login never sends a state, and that never fails to resolve.
+			// Only a default-frontend login started before the deploy has no state (transition).
+			if (!acceptsLegacyState()) throw new UnauthorizedException('OAuth state missing');
 			const frontend = resolveGoogleOAuthFrontend(this.vps);
 			if (!frontend) throw new UnauthorizedException('Expired session');
 			request.googleOAuth = { frontend: frontend };
@@ -172,16 +187,17 @@ export class GoogleOAuth2CallbackGuard extends GoogleOAuth2BaseGuard {
 		// Known from here on, so an error below still returns to the right frontend and flow.
 		request.googleOAuth = { identityId: record.identityId, frontend: frontend };
 		// Check the cookie before deleting, so someone else's request can't burn this state.
-		if (record.identityId && readCookie(request, OAUTH_STATE_COOKIE) !== state) {
+		// Only an unbound login state written before the deploy may skip it (transition).
+		const legacy = !record.bound && !record.identityId && acceptsLegacyState();
+		if (!legacy && readCookie(request, OAUTH_STATE_COOKIE) !== state) {
 			throw new UnauthorizedException('OAuth state mismatch');
 		}
 		// DEL is the single-use gate: only one callback can consume the state.
 		if ((await this.redis.del(oauthStateKey(state))) === 0) {
 			throw new UnauthorizedException('Expired session');
 		}
-		// The nonce is spent: drop the linking flow's cookie instead of leaving it until it expires.
-		if (record.identityId)
-			response.clearCookie(OAUTH_STATE_COOKIE, this.stateCookieOptions(request));
+		// The nonce is spent: drop its cookie instead of leaving it until it expires.
+		response.clearCookie(OAUTH_STATE_COOKIE, this.stateCookieOptions(request));
 		return request.googleOAuth;
 	}
 }

@@ -3,7 +3,11 @@ import { AUTH_CLIENT } from '../../auth-gateway/constants/auth';
 import { GOOGLE_CALLBACK_PATH } from '../../auth-gateway/google-oauth-frontends';
 import { GoogleOAuth2Strategy } from '../../auth-gateway/strategies/google-oauth2.strategy';
 import { JwtStrategy } from '../../auth-gateway/strategies/jwt.strategy';
-import { OAUTH_STATE_COOKIE, oauthStateKey } from '../../auth/guards/google-oauth2.guard';
+import {
+	LEGACY_STATE_GRACE_MS,
+	OAUTH_STATE_COOKIE,
+	oauthStateKey,
+} from '../../auth/guards/google-oauth2.guard';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { status } from '@grpc/grpc-js';
 import { RedisService } from '@liaoliaots/nestjs-redis';
@@ -95,6 +99,23 @@ describe('Google OAuth across frontends', () => {
 	};
 	const putState = (nonce: string, record: object) =>
 		redis.store.set(oauthStateKey(nonce), JSON.stringify(record));
+	/** A login state as the start writes it now; returns the matching cookie header. */
+	const putLogin = (nonce: string, record: object = {}) => {
+		putState(nonce, { ...record, bound: true });
+		return { Cookie: `${OAUTH_STATE_COOKIE}=${nonce}` };
+	};
+	const stateCookie = (res: Response) =>
+		res.headers.getSetCookie().find(c => c.startsWith(`${OAUTH_STATE_COOKIE}=`));
+	/** Runs the rest of a test after the transition window for pre-deploy flows has closed. */
+	const afterTransition = async (run: () => Promise<void>) => {
+		const closed = Date.now() + LEGACY_STATE_GRACE_MS + 1;
+		const now = jest.spyOn(Date, 'now').mockReturnValue(closed);
+		try {
+			await run();
+		} finally {
+			now.mockRestore();
+		}
+	};
 
 	beforeAll(async () => {
 		const moduleRef = await Test.createTestingModule({
@@ -142,27 +163,38 @@ describe('Google OAuth across frontends', () => {
 	afterAll(() => app.close());
 
 	describe('start', () => {
-		it('default frontend: BASE_URL callback and no state, as before', async () => {
+		it('default frontend login: BASE_URL callback and a state bound to the browser', async () => {
 			const res = await get('/google');
 			expect(res.status).toBe(302);
 			const url = location(res);
 			expect(url.host).toBe('accounts.google.com');
 			expect(url.searchParams.get('redirect_uri')).toBe(`${MAIN}${GOOGLE_CALLBACK_PATH}`);
-			expect(url.searchParams.get('state')).toBeNull();
-			expect(redis.set).not.toHaveBeenCalled();
+			const state = url.searchParams.get('state') ?? '';
+			expect(JSON.parse(redis.store.get(oauthStateKey(state)) ?? '')).toEqual({ bound: true });
+			const cookie = stateCookie(res);
+			expect(cookie).toContain(`${OAUTH_STATE_COOKIE}=${state}`);
+			expect(cookie).toContain(`Path=${GOOGLE_CALLBACK_PATH}`);
+			expect(cookie).toContain('HttpOnly');
+			expect(cookie).toContain('SameSite=Lax');
 		});
 
 		it('naming the default frontend is the same as omitting it', async () => {
 			const url = location(await get(`/google?frontend=${encodeURIComponent(`${MAIN}/`)}`));
 			expect(url.searchParams.get('redirect_uri')).toBe(`${MAIN}${GOOGLE_CALLBACK_PATH}`);
-			expect(url.searchParams.get('state')).toBeNull();
+			const state = url.searchParams.get('state') ?? '';
+			expect(JSON.parse(redis.store.get(oauthStateKey(state)) ?? '')).toEqual({ bound: true });
 		});
 
-		it('listed frontend: its own callback, remembered in the state', async () => {
-			const url = location(await get(`/google?frontend=${encodeURIComponent(SHARE)}`));
+		it('listed frontend: its own callback, remembered in the bound state', async () => {
+			const res = await get(`/google?frontend=${encodeURIComponent(SHARE)}`);
+			const url = location(res);
 			expect(url.searchParams.get('redirect_uri')).toBe(`${SHARE}${GOOGLE_CALLBACK_PATH}`);
 			const state = url.searchParams.get('state') ?? '';
-			expect(JSON.parse(redis.store.get(oauthStateKey(state)) ?? '')).toEqual({ frontend: SHARE });
+			expect(JSON.parse(redis.store.get(oauthStateKey(state)) ?? '')).toEqual({
+				frontend: SHARE,
+				bound: true,
+			});
+			expect(stateCookie(res)).toContain(`${OAUTH_STATE_COOKIE}=${state}`);
 		});
 
 		it('unlisted frontend is 400, so the redirect cannot leave the allowlist', async () => {
@@ -180,8 +212,9 @@ describe('Google OAuth across frontends', () => {
 			expect(JSON.parse(redis.store.get(oauthStateKey(state)) ?? '')).toEqual({
 				identityId: 'user-1',
 				frontend: SHARE,
+				bound: true,
 			});
-			const cookie = res.headers.getSetCookie().find(c => c.startsWith(`${OAUTH_STATE_COOKIE}=`));
+			const cookie = stateCookie(res);
 			expect(cookie).toContain(`${OAUTH_STATE_COOKIE}=${state}`);
 			expect(cookie).toContain(`Path=${GOOGLE_CALLBACK_PATH}`);
 			expect(cookie).not.toContain('Secure');
@@ -191,8 +224,7 @@ describe('Google OAuth across frontends', () => {
 			config['env'] = 'production';
 			try {
 				const res = await get('/credentials/google', { Cookie: `access_token=${accessToken}` });
-				const cookie = res.headers.getSetCookie().find(c => c.startsWith(`${OAUTH_STATE_COOKIE}=`));
-				expect(cookie).toContain('Secure');
+				expect(stateCookie(res)).toContain('Secure');
 			} finally {
 				config['env'] = 'development';
 			}
@@ -200,8 +232,8 @@ describe('Google OAuth across frontends', () => {
 	});
 
 	describe('callback', () => {
-		it('no state: default frontend login, with the Google name and email', async () => {
-			const res = await get('/google/callback?code=c');
+		it('default frontend login, with the Google name and email', async () => {
+			const res = await get('/google/callback?code=c&state=n0', putLogin('n0'));
 			expect(res.status).toBe(302);
 			expect(exchangedRedirectUri).toBe(`${MAIN}${GOOGLE_CALLBACK_PATH}`);
 			const url = location(res);
@@ -215,11 +247,62 @@ describe('Google OAuth across frontends', () => {
 					email: 'van.a@gmail.com',
 				}),
 			);
+			expect(redis.store.has(oauthStateKey('n0'))).toBe(false);
+			expect(stateCookie(res)).toContain(`${OAUTH_STATE_COOKIE}=;`);
+		});
+
+		it("login with someone else's code and state is refused (login CSRF)", async () => {
+			putLogin('n8');
+			const attempts: Record<string, string>[] = [{}, { Cookie: `${OAUTH_STATE_COOKIE}=attacker` }];
+			for (const headers of attempts) {
+				const res = await get('/google/callback?code=c&state=n8', headers);
+				expect(errorRedirect(res)).toEqual({
+					at: `${MAIN}/auth/callback`,
+					error: 'SESSION_EXPIRED',
+					flow: null,
+				});
+			}
+			expect(redis.store.has(oauthStateKey('n8'))).toBe(true);
+			expect(authService.registerOrLoginGoogle).not.toHaveBeenCalled();
+		});
+
+		it('transition: a pre-deploy login without a state is still accepted', async () => {
+			const res = await get('/google/callback?code=c');
+			expect(res.status).toBe(302);
+			expect(location(res).searchParams.get('loginToken')).toBeTruthy();
+		});
+
+		it('transition: a pre-deploy unbound listed-frontend state needs no cookie', async () => {
+			putState('n9', { frontend: SHARE });
+			const res = await get('/google/callback?code=c&state=n9');
+			expect(res.status).toBe(302);
+			expect(location(res).searchParams.get('loginToken')).toBeTruthy();
+		});
+
+		it('after the transition a missing or unbound state is refused', async () => {
+			await afterTransition(async () => {
+				expect(errorRedirect(await get('/google/callback?code=c'))).toEqual({
+					at: `${MAIN}/auth/callback`,
+					error: 'SESSION_EXPIRED',
+					flow: null,
+				});
+				putState('n10', { frontend: SHARE });
+				expect(errorRedirect(await get('/google/callback?code=c&state=n10'))).toMatchObject({
+					at: `${SHARE}/auth/callback`,
+					error: 'SESSION_EXPIRED',
+				});
+				// a bound state with its cookie still works
+				const res = await get('/google/callback?code=c&state=n11', putLogin('n11'));
+				expect(location(res).searchParams.get('loginToken')).toBeTruthy();
+			});
+			expect(authService.registerOrLoginGoogle).toHaveBeenCalledTimes(1);
 		});
 
 		it('login from a listed frontend returns to that frontend', async () => {
-			putState('n1', { frontend: SHARE });
-			const res = await get('/google/callback?code=c&state=n1');
+			const res = await get(
+				'/google/callback?code=c&state=n1',
+				putLogin('n1', { frontend: SHARE }),
+			);
 			expect(res.status).toBe(302);
 			// passport must repeat the redirect_uri of the start, or Google rejects the exchange
 			expect(exchangedRedirectUri).toBe(`${SHARE}${GOOGLE_CALLBACK_PATH}`);
@@ -279,8 +362,10 @@ describe('Google OAuth across frontends', () => {
 		});
 
 		it('cancelling on Google is ACCESS_DENIED, back on the frontend that started', async () => {
-			putState('n5', { frontend: SHARE });
-			const res = await get('/google/callback?error=access_denied&state=n5');
+			const res = await get(
+				'/google/callback?error=access_denied&state=n5',
+				putLogin('n5', { frontend: SHARE }),
+			);
 			expect(errorRedirect(res)).toEqual({
 				at: `${SHARE}/auth/callback`,
 				error: 'ACCESS_DENIED',
@@ -319,11 +404,11 @@ describe('Google OAuth across frontends', () => {
 			authService.registerOrLoginGoogle.mockReturnValueOnce(
 				throwError(() => ({ code: status.PERMISSION_DENIED, details: 'Account locked' })),
 			);
-			expect(errorRedirect(await get('/google/callback?code=c'))).toMatchObject({
-				error: 'FORBIDDEN',
-			});
+			const locked = await get('/google/callback?code=c&state=l1', putLogin('l1'));
+			expect(errorRedirect(locked)).toMatchObject({ error: 'FORBIDDEN' });
 			authService.registerOrLoginGoogle.mockReturnValueOnce(throwError(() => new Error('boom')));
-			expect(errorRedirect(await get('/google/callback?code=c'))).toMatchObject({
+			const failed = await get('/google/callback?code=c&state=l2', putLogin('l2'));
+			expect(errorRedirect(failed)).toMatchObject({
 				error: 'GOOGLE_FAILED',
 			});
 		});
@@ -340,7 +425,7 @@ describe('Google OAuth across frontends', () => {
 			res.headers.getSetCookie().filter(c => /^(access|refresh)_token=[^;]/.test(c));
 
 		it('the callback login token sets the session cookies once', async () => {
-			const callback = await get('/google/callback?code=c');
+			const callback = await get('/google/callback?code=c&state=x1', putLogin('x1'));
 			const loginToken = location(callback).searchParams.get('loginToken') ?? '';
 			const first = await exchange(loginToken);
 			expect(first.status).toBe(201);

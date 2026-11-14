@@ -45,7 +45,7 @@ All of this is in `apps/gateway/src/auth-gateway/auth-cookies.ts` and `auth.rout
 | --------------- | ---------------------------------------------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------ | -------------------------- |
 | `access_token`  | `POST /auth/register`, `/auth/login`, `/auth/refresh`, `/auth/google/tokens` | `/`                            | `HttpOnly`, `SameSite=Lax`, `Secure` when `req.secure`, `X-Forwarded-Proto: https`, or `NODE_ENV=production` | from the token's own `exp` |
 | `refresh_token` | same (only when the RPC returned one)                                        | `/api/v1/auth`                 | same                                                                                                         | from the token's own `exp` |
-| `oauth2_state`  | `GET /auth/credentials/google` (linking only), `GoogleOAuth2Guard`           | `/api/v1/auth/google/callback` | `HttpOnly`, `SameSite=Lax`, `Secure` on HTTPS                                                                | 300 s                      |
+| `oauth2_state`  | `GET /auth/google`, `GET /auth/credentials/google` (`GoogleOAuth2Guard`)     | `/api/v1/auth/google/callback` | `HttpOnly`, `SameSite=Lax`, `Secure` on HTTPS                                                                | 300 s                      |
 
 Cookie-issuing routes return `data: null`; tokens never appear in a response body.
 
@@ -77,7 +77,7 @@ The browser only talks to the frontend's origin. `meowlish-fe/next.config.ts` re
 So the session cookies are set by, and sent to, the frontend origin: they are first-party, `refresh_token`'s `Path=/api/v1/auth` matches the proxied path, and the gateway's origin doesn't need to be same-site with the frontend. What still matters:
 
 - `CORS_ORIGINS` (gateway and live) must list the frontend origin, because the browser's `Origin` header is checked by `CookieIssuanceGuard` and by live's handshake `allowRequest` (`apps/live/src/app/infra/adapter/redis-io.adapter.ts`).
-- `BASE_URL` is the frontend's public origin, so Google redirects back through the proxy (where `oauth2_state` lives).
+- `BASE_URL` is the frontend's public origin, so Google redirects back through the proxy (where `oauth2_state` lives). Every Google flow needs that cookie on the callback: if `BASE_URL` pointed at another host, every Google login would fail with `SESSION_EXPIRED`.
 - More than one frontend: list the others in `GOOGLE_OAUTH_FRONTENDS` and have each open `/auth/google` and `/auth/credentials/google` with `?frontend=${location.origin}`. The start guard (`GoogleOAuth2Guard`) stores that origin in the state and sends Google `<origin>/api/v1/auth/google/callback`; the callback guard (`GoogleOAuth2CallbackGuard`) reads it back, repeats the same `redirect_uri` in the code exchange, and the user lands on `<origin>` + the path of `FE_LOGIN_REDIRECT_URL`. An unlisted origin is 400, so the redirect can't be pointed elsewhere. No `frontend` (or the default frontend's own origin) keeps the single-frontend behaviour below.
 - Next's built-in proxy doesn't add `X-Forwarded-For`; see [operations.md](operations.md) (`TRUST_PROXY`) and `docs/operations/upgrade-notes.md`.
 
@@ -100,11 +100,13 @@ sequenceDiagram
   Note over B,A: Login / register
   B->>FE: navigate GET /api/v1/auth/google
   FE->>G: proxied
-  G-->>B: 302 to Google (no state; with ?frontend=<listed origin>: state=nonce, SET state = {frontend})
+  G->>R: SET gateway:oauth2:state:nonce = {frontend?, bound}, EX 300
+  G-->>B: Set-Cookie oauth2_state=nonce, 302 to Google with state=nonce
   B->>Go: consent
-  Go-->>B: 302 BASE_URL/api/v1/auth/google/callback?code=...
-  B->>FE: GET callback
+  Go-->>B: 302 BASE_URL/api/v1/auth/google/callback?code&state
+  B->>FE: GET callback (oauth2_state cookie comes back)
   FE->>G: proxied
+  G->>G: GET state key, state == cookie?, DEL (single use) -> frontend
   G->>A: RegisterOrLoginGoogle(googleId)
   A-->>G: Tokens
   G->>R: SETEX oauth2:google:loginToken:uuid 60 s = Tokens
@@ -118,7 +120,7 @@ sequenceDiagram
   Note over B,A: Linking (already logged in)
   B->>FE: top-level navigation GET /api/v1/auth/credentials/google (sends access_token cookie)
   FE->>G: proxied, JwtAuthGuard ok
-  G->>R: SET gateway:oauth2:state:nonce = {identityId, frontend?}, EX 300
+  G->>R: SET gateway:oauth2:state:nonce = {identityId, frontend?, bound}, EX 300
   G-->>B: Set-Cookie oauth2_state=nonce, 302 to Google with state=nonce
   B->>Go: consent
   Go-->>B: 302 callback?code&state
