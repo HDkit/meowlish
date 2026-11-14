@@ -10,6 +10,7 @@ const setup = () => {
 			update: jest.fn(),
 			delete: jest.fn(),
 			deleteMany: jest.fn(),
+			findMany: jest.fn(),
 		},
 	};
 	const sse = { emit: jest.fn() };
@@ -92,6 +93,49 @@ describe('NotificationService', () => {
 				type: 'flashcard',
 				data: { path: ['proposalId'], equals: 'p1' },
 			},
+		});
+	});
+
+	describe('listMissed (SSE Last-Event-ID replay)', () => {
+		const row = (id: string, ms: number) => ({
+			id: id,
+			recipientId: 'u1',
+			type: 'achievement',
+			title: 't',
+			message: 'm',
+			data: null,
+			isRead: false,
+			readAt: null,
+			createdAt: new Date(ms),
+		});
+
+		it('replays nothing for an id that is not one of the recipient’s notifications', async () => {
+			const { tx, service } = setup();
+			tx.notification.findFirst.mockResolvedValue(null);
+			await expect(service.listMissed('u1', 'someone-elses')).resolves.toEqual([]);
+			expect(tx.notification.findFirst).toHaveBeenCalledWith(
+				expect.objectContaining({ where: { id: 'someone-elses', recipientId: 'u1' } }),
+			);
+			expect(tx.notification.findMany).not.toHaveBeenCalled();
+		});
+
+		it('returns the newest 100 notifications after the anchor, oldest first', async () => {
+			const { tx, service } = setup();
+			tx.notification.findFirst.mockResolvedValue({ id: 'n1', createdAt: new Date(1000) });
+			tx.notification.findMany.mockResolvedValue([row('n3', 3000), row('n2', 2000)]);
+			const missed = await service.listMissed('u1', 'n1');
+			expect(missed.map(n => n.id)).toEqual(['n2', 'n3']);
+			expect(tx.notification.findMany).toHaveBeenCalledWith({
+				where: {
+					recipientId: 'u1',
+					OR: [
+						{ createdAt: { gt: new Date(1000) } },
+						{ createdAt: new Date(1000), id: { gt: 'n1' } },
+					],
+				},
+				orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+				take: 100,
+			});
 		});
 	});
 });

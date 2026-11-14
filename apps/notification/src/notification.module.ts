@@ -17,7 +17,6 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { CqrsModule } from '@nestjs/cqrs';
-import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PrismaClient } from '@prisma-client/notification';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { auth } from '@server/generated';
@@ -67,7 +66,6 @@ const rmqPubModule = RabbitMQModule.forRootAsync({
 			load: [config],
 		}),
 		CqrsModule.forRoot(),
-		EventEmitterModule.forRoot(),
 		ClsModule.forRoot({
 			global: true,
 			guard: { mount: false },

@@ -16,6 +16,12 @@ const mqSchema = z.object({
 	port: z.coerce.number(),
 });
 
+/** Redis pub/sub that fans SSE pushes out to every notification replica. */
+const redisVarsSchema = z.object({
+	host: z.string(),
+	port: z.coerce.number(),
+});
+
 /** auth gRPC address (to find the admins to notify); `url` overrides host:port. */
 const authServiceSchema = z.object({
 	url: z.string().optional(),
@@ -36,6 +42,7 @@ export const envFileSchema = z.object({
 	server: serverSchema,
 	database: dbVarsSchema,
 	messageQueue: mqSchema,
+	redis: redisVarsSchema,
 	authService: authServiceSchema,
 });
 
@@ -61,6 +68,10 @@ const loadEnv = (): DeepStringify<IEnvVars> => ({
 		port: process.env.RMQ_PORT,
 		user: process.env.RMQ_USER,
 		password: process.env.RMQ_PASS,
+	},
+	redis: {
+		host: process.env.REDIS_HOST,
+		port: process.env.REDIS_PORT,
 	},
 	authService: {
 		url: process.env.AUTH_SERVICE_URL || undefined,

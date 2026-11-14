@@ -6,7 +6,7 @@ import {
 	type CreateNotificationInput,
 	type ListNotificationsInput,
 } from '../types/notification.input';
-import { NotificationSseService } from './notification-sse.service';
+import { NotificationSseService, SSE_REPLAY_LIMIT } from './notification-sse.service';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
@@ -73,6 +73,31 @@ export class NotificationService {
 		for (const notification of notifications) {
 			this.sseService.emit(notification.recipientId, notification);
 		}
+	}
+
+	/**
+	 * The recipient's notifications stored after `lastId` (an SSE `Last-Event-ID`), oldest first:
+	 * the newest `SSE_REPLAY_LIMIT` of them, as older ones are still in the list. An id that is not
+	 * one of the recipient's notifications (deleted, or someone else's) replays nothing.
+	 */
+	async listMissed(recipientId: string, lastId: string): Promise<NotificationReadModel[]> {
+		const anchor = await this.txHost.tx.notification.findFirst({
+			where: { id: lastId, recipientId: recipientId },
+			select: { id: true, createdAt: true },
+		});
+		if (!anchor) return [];
+		const newestFirst = await this.txHost.tx.notification.findMany({
+			where: {
+				recipientId: recipientId,
+				OR: [
+					{ createdAt: { gt: anchor.createdAt } },
+					{ createdAt: anchor.createdAt, id: { gt: anchor.id } },
+				],
+			},
+			orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+			take: SSE_REPLAY_LIMIT,
+		});
+		return newestFirst.reverse().map(n => this.toReadModel(n));
 	}
 
 	async getNotification(id: string, recipientId: string): Promise<NotificationReadModel> {
