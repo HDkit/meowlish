@@ -63,10 +63,17 @@ describe('NotificationGatewayController preferences', () => {
 		);
 	});
 
-	it('PATCH /preferences forwards the forum quote switch', async () => {
-		await request(server()).patch('/preferences').send({ forumQuoteEnabled: false }).expect(200);
+	it('PATCH /preferences forwards the forum quote and flash card switches', async () => {
+		await request(server())
+			.patch('/preferences')
+			.send({ forumQuoteEnabled: false, flashcardEnabled: false })
+			.expect(200);
 		expect(updatePreferences).toHaveBeenCalledWith(
-			expect.objectContaining({ identityId: 'jwt-user', forumQuoteEnabled: false }),
+			expect.objectContaining({
+				identityId: 'jwt-user',
+				forumQuoteEnabled: false,
+				flashcardEnabled: false,
+			}),
 		);
 	});
 

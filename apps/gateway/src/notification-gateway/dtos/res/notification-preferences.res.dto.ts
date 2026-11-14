@@ -47,6 +47,12 @@ export class NotificationPreferencesDto {
 	forumQuoteEnabled!: boolean;
 
 	@Expose()
+	@ApiProperty({
+		description: 'Flash card proposals: one waits for my review, or mine was accepted/rejected',
+	})
+	flashcardEnabled!: boolean;
+
+	@Expose()
 	@ApiProperty()
 	updatedAt!: string;
 }

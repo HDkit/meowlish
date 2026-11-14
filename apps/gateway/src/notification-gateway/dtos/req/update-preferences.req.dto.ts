@@ -50,4 +50,11 @@ export class UpdatePreferencesReqDto implements Omit<
 	@IsOptional()
 	@ApiPropertyOptional({ description: 'Someone quoted my forum reply' })
 	forumQuoteEnabled?: boolean;
+
+	@IsBoolean()
+	@IsOptional()
+	@ApiPropertyOptional({
+		description: 'Flash card proposals: one waits for my review, or mine was accepted/rejected',
+	})
+	flashcardEnabled?: boolean;
 }

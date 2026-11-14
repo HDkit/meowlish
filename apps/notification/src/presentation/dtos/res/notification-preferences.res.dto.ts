@@ -36,5 +36,8 @@ export class NotificationPreferencesDto implements notification.NotificationPref
 	forumQuoteEnabled!: boolean;
 
 	@Expose()
+	flashcardEnabled!: boolean;
+
+	@Expose()
 	updatedAt!: string;
 }

@@ -26,6 +26,7 @@ export interface UpdatePreferencesInput {
 	commentReplyEnabled?: boolean;
 	forumReplyEnabled?: boolean;
 	forumQuoteEnabled?: boolean;
+	flashcardEnabled?: boolean;
 }
 
 /** Notification types a user can opt out of via preferences. */
@@ -36,4 +37,5 @@ export type OptionalNotificationType =
 	| 'blogComment'
 	| 'commentReply'
 	| 'forumReply'
-	| 'forumQuote';
+	| 'forumQuote'
+	| 'flashcard';

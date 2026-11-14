@@ -1,4 +1,5 @@
 import { type NotificationReadModel } from '../../../domain/read-models/notification.read-model';
+import { NotificationPreferencesService } from '../../services/notification-preferences.service';
 import { NotificationService } from '../../services/notification.service';
 import { proposalAction } from './flashcard-proposal-created.handler';
 import { RabbitPayload, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
@@ -55,6 +56,7 @@ export const proposalDecisionText = (event: {
 export class FlashCardProposalDecidedHandler {
 	constructor(
 		private readonly notificationService: NotificationService,
+		private readonly preferencesService: NotificationPreferencesService,
 		private readonly inbox: InboxService,
 	) {}
 
@@ -79,6 +81,7 @@ export class FlashCardProposalDecidedHandler {
 		const event = await validatePayload(FlashCardProposalDecidedEvent, payload);
 		const text = proposalDecisionText(event);
 		if (!text || event.decidedBy === event.authorId) return created;
+		if (!(await this.preferencesService.isEnabled(event.authorId, 'flashcard'))) return created;
 		created.push(
 			await this.notificationService.createNotification({
 				recipientId: event.authorId,

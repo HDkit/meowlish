@@ -25,6 +25,7 @@ export class NotificationPreferencesService {
 			commentReplyEnabled: entity.commentReplyEnabled,
 			forumReplyEnabled: entity.forumReplyEnabled,
 			forumQuoteEnabled: entity.forumQuoteEnabled,
+			flashcardEnabled: entity.flashcardEnabled,
 			updatedAt: entity.updatedAt.toISOString(),
 		};
 	}
@@ -51,6 +52,7 @@ export class NotificationPreferencesService {
 				commentReplyEnabled: data.commentReplyEnabled,
 				forumReplyEnabled: data.forumReplyEnabled,
 				forumQuoteEnabled: data.forumQuoteEnabled,
+				flashcardEnabled: data.flashcardEnabled,
 			},
 			create: {
 				identityId: data.identityId,
@@ -63,6 +65,7 @@ export class NotificationPreferencesService {
 				commentReplyEnabled: data.commentReplyEnabled,
 				forumReplyEnabled: data.forumReplyEnabled,
 				forumQuoteEnabled: data.forumQuoteEnabled,
+				flashcardEnabled: data.flashcardEnabled,
 			},
 		});
 		return this.toReadModel(entity);
@@ -82,6 +85,7 @@ export class NotificationPreferencesService {
 			commentReply: prefs.commentReplyEnabled,
 			forumReply: prefs.forumReplyEnabled,
 			forumQuote: prefs.forumQuoteEnabled,
+			flashcard: prefs.flashcardEnabled,
 		};
 		return enabledByType[type];
 	}

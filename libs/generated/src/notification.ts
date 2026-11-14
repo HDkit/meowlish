@@ -91,6 +91,8 @@ export interface NotificationPreferencesResponse {
   forumReplyEnabled: boolean;
   /** someone quoted my forum reply */
   forumQuoteEnabled: boolean;
+  /** flash card proposals: one waiting for my review, or my proposal accepted/rejected */
+  flashcardEnabled: boolean;
 }
 
 export interface GetPreferencesRequest {
@@ -108,6 +110,7 @@ export interface UpdatePreferencesRequest {
   commentReplyEnabled?: boolean | undefined;
   forumReplyEnabled?: boolean | undefined;
   forumQuoteEnabled?: boolean | undefined;
+  flashcardEnabled?: boolean | undefined;
 }
 
 function createBaseNotificationResponse(): NotificationResponse {
@@ -723,6 +726,7 @@ function createBaseNotificationPreferencesResponse(): NotificationPreferencesRes
     commentReplyEnabled: false,
     forumReplyEnabled: false,
     forumQuoteEnabled: false,
+    flashcardEnabled: false,
   };
 }
 
@@ -763,6 +767,9 @@ export const NotificationPreferencesResponse: MessageFns<NotificationPreferences
     }
     if (message.forumQuoteEnabled !== false) {
       writer.uint32(96).bool(message.forumQuoteEnabled);
+    }
+    if (message.flashcardEnabled !== false) {
+      writer.uint32(104).bool(message.flashcardEnabled);
     }
     return writer;
   },
@@ -876,6 +883,14 @@ export const NotificationPreferencesResponse: MessageFns<NotificationPreferences
             message.forumQuoteEnabled = reader.bool();
             continue;
           }
+          case 13: {
+            if (tag !== 104) {
+              break;
+            }
+
+            message.flashcardEnabled = reader.bool();
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -971,6 +986,9 @@ export const UpdatePreferencesRequest: MessageFns<UpdatePreferencesRequest> = {
     if (message.forumQuoteEnabled !== undefined) {
       BoolValue.encode({ value: message.forumQuoteEnabled! }, writer.uint32(82).fork()).join();
     }
+    if (message.flashcardEnabled !== undefined) {
+      BoolValue.encode({ value: message.flashcardEnabled! }, writer.uint32(90).fork()).join();
+    }
     return writer;
   },
 
@@ -1065,6 +1083,14 @@ export const UpdatePreferencesRequest: MessageFns<UpdatePreferencesRequest> = {
             }
 
             message.forumQuoteEnabled = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 11: {
+            if (tag !== 90) {
+              break;
+            }
+
+            message.flashcardEnabled = BoolValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }

@@ -219,19 +219,19 @@ Notification consumers of the events above (all in `apps/notification/src/app/ev
 ### resource.flashcard-proposal.created
 
 - Queue `notification.events.flashcard-proposal.created`; `FlashCardProposalCreatedHandler` (`flashcard-proposal-created.handler.ts`); inbox yes.
-- Skips when `targetOwnerId === authorId`. No preference check (there is no flash card preference).
+- Skips when `targetOwnerId === authorId`, or when the owner turned off `flashcardEnabled` (`isEnabled(targetOwnerId, 'flashcard')`).
 - Notification to `targetOwnerId`: `type: 'flashcard'`, title `Có đề xuất thay đổi cho bộ thẻ của bạn`, `data { proposalId, listId, action: /flashcards/<targetListId>/proposals/<proposalId> }`.
 
 ### resource.flashcard-proposal.decided
 
 - Queue `notification.events.flashcard-proposal.decided`; `FlashCardProposalDecidedHandler` (`flashcard-proposal-decided.handler.ts`); inbox yes.
-- `proposalDecisionText` builds accepted / rejected text (appends `Ghi chú: <note>` if a note was given); any other status returns null and the event is dropped. Also skipped when `decidedBy === authorId`. No preference check.
+- `proposalDecisionText` builds accepted / rejected text (appends `Ghi chú: <note>` if a note was given); any other status returns null and the event is dropped. Also skipped when `decidedBy === authorId`, or when the proposer turned off `flashcardEnabled` (`isEnabled(authorId, 'flashcard')`).
 - Notification to the proposer (`authorId`): `type: 'flashcard'`, `data { proposalId, listId, status, action }` (same path as above).
 
 ## Findings
 
 - ~~A forum quote notification shared the `commentReply` switch and `comment_reply` type with blog comment replies~~: fixed (C37), own `forumQuoteEnabled` switch and `forum_quote` type.
-- `apps/notification/src/app/events/handlers/flashcard-proposal-created.handler.ts` and `flashcard-proposal-decided.handler.ts`: proposal notifications skip the preference check entirely; `OptionalNotificationType` (`apps/notification/src/app/types/notification.input.ts`) has no flash card entry, so they cannot be turned off: backlog X5 (needs a column, proto field and a frontend switch).
+- ~~Flash card proposal notifications could not be turned off~~: fixed (C38), `flashcardEnabled` switch checked by both handlers.
 - ~~The SSE push happened inside the consumer's transaction, before the commit~~: fixed, pushed after the commit (see fixed-issues.md).
 - `apps/notification/src/app/events/handlers/forum-reply-created.handler.ts:17`: the notification link's page number assumes 20 replies per page (a constant copied from the frontend), while the gateway's default `limit` is 10; a frontend change silently breaks the deep links: backlog X6 (the frontend does use 20 today, so the links are right for now).
 - ~~A whitespace-only proposal title is stored as empty~~: fixed (see fixed-issues.md; 400).

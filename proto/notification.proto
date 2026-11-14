@@ -96,6 +96,8 @@ message NotificationPreferencesResponse {
 	bool   forum_reply_enabled = 11;
 	// someone quoted my forum reply
 	bool   forum_quote_enabled = 12;
+	// flash card proposals: one waiting for my review, or my proposal accepted/rejected
+	bool   flashcard_enabled = 13;
 }
 
 message GetPreferencesRequest {
@@ -113,4 +115,5 @@ message UpdatePreferencesRequest {
 	optional google.protobuf.BoolValue   comment_reply_enabled = 8;
 	optional google.protobuf.BoolValue   forum_reply_enabled = 9;
 	optional google.protobuf.BoolValue   forum_quote_enabled = 10;
+	optional google.protobuf.BoolValue   flashcard_enabled = 11;
 }

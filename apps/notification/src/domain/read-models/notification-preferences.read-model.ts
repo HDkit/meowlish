@@ -10,5 +10,6 @@ export interface NotificationPreferencesReadModel {
 	commentReplyEnabled: boolean;
 	forumReplyEnabled: boolean;
 	forumQuoteEnabled: boolean;
+	flashcardEnabled: boolean;
 	updatedAt: string;
 }

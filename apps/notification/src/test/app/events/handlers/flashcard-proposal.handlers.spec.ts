@@ -10,16 +10,28 @@ jest.mock('nestjs-cls', () => ({ UseCls: () => () => undefined }));
 
 const event = (type: string, payload: object) => ({ id: 'evt-1', type: type, payload: payload });
 
-const setup = (claimed = true) => {
+const setup = (claimed = true, disabled: string[] = []) => {
 	const notifications = {
 		createNotification: jest.fn((n: object) => Promise.resolve(n)),
 		push: jest.fn(),
 	};
+	const preferences = {
+		isEnabled: jest.fn((id: string) => Promise.resolve(!disabled.includes(id))),
+	};
 	const inbox = { claim: jest.fn().mockResolvedValue(claimed) };
 	return {
 		notifications: notifications,
-		created: new FlashCardProposalCreatedHandler(notifications as never, inbox as never),
-		decided: new FlashCardProposalDecidedHandler(notifications as never, inbox as never),
+		preferences: preferences,
+		created: new FlashCardProposalCreatedHandler(
+			notifications as never,
+			preferences as never,
+			inbox as never,
+		),
+		decided: new FlashCardProposalDecidedHandler(
+			notifications as never,
+			preferences as never,
+			inbox as never,
+		),
 	};
 };
 
@@ -89,6 +101,28 @@ describe('flash card proposal notifications', () => {
 			}),
 		);
 		expect(self.notifications.createNotification).not.toHaveBeenCalled();
+	});
+
+	it('respects the flashcard switch of the owner and of the proposer', async () => {
+		const owner = setup(true, ['owner']);
+		await owner.created.handle(
+			event('x', { ...proposal, targetOwnerId: 'owner', authorId: 'proposer' }),
+		);
+		expect(owner.preferences.isEnabled).toHaveBeenCalledWith('owner', 'flashcard');
+		expect(owner.notifications.createNotification).not.toHaveBeenCalled();
+
+		const proposer = setup(true, ['proposer']);
+		await proposer.decided.handle(
+			event('x', {
+				...proposal,
+				authorId: 'proposer',
+				status: 'ACCEPTED',
+				decidedBy: 'owner',
+				decisionNote: null,
+			}),
+		);
+		expect(proposer.preferences.isEnabled).toHaveBeenCalledWith('proposer', 'flashcard');
+		expect(proposer.notifications.createNotification).not.toHaveBeenCalled();
 	});
 
 	it('rejects malformed events so they are retried and dead-lettered', async () => {
