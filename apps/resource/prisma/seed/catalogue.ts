@@ -53,7 +53,7 @@ const POSTS: { slug: string; title: string; tags: string[]; intro: string; secti
 		{
 			slug: 'shadowing',
 			title: 'Shadowing: luyện nghe và nói cùng lúc',
-			tags: ['Listening', 'Speaking'],
+			tags: ['nghe', 'noi'],
 			intro:
 				'Shadowing là kỹ thuật nghe một đoạn audio và nói lặp lại gần như đồng thời. Chỉ 15 phút mỗi ngày đủ để cải thiện ngữ điệu rõ rệt.',
 			sections: [
@@ -76,7 +76,7 @@ const POSTS: { slug: string; title: string; tags: string[]; intro: string; secti
 		{
 			slug: 'toeic-part-5',
 			title: 'TOEIC Part 5: 5 dạng ngữ pháp gặp nhiều nhất',
-			tags: ['TOEIC', 'Grammar'],
+			tags: ['toeic', 'ngu-phap'],
 			intro:
 				'Part 5 có 30 câu điền từ. Nắm chắc vài dạng lặp lại giúp bạn làm nhanh và để dành thời gian cho Part 7.',
 			sections: [
@@ -103,7 +103,7 @@ const POSTS: { slug: string; title: string; tags: string[]; intro: string; secti
 		{
 			slug: 'writing-task-1',
 			title: 'IELTS Writing Task 1: viết phần overview sao cho đủ ý',
-			tags: ['IELTS', 'Writing'],
+			tags: ['ielts', 'viet-lach'],
 			intro:
 				'Overview là phần giám khảo tìm đầu tiên khi chấm Task Achievement. Thiếu overview, điểm khó vượt 5.0.',
 			sections: [
@@ -124,7 +124,7 @@ const POSTS: { slug: string; title: string; tags: string[]; intro: string; secti
 		{
 			slug: 'phrasal-verbs',
 			title: '20 phrasal verb dùng hằng ngày nơi công sở',
-			tags: ['Vocabulary', 'TOEIC'],
+			tags: ['tu-vung', 'toeic'],
 			intro:
 				'Phrasal verb xuất hiện dày đặc trong email và hội thoại công việc. Học theo ngữ cảnh sẽ nhớ lâu hơn học danh sách.',
 			sections: [
@@ -153,7 +153,7 @@ const POSTS: { slug: string; title: string; tags: string[]; intro: string; secti
 		{
 			slug: 'reading-skimming',
 			title: 'Skimming và scanning trong IELTS Reading',
-			tags: ['IELTS', 'Reading'],
+			tags: ['ielts', 'doc-hieu'],
 			intro:
 				'Bạn không cần đọc hết từng chữ. Skimming để nắm ý chính, scanning để tìm thông tin cụ thể.',
 			sections: [
@@ -171,7 +171,7 @@ const POSTS: { slug: string; title: string; tags: string[]; intro: string; secti
 		{
 			slug: 'pronunciation-ed',
 			title: 'Phát âm đuôi -ed: ba cách đọc, một quy tắc',
-			tags: ['Pronunciation'],
+			tags: ['phat-am'],
 			intro: 'Đuôi -ed có ba cách đọc: /t/, /d/ và /ɪd/. Chỉ cần nhìn âm cuối của động từ gốc.',
 			sections: [
 				{
@@ -184,7 +184,7 @@ const POSTS: { slug: string; title: string; tags: string[]; intro: string; secti
 		{
 			slug: 'study-plan-30-days',
 			title: 'Kế hoạch 30 ngày tăng 100 điểm TOEIC',
-			tags: ['TOEIC', 'Study tips'],
+			tags: ['toeic', 'phuong-phap'],
 			intro: 'Một lộ trình cụ thể cho người đang ở khoảng 500–600 điểm muốn lên 650–700.',
 			sections: [
 				{
@@ -205,7 +205,7 @@ const POSTS: { slug: string; title: string; tags: string[]; intro: string; secti
 		{
 			slug: 'speaking-part-2',
 			title: 'IELTS Speaking Part 2: nói đủ 2 phút không bí ý',
-			tags: ['IELTS', 'Speaking'],
+			tags: ['ielts', 'noi'],
 			intro: 'Một phút chuẩn bị là đủ nếu bạn có khung ý sẵn.',
 			sections: [
 				{
@@ -222,7 +222,7 @@ const POSTS: { slug: string; title: string; tags: string[]; intro: string; secti
 		{
 			slug: 'collocations',
 			title: 'Collocation: vì sao "make a decision" mà không phải "do a decision"',
-			tags: ['Vocabulary'],
+			tags: ['tu-vung'],
 			intro:
 				'Collocation là những từ hay đi với nhau. Dùng đúng giúp câu văn tự nhiên và tăng điểm Lexical Resource.',
 			sections: [
@@ -239,7 +239,7 @@ const POSTS: { slug: string; title: string; tags: string[]; intro: string; secti
 		{
 			slug: 'listening-traps',
 			title: 'Những cái bẫy thường gặp trong TOEIC Listening',
-			tags: ['TOEIC', 'Listening'],
+			tags: ['toeic', 'nghe'],
 			intro: 'Đề nghe thường cài từ đồng âm và thông tin bị sửa lại ở cuối câu.',
 			sections: [
 				{
@@ -256,7 +256,7 @@ const POSTS: { slug: string; title: string; tags: string[]; intro: string; secti
 		{
 			slug: 'linking-words',
 			title: 'Từ nối giúp bài Writing mạch lạc hơn',
-			tags: ['Writing', 'Grammar'],
+			tags: ['viet-lach', 'ngu-phap'],
 			intro: 'Coherence & Cohesion chiếm 25% điểm Writing. Dùng từ nối đúng chỗ, không nhồi nhét.',
 			sections: [
 				{
@@ -273,7 +273,7 @@ const POSTS: { slug: string; title: string; tags: string[]; intro: string; secti
 		{
 			slug: 'daily-habit',
 			title: 'Học 15 phút mỗi ngày: thói quen nhỏ, kết quả lớn',
-			tags: ['Study tips'],
+			tags: ['phuong-phap'],
 			intro: 'Học đều đặn hiệu quả hơn học dồn. Chuỗi ngày học trên trang Tiến độ là động lực tốt.',
 			sections: [
 				{
@@ -289,7 +289,7 @@ const POSTS: { slug: string; title: string; tags: string[]; intro: string; secti
 		{
 			slug: 'email-writing',
 			title: 'Viết email công việc bằng tiếng Anh: mẫu và lưu ý',
-			tags: ['Writing', 'TOEIC'],
+			tags: ['viet-lach', 'toeic'],
 			intro: 'Email ngắn, rõ mục đích và đúng giọng điệu là kỹ năng dùng hằng ngày.',
 			sections: [
 				{
@@ -306,7 +306,7 @@ const POSTS: { slug: string; title: string; tags: string[]; intro: string; secti
 		{
 			slug: 'mistakes-review',
 			title: 'Cách ôn lại lỗi sai sau mỗi bài thi',
-			tags: ['Study tips', 'IELTS', 'TOEIC'],
+			tags: ['phuong-phap', 'ielts', 'toeic'],
 			intro: 'Điểm chỉ tăng khi bạn hiểu vì sao mình sai.',
 			sections: [
 				{
