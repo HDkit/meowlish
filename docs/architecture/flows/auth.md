@@ -8,7 +8,7 @@ Conventions used below:
 - **Throttling** (`apps/gateway/src/throttle.ts`, registered by `ThrottlerModule.forRoot(throttlerOptions)` in `apps/gateway/src/gateway.module.ts:45` with a global `ThrottlerGuard`): every route has throttler `default` 100/min keyed `<ip>:sub:<id>` (the `access_token` cookie or Bearer `sub`, decoded **without** verification) or `<ip>` when signed out. `Strict*` decorators replace `default` with 10/min keyed `<ip>:<account>` and enable throttler `ip` (100/min per IP). Storage is the throttler's default in-memory store (no `storage` option), so limits are per gateway process. Over the limit: 429 `Rate limit reached`.
 - **Cookies**: `setAuthCookies` / `clearAuthCookies` in `apps/gateway/src/auth-gateway/auth-cookies.ts` (`access_token` Path=/, `refresh_token` Path=/api/v1/auth, HttpOnly, SameSite=Lax, Secure on HTTPS/production, Max-Age from the JWT `exp`). See [Session cookies](../authorization.md#3-session-cookies).
 - **gRPC errors** map Nest exception → gRPC code (`GlobalRpcExceptionFilter`) → HTTP (`gRPC2HttpExceptionFilter`): 400/401/403/404/409 round-trip; 405 becomes CANCELLED → **499**; any non-`HttpException` (raw Prisma error, plain `Error`) becomes UNKNOWN → **502**.
-- Every write through `IdentityPrismaRepositoryImpl.save` (`apps/auth/src/infra/repositories/identity.prisma.repository.impl.ts:154`) runs in `txHost.withTransaction`: insert at `version 0 → 1`, else `update where {id, version}` with `version + 1` (optimistic lock; a stale version raises Prisma P2025, not mapped, so 502). It then replays the aggregate's uncommitted domain events as row writes: `RoleAdded/Deleted` → `IdentityRole`, `CredAdded/Deleted/Updated` → `Credential`. P2002 → 409 `A record with this value already exists`. `IdentityUpdated`, `IdentityAvatarUpdated`, `IdentityLocked/Unlocked` are not persisted by `save`; publishers read them where noted.
+- Every write through `IdentityPrismaRepositoryImpl.save` (`apps/auth/src/infra/repositories/identity.prisma.repository.impl.ts:154`) runs in `txHost.withTransaction`: insert at `version 0 → 1`, else `update where {id, version}` with `version + 1` (optimistic lock; a stale version raises Prisma P2025 → 409 `Identity was changed concurrently, try again`). It then replays the aggregate's uncommitted domain events as row writes: `RoleAdded/Deleted` → `IdentityRole` (FK miss on an unknown role, P2003 → 404 `Role not found`), `CredAdded/Deleted/Updated` → `Credential`. P2002 → 409 `A record with this value already exists`. `IdentityUpdated`, `IdentityAvatarUpdated`, `IdentityLocked/Unlocked` are not persisted by `save`; publishers read them where noted.
 - `findOneById` / `getClaimsOfId` ignore soft-deleted identities (`deletedAt: null`).
 
 ## Contents
@@ -60,9 +60,9 @@ Create a mail/password account and start a session.
 
 - **Access**: `@IsPublic()`, `CookieIssuanceGuard`, `@StrictThrottleByMail()` (10/min per `<ip>:<lowercased body.mail>`, plus 100/min per IP).
 - **Flow**:
-  1. Gateway `registerMail` (`auth.router.controller.ts:114`), DTO `RegisterMailDto`: `mail` `@IsEmail`, `username` `@IsString` only (no length/charset rule), `password` `@IsStrongPassword`. Calls `auth.AuthService/RegisterMail`.
+  1. Gateway `registerMail` (`auth.router.controller.ts:114`), DTO `RegisterMailDto`: `mail` `@IsEmail`, `username` `@IsString`, not blank, max 50 (no charset rule), `password` `@IsStrongPassword`. Calls `auth.AuthService/RegisterMail`.
   2. `AuthController.registerMail` → `MailRegisterCommandHandler` (`apps/auth/src/app/commands/handlers/mail-register.handler.ts`).
-  3. Builds `Identity` + `Credential` (`loginType MAIL`, password bcrypt-hashed with `hashSync`, cost 10, in `credential.entity.ts:33`); adds the `student` role if `RoleReadRepository.findByName` finds it.
+  3. Builds `Identity` + `Credential` (`loginType MAIL`, password hashed with async `bcrypt.hash`, cost 10, by `Credential.hashSecret`); adds the `student` role if `RoleReadRepository.findByName` finds it.
   4. `identityRepository.save` (one transaction): insert `Identity`, `IdentityRole`, `Credential`. No `@Transactional()` on the handler, so the following `getClaimsOfId` read and token signing run after commit.
   5. `TokenService.generateTokens(claims, true)` signs access + refresh JWT (RS256, `jti`, `iatMs`).
   6. Gateway `issueCookies` sets both cookies; response `data: null`.
@@ -103,11 +103,11 @@ Mint a new access + refresh token pair from a refresh token.
 
 Revoke every token of the caller.
 
-- **Access**: authenticated. No `CookieIssuanceGuard` although it clears cookies (see Findings). Default throttle.
+- **Access**: authenticated, `CookieIssuanceGuard`. Default throttle.
 - **Flow**:
   1. Gateway `logoutAll` (`:172`) → `auth.AuthService/LogOutAll({ identityId: req.user.sub })`.
   2. `LogoutAllCommandHandler` (`logout-all.handler.ts`): load `Identity` (404 missing); `assertNotDemo` (403 for the shared demo account).
-  3. `TokenService.revokeUser`: Redis `SETEX jwt:blacklist:user:<id> <JWT_REFRESH_TOKEN_EXPIRATION s, default 604800> <Date.now() ms>`. Every token with `iatMs <= value` is then refused by ValidateAccess/ValidateRefresh.
+  3. `TokenService.revokeUser`: Redis `SETEX jwt:blacklist:user:<id> <JWT_REFRESH_TOKEN_EXPIRATION s, default 604800> <Date.now() ms>`. Every token with `iatMs <= value` is then refused by ValidateAccess/ValidateRefresh. Tokens issued afterwards are dated at least 1 ms after the stored value (`TokenService.issueTimeMs`), so a session issued in the same millisecond still outlives the revoke.
   4. Gateway clears cookies; `data: null`.
 - **Errors**: 403 demo account; 401 if already revoked.
 
@@ -138,7 +138,7 @@ Start a Google login/sign-up (redirect to Google).
 Start linking a Google account to the signed-in identity. Must be a top-level navigation.
 
 - **Access**: authenticated (the global `JwtAuthGuard` sets `req.user` before `GoogleOAuth2Guard`).
-- **Flow**: as `GET /google`, but `req.user.sub` is present, so the state record is always written (`{ identityId, frontend? }`, 300 s) and an `oauth2_state=<nonce>` cookie is set (HttpOnly, Lax, Path=`/api/v1/auth/google/callback`, 300 s) to bind the flow to this browser.
+- **Flow**: as `GET /google`, but `req.user.sub` is present, so the state record is always written (`{ identityId, frontend? }`, 300 s) and an `oauth2_state=<nonce>` cookie is set (HttpOnly, Lax, `Secure` like the session cookies, Path=`/api/v1/auth/google/callback`, 300 s) to bind the flow to this browser.
 - **Errors**: 401 no session; 400 unknown frontend.
 
 ### GET /api/v1/auth/google/callback
@@ -156,14 +156,14 @@ Google's redirect target. Always answers with a redirect to the frontend login c
   3. Gateway `googleCallback` (`auth.router.controller.ts:199`): `SETEX oauth2:google:loginToken:<uuid> 60 <tokens | true>`; redirect to `<frontend loginRedirectUrl>?loginToken=<uuid>[&flow=link]`.
   4. On any error the filter redirects to the same page with `?error=` (`ACCESS_DENIED`, `SESSION_EXPIRED` for 401, `FORBIDDEN` for 403, `GOOGLE_ALREADY_LINKED`, `GOOGLE_ACCOUNT_IN_USE`, else `GOOGLE_FAILED` and an error log).
 - **Async**: `auth.user.login` (existing-account login only) → achievement, as in [login](#post-apiv1authlogin).
-- **Notes**: the `oauth2_state` cookie is not cleared after use (it expires after 300 s).
+- **Notes**: once a linking state is consumed, the `oauth2_state` cookie is cleared on the same path.
 
 ### POST /api/v1/auth/google/tokens
 
 Exchange the one-time `loginToken` for session cookies.
 
 - **Access**: `@IsPublic()`, `CookieIssuanceGuard`; body must be `application/json` (415 otherwise). Default throttle.
-- **Flow** (`:226`): DTO `ExchangeGoogleLoginTokenDto` (`loginToken` string); Redis `GET oauth2:google:loginToken:<t>` (missing → 401 `Invalid or expired login token`), then `DEL`; if the value is a token object, `setAuthCookies`; linking flow (`true`) sets nothing. `data: null`.
+- **Flow** (`:226`): DTO `ExchangeGoogleLoginTokenDto` (`loginToken` string); Redis `GETDEL oauth2:google:loginToken:<t>` (missing → 401 `Invalid or expired login token`), the single-use gate, so of two concurrent exchanges only one gets cookies; if the value is a token object, `setAuthCookies`; linking flow (`true`) sets nothing. `data: null`.
 - **Errors**: 401, 403, 415.
 
 ## Credentials
@@ -179,16 +179,16 @@ Add a mail/password sign-in method.
 ### DELETE /api/v1/auth/credentials/:id
 
 - **Access**: authenticated; the credential must belong to `req.user.sub`.
-- **Flow**: `RemoveCredential({ id, identityId })` → `RemoveCredCommandHandler`: load identity, `deleteCredential` (403 demo, 404 not one of the caller's credentials, 405 last credential) → `save` deletes the `Credential` row. Sessions are not revoked.
-- **Errors**: 404; 403; last credential returns HTTP **499** (405 → gRPC CANCELLED).
+- **Flow**: `RemoveCredential({ id, identityId })` → `RemoveCredCommandHandler`: load identity, `deleteCredential` (403 demo, 404 not one of the caller's credentials, 409 last credential) → `save` deletes the `Credential` row. Sessions are not revoked.
+- **Errors**: 404; 403; 409 last credential.
 
 ### POST /api/v1/auth/credentials/mail/password
 
 Change the password of a mail credential.
 
-- **Access**: authenticated, `@StrictThrottleBySession()`.
-- **Flow**: DTO `UpdateMailPasswordDto` (`id` = credential id, `currentPassword` min 1, `password` `@IsStrongPassword`) → `UpdateMailPassword` → `UpdatePasswordCommandHandler` (`update-password.handler.ts`): load identity (404); `assertNotDemo` (403, checked before the password); find the credential among the caller's (404); `bcrypt.compare` current password (401 `Wrong password`); `updateCredential` rehashes → `save` updates `Credential`; then `revokeUser` (Redis revocation key, outside the transaction).
-- **Notes**: the caller's own current tokens are revoked too; the response does not clear or reissue cookies, so the next request is 401 and the client must log in again.
+- **Access**: authenticated, `CookieIssuanceGuard`, `@StrictThrottleBySession()`.
+- **Flow**: DTO `UpdateMailPasswordDto` (`id` = credential id, `currentPassword` min 1, `password` `@IsStrongPassword`) → `UpdateMailPassword` → `UpdatePasswordCommandHandler` (`update-password.handler.ts`): load identity (404); `assertNotDemo` (403, checked before the password); find the credential among the caller's (404); `bcrypt.compare` current password (401 `Wrong password`); `updateCredential` with the new hash (`Credential.hashSecret`, async bcrypt) → `save` updates `Credential`; then `revokeUser` (Redis revocation key, outside the transaction). The gateway then calls `Refresh({ identityId })` and sets fresh cookies (issued after the revoke), so this browser stays signed in; if that fails it clears the cookies instead. `data: null`.
+- **Notes**: every other session of the account ends.
 - **Errors**: 401, 403, 404, 409.
 
 ### GET /api/v1/auth/credentials
@@ -207,7 +207,7 @@ Update the caller's profile.
 
 - **Access**: authenticated.
 - **Flow**:
-  1. DTO `UpdateIdentityDto`: optional `username`, `fullName`, `bio`, `avatarId`, `phoneNumber` (strings), and `set*Null` booleans; `identityId = sub` → `UpdateIdentity`.
+  1. DTO `UpdateIdentityDto`: optional `username` (max 50, not whitespace-only; empty leaves it unchanged), `fullName`, `bio`, `avatarId`, `phoneNumber` (strings), and `set*Null` booleans; `identityId = sub` → `UpdateIdentity`.
   2. `UpdateIdentityCommandPayload` turns `set*Null` into `null`. `UpdateIdentityCommandHandler` (`update-identity.handler.ts`, `@Transactional()`): load identity (404).
   3. If `avatarId` is new: `FileOwnershipService.assertOwnedBy` → file-service gRPC `CheckFilesOwnedBy` (403 listing foreign ids; no admin override; re-sending the current avatar skips it).
   4. `updateDetails` (403 if the demo account changes username/phone) → `save` updates `Identity` (version check). DB trigger `identities_after_update_avatar` (migration `20260418163535_add_deleted_file_trigger`) upserts the previous avatar id into `deleted_files` (`count + 1`) when `avatar_file_id` changes.
@@ -225,21 +225,21 @@ Public. `HydrateIdentitiesQueryDto.ids` (`ToStringArray`, max 100) → `HydrateI
 
 ### GET /api/v1/auth/identities-public
 
-Public username search. `FindIdentitiesLimitedDto` (`usernameOrCredIdentifier`, `cursor`, `limit` `@IsPositive`, no max) → `FindIdentities` with `usernameOnly: true`, empty role/perm filters → `FindIdentitiesQueryHandler`: HMAC-signed cursor (`CursorPaginationHelper`), the cursor's own filters win but `usernameOnly` can only be narrowed; Prisma `username contains`, `orderBy id`, default limit 10; avatar URLs from file-service (failure → 503). Serialized as `LimitedIdentitiesDto` (no phone, roles, lock state).
+Public username search. `FindIdentitiesLimitedDto` (`usernameOrCredIdentifier`, `cursor`, `limit` 1-100) → `FindIdentities` with `usernameOnly: true`, empty role/perm filters → `FindIdentitiesQueryHandler`: HMAC-signed cursor (`CursorPaginationHelper`), the cursor's own filters win but `usernameOnly` can only be narrowed; Prisma `username contains`, `orderBy id`, default limit 10; avatar URLs from file-service (failure → 503). Serialized as `LimitedIdentitiesDto` (no phone, roles, lock state). Soft-deleted identities are skipped.
 
 ### GET /api/v1/auth/identity-ids
 
-Public. `FindIdentityIdsDto` + `usernameOnly: true` → `FindIdentityIdsQueryHandler` → ids of identities whose username contains the term, signed cursors. `IdentityIdsDto`. `limit` has no upper bound.
+Public. `FindIdentityIdsDto` + `usernameOnly: true` → `FindIdentityIdsQueryHandler` → ids of identities whose username contains the term, signed cursors. `IdentityIdsDto`. `limit` 1-100. Soft-deleted identities are skipped.
 
 ## Admin
 
 ### GET /api/v1/auth/identities
 
-`@HasRoles(Admin)`. `FindIdentitiesDto` (`usernameOrCredIdentifierOrId`, `hasRoles[]`, `hasPerms[]`, `cursor`, `limit`) → `FindIdentitiesQueryHandler` (as above, without `usernameOnly`: also matches credential identifiers (e-mails, Google ids) and id substrings; role/permission filters OR-ed). `IdentitiesDto` with roles, permissions, phone, `isLocked`. Includes soft-deleted identities. 503 if file-service is down.
+`@HasRoles(Admin)`. `FindIdentitiesDto` (`usernameOrCredIdentifierOrId`, `hasRoles[]`, `hasPerms[]`, `cursor`, `limit`) → `FindIdentitiesQueryHandler` (as above, without `usernameOnly`: also matches credential identifiers (e-mails, Google ids) and id substrings; role/permission filters OR-ed). `IdentitiesDto` with roles, permissions, phone, `isLocked`. `limit` 1-100. Soft-deleted identities are skipped. 503 if file-service is down.
 
 ### GET /api/v1/auth/identity/search/phone
 
-`@HasRoles(Admin)`. Individual `@Query('phoneNumber' | 'cursor' | 'limit')` params (no DTO) → `FindIdentitiesByPhone` → `FindIdentitiesByPhoneQueryHandler`: `phoneNumber contains`, signed cursor, file-service avatar URLs (503 on failure). `IdentitiesDto`.
+`@HasRoles(Admin)`. `FindIdentitiesByPhoneDto` (`phoneNumber` required, non-empty; `cursor`; `limit` 1-100) → `FindIdentitiesByPhone` → `FindIdentitiesByPhoneQueryHandler`: `phoneNumber contains` (soft-deleted skipped), signed cursor, file-service avatar URLs (503 on failure). `IdentitiesDto`.
 
 ### GET /api/v1/auth/roles
 
@@ -253,7 +253,7 @@ Public. `FindIdentityIdsDto` + `usernameOnly: true` → `FindIdentityIdsQueryHan
 
 - **Access**: `@HasRoles(Admin)`.
 - **Flow**: `AssignRoleToDto.roleId` + path `id` → `AssignRoleTo` → `AssignRoleToCommandHandler`: load identity (404), `addRole` (409 already has it), `save` inserts `IdentityRole`, then `revokeUser(id)` (Redis revocation key) so the target must re-login and gets new claims.
-- **Errors**: 404, 409; an unknown `roleId` is not checked and fails on the FK (unmapped Prisma error → 502).
+- **Errors**: 404 (unknown identity or `roleId`), 409.
 
 ### DELETE /api/v1/auth/:id/roles
 
@@ -325,17 +325,17 @@ Same handler as `GET /google/calendar/token` (`GetGoogleCalendarTokenQuery`); it
 ## Findings
 
 1. ~~An access token was accepted by `POST /auth/refresh`~~: fixed (S18, `typ` claim; see [fixed-issues.md](../../fixed-issues.md)).
-2. `apps/gateway/src/auth/guards/google-oauth2.guard.ts:101`: the default-frontend Google login sends no `state` and the strategy uses passport-oauth2's null state store, so `/google/callback` accepts any code; an attacker's own code sent to a victim yields a `loginToken` redirect that the frontend exchanges, logging the victim into the attacker's account (login CSRF), unless the frontend adds its own check (unclear, frontend not in this repo).
-3. `apps/gateway/src/auth-gateway/auth.router.controller.ts:245-249`: the Google `loginToken` exchange is `GET` then `DEL`, not atomic, so two concurrent requests with the same token can both receive cookies (the callback guard uses the `DEL` result as its single-use gate; this route does not).
-4. Refresh tokens are not rotated or invalidated on use (`refresh.handler.ts`); a stolen refresh token keeps working until `exp` or a logout-all.
-5. `apps/auth/src/domain/entities/identity.entity.ts:159`: "Cannot remove your last credential" is a `MethodNotAllowedException` (405), which `GlobalRpcExceptionFilter` maps to gRPC CANCELLED and the gateway to HTTP 499.
-6. `apps/auth/src/infra/repositories/identity.prisma.repository.impl.ts:163`: an optimistic-version miss on `update` raises Prisma P2025, which is not mapped and reaches the client as 502; the same goes for the FK failure of `POST /:id/roles` with an unknown `roleId` (`assign-role-to.handler.ts`) and for a malformed cursor (`CursorPaginationHelper.decodeCursor` throws a plain `Error`).
+2. ~~Default-frontend Google login sends no `state` (login CSRF)~~: backlog X1.
+3. ~~Google `loginToken` exchange was GET then DEL~~: fixed, `GETDEL` (see fixed-issues.md).
+4. ~~Refresh tokens are not rotated or invalidated on use~~: backlog X2.
+5. ~~"Cannot remove your last credential" was 405 (HTTP 499)~~: fixed, 409 (see fixed-issues.md).
+6. ~~P2025 version miss and the unknown-`roleId` FK failure reached clients as 502~~: fixed, 409 and 404 (see fixed-issues.md); the malformed-cursor plain `Error` comes from the shared `CursorPaginationHelper` (libs/utils): backlog X3.
 7. ~~Doc drift~~: `messaging.md` §7 said Google sign-up emits `auth.user.login`; corrected (only logins to an existing account do).
-8. `auth.router.controller.ts:172`: `logout-all` clears the session cookies but has no `CookieIssuanceGuard`, unlike AGENTS.md's rule for cookie-clearing routes (the SameSite=Lax access cookie limits the impact).
-9. `auth.router.controller.ts:415-429`: `GET /identity/search/phone` uses individual `@Query()` params instead of a DTO, so `limit` has no bounds and an absent `phoneNumber` arrives as an empty string and matches every identity; public `identity-ids` and `identities-public` and admin `identities` also have no `@Max` on `limit`.
-10. `apps/auth/src/infra/repositories/identity.read.prisma.repository.impl.ts`: `findIdentities`, `findIdentityIds`, `findIdentitiesByPhone`, `hydrate` and `hydrateMany` have no `deletedAt` filter, so soft-deleted identities appear in public search and hydration.
-11. `update-password.handler.ts:34`: the password change revokes the caller's own session, but the gateway returns success without clearing or reissuing cookies, so the client gets 401 on its next call with no hint.
-12. `apps/gateway/src/throttle.ts:55`: no throttler `storage` is configured, so the in-memory store makes every limit (including the 10/min login limit) per gateway replica.
-13. `apps/auth/src/domain/entities/credential.entity.ts:33`: passwords are hashed with `bcrypt.hashSync` on the request path, blocking the auth event loop for each register, add-mail-credential and password change.
-14. `RegisterMailDto.username` and `UpdateIdentityDto.username` (gateway and service) are only `@IsString()`: no length, charset or empty-string check.
-15. `google-oauth2.guard.ts:115-121`: the `oauth2_state` cookie's `secure` flag ignores `env === 'production'` (unlike the session cookies) and the cookie is never cleared after the callback.
+8. ~~`logout-all` had no `CookieIssuanceGuard`~~: fixed (see fixed-issues.md).
+9. ~~Phone search used loose `@Query()` params; no `@Max` on `limit`~~: fixed, `FindIdentitiesByPhoneDto` and `limit` 1-100 (see fixed-issues.md).
+10. ~~Soft-deleted identities appeared in search~~: fixed for `findIdentities`, `findIdentityIds`, `findIdentitiesByPhone` (see fixed-issues.md); `hydrate`/`hydrateMany` still return them: backlog X4.
+11. ~~Password change revoked the caller's own session without new cookies~~: fixed, fresh cookies, cleared if they can't be issued (see fixed-issues.md).
+12. ~~Throttler storage is per gateway replica~~: backlog X5.
+13. ~~Passwords hashed with `bcrypt.hashSync`~~: fixed, async `bcrypt.hash` (see fixed-issues.md).
+14. ~~`username` was only `@IsString()`~~: fixed, not blank and max 50 (see fixed-issues.md); a charset rule is backlog X6.
+15. ~~`oauth2_state` cookie ignored production `Secure` and was never cleared~~: fixed (see fixed-issues.md).

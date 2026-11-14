@@ -57,7 +57,7 @@ describe('auth cookies', () => {
 		validateRefresh: jest.fn(() => of({ sub: 'user-1', permissions: [], roles: [] })),
 		logOutAll: jest.fn(() => of({})),
 	};
-	const redis = { get: jest.fn(), del: jest.fn() };
+	const redis = { getdel: jest.fn() };
 	const exchange = (loginToken: string) =>
 		fetch(`${base}/google/tokens`, {
 			method: 'POST',
@@ -185,18 +185,18 @@ describe('auth cookies', () => {
 	});
 
 	it('google/tokens swaps the one-time login token for cookies', async () => {
-		redis.get.mockResolvedValueOnce(
+		redis.getdel.mockResolvedValueOnce(
 			JSON.stringify({ accessToken: accessToken, refreshToken: refreshToken }),
 		);
 		const res = await exchange('abc');
 		expect(res.status).toBe(201);
 		expect(((await res.json()) as { data: unknown }).data).toBeNull();
 		expect(Object.keys(setCookies(res)).sort()).toEqual(['access_token', 'refresh_token']);
-		expect(redis.del).toHaveBeenCalledWith('oauth2:google:loginToken:abc');
+		expect(redis.getdel).toHaveBeenCalledWith('oauth2:google:loginToken:abc');
 	});
 
 	it('google/tokens refuses a form post, so a cross-site form cannot log a victim in', async () => {
-		redis.get.mockResolvedValue(
+		redis.getdel.mockResolvedValue(
 			JSON.stringify({ accessToken: accessToken, refreshToken: refreshToken }),
 		);
 		const res = await fetch(`${base}/google/tokens`, {
@@ -206,7 +206,7 @@ describe('auth cookies', () => {
 		});
 		expect(res.status).toBe(415);
 		expect(res.headers.getSetCookie()).toEqual([]);
-		redis.get.mockReset();
+		redis.getdel.mockReset();
 	});
 
 	it('google/tokens rejects a body without a login token', async () => {
@@ -226,7 +226,7 @@ describe('auth cookies', () => {
 	});
 
 	it('google/tokens sets no cookie after a linking flow', async () => {
-		redis.get.mockResolvedValueOnce('true');
+		redis.getdel.mockResolvedValueOnce('true');
 		const res = await exchange('link');
 		expect(res.status).toBe(201);
 		expect(res.headers.getSetCookie()).toEqual([]);

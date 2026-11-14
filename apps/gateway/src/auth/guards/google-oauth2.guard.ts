@@ -14,7 +14,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import { Claims } from '@server/utils';
-import { Request, Response } from 'express';
+import { CookieOptions, Request, Response } from 'express';
 import Redis from 'ioredis';
 import { z } from 'zod/v4';
 
@@ -73,6 +73,19 @@ abstract class GoogleOAuth2BaseGuard extends AuthGuard('google') {
 	protected get vps() {
 		return this.configService.getOrThrow('vps', { infer: true });
 	}
+
+	/** Same `secure` rule as the session cookies (auth-cookies.ts). */
+	protected stateCookieOptions(request: Request): CookieOptions {
+		return {
+			httpOnly: true,
+			sameSite: 'lax',
+			secure:
+				request.secure ||
+				request.headers['x-forwarded-proto'] === 'https' ||
+				this.configService.getOrThrow('env', { infer: true }) === 'production',
+			path: GOOGLE_CALLBACK_PATH,
+		};
+	}
 }
 
 // `state` and `callbackURL` are passed by nestjs/passport's AuthGuard to passport.authenticate()
@@ -113,11 +126,8 @@ export class GoogleOAuth2Guard extends GoogleOAuth2BaseGuard {
 			// someone else. The cookie lives on the frontend's host, which is why the callback must
 			// come back through the same frontend.
 			response.cookie(OAUTH_STATE_COOKIE, nonce, {
-				httpOnly: true,
-				sameSite: 'lax',
-				secure: request.secure || request.headers['x-forwarded-proto'] === 'https',
+				...this.stateCookieOptions(request),
 				maxAge: OAUTH_STATE_TTL_SECONDS * 1000,
-				path: GOOGLE_CALLBACK_PATH,
 			});
 		}
 		return { state: nonce, callbackURL: frontend.callbackUrl };
@@ -132,12 +142,18 @@ export class GoogleOAuth2Guard extends GoogleOAuth2BaseGuard {
 @Injectable()
 export class GoogleOAuth2CallbackGuard extends GoogleOAuth2BaseGuard {
 	async getAuthenticateOptions(context: ExecutionContext) {
-		const request = context.switchToHttp().getRequest<GoogleOAuthRequest>();
-		const flow = await this.consumeState(request);
+		const http = context.switchToHttp();
+		const flow = await this.consumeState(
+			http.getRequest<GoogleOAuthRequest>(),
+			http.getResponse<Response>(),
+		);
 		return { callbackURL: flow.frontend.callbackUrl };
 	}
 
-	private async consumeState(request: GoogleOAuthRequest): Promise<GoogleOAuthFlow> {
+	private async consumeState(
+		request: GoogleOAuthRequest,
+		response: Response,
+	): Promise<GoogleOAuthFlow> {
 		const state = request.query['state'];
 		if (state === undefined) {
 			// Default-frontend login never sends a state, and that never fails to resolve.
@@ -163,6 +179,9 @@ export class GoogleOAuth2CallbackGuard extends GoogleOAuth2BaseGuard {
 		if ((await this.redis.del(oauthStateKey(state))) === 0) {
 			throw new UnauthorizedException('Expired session');
 		}
+		// The nonce is spent: drop the linking flow's cookie instead of leaving it until it expires.
+		if (record.identityId)
+			response.clearCookie(OAUTH_STATE_COOKIE, this.stateCookieOptions(request));
 		return request.googleOAuth;
 	}
 }

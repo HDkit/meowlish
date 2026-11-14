@@ -22,6 +22,7 @@ import { AssignRoleToDto } from './dtos/req/assign-role-to.req.dto';
 import { ConnectGoogleCalendarDto } from './dtos/req/connect-google-calendar.req.dto';
 import { ExchangeGoogleCalendarCodeDto } from './dtos/req/exchange-google-calendar-code.req.dto';
 import { ExchangeGoogleLoginTokenDto } from './dtos/req/exchange-google-login-token.req.dto';
+import { FindIdentitiesByPhoneDto } from './dtos/req/find-identities-by-phone.req.dto';
 import { FindIdentitiesLimitedDto } from './dtos/req/find-identities-limited.req.dto';
 import { FindIdentitiesDto } from './dtos/req/find-identities.req.dto';
 import { FindIdentityIdsDto } from './dtos/req/find-identity-ids.req.dto';
@@ -170,6 +171,7 @@ export class AuthGatewayController implements OnModuleInit {
 	}
 
 	@Post('logout-all')
+	@UseGuards(CookieIssuanceGuard)
 	@ApiEmptyResponseEntity()
 	@ApiOperation({
 		summary: 'Log out from all active sessions',
@@ -241,12 +243,11 @@ export class AuthGatewayController implements OnModuleInit {
 		if (!req.is('application/json')) {
 			throw new UnsupportedMediaTypeException('Send the login token as application/json');
 		}
-		const loginToken = body.loginToken;
-		const data = await this.redis.get(`oauth2:google:loginToken:${loginToken}`);
+		// GETDEL is the single-use gate: of two concurrent exchanges only one gets the tokens.
+		const data = await this.redis.getdel(`oauth2:google:loginToken:${body.loginToken}`);
 		if (!data) {
 			throw new UnauthorizedException('Invalid or expired login token');
 		}
-		await this.redis.del(`oauth2:google:loginToken:${loginToken}`);
 		const result = JSON.parse(data) as auth.Tokens | boolean;
 		// linking flow stores `true`: the browser already has its session, nothing to set
 		if (typeof result === 'object' && result.accessToken) {
@@ -371,11 +372,34 @@ export class AuthGatewayController implements OnModuleInit {
 	}
 
 	@Post('credentials/mail/password')
+	@UseGuards(CookieIssuanceGuard)
 	@ApiEmptyResponseEntity()
-	@ApiOperation({ summary: 'Change password' })
+	@ApiOperation({
+		summary: 'Change password',
+		description: `Ends every session of this account, then signs this browser in again. ${SETS_COOKIES} If the new session can't be issued, the cookies are cleared instead (sign in with the new password).`,
+	})
 	@StrictThrottleBySession()
-	updateMailPassword(@Body() body: UpdateMailPasswordDto, @Req() request: AuthenticatedRequest) {
-		return this.authService.updateMailPassword({ ...body, identityId: request.user.sub });
+	async updateMailPassword(
+		@Body() body: UpdateMailPasswordDto,
+		@Req() request: AuthenticatedRequest,
+		@Res({ passthrough: true }) res: Response,
+	) {
+		const identityId = request.user.sub;
+		await lastValueFrom(this.authService.updateMailPassword({ ...body, identityId: identityId }));
+		// The change revoked every token, this browser's too: keep it signed in with fresh ones
+		// (issued after the revocation). The caller just proved the current password.
+		try {
+			setAuthCookies(
+				request,
+				res,
+				await lastValueFrom(this.authService.refresh({ identityId: identityId })),
+				this.env,
+			);
+		} catch {
+			// The password did change; clear the dead cookies so the client knows to sign in again.
+			clearAuthCookies(request, res, this.env);
+		}
+		return null;
 	}
 
 	@Get('hydrate-many')
@@ -417,16 +441,8 @@ export class AuthGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Search identities by phone number (admins)' })
 	@ApiResponseEntity(IdentitiesDto)
 	@SerializeOptions({ type: IdentitiesDto })
-	findIdentitiesByPhone(
-		@Query('phoneNumber') phoneNumber: string,
-		@Query('cursor') cursor?: string,
-		@Query('limit') limit?: number,
-	) {
-		return this.authService.findIdentitiesByPhone({
-			phoneNumber: phoneNumber,
-			cursor: cursor,
-			limit: limit,
-		});
+	findIdentitiesByPhone(@Query() query: FindIdentitiesByPhoneDto) {
+		return this.authService.findIdentitiesByPhone(query);
 	}
 
 	@Post('google/calendar/exchange-code')

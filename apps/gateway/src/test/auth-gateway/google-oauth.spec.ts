@@ -41,6 +41,11 @@ class FakeRedis {
 	});
 	setex = jest.fn((key: string, _ttl: number, value: string) => this.set(key, value));
 	del = jest.fn((key: string) => Promise.resolve(this.store.delete(key) ? 1 : 0));
+	getdel = jest.fn((key: string) => {
+		const value = this.store.get(key) ?? null;
+		this.store.delete(key);
+		return Promise.resolve(value);
+	});
 }
 
 type OAuth2Client = {
@@ -179,6 +184,18 @@ describe('Google OAuth across frontends', () => {
 			const cookie = res.headers.getSetCookie().find(c => c.startsWith(`${OAUTH_STATE_COOKIE}=`));
 			expect(cookie).toContain(`${OAUTH_STATE_COOKIE}=${state}`);
 			expect(cookie).toContain(`Path=${GOOGLE_CALLBACK_PATH}`);
+			expect(cookie).not.toContain('Secure');
+		});
+
+		it('the state cookie is Secure in production, like the session cookies', async () => {
+			config['env'] = 'production';
+			try {
+				const res = await get('/credentials/google', { Cookie: `access_token=${accessToken}` });
+				const cookie = res.headers.getSetCookie().find(c => c.startsWith(`${OAUTH_STATE_COOKIE}=`));
+				expect(cookie).toContain('Secure');
+			} finally {
+				config['env'] = 'development';
+			}
 		});
 	});
 
@@ -226,6 +243,10 @@ describe('Google OAuth across frontends', () => {
 			expect(url.origin).toBe(SHARE);
 			expect(url.searchParams.get('flow')).toBe('link');
 			expect(url.searchParams.get('loginToken')).toBeTruthy();
+			// the spent nonce's cookie is cleared on the callback path
+			const cleared = res.headers.getSetCookie().find(c => c.startsWith(`${OAUTH_STATE_COOKIE}=;`));
+			expect(cleared).toContain(`Path=${GOOGLE_CALLBACK_PATH}`);
+			expect(cleared).toContain('Expires=Thu, 01 Jan 1970');
 		});
 
 		it('linking without the cookie is refused and does not burn the state', async () => {
@@ -305,6 +326,40 @@ describe('Google OAuth across frontends', () => {
 			expect(errorRedirect(await get('/google/callback?code=c'))).toMatchObject({
 				error: 'GOOGLE_FAILED',
 			});
+		});
+	});
+
+	describe('login token exchange', () => {
+		const exchange = (loginToken: string) =>
+			fetch(`${base}/google/tokens`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ loginToken: loginToken }),
+			});
+		const sessionCookies = (res: Response) =>
+			res.headers.getSetCookie().filter(c => /^(access|refresh)_token=[^;]/.test(c));
+
+		it('the callback login token sets the session cookies once', async () => {
+			const callback = await get('/google/callback?code=c');
+			const loginToken = location(callback).searchParams.get('loginToken') ?? '';
+			const first = await exchange(loginToken);
+			expect(first.status).toBe(201);
+			expect(sessionCookies(first)).toHaveLength(2);
+			const second = await exchange(loginToken);
+			expect(second.status).toBe(401);
+			expect(sessionCookies(second)).toHaveLength(0);
+		});
+
+		it('two concurrent exchanges of one token: only one gets cookies', async () => {
+			redis.store.set(
+				'oauth2:google:loginToken:t1',
+				JSON.stringify({ accessToken: accessToken, refreshToken: 'rt' }),
+			);
+			const results = await Promise.all([exchange('t1'), exchange('t1')]);
+			expect(results.map(r => r.status).sort()).toEqual([201, 401]);
+			expect(results.filter(r => sessionCookies(r).length > 0)).toHaveLength(1);
+			// read and delete in one command, never GET then DEL
+			expect(redis.get).not.toHaveBeenCalledWith('oauth2:google:loginToken:t1');
 		});
 	});
 });

@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ToStringArray } from '@server/utils';
 import { Type } from 'class-transformer';
-import { IsArray, IsInt, IsOptional, IsPositive, IsString } from 'class-validator';
+import { IsArray, IsInt, IsOptional, IsPositive, IsString, Max } from 'class-validator';
 
 export class FindIdentitiesDto {
 	@IsOptional()
@@ -34,6 +34,7 @@ export class FindIdentitiesDto {
 	@IsInt()
 	@IsOptional()
 	@IsPositive()
-	@ApiPropertyOptional({ type: Number })
+	@Max(100)
+	@ApiPropertyOptional({ type: Number, maximum: 100 })
 	limit?: number;
 }
