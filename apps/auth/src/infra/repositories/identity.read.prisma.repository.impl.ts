@@ -25,6 +25,7 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 		const direction = Math.sign(options?.direction || 1);
 		const foundIdentities = await this.txHost.tx.identity.findMany({
 			where: {
+				deletedAt: null,
 				...(options?.usernameOrCredentialIdentifier && {
 					OR: [
 						{ username: { contains: options.usernameOrCredentialIdentifier } },
@@ -95,6 +96,7 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 
 		const foundIdentities = await this.txHost.tx.identity.findMany({
 			where: {
+				deletedAt: null,
 				// Two independent OR groups: spreading both as `OR` let the role filter overwrite the
 				// identifier filter.
 				AND: [
@@ -169,6 +171,7 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 
 		const foundIdentities = await this.txHost.tx.identity.findMany({
 			where: {
+				deletedAt: null,
 				phoneNumber: { contains: options.phoneNumber },
 			},
 			orderBy: { id: 'asc' },

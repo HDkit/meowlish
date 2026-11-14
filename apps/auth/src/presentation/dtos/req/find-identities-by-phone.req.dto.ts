@@ -1,7 +1,9 @@
 import { auth } from '@server/generated';
-import { IsInt, IsOptional, IsString } from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, IsPositive, IsString, Max } from 'class-validator';
 
 export class FindIdentitiesByPhoneDto implements auth.FindIdentitiesByPhoneDto {
+	// an empty string would match every identity
+	@IsNotEmpty()
 	@IsString()
 	phoneNumber!: string;
 
@@ -11,5 +13,7 @@ export class FindIdentitiesByPhoneDto implements auth.FindIdentitiesByPhoneDto {
 
 	@IsInt()
 	@IsOptional()
+	@IsPositive()
+	@Max(100)
 	limit?: number;
 }

@@ -11,7 +11,7 @@ import { IIdentityRepository } from '../../domain/repositories/identity.reposito
 import { LoginType } from '../../enums/login-type.enum';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import {
 	Prisma,
 	PrismaClient,
@@ -84,7 +84,6 @@ class IdentityPrismaMapper {
 					new Credential({
 						...cred,
 						loginType: this.mapLoginType(cred.loginType),
-						isHashed: true,
 					}),
 			),
 		});
@@ -169,6 +168,10 @@ export class IdentityPrismaRepositoryImpl implements IIdentityRepository {
 					if (e.code === 'P2002') {
 						throw new ConflictException('A record with this value already exists');
 					}
+					// the `version` filter matched nothing: someone else saved this identity first
+					if (e.code === 'P2025') {
+						throw new ConflictException('Identity was changed concurrently, try again');
+					}
 				}
 				throw e;
 			}
@@ -196,9 +199,17 @@ export class IdentityPrismaRepositoryImpl implements IIdentityRepository {
 	}
 
 	private async onRoleAdded(event: RoleAddedEvent): Promise<void> {
-		await this.txHost.tx.identityRole.create({
-			data: { identityId: event.payload.identityId, roleId: event.payload.roleId },
-		});
+		try {
+			await this.txHost.tx.identityRole.create({
+				data: { identityId: event.payload.identityId, roleId: event.payload.roleId },
+			});
+		} catch (e) {
+			// foreign key on role_id: no such role
+			if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2003') {
+				throw new NotFoundException('Role not found');
+			}
+			throw e;
+		}
 	}
 
 	private async onRoleDeleted(event: RoleDeletedEvent): Promise<void> {

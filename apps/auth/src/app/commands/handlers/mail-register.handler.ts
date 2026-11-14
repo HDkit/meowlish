@@ -31,7 +31,7 @@ export class MailRegisterCommandHandler implements ICommandHandler<MailRegisterC
 		const credential = new Credential({
 			identifier: payload.mail,
 			loginType: LoginType.Mail,
-			secretHash: payload.password,
+			secretHash: await Credential.hashSecret(payload.password),
 		});
 		identity.addCredential(credential);
 		const studentRole = await this.roleReadRepository.findByName(Role.Student);

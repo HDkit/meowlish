@@ -10,12 +10,7 @@ import {
 	RoleDeletedEvent,
 } from '../events/identity-update.events';
 import { Credential, type CredentialUpdatableProperties } from './credential.entity';
-import {
-	ConflictException,
-	ForbiddenException,
-	MethodNotAllowedException,
-	NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { AggregateRoot } from '@nestjs/cqrs';
 import { Event, IAggregate } from '@server/utils';
 
@@ -157,7 +152,7 @@ export class Identity extends AggregateRoot<Event<any>> implements IAggregate<Id
 		const idx = this.credentials.findIndex(cred => cred.id === id);
 		if (idx === -1) throw new NotFoundException('Credential not found');
 		if (this.credentials.length === 1)
-			throw new MethodNotAllowedException('Cannot remove your last credential');
+			throw new ConflictException('Cannot remove your last credential');
 		this.credentials.splice(idx, 1);
 		this.apply(new CredDeletedEvent({ identityId: this.id, credId: id }));
 	}

@@ -54,7 +54,6 @@ describe('UpdatePasswordCommandHandler', () => {
 					identifier: 'demo@lingriser.test',
 					loginType: LoginType.Mail,
 					secretHash: hash,
-					isHashed: true,
 				}),
 			],
 		});
@@ -79,7 +78,15 @@ describe('UpdatePasswordCommandHandler', () => {
 	it('correct current password updates and revokes sessions', async () => {
 		const { handler, repo, identity, tokens } = setup();
 		await handler.execute(cmd('Old-Pass-1!'));
-		expect(identity.updateCredential).toHaveBeenCalledWith('c1', { secretHash: 'New-Pass-2!' });
+		expect(identity.updateCredential).toHaveBeenCalledTimes(1);
+		const [credId, update] = identity.updateCredential.mock.calls[0] as [
+			string,
+			{ secretHash: string },
+		];
+		expect(credId).toBe('c1');
+		// stored as a bcrypt hash of the new password, never the plain text
+		expect(update.secretHash).not.toBe('New-Pass-2!');
+		await expect(bcrypt.compare('New-Pass-2!', update.secretHash)).resolves.toBe(true);
 		expect(repo.save).toHaveBeenCalledWith(identity);
 		expect(tokens.revokeUser).toHaveBeenCalledWith('i1');
 	});

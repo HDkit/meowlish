@@ -144,6 +144,46 @@ describe('TokenService revocation', () => {
 		expect(await service.isTokenRevoked('u', Math.floor(iatMs / 1000), iatMs)).toBe(false);
 	});
 
+	it('a token issued in the same millisecond as the revoke outlives it', async () => {
+		jest.useFakeTimers().setSystemTime(new Date('2026-01-01T00:00:10.200Z'));
+		const store = new Map<string, string>();
+		const redis = {
+			setex: jest.fn((k: string, _t: number, v: number) => store.set(k, String(v))),
+			get: jest.fn((k: string) => Promise.resolve(store.get(k) ?? null)),
+		};
+		// the "JWT" is the payload as JSON, so the test can read iatMs back
+		const signer = { signAsync: jest.fn((p: object) => Promise.resolve(JSON.stringify(p))) };
+		const service = new TokenService(
+			signer as never,
+			signer as never,
+			{ getOrThrow: () => redis } as never,
+			{ getOrThrow: () => ({ refreshTokenExpiration: 100 }) } as never,
+		);
+		await service.revokeUser('u');
+		// the clock has not moved: password change, then the new session in the same ms
+		const issued = await service.generateTokens({ sub: 'u', roles: [], permissions: [] }, true);
+		for (const token of [issued.accessToken, issued.refreshToken ?? '']) {
+			const { iat, iatMs } = JSON.parse(token) as { iat?: number; iatMs: number };
+			expect(iatMs).toBe(Date.now() + 1);
+			expect(await service.isTokenRevoked('u', iat ?? Math.floor(iatMs / 1000), iatMs)).toBe(false);
+		}
+	});
+
+	it('dates tokens now when nothing was revoked', async () => {
+		jest.useFakeTimers().setSystemTime(new Date('2026-01-01T00:00:10.200Z'));
+		const redis = { get: jest.fn().mockResolvedValue(null) };
+		const signer = { signAsync: jest.fn((p: object) => Promise.resolve(JSON.stringify(p))) };
+		const service = new TokenService(
+			signer as never,
+			signer as never,
+			{ getOrThrow: () => redis } as never,
+			{} as never,
+		);
+		const issued = await service.generateTokens({ sub: 'u', roles: [], permissions: [] });
+		expect((JSON.parse(issued.accessToken) as { iatMs: number }).iatMs).toBe(Date.now());
+		expect(issued.refreshToken).toBeUndefined();
+	});
+
 	it('a legacy seconds-valued revocation still revokes earlier tokens', async () => {
 		const service = make();
 		const revokedSec = 1_767_225_610; // 2026-01-01T00:00:10Z, as written by the old code

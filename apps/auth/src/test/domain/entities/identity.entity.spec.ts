@@ -9,10 +9,9 @@ const mailCred = () =>
 		identifier: 'demo@lingriser.test',
 		loginType: LoginType.Mail,
 		secretHash: 'hash',
-		isHashed: true,
 	});
 const googleCred = () =>
-	new Credential({ id: 'google', identifier: 'g-1', loginType: LoginType.Google, isHashed: true });
+	new Credential({ id: 'google', identifier: 'g-1', loginType: LoginType.Google });
 
 const build = (isDemo: boolean) =>
 	new Identity({
@@ -34,9 +33,7 @@ describe('Identity demo guard', () => {
 			[
 				'add a credential',
 				(i: Identity) =>
-					i.addCredential(
-						new Credential({ identifier: 'x', loginType: LoginType.Google, isHashed: true }),
-					),
+					i.addCredential(new Credential({ identifier: 'x', loginType: LoginType.Google })),
 			],
 			['remove a credential', (i: Identity) => i.deleteCredential('google')],
 			['change the username', (i: Identity) => i.updateDetails({ username: 'other' })],
@@ -71,9 +68,7 @@ describe('Identity demo guard', () => {
 		const identity = build(false);
 		identity.updateDetails({ username: 'other', phoneNumber: '0911111111' });
 		identity.deleteCredential('google');
-		identity.addCredential(
-			new Credential({ identifier: 'g-9', loginType: LoginType.Google, isHashed: true }),
-		);
+		identity.addCredential(new Credential({ identifier: 'g-9', loginType: LoginType.Google }));
 		identity.updateCredential('mail', { identifier: 'new@y.z' });
 		expect(identity.username).toBe('other');
 		expect(identity.phoneNumber).toBe('0911111111');
@@ -85,12 +80,18 @@ describe('Identity.addCredential', () => {
 	it('allows one sign-in method per type', () => {
 		const identity = new Identity({ id: 'i2', username: 'u', credentials: [googleCred()] });
 		expect(() =>
-			identity.addCredential(
-				new Credential({ identifier: 'g-2', loginType: LoginType.Google, isHashed: true }),
-			),
+			identity.addCredential(new Credential({ identifier: 'g-2', loginType: LoginType.Google })),
 		).toThrow(ConflictException);
 		expect(identity.credentials).toHaveLength(1);
 		identity.addCredential(mailCred());
 		expect(identity.credentials.map(c => c.loginType)).toEqual([LoginType.Google, LoginType.Mail]);
+	});
+});
+
+describe('Identity.deleteCredential', () => {
+	it('refuses to remove the last credential with 409, not 405', () => {
+		const identity = new Identity({ id: 'i3', username: 'u', credentials: [googleCred()] });
+		expect(() => identity.deleteCredential('google')).toThrow(ConflictException);
+		expect(identity.credentials).toHaveLength(1);
 	});
 });

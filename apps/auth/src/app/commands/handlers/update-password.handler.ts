@@ -1,3 +1,4 @@
+import { Credential } from '../../../domain/entities/credential.entity';
 import {
 	type IIdentityRepository,
 	IIdentityRepositoryToken,
@@ -28,7 +29,9 @@ export class UpdatePasswordCommandHandler implements ICommandHandler<UpdatePassw
 			!(await bcrypt.compare(payload.currentPassword, credential.secretHash))
 		)
 			throw new UnauthorizedException('Wrong password');
-		identity.updateCredential(payload.id, { secretHash: payload.password });
+		identity.updateCredential(payload.id, {
+			secretHash: await Credential.hashSecret(payload.password),
+		});
 		await this.identityRepository.save(identity);
 		// A changed password must end every existing session, or a stolen token outlives the change.
 		await this.tokenService.revokeUser(payload.identityId);
