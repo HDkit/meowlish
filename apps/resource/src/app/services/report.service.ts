@@ -75,6 +75,8 @@ export class ReportService {
 			},
 			include: withFiles,
 		});
+		// Sequential: the outbox rows share one interactive transaction.
+		for (const fileId of fileIds) await this.events.fileAdded(fileId);
 		await this.events.reportCreated({
 			reportId: report.id,
 			reportedBy: report.reportedBy,
@@ -116,9 +118,16 @@ export class ReportService {
 		return this.toReadModel(updated);
 	}
 
+	@Transactional()
 	async deleteReport(id: string): Promise<void> {
+		const files = await this.txHost.tx.reportFile.findMany({
+			where: { reportId: id },
+			select: { fileId: true },
+		});
 		const { count } = await this.txHost.tx.report.deleteMany({ where: { id: id } });
 		if (count === 0) throw new NotFoundException('Report not found');
+		// the attachments go with the report (cascade): release their references
+		await this.events.filesRemoved(files.map(f => ({ id: f.fileId, count: 1 })));
 	}
 
 	async listReports(data: ListReportsInput, requester: Requester): Promise<ReportListReadModel> {
@@ -145,6 +154,7 @@ export class ReportService {
 	}
 
 	/** `mayAttachAnyFile` (admins) skips the uploader check; everyone else attaches only their own uploads. */
+	@Transactional()
 	async addFileToReport(
 		reportId: string,
 		fileId: string,
@@ -153,13 +163,15 @@ export class ReportService {
 	): Promise<void> {
 		await this.findVisibleReport(reportId, requester);
 		if (!mayAttachAnyFile) await this.fileOwnership.assertOwnedBy([fileId], requester.id);
-		await this.txHost.tx.reportFile.upsert({
-			where: { reportId_fileId: { reportId: reportId, fileId: fileId } },
-			update: {},
-			create: { reportId: reportId, fileId: fileId },
+		const { count } = await this.txHost.tx.reportFile.createMany({
+			data: [{ reportId: reportId, fileId: fileId }],
+			skipDuplicates: true,
 		});
+		// only a new attachment adds a reference (re-attaching is a no-op)
+		if (count > 0) await this.events.fileAdded(fileId);
 	}
 
+	@Transactional()
 	async removeFileFromReport(
 		reportId: string,
 		fileId: string,
@@ -170,5 +182,6 @@ export class ReportService {
 			where: { reportId: reportId, fileId: fileId },
 		});
 		if (count === 0) throw new NotFoundException('File is not attached to this report');
+		await this.events.filesRemoved([{ id: fileId, count: 1 }]);
 	}
 }

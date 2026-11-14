@@ -142,7 +142,7 @@ Published by `apps/exam/src/app/events/publishers/attempt-scored.publisher.ts` a
 
 #### `*.file.added` → `file.events.file.added`
 
-`apps/file-service/src/app/events/handlers/file-added.handler.ts`. Publishers: `auth.file.added` (`apps/auth/src/app/events/publisher/file-added.publisher.ts`, avatar) and `exam.file.added` (`apps/exam/src/app/events/publishers/file-added.publisher.ts`, question/section files). Payload `{ fileId }`. `incrementRef([fileId])`: `updateMany files set ref_count + 1` (also bumps `updatedAt`). An unknown or already-deleted id updates 0 rows silently. Resource report attachments publish nothing (backlog C20).
+`apps/file-service/src/app/events/handlers/file-added.handler.ts`. Publishers: `auth.file.added` (`apps/auth/src/app/events/publisher/file-added.publisher.ts`, avatar) and `exam.file.added` (`apps/exam/src/app/events/publishers/file-added.publisher.ts`, question/section files). Payload `{ fileId }`. `incrementRef([fileId])`: `updateMany files set ref_count + 1` (also bumps `updatedAt`). An unknown or already-deleted id updates 0 rows silently. `resource.file.added` (report attachments, `apps/resource/src/app/services/report.service.ts`).
 
 #### `*.file.removed`, `*.files.removed` → `file.events.files.removed`
 

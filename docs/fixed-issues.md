@@ -4,6 +4,23 @@ What was fixed from [`backlog.md`](backlog.md), and how. Newest first. Each entr
 
 ## November 2026
 
+### C20: report attachments were never reference-counted
+
+- **Problem:** exam and auth tell file-service when a file becomes referenced (`*.file.added`) or released (`*.files.removed`), and file-service's orphan cleanup deletes files with `ref_count <= 0` an hour after upload. resource's reports did neither, so every report attachment looked orphaned and was deleted after an hour.
+- **Fix:** `ReportService` (`apps/resource/src/app/services/report.service.ts`) writes, in the same transaction as the change, `resource.file.added { fileId }` for each attachment of a new report and for each newly attached file (re-attaching is a no-op), and `resource.files.removed { files: [{ id, count: 1 }] }` when a file is detached or its report deleted. Publisher methods `fileAdded` / `filesRemoved` in `resource-events.publisher.ts`. file-service already consumes both keys (`*.file.added`, `*.files.removed`).
+- **Running systems:** files attached before this build need their reference added once, **before** the new resource build starts (after it, new attachments are counted by their events):
+
+  ```sql
+  -- resource_db: how many reports reference each file
+  SELECT file_id, count(*) FROM report_files GROUP BY file_id;
+  -- file_db: add those counts (one UPDATE per file, or a VALUES join)
+  UPDATE files SET ref_count = ref_count + <count> WHERE id = '<file_id>';
+  ```
+
+  Production had no report attachments on 14 November 2026, so nothing was backfilled there.
+
+- **Tests:** `apps/resource/src/test/app/services/report.service.spec.ts` ("file references (C20)").
+
 ### S19: leaving one's own uid room dodged ban kicks
 
 - **Problem:** at connect, live joins each socket to a room named after its uid, and a ban removed sockets through that room (`server.in(uid).socketsLeave(roomId)`). `leave-room` accepted any string, so a client could leave its uid room first; the ban then missed it and it kept chatting (`chat` only checks room membership). The ban was also saved _after_ the kick, so a kicked user could re-join before it was stored.

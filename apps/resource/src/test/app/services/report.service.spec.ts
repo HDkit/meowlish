@@ -42,9 +42,18 @@ const setup = () => {
 			update: jest.fn(),
 			deleteMany: jest.fn(),
 		},
-		reportFile: { upsert: jest.fn(), deleteMany: jest.fn() },
+		reportFile: {
+			createMany: jest.fn().mockResolvedValue({ count: 1 }),
+			deleteMany: jest.fn(),
+			findMany: jest.fn().mockResolvedValue([]),
+		},
 	};
-	const events = { reportStatusChanged: jest.fn(), reportCreated: jest.fn() };
+	const events = {
+		reportStatusChanged: jest.fn(),
+		reportCreated: jest.fn(),
+		fileAdded: jest.fn(),
+		filesRemoved: jest.fn(),
+	};
 	const files = { assertOwnedBy: jest.fn().mockResolvedValue(undefined) };
 	const service = new ReportService(
 		{ tx: tx } as never,
@@ -97,7 +106,7 @@ describe('ReportService access rules', () => {
 		await expect(
 			service.addFileToReport('r1', 'f1', { id: 'someone-else', privileged: false }),
 		).rejects.toBeInstanceOf(NotFoundException);
-		expect(tx.reportFile.upsert).not.toHaveBeenCalled();
+		expect(tx.reportFile.createMany).not.toHaveBeenCalled();
 	});
 
 	it('publishes status-changed only when the status actually changes', async () => {
@@ -177,7 +186,7 @@ describe('ReportService file ownership', () => {
 			service.addFileToReport('r1', 'theirs', { id: 'owner', privileged: false }),
 		).rejects.toBeInstanceOf(ForbiddenException);
 		expect(files.assertOwnedBy).toHaveBeenCalledWith(['theirs'], 'owner');
-		expect(tx.reportFile.upsert).not.toHaveBeenCalled();
+		expect(tx.reportFile.createMany).not.toHaveBeenCalled();
 	});
 
 	it('still checks ownership for privileged staff unless they may attach any file', async () => {
@@ -189,6 +198,48 @@ describe('ReportService file ownership', () => {
 		files.assertOwnedBy.mockClear();
 		await service.addFileToReport('r1', 'theirs', { id: 'admin', privileged: true }, true);
 		expect(files.assertOwnedBy).not.toHaveBeenCalled();
-		expect(tx.reportFile.upsert).toHaveBeenCalledTimes(2);
+		expect(tx.reportFile.createMany).toHaveBeenCalledTimes(2);
+	});
+});
+
+describe('ReportService file references (C20)', () => {
+	const owner = { id: 'owner', privileged: false };
+
+	it('adds a reference for each attachment of a new report', async () => {
+		const { tx, events, service } = setup();
+		tx.report.create.mockResolvedValue(report({ files: [{ fileId: 'f1' }, { fileId: 'f2' }] }));
+		await service.createReport({
+			reportedBy: 'owner',
+			type: 'bug',
+			title: 'Broken',
+			description: 'desc',
+			fileIds: ['f1', 'f2', 'f1'],
+		});
+		expect(events.fileAdded.mock.calls).toEqual([['f1'], ['f2']]);
+	});
+
+	it('adds a reference only when a file is newly attached', async () => {
+		const { tx, events, service } = setup();
+		tx.report.findUnique.mockResolvedValue(report());
+		await service.addFileToReport('r1', 'f1', owner, true);
+		tx.reportFile.createMany.mockResolvedValueOnce({ count: 0 });
+		await service.addFileToReport('r1', 'f1', owner, true);
+		expect(events.fileAdded.mock.calls).toEqual([['f1']]);
+	});
+
+	it('releases references on detach and on report delete', async () => {
+		const { tx, events, service } = setup();
+		tx.report.findUnique.mockResolvedValue(report());
+		tx.reportFile.deleteMany.mockResolvedValue({ count: 1 });
+		await service.removeFileFromReport('r1', 'f1', owner);
+		expect(events.filesRemoved).toHaveBeenLastCalledWith([{ id: 'f1', count: 1 }]);
+
+		tx.reportFile.findMany.mockResolvedValue([{ fileId: 'f2' }, { fileId: 'f3' }]);
+		tx.report.deleteMany.mockResolvedValue({ count: 1 });
+		await service.deleteReport('r1');
+		expect(events.filesRemoved).toHaveBeenLastCalledWith([
+			{ id: 'f2', count: 1 },
+			{ id: 'f3', count: 1 },
+		]);
 	});
 });

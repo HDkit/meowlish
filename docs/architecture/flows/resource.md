@@ -223,14 +223,14 @@ Move an existing card into this list.
 
 ## Reports
 
-Service: `ReportService` (`apps/resource/src/app/services/report.service.ts`). Privileged = `Mod`/`Admin` (`REPORT_STAFF_ROLES`). `findVisibleReport` (line 50): 404 `Report not found` unless privileged or the reporter. File checks use `FileOwnershipService.assertOwnedBy` (`apps/resource/src/app/services/file-ownership.service.ts`), which calls `file.FileService/CheckFilesOwnedBy { fileIds, userId }` on file-service over gRPC; any id not uploaded by `userId` (other uploader, no recorded uploader, or unknown id) gives 403 `You can only attach files you uploaded: <ids>`. Report file attach/remove publishes no `file.added`/`files.removed`, so file-service ref counts are not touched (backlog C20, see [services-and-data.md](../services-and-data.md#resource-appsresource)).
+Service: `ReportService` (`apps/resource/src/app/services/report.service.ts`). Privileged = `Mod`/`Admin` (`REPORT_STAFF_ROLES`). `findVisibleReport` (line 50): 404 `Report not found` unless privileged or the reporter. File checks use `FileOwnershipService.assertOwnedBy` (`apps/resource/src/app/services/file-ownership.service.ts`), which calls `file.FileService/CheckFilesOwnedBy { fileIds, userId }` on file-service over gRPC; any id not uploaded by `userId` (other uploader, no recorded uploader, or unknown id) gives 403 `You can only attach files you uploaded: <ids>`. Attachments are reference-counted through `resource.file.added` / `resource.files.removed` (see the routes below).
 
 ### POST /api/v1/resources/reports
 
 - **Access**: any user; `reportedBy = sub`.
 - **Flow**:
   1. Gateway: `CreateReportDto` (`type`, `title`, `description`; optional `targetType`, `targetId`, `fileIds` default `[]`; all free strings) → `resource.ReportService/CreateReport`.
-  2. `ReportService.createReport`, `@Transactional()`: dedupe `fileIds`; if any, `CheckFilesOwnedBy(fileIds, reportedBy)` (403; no admin bypass on create); insert `Report` (status default `pending`) with nested `ReportFile` rows; outbox `resource.report.created` `{ reportId, reportedBy, type, title, targetType, targetId }`.
+  2. `ReportService.createReport`, `@Transactional()`: dedupe `fileIds`; if any, `CheckFilesOwnedBy(fileIds, reportedBy)` (403; no admin bypass on create); insert `Report` (status default `pending`) with nested `ReportFile` rows; outbox `resource.file.added { fileId }` per attachment (file-service raises `ref_count`, so the orphan cleanup keeps it); outbox `resource.report.created` `{ reportId, reportedBy, type, title, targetType, targetId }`.
   3. Response `ReportDto` (with `fileIds`).
 - **Async**: `notification.events.report.created` → `ReportCreatedHandler` (`apps/notification/src/app/events/handlers/report-created.handler.ts`, inbox yes): calls `auth.AuthService/FindIdentityIdsByRole { role: Admin }` (an auth outage throws, so the message is retried), notifies every admin except the reporter whose `report` preference is on (`action: '/report-management'`). Mods are not notified.
 - **Errors**: 403 foreign files; the gRPC call to file-service runs inside the open DB transaction.
@@ -253,7 +253,7 @@ Triage a report.
 
 ### DELETE /api/v1/resources/reports/:id
 
-`@HasRoles(Mod, Admin)` → `resource.ReportService/DeleteReport` → `ReportService.deleteReport`: `deleteMany({ id })`, 404 if count is 0; `ReportFile` rows go by cascade. No event.
+`@HasRoles(Mod, Admin)` → `resource.ReportService/DeleteReport` → `ReportService.deleteReport`, `@Transactional()`: read the report's `ReportFile` ids, `deleteMany({ id })` (404 if count is 0; `ReportFile` rows go by cascade), then outbox `resource.files.removed { files: [{ id, count: 1 }] }` for the attachments (file-service lowers `ref_count`).
 
 ### GET /api/v1/resources/reports
 
@@ -262,11 +262,11 @@ Triage a report.
 ### POST /api/v1/resources/reports/:id/files
 
 - **Access**: reporter or mod/admin (`findVisibleReport`); uploader check skipped only when `mayAttachAnyFile = hasAnyRole(user, [Admin])`.
-- **Flow**: `AddFileToReportDto` (`fileId`) → `resource.ReportService/AddFileToReport` → `ReportService.addFileToReport`: `findVisibleReport` (404) → unless admin, `CheckFilesOwnedBy([fileId], requesterId)` (403) → `ReportFile.upsert` on `(reportId, fileId)` (re-adding is a no-op). Not `@Transactional`. Response empty. Worked example: [authorization.md §7(c)](../authorization.md#c-attaching-a-file-someone-else-uploaded).
+- **Flow**: `AddFileToReportDto` (`fileId`) → `resource.ReportService/AddFileToReport` → `ReportService.addFileToReport`: `findVisibleReport` (404) → unless admin, `CheckFilesOwnedBy([fileId], requesterId)` (403) → in one transaction, `ReportFile.createMany(skipDuplicates)`; only a new row writes outbox `resource.file.added { fileId }` (re-attaching is a no-op). Not `@Transactional`. Response empty. Worked example: [authorization.md §7(c)](../authorization.md#c-attaching-a-file-someone-else-uploaded).
 
 ### DELETE /api/v1/resources/reports/:reportId/files/:fileId
 
-`requesterOf(user, [Mod, Admin])` → `resource.ReportService/RemoveFileFromReport` → `findVisibleReport` (404) → `ReportFile.deleteMany({ reportId, fileId })`; 404 `File is not attached to this report` if nothing was deleted. The reporter may remove files from their own report regardless of status. Response empty.
+`requesterOf(user, [Mod, Admin])` → `resource.ReportService/RemoveFileFromReport` → `findVisibleReport` (404) → `ReportFile.deleteMany({ reportId, fileId })`; 404 `File is not attached to this report` if nothing was deleted, else (same transaction) outbox `resource.files.removed { files: [{ id: fileId, count: 1 }] }`. The reporter may remove files from their own report regardless of status. Response empty.
 
 ## Background work
 
