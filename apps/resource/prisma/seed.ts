@@ -1,5 +1,6 @@
 import { childPath } from '../src/domain/comments/comment-path';
 import { SEED_BLOGS } from './seed/blogs';
+import { EXTRA_BLOGS, PUBLIC_FLASHCARD_LISTS } from './seed/catalogue';
 import { DEMO_FLASHCARD_LISTS } from './seed/demo-flashcards';
 import {
 	SEED_BLOG_COMMENTS,
@@ -65,7 +66,9 @@ const DAY = 24 * 60 * MINUTE;
 /** Upserts the seeded posts: matched by seed id or (current/former) title, so re-runs update them. */
 async function seedBlogs(): Promise<Map<string, string>> {
 	const ids = new Map<string, string>();
-	for (const [i, blog] of SEED_BLOGS.entries()) {
+	// the extra posts first (older), so the hand-written ones stay the newest
+	const blogs = [...EXTRA_BLOGS, ...SEED_BLOGS];
+	for (const [i, blog] of blogs.entries()) {
 		const existing = await prisma.blog.findFirst({
 			where: {
 				OR: [{ id: blog.id }, { title: { in: [blog.title, ...(blog.formerTitles ?? [])] } }],
@@ -82,13 +85,13 @@ async function seedBlogs(): Promise<Map<string, string>> {
 					...data,
 					id: blog.id,
 					authorId: blog.authorId,
-					createdAt: new Date(Date.now() - (SEED_BLOGS.length - i) * 3 * DAY),
+					createdAt: new Date(Date.now() - (blogs.length - i) * 2 * DAY),
 				},
 			});
 			ids.set(blog.id, blog.id);
 		}
 	}
-	console.warn(`Seeded ${SEED_BLOGS.length} blogs`);
+	console.warn(`Seeded ${blogs.length} blogs`);
 	return ids;
 }
 
@@ -230,7 +233,7 @@ async function seedForum(): Promise<void> {
  * exist are left as testers changed them.
  */
 async function seedDemoFlashCards(): Promise<void> {
-	for (const list of DEMO_FLASHCARD_LISTS) {
+	for (const list of [...DEMO_FLASHCARD_LISTS, ...PUBLIC_FLASHCARD_LISTS]) {
 		const createdAt = new Date(Date.now() - list.daysAgo * DAY);
 		await prisma.flashCardList.upsert({
 			where: { id: list.id },
@@ -261,7 +264,9 @@ async function seedDemoFlashCards(): Promise<void> {
 			});
 		}
 	}
-	console.warn(`Seeded ${DEMO_FLASHCARD_LISTS.length} flashcard lists for the demo account`);
+	console.warn(
+		`Seeded ${DEMO_FLASHCARD_LISTS.length} demo and ${PUBLIC_FLASHCARD_LISTS.length} public flashcard lists`,
+	);
 }
 
 async function main() {
