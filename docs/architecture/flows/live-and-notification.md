@@ -216,7 +216,7 @@ Admin creates an arbitrary notification for any user.
 | `resource.report.created`        | `notification.events.report.created`        | `report-created.handler.ts`        | Payload `{ reportId, reportedBy, type, title, targetType?, targetId? }`. Calls `auth.AuthService/FindIdentityIdsByRole { role: Admin }` (gRPC, `AUTH_CLIENT` from `authService` config; an auth outage throws, so the message is retried). For each admin except the reporter with `report` enabled: notification `type: 'report'`, `data { reportId, targetType, targetId, action: '/report-management' }`. | same                                                               |
 | `resource.report.status-changed` | `notification.events.report.status-changed` | `report-status-changed.handler.ts` | Payload `{ reportId, reportedBy, status, title }`. If the reporter has `report` enabled: notification `type: 'report'`, message built with `reportStatusText(status)` (Vietnamese phrase, raw status fallback), `data { reportId, status }`.                                                                                                                                                                 | same                                                               |
 
-The other four consumers (`resource.blog-comment.created`, `resource.forum-reply.created`, `resource.flashcard-proposal.created`, `resource.flashcard-proposal.decided`) are documented in [resource-community.md](resource-community.md).
+The other five consumers (`resource.blog-comment.created`, `resource.forum-reply.created`, `resource.flashcard-proposal.created`, `resource.flashcard-proposal.decided`, `resource.flashcard-proposal.withdrawn`) are documented in [resource-community.md](resource-community.md).
 
 ## Findings
 

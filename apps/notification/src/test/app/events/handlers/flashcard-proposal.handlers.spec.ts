@@ -3,6 +3,7 @@ import {
 	FlashCardProposalDecidedHandler,
 	proposalDecisionText,
 } from '../../../../app/events/handlers/flashcard-proposal-decided.handler';
+import { FlashCardProposalWithdrawnHandler } from '../../../../app/events/handlers/flashcard-proposal-withdrawn.handler';
 import { FlashCardProposalStatus } from '@server/typing';
 
 jest.mock('@nestjs-cls/transactional', () => ({ Transactional: () => () => undefined }));
@@ -140,5 +141,37 @@ describe('flash card proposal notifications', () => {
 		expect(
 			proposalDecisionText({ ...proposal, status: FlashCardProposalStatus.Withdrawn }),
 		).toBeNull();
+	});
+});
+
+describe('FlashCardProposalWithdrawnHandler', () => {
+	const withdrawn = {
+		proposalId: 'p1',
+		targetListId: 'l1',
+		targetOwnerId: 'owner',
+		authorId: 'proposer',
+	};
+	const run = async (payload: object, claimed = true) => {
+		const notifications = { deleteProposalNotifications: jest.fn().mockResolvedValue(1) };
+		const inbox = { claim: jest.fn().mockResolvedValue(claimed) };
+		await new FlashCardProposalWithdrawnHandler(notifications as never, inbox as never).handle(
+			event('resource.flashcard-proposal.withdrawn', payload),
+		);
+		return { notifications: notifications, inbox: inbox };
+	};
+
+	it("removes the owner's review notification for that proposal", async () => {
+		const { notifications, inbox } = await run(withdrawn);
+		expect(inbox.claim).toHaveBeenCalledWith(
+			'evt-1',
+			'notification.events.flashcard-proposal.withdrawn',
+		);
+		expect(notifications.deleteProposalNotifications).toHaveBeenCalledWith('owner', 'p1');
+	});
+
+	it('skips redeliveries and rejects malformed events', async () => {
+		const { notifications } = await run(withdrawn, false);
+		expect(notifications.deleteProposalNotifications).not.toHaveBeenCalled();
+		await expect(run({ proposalId: 'p1' })).rejects.toThrow();
 	});
 });

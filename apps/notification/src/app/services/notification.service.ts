@@ -84,6 +84,21 @@ export class NotificationService {
 		await this.txHost.tx.notification.delete({ where: { id: id } });
 	}
 
+	/**
+	 * Deletes a user's `flashcard` notifications about one proposal (matched on `data.proposalId`).
+	 * Returns how many were deleted.
+	 */
+	async deleteProposalNotifications(recipientId: string, proposalId: string): Promise<number> {
+		const { count } = await this.txHost.tx.notification.deleteMany({
+			where: {
+				recipientId: recipientId,
+				type: 'flashcard',
+				data: { path: ['proposalId'], equals: proposalId },
+			},
+		});
+		return count;
+	}
+
 	async listNotifications(data: ListNotificationsInput): Promise<NotificationListReadModel> {
 		const take = data.limit && data.limit > 0 ? data.limit : 10;
 		const skip = ((data.page && data.page > 0 ? data.page : 1) - 1) * take;

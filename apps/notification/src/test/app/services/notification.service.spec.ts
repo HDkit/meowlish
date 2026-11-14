@@ -9,6 +9,7 @@ const setup = () => {
 			create: jest.fn(),
 			update: jest.fn(),
 			delete: jest.fn(),
+			deleteMany: jest.fn(),
 		},
 	};
 	const sse = { emit: jest.fn() };
@@ -79,5 +80,18 @@ describe('NotificationService', () => {
 			}),
 		).rejects.toBeInstanceOf(BadRequestException);
 		expect(tx.notification.create).not.toHaveBeenCalled();
+	});
+
+	it('deletes only the recipient’s flash card notifications about that proposal', async () => {
+		const { tx, service } = setup();
+		tx.notification.deleteMany.mockResolvedValue({ count: 1 });
+		await expect(service.deleteProposalNotifications('owner', 'p1')).resolves.toBe(1);
+		expect(tx.notification.deleteMany).toHaveBeenCalledWith({
+			where: {
+				recipientId: 'owner',
+				type: 'flashcard',
+				data: { path: ['proposalId'], equals: 'p1' },
+			},
+		});
 	});
 });

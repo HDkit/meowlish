@@ -228,6 +228,11 @@ Notification consumers of the events above (all in `apps/notification/src/app/ev
 - `proposalDecisionText` builds accepted / rejected text (appends `Ghi chú: <note>` if a note was given); any other status returns null and the event is dropped. Also skipped when `decidedBy === authorId`, or when the proposer turned off `flashcardEnabled` (`isEnabled(authorId, 'flashcard')`).
 - Notification to the proposer (`authorId`): `type: 'flashcard'`, `data { proposalId, listId, status, action }` (same path as above).
 
+### resource.flashcard-proposal.withdrawn
+
+- Queue `notification.events.flashcard-proposal.withdrawn`; `FlashCardProposalWithdrawnHandler` (`flashcard-proposal-withdrawn.handler.ts`); inbox yes; payload `{ proposalId, targetListId, targetOwnerId, authorId }`.
+- `NotificationService.deleteProposalNotifications(targetOwnerId, proposalId)`: `Notification.deleteMany` where `recipientId = targetOwnerId`, `type = 'flashcard'`, `data.proposalId = proposalId` (JSON path). The "waiting for your review" notification is deleted rather than marked read: its text is no longer true, and either way it leaves the unread count. Nothing is pushed over SSE; the client sees the change on its next list fetch.
+
 ## Findings
 
 - ~~A forum quote notification shared the `commentReply` switch and `comment_reply` type with blog comment replies~~: fixed (C37), own `forumQuoteEnabled` switch and `forum_quote` type.
