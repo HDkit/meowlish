@@ -4,6 +4,12 @@ What was fixed from [`backlog.md`](backlog.md), and how. Newest first. Each entr
 
 ## November 2026
 
+### C22: the first websocket-only chat connection after a gateway restart timed out
+
+- **Problem:** http-proxy-middleware subscribes to the HTTP server's `upgrade` event only on the first normal request through its route, so after a gateway restart a socket.io client using only the websocket transport timed out until some polling request came through (reproduced on production).
+- **Fix:** `LiveWsGatewayController.handleUpgrade` (socket.io paths only) is subscribed to the server's `upgrade` event in `apps/gateway/src/bootstrap.ts` before `listen`. Once the library subscribes itself, its `upgrade` steps aside, so no upgrade is handled twice.
+- **Tests:** `apps/gateway/src/test/live-ws-gateway/live-ws.router.controller.spec.ts` ("websocket handshake as the very first request after start-up"; it fails without the subscription).
+
 ### S20: Postgres, Redis, MinIO, RabbitMQ and Adminer were open to other machines
 
 - **Problem:** `docker-compose.db.yaml` (and the observability stack) published every infrastructure port on all interfaces: Postgres (5434 in production), Redis without a password (6381) and RedisInsight (8003), Adminer (8180), MinIO's API and console (9000, 9001), RabbitMQ and its management UI (5673, 15673), and Grafana/OTLP. Anything on the network could reach them directly.

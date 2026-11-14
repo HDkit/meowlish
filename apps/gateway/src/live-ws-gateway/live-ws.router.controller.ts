@@ -6,6 +6,8 @@ import { ConfigService } from '@nestjs/config';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { NextFunction, Request, Response } from 'express';
 import { type RequestHandler, createProxyMiddleware } from 'http-proxy-middleware';
+import { type IncomingMessage } from 'node:http';
+import { type Duplex } from 'node:stream';
 
 // The live service verifies the access token itself (`access_token` cookie, socket.io
 // `auth.token`, `?token=` or `Authorization: Bearer`), so this proxy forwards the handshake untouched.
@@ -30,6 +32,17 @@ export class LiveWsGatewayController {
 			},
 		});
 	}
+
+	/**
+	 * Proxies a WebSocket upgrade for the socket.io path. Subscribed to the HTTP server at start-up
+	 * (`bootstrap.ts`): http-proxy-middleware only subscribes itself on the first normal request, so
+	 * after a restart a websocket-only client timed out until a polling request came through. Once
+	 * the library has subscribed, its `upgrade` steps aside, so nothing is handled twice.
+	 */
+	readonly handleUpgrade = (req: IncomingMessage, socket: Duplex, head: Buffer): void => {
+		if (!req.url?.includes('/socket.io')) return;
+		this.proxy.upgrade(req, socket as never, head);
+	};
 
 	// long-polling and reconnects must not eat the API rate-limit bucket
 	@All()

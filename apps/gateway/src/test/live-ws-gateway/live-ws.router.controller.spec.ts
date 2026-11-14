@@ -1,3 +1,4 @@
+import { LiveWsGatewayController } from '../../live-ws-gateway/live-ws.router.controller';
 import { LiveWsGatewayModule } from '../../live-ws-gateway/live-ws.router.module';
 import { Global, type INestApplication, Module, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -110,5 +111,45 @@ describe('live socket.io proxy', () => {
 	it('still lets live refuse a handshake from a foreign origin', async () => {
 		const res = await poll('?EIO=4&transport=polling', 'https://evil.example');
 		expect(res.status).toBe(403);
+	});
+});
+
+describe('live socket.io proxy, websocket before any HTTP request (C22)', () => {
+	let live: HttpServer;
+	let io: Server;
+	let app: INestApplication;
+
+	beforeAll(async () => {
+		live = createServer((_req, res) => res.writeHead(404).end());
+		io = new Server(live, { allowRequest: (_req, callback) => callback(null, true) });
+		await new Promise<void>(resolve => live.listen(0, '127.0.0.1', resolve));
+		liveWsUrl = `http://127.0.0.1:${portOf(live)}`;
+
+		const moduleRef = await Test.createTestingModule({ imports: [TestGatewayModule] }).compile();
+		app = moduleRef.createNestApplication();
+		app.setGlobalPrefix('api', { exclude: ['health/live', 'health/ready'] });
+		app.enableVersioning({ defaultVersion: '1', type: VersioningType.URI });
+		// what bootstrap.ts does
+		const liveWs = app.get(LiveWsGatewayController, { strict: false });
+		(app.getHttpServer() as HttpServer).on('upgrade', liveWs.handleUpgrade);
+		await app.listen(0, '127.0.0.1');
+	});
+
+	afterAll(async () => {
+		await app.close();
+		await io.close();
+	});
+
+	it('completes a websocket handshake as the very first request after start-up', async () => {
+		const port = portOf(app.getHttpServer() as HttpServer);
+		const ws = new WebSocket(
+			`ws://127.0.0.1:${port}/api/v1/chat/ws/socket.io/?EIO=4&transport=websocket`,
+		);
+		const open = await new Promise<string>((resolve, reject) => {
+			ws.onmessage = event => resolve(String(event.data));
+			ws.onerror = () => reject(new Error('websocket handshake failed'));
+		});
+		ws.close();
+		expect(open).toMatch(/^0\{"sid":"/);
 	});
 });

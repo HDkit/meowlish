@@ -1,6 +1,7 @@
 import { type IEnvVars } from './configs/config';
 import { corsOptions } from './cors';
 import { GatewayModule } from './gateway.module';
+import { LiveWsGatewayController } from './live-ws-gateway/live-ws.router.controller';
 import { INestApplicationContext, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
@@ -41,6 +42,10 @@ async function bootstrap() {
 			content: document,
 		}),
 	);
+
+	// socket.io WebSocket upgrades are proxied from the first connection on (C22)
+	const liveWs = gatewayModule.get(LiveWsGatewayController, { strict: false });
+	gatewayModule.getHttpServer().on('upgrade', liveWs.handleUpgrade);
 
 	await gatewayModule.listen(server.port, server.host);
 }
