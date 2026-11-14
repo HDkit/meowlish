@@ -11,6 +11,8 @@ service BlogService {
 	rpc UpdateBlog(UpdateBlogRequest) returns (BlogResponse) {}
 	rpc DeleteBlog(DeleteBlogRequest) returns (google.protobuf.Empty) {}
 	rpc ListBlogs(ListBlogsRequest) returns (ListBlogsResponse) {}
+	// every tag used by a blog post, most used first
+	rpc ListBlogTags(google.protobuf.Empty) returns (ListBlogTagsResponse) {}
 }
 
 service FlashCardService {
@@ -126,6 +128,15 @@ message ListBlogsRequest {
 message ListBlogsResponse {
 	repeated BlogResponse blogs       = 1;
 	int32                 total_count = 2;
+}
+
+message BlogTagCount {
+	string name  = 1;
+	int32  count = 2;
+}
+
+message ListBlogTagsResponse {
+	repeated BlogTagCount tags = 1;
 }
 
 message FlashCardResponse {

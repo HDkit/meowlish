@@ -22,7 +22,7 @@ import { UpdateFlashCardListDto } from './dtos/req/update-flash-card-list.req.dt
 import { UpdateFlashCardDto } from './dtos/req/update-flash-card.req.dto';
 import { UpdateReportDto } from './dtos/req/update-report.req.dto';
 import { BlogCommentDto, ListBlogCommentsDto } from './dtos/res/blog-comment.dto';
-import { BlogDto, ListBlogsDto } from './dtos/res/blog.dto';
+import { BlogDto, ListBlogTagsDto, ListBlogsDto } from './dtos/res/blog.dto';
 import {
 	FlashCardListDetailDto,
 	FlashCardListDto,
@@ -99,6 +99,15 @@ export class ResourceGatewayController implements OnModuleInit {
 			tags: body.tags ?? [],
 			authorId: req.user.sub,
 		});
+	}
+
+	// before 'blogs/:id', so "tags" isn't taken for an id
+	@Get('blogs/tags')
+	@ApiOperation({ summary: 'List every tag used by blog posts, most used first' })
+	@ApiResponseEntity(ListBlogTagsDto)
+	@SerializeOptions({ type: ListBlogTagsDto, strategy: 'exposeAll' })
+	listBlogTags() {
+		return this.blogService.listBlogTags({});
 	}
 
 	@Get('blogs/:id')

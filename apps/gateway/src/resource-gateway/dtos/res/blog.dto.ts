@@ -31,6 +31,23 @@ export class BlogDto {
 	updatedAt!: Date;
 }
 
+export class BlogTagCountDto {
+	@Expose()
+	@ApiProperty({ example: 'ielts' })
+	name!: string;
+
+	@Expose()
+	@ApiProperty({ description: 'How many blog posts use the tag', example: 4 })
+	count!: number;
+}
+
+export class ListBlogTagsDto {
+	@Expose()
+	@Type(() => BlogTagCountDto)
+	@ApiProperty({ type: () => [BlogTagCountDto], description: 'Most used first' })
+	tags!: BlogTagCountDto[];
+}
+
 export class ListBlogsDto {
 	@Expose()
 	@Type(() => BlogDto)

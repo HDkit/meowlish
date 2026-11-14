@@ -56,6 +56,15 @@ export interface ListBlogsResponse {
   totalCount: number;
 }
 
+export interface BlogTagCount {
+  name: string;
+  count: number;
+}
+
+export interface ListBlogTagsResponse {
+  tags: BlogTagCount[];
+}
+
 export interface FlashCardResponse {
   id: string;
   word: string;
@@ -1389,6 +1398,109 @@ export const ListBlogsResponse: MessageFns<ListBlogsResponse> = {
             }
 
             message.totalCount = reader.int32();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseBlogTagCount(): BlogTagCount {
+  return { name: "", count: 0 };
+}
+
+export const BlogTagCount: MessageFns<BlogTagCount> = {
+  encode(message: BlogTagCount, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.name !== "") {
+      writer.uint32(10).string(message.name);
+    }
+    if (message.count !== 0) {
+      writer.uint32(16).int32(message.count);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): BlogTagCount {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseBlogTagCount();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.name = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 16) {
+              break;
+            }
+
+            message.count = reader.int32();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+};
+
+function createBaseListBlogTagsResponse(): ListBlogTagsResponse {
+  return { tags: [] };
+}
+
+export const ListBlogTagsResponse: MessageFns<ListBlogTagsResponse> = {
+  encode(message: ListBlogTagsResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.tags) {
+      BlogTagCount.encode(v!, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListBlogTagsResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseListBlogTagsResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.tags.push(BlogTagCount.decode(reader, reader.uint32()));
             continue;
           }
         }
@@ -8390,6 +8502,10 @@ export interface BlogServiceClient {
   deleteBlog(request: DeleteBlogRequest, metadata?: Metadata): Observable<Empty>;
 
   listBlogs(request: ListBlogsRequest, metadata?: Metadata): Observable<ListBlogsResponse>;
+
+  /** every tag used by a blog post, most used first */
+
+  listBlogTags(request: Empty, metadata?: Metadata): Observable<ListBlogTagsResponse>;
 }
 
 export interface BlogServiceController {
@@ -8414,11 +8530,18 @@ export interface BlogServiceController {
     request: ListBlogsRequest,
     metadata?: Metadata,
   ): Promise<ListBlogsResponse> | Observable<ListBlogsResponse> | ListBlogsResponse;
+
+  /** every tag used by a blog post, most used first */
+
+  listBlogTags(
+    request: Empty,
+    metadata?: Metadata,
+  ): Promise<ListBlogTagsResponse> | Observable<ListBlogTagsResponse> | ListBlogTagsResponse;
 }
 
 export function BlogServiceControllerMethods() {
   return function (constructor: Function) {
-    const grpcMethods: string[] = ["createBlog", "getBlog", "updateBlog", "deleteBlog", "listBlogs"];
+    const grpcMethods: string[] = ["createBlog", "getBlog", "updateBlog", "deleteBlog", "listBlogs", "listBlogTags"];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
       GrpcMethod("BlogService", method)(constructor.prototype[method], method, descriptor);
@@ -8482,6 +8605,17 @@ export const BlogServiceService = {
     responseSerialize: (value: ListBlogsResponse): Buffer => Buffer.from(ListBlogsResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): ListBlogsResponse => ListBlogsResponse.decode(value),
   },
+  /** every tag used by a blog post, most used first */
+  listBlogTags: {
+    path: "/resource.BlogService/ListBlogTags" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
+    requestDeserialize: (value: Buffer): Empty => Empty.decode(value),
+    responseSerialize: (value: ListBlogTagsResponse): Buffer =>
+      Buffer.from(ListBlogTagsResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ListBlogTagsResponse => ListBlogTagsResponse.decode(value),
+  },
 } as const;
 
 export interface BlogServiceServer extends UntypedServiceImplementation {
@@ -8490,6 +8624,8 @@ export interface BlogServiceServer extends UntypedServiceImplementation {
   updateBlog: handleUnaryCall<UpdateBlogRequest, BlogResponse>;
   deleteBlog: handleUnaryCall<DeleteBlogRequest, Empty>;
   listBlogs: handleUnaryCall<ListBlogsRequest, ListBlogsResponse>;
+  /** every tag used by a blog post, most used first */
+  listBlogTags: handleUnaryCall<Empty, ListBlogTagsResponse>;
 }
 
 export interface FlashCardServiceClient {

@@ -1,6 +1,7 @@
 import {
 	type BlogListReadModel,
 	type BlogReadModel,
+	type BlogTagCountReadModel,
 } from '../../domain/read-models/blog.read-model';
 import { ResourceEventsPublisher } from '../events/resource-events.publisher';
 import {
@@ -92,5 +93,15 @@ export class BlogService {
 		]);
 
 		return { blogs: blogs.map(b => this.toReadModel(b)), totalCount: totalCount };
+	}
+
+	/** Every tag of every post, most used first (then by name), so filters can offer all of them. */
+	async listBlogTags(): Promise<BlogTagCountReadModel[]> {
+		const rows = await this.txHost.tx.$queryRaw<{ name: string; count: number }[]>`
+			SELECT tag AS name, COUNT(*)::int AS count
+			FROM blogs, unnest(tags) AS tag
+			GROUP BY tag
+			ORDER BY count DESC, tag ASC`;
+		return rows.map(r => ({ name: r.name, count: r.count }));
 	}
 }
