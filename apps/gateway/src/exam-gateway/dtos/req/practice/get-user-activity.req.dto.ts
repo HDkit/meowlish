@@ -1,8 +1,9 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { exam } from '@server/generated';
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, Max, Min } from 'class-validator';
 
-export class GetUserActivityDto {
+export class GetUserActivityDto implements Omit<exam.GetUserActivityDto, 'uid'> {
 	@Type(() => Number)
 	@IsInt()
 	@IsOptional()

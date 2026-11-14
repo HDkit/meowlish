@@ -1,8 +1,9 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { exam } from '@server/generated';
 import { Type } from 'class-transformer';
 import { IsNumber, IsOptional, IsPositive, IsString, ValidateNested } from 'class-validator';
 
-class OptionsDto {
+class OptionsDto implements exam.AttemptDto_Options {
 	@IsNumber()
 	@IsOptional()
 	@IsPositive()
@@ -15,7 +16,7 @@ class OptionsDto {
 	sectionIds: string[] = [];
 }
 
-export class AttemptDto {
+export class AttemptDto implements Omit<exam.AttemptDto, 'userId' | 'examId'> {
 	@Type(() => OptionsDto)
 	@IsOptional()
 	@ValidateNested()

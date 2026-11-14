@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { exam } from '@server/generated';
 import {
 	ArrayUnique,
 	IsArray,
@@ -9,7 +10,10 @@ import {
 	IsString,
 } from 'class-validator';
 
-export class UpdateExamDto {
+export class UpdateExamDto implements Omit<
+	exam.UpdateExamDto,
+	'id' | 'requesterId' | 'privileged'
+> {
 	@IsOptional()
 	@IsString()
 	@ApiPropertyOptional()

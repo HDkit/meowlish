@@ -26,8 +26,6 @@ More candidate issues, noticed while writing the per-operation flows (November 2
 
 ## Conventions (see AGENTS.md)
 
-- Gateway `exam-gateway/dtos/req/**` DTOs don't `implements` the generated messages.
-- `review-exam.req.dto.ts` documents `status` as a free string instead of an enum.
 - `process.env` is still read directly in gRPC/RMQ client module registration (gateway `*.router.module.ts`, exam `FILE_CLIENT`) and in the `bootstrap.ts` listeners of several apps (e.g. `live`).
 - Remove legacy bare-payload support from `@server/messaging` (`unwrapEvent`/`claim`) once every service runs the outbox build and all queues are drained. It needs two spec changes: `unwrapEvent rejects a bare payload` and `claim rejects a missing id`. (`exam.writing.submitted` stays bare on purpose; it is not read through `unwrapEvent`.)
 - `relay: false` services (file-service, notification) have no outbox metrics or alerts. Adding `outbox.add` there needs `relay: true`.

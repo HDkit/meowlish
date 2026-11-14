@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { exam } from '@server/generated';
 import { Type } from 'class-transformer';
 import {
 	ArrayUnique,
@@ -11,7 +12,7 @@ import {
 	ValidateNested,
 } from 'class-validator';
 
-class AddChoiceDto {
+class AddChoiceDto implements exam.UpdateQuestionDto_AddChoice {
 	@IsString()
 	@ApiProperty()
 	key!: string;
@@ -26,7 +27,7 @@ class AddChoiceDto {
 	isCorrect!: boolean;
 }
 
-class UpdateChoiceDto {
+class UpdateChoiceDto implements exam.UpdateQuestionDto_UpdateChoice {
 	@IsString()
 	@ApiProperty()
 	id!: string;
@@ -52,7 +53,10 @@ class UpdateChoiceDto {
 	setContentNull?: boolean;
 }
 
-export class UpdateQuestionDto {
+export class UpdateQuestionDto implements Omit<
+	exam.UpdateQuestionDto,
+	'id' | 'requesterId' | 'privileged'
+> {
 	@Type(() => AddChoiceDto)
 	@IsArray()
 	@ValidateNested({ each: true })

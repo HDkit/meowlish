@@ -1,7 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { exam } from '@server/generated';
 import { ArrayUnique, IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
 
-export class UpdateSectionDto {
+export class UpdateSectionDto implements Omit<
+	exam.UpdateSectionDto,
+	'id' | 'requesterId' | 'privileged'
+> {
 	@IsOptional()
 	@IsString()
 	@ApiPropertyOptional()

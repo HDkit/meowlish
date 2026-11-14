@@ -1,9 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { exam } from '@server/generated';
 import { SortDirection } from '@server/typing';
 import { Type } from 'class-transformer';
 import { IsDate, IsEnum, IsIn, IsInt, IsOptional, IsString, ValidateNested } from 'class-validator';
 
-class TimeRangeDto {
+class TimeRangeDto implements exam.FindExamsManagementDto_TimeRange {
 	@Type(() => Date)
 	@IsDate()
 	@ApiProperty({ type: String, format: 'date-time' })
@@ -15,7 +16,7 @@ class TimeRangeDto {
 	to!: Date;
 }
 
-class FilterOptionsDto {
+class FilterOptionsDto implements exam.FindExamsManagementDto_FilterOption {
 	@IsOptional()
 	@IsString()
 	@ApiPropertyOptional()
@@ -44,7 +45,7 @@ class FilterOptionsDto {
 	updatedTimeRange?: TimeRangeDto;
 }
 
-class SortOptionsDto {
+class SortOptionsDto implements exam.FindExamsManagementDto_SortOption {
 	@IsEnum(SortDirection)
 	@ApiProperty({ enum: SortDirection })
 	direction!: SortDirection;
@@ -55,7 +56,7 @@ class SortOptionsDto {
 	key!: 'updatedAt' | 'createdAt';
 }
 
-export class FindExamsForManagentDto {
+export class FindExamsForManagentDto implements exam.FindExamsManagementDto {
 	@IsOptional()
 	@IsString()
 	@ApiPropertyOptional()

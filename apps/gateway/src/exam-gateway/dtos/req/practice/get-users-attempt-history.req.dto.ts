@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { exam } from '@server/generated';
 import { SortDirection } from '@server/typing';
 import { Type } from 'class-transformer';
 import {
@@ -11,7 +12,7 @@ import {
 	ValidateNested,
 } from 'class-validator';
 
-class SortOptionsDto {
+class SortOptionsDto implements exam.GetUsersAttemptHistoryDto_SortOption {
 	@IsIn(['endedAt', 'startedAt', 'examId', 'score'])
 	@ApiProperty({ enum: ['endedAt', 'startedAt', 'examId', 'score'] })
 	key!: 'endedAt' | 'startedAt' | 'examId' | 'score';
@@ -21,7 +22,7 @@ class SortOptionsDto {
 	direction!: SortDirection;
 }
 
-export class GetUsersAttemptHistoryDto {
+export class GetUsersAttemptHistoryDto implements Omit<exam.GetUsersAttemptHistoryDto, 'uid'> {
 	@IsOptional()
 	@IsString()
 	@ApiPropertyOptional()

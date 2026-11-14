@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { exam } from '@server/generated';
 import { SortDirection } from '@server/typing';
 import { ToStringArray } from '@server/utils';
 import { Type } from 'class-transformer';
@@ -14,7 +15,7 @@ import {
 	ValidateNested,
 } from 'class-validator';
 
-class FilterOptionsDto {
+class FilterOptionsDto implements exam.FindExamsDto_FilterOption {
 	@IsOptional()
 	@IsString()
 	@ApiPropertyOptional()
@@ -44,7 +45,7 @@ class FilterOptionsDto {
 	requiredTags: string[] = [];
 }
 
-class SortOptionsDto {
+class SortOptionsDto implements exam.FindExamsDto_SortOption {
 	@IsIn(['attemptsCount', 'updatedAt'])
 	@ApiProperty({ enum: ['attemptsCount', 'updatedAt'] })
 	key!: 'attemptsCount' | 'updatedAt';
@@ -54,7 +55,7 @@ class SortOptionsDto {
 	direction!: SortDirection;
 }
 
-export class FindExamsDto {
+export class FindExamsDto implements exam.FindExamsDto {
 	@Type(() => FilterOptionsDto)
 	@IsOptional()
 	@ValidateNested()
