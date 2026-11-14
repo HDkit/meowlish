@@ -171,4 +171,31 @@ describe('ChatGateway authentication', () => {
 		).rejects.toThrow();
 		expect(socket.join).not.toHaveBeenCalled();
 	});
+
+	it('acknowledges a chat message with the stored id so the sender can drop its optimistic copy', async () => {
+		const createdAt = new Date('2026-11-14T10:00:00Z');
+		const config = { get: () => publicKey } as unknown as ConfigService;
+		const roomRepository = {
+			canJoinRoom: jest.fn(),
+			saveLog: jest.fn().mockResolvedValue({ id: 'log-1', createdAt: createdAt }),
+		};
+		const gateway = new ChatGateway(
+			logger as unknown as AppLoggerService,
+			roomRepository as never,
+			config,
+			{ getService: () => ({ validateAccess: () => of({}) }) } as never,
+		);
+		const emit = jest.fn();
+		const socket = {
+			data: { uid: 'me' },
+			rooms: new Set(['room-1']),
+			to: jest.fn(() => ({ emit: emit })),
+		};
+		const ack = await gateway.handlePing({ roomId: 'room-1', message: 'hi' }, socket as never);
+		expect(ack).toEqual({ id: 'log-1', createdAt: createdAt.toISOString() });
+		expect(emit).toHaveBeenCalledWith(
+			'message',
+			expect.objectContaining({ id: 'log-1', fromId: 'me' }),
+		);
+	});
 });

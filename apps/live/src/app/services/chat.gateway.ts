@@ -158,20 +158,27 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect, On
 		await socket.leave(roomId);
 	}
 
+	/**
+	 * Saves and broadcasts a message to the room's other sockets. Returns the stored message as the
+	 * socket.io acknowledgement, so the sender can replace its optimistic copy with the real one
+	 * (same id as in the chat log) instead of showing it twice.
+	 */
 	@SubscribeMessage('chat')
 	async handlePing(
 		@MessageBody() data: ChatDto,
 		@ConnectedSocket() socket: ModifiedSocket,
-	): Promise<void> {
+	): Promise<{ id: string; createdAt: string }> {
 		if (!socket.rooms.has(data.roomId))
 			throw new ForbiddenException('You need to join the room before sending a message');
 		const log = await this.roomRepository.saveLog(data.roomId, socket.data.uid, data.message);
+		const createdAt = log.createdAt.toISOString();
 		socket.to(data.roomId).emit('message', {
 			id: log.id,
 			fromId: socket.data.uid,
 			message: data.message,
-			createdAt: log.createdAt.toISOString(),
+			createdAt: createdAt,
 		});
+		return { id: log.id, createdAt: createdAt };
 	}
 
 	/**
