@@ -192,9 +192,6 @@ services:
     environment:
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-user}:${RABBITMQ_PASSWORD:-password}@rabbit-mq:5672/
       - LLM_API_URL=http://ai-llm:8080/v1
-      # not a secret: llama-server runs without an API key; the scorer sends an invalid
-      # `Authorization: Bearer ` header (and fails) when this is empty
-      - HF_TOKEN=local-llama-server
       - LLM_TIMEOUT=600
       # one essay at a time on CPU: queued essays must not expire while they wait (1 h)
       - MQ_PREFETCH_COUNT=1

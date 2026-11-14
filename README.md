@@ -280,7 +280,7 @@ Two containers in `docker/docker-compose.app.yaml`, started with `docker compose
 
 Switching from the mock: stop `mock-ai-scorer` **and delete its queues** (`mock-ai-scorer.writing.submitted`, `.retry.1-5`, `.dlq`). The queue is durable and stays bound to `exam.writing.submitted`, so it keeps collecting submissions, and a restarted mock would overwrite the real feedback with random scores.
 
-Known limits of the worker (upstream): if the model doesn't write the `Overall Band Score: x` lines it expects, it reports **success with every score 0.0**; it always sends `Authorization: Bearer <HF_TOKEN>` and fails on an empty token (compose sets a placeholder); its retries republish to `exam.writing.submitted` on `eventbus`, so every queue bound to that key gets them.
+Local fixes on top of upstream are applied at build time from `docker/ai-scorer/patches/` (see its README); the build runs their tests. The main one: upstream saved essays as **band 0** whenever the model wrote its score in another format (`Scoring: 8.0`). The patched worker reads those formats, asks the model again when it finds no band, and reports `LLM_PARSE_ERROR` instead of a fake 0; a real band 0 is still reported. Still missing upstream: `corrected_version` and `corrections` are always empty.
 
 ### Gateway (`apps/gateway/.env.example`)
 
