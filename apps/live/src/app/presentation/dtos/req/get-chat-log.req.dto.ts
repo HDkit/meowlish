@@ -32,4 +32,8 @@ export class GetChatLogDto implements live.GetChatLogRequest {
 	@IsOptional()
 	@IsString()
 	cursor?: string;
+
+	/** Set by the gateway from the JWT. */
+	@IsString()
+	requesterId!: string;
 }

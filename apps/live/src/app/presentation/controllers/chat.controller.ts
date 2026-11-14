@@ -31,7 +31,7 @@ export class ChatController implements live.ChatServiceController {
 
 	@SerializeOptions({ type: ChatLogDto })
 	async getChatLog(@Payload() request: GetChatLogDto): Promise<ChatLogDto> {
-		return this.chatService.getChatLogsOf(request.roomId, {
+		return this.chatService.getChatLogsOf(request.roomId, request.requesterId, {
 			cursor: request.cursor,
 			dateRange: request.dateRange,
 			limit: request.limit,

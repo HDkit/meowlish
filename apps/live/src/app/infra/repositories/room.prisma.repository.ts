@@ -40,6 +40,14 @@ export class RoomPrismaRepositoryImpl implements IRoomRepository {
 		return !!room && room.banneds.length === 0;
 	}
 
+	async isBannedFrom(roomId: string, uid: string): Promise<boolean> {
+		const ban = await this.txHost.tx.banned.findUnique({
+			where: { roomId_uid: { roomId: roomId, uid: uid } },
+			select: { uid: true },
+		});
+		return !!ban;
+	}
+
 	async createRoom(name: string, createdBy?: string): Promise<string> {
 		try {
 			const room = await this.txHost.tx.room.create({

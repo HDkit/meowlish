@@ -4,6 +4,8 @@ export interface IRoomRepository {
 		options: { url?: string | null; time?: Date | null },
 	): Promise<void>;
 	canJoinRoom(roomId: string, uid: string): Promise<boolean>;
+	/** Whether a `banneds` row exists for this user in this room. */
+	isBannedFrom(roomId: string, uid: string): Promise<boolean>;
 	createRoom(name: string, createdBy?: string): Promise<string>;
 	/** Owner of a live room: undefined when the room does not exist, null when it has no recorded owner. */
 	getRoomOwner(roomId: string): Promise<string | null | undefined>;

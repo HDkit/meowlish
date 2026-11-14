@@ -47,10 +47,10 @@ List rooms, newest message per room included, optional case-insensitive name sea
 
 Chat history of a room.
 
-- **Access**: any authenticated user. No membership or ban check (backlog, see Findings).
+- **Access**: any authenticated user except one banned from the room (404, as for a missing room). There is no membership or visibility rule beyond the ban.
 - **Flow**:
-  1. Gateway `GetChatLogQueryDto { uid?, cursor?, limit? (1-100) }` (`apps/gateway/src/live-gateway/dtos/req/get-chat-log.query.dto.ts`) → `live.ChatService/GetChatLog`. `dateRange` exists in the proto/live DTO but the gateway never sends it.
-  2. Live `GetChatLogDto` (`limit` `@IsPositive`, `@Max(100)`) → `ChatService.getChatLogsOf`: decodes cursor (namespace `GetChatLogsOf`), cursor's `uid`/`dateRange` win; `limit` defaults to 10.
+  1. Gateway `GetChatLogQueryDto { uid?, cursor?, limit? (1-100) }` (`apps/gateway/src/live-gateway/dtos/req/get-chat-log.query.dto.ts`) → `live.ChatService/GetChatLog` with `requesterId = req.user.sub`. `dateRange` exists in the proto/live DTO but the gateway never sends it.
+  2. Live `GetChatLogDto` (`limit` `@IsPositive`, `@Max(100)`, `requesterId` required) → `ChatService.getChatLogsOf`: first `RoomPrismaRepositoryImpl.isBannedFrom(roomId, requesterId)` (`banneds` by `(roomId, uid)`); a ban answers 404 `Room not found`. Then it decodes the cursor (namespace `GetChatLogsOf`), cursor's `uid`/`dateRange` win; `limit` defaults to 10.
   3. `ChatLogReadPrismaRepositoryImpl.getChatLogsOf`: `Log.findMany` where `roomId`, `room.isDeleted = false`, optional `fromId = uid`, optional `createdAt` range; `orderBy [createdAt desc, id desc]`, cursor + `skip 1`, `take ±(limit+1)` (the extra row tells whether another page exists). The first page is therefore the **latest** `limit` messages, newest first.
   4. Response `ChatLogDto { chats[{ id, uid, message, createdAt }], nextCursor, prevCursor }`, `chats` newest first. `nextCursor` pages to **older** messages, `prevCursor` back to **newer** ones; each is `''` when there is no such page (so the first page has `prevCursor: ''`, the oldest page `nextCursor: ''`, an empty room both).
 
@@ -224,7 +224,7 @@ The other four consumers (`resource.blog-comment.created`, `resource.forum-reply
 - ~~A ban without a `reason` failed with 400 in live~~: fixed (see fixed-issues.md). The ts-proto codec omits an unset `optional StringValue`, so live received `undefined`, not `''`.
 - ~~Chat-log cursors were encoded even past the end, so paging restarted from the first page~~: fixed (see fixed-issues.md).
 - ~~The first page of `GET …/logs` was the oldest messages~~: fixed, newest first (see fixed-issues.md).
-- ~~`GET …/logs` used individual `@Query` params with no upper bound on `limit`~~: fixed (query DTO, `limit` 1-100; see fixed-issues.md). It still has no membership or ban check, so a user banned from a room can read its history: backlog X1 (needs a proto field).
+- ~~`GET …/logs` used individual `@Query` params with no upper bound on `limit`~~: fixed (query DTO, `limit` 1-100; see fixed-issues.md). ~~A user banned from a room could still read its history~~: fixed (S25), `requester_id` in `GetChatLogRequest`, 404 for a banned requester.
 - ~~Deleting a deleted room succeeded again; unknown rooms on delete/schedule gave 502~~: fixed, 404 (see fixed-issues.md).
 - ~~`closeRoom` ran before the room delete committed~~: fixed, it runs after the commit (see fixed-issues.md).
 - ~~The SSE push happened before the consumer transaction committed~~: fixed, pushed after the commit (see fixed-issues.md).

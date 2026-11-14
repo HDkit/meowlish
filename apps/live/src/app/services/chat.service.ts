@@ -87,8 +87,10 @@ export class ChatService {
 		};
 	}
 
+	/** A user banned from the room gets 404, as if it did not exist (no hint that it is there). */
 	async getChatLogsOf(
 		roomId: string,
+		requesterId: string,
 		options?: {
 			uid?: string;
 			cursor?: string;
@@ -96,6 +98,9 @@ export class ChatService {
 			dateRange?: { from: Date; to: Date };
 		},
 	): Promise<{ chats: ChatLog[]; nextCursor: string; prevCursor: string }> {
+		if (await this.roomRepository.isBannedFrom(roomId, requesterId)) {
+			throw new NotFoundException('Room not found');
+		}
 		type DecodedCursor = {
 			id?: string;
 			uid?: string;

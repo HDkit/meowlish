@@ -56,7 +56,11 @@ export interface GetChatLogRequest {
   uid?: string | undefined;
   dateRange?: GetChatLogRequest_DateRange | undefined;
   cursor?: string | undefined;
-  limit?: number | undefined;
+  limit?:
+    | number
+    | undefined;
+  /** who is asking (set by the gateway from the JWT): a user banned from the room gets 404 */
+  requesterId: string | undefined;
 }
 
 export interface GetChatLogRequest_DateRange {
@@ -438,7 +442,7 @@ export const Chat: MessageFns<Chat> = {
 };
 
 function createBaseGetChatLogRequest(): GetChatLogRequest {
-  return { roomId: undefined };
+  return { roomId: undefined, requesterId: undefined };
 }
 
 export const GetChatLogRequest: MessageFns<GetChatLogRequest> = {
@@ -457,6 +461,9 @@ export const GetChatLogRequest: MessageFns<GetChatLogRequest> = {
     }
     if (message.limit !== undefined) {
       Int32Value.encode({ value: message.limit! }, writer.uint32(42).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(50).fork()).join();
     }
     return writer;
   },
@@ -512,6 +519,14 @@ export const GetChatLogRequest: MessageFns<GetChatLogRequest> = {
             }
 
             message.limit = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }

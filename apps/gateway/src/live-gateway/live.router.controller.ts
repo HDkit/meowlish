@@ -62,9 +62,14 @@ export class LiveGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Get chat log for a room, newest messages first' })
 	@ApiResponseEntity(ChatLogDto)
 	@SerializeOptions({ type: ChatLogDto, strategy: 'exposeAll' })
-	getChatLog(@Param('roomId') roomId: string, @Query() query: GetChatLogQueryDto) {
+	getChatLog(
+		@Req() req: AuthenticatedRequest,
+		@Param('roomId') roomId: string,
+		@Query() query: GetChatLogQueryDto,
+	) {
 		return this.chatService.getChatLog({
 			roomId: roomId,
+			requesterId: req.user.sub,
 			uid: query.uid,
 			cursor: query.cursor,
 			limit: query.limit,

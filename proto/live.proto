@@ -53,6 +53,8 @@ message GetChatLogRequest {
 	optional DateRange                   date_range = 3;
 	optional google.protobuf.StringValue cursor     = 4;
 	optional google.protobuf.Int32Value  limit      = 5;
+	// who is asking (set by the gateway from the JWT): a user banned from the room gets 404
+	google.protobuf.StringValue          requester_id = 6;
 
 	message DateRange {
 		google.protobuf.Timestamp from = 1;
