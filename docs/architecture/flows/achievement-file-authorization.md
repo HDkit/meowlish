@@ -16,7 +16,6 @@ Route prefixes: global prefix `api` plus URI version `v1` (`apps/gateway/src/boo
 | [gRPC `FileService/CheckFilesOwnedBy`](#grpc-fileservicecheckfilesownedby)                                                | internal (auth, exam, resource) | -                                                  | -                          |
 | [gRPC `FileService/GetUrls`](#grpc-fileservicegeturls)                                                                    | internal (auth, exam)           | -                                                  | -                          |
 | [`ResourceAccessGuard` → `AuthorizationService/CheckOwnership`](#resourceaccessguard--authorizationservicecheckownership) | gateway guard                   | -                                                  | -                          |
-| [gRPC `RegisterOwnership` / `RemoveOwnership`](#grpc-registerownership--removeownership)                                  | internal, unused                | `resource_ownership`                               | -                          |
 | [Consumer `auth.user.login`](#authuserlogin--achievementeventsuserlogin)                                                  | RabbitMQ                        | `login_criteria`, `user_badges`, `outbox_events`   | `achievement.badge.earned` |
 | [Consumer `exam.attempt.submitted`](#examattemptsubmitted--achievementeventsattemptsubmitted)                             | RabbitMQ                        | `attempt_criteria`, `user_badges`, `outbox_events` | `achievement.badge.earned` |
 | [Consumer `exam.attempt.scored`](#examattemptscored--achievementeventsattemptscored)                                      | RabbitMQ                        | `attempt_criteria`, `user_badges`, `outbox_events` | `achievement.badge.earned` |
@@ -39,7 +38,7 @@ All four routes call `achievement.AchievementService` over gRPC (`ErrorHandlingG
 
 - **Access**: JWT; `userId` is `req.user.sub`.
 - **Flow**:
-  1. Gateway DTO `GetUsersBadgesDto` (`apps/gateway/src/achievement-gateway/dtos/req/get-users-badges.req.dto.ts`): optional `cursor` string, optional positive int `limit` (no upper bound). Calls `AchievementService/GetUsersBadges({ cursor, limit, userId: sub })`.
+  1. Gateway DTO `GetUsersBadgesDto` (`apps/gateway/src/achievement-gateway/dtos/req/get-users-badges.req.dto.ts`): optional `cursor` string, optional positive int `limit`, at most 100 (`@Max`, also enforced by the service DTO). Calls `AchievementService/GetUsersBadges({ cursor, limit, userId: sub })`.
   2. `GetUsersBadgesQueryHandler` (`apps/achievement/src/app/queries/handlers/get-users-badges.handler.ts`): decodes the opaque cursor (`CursorPaginationFactory.create('GetBadges')`, `@server/utils`); a cursor whose `userId` differs from the request's is discarded. `limit` = request, else cursor, else 10; `direction` from the cursor (default 1).
   3. `getUsersBadges`: `userBadge.findMany where uid`, order `updatedAt desc, id desc`, `take: direction * limit`, Prisma cursor on `lastId` with `skip: 1`; joins `badge` for names.
   4. Response `FoundUsersBadgesDto { badges: { id, name, displayName, description, date }[], nextCursor, prevCursor }`. Both cursors are always returned, even for an empty page.
@@ -48,7 +47,7 @@ All four routes call `achievement.AchievementService` over gRPC (`ErrorHandlingG
 ### GET /api/v1/achievements/badges/my/progress
 
 - **Access**: JWT; `userId` is `req.user.sub`.
-- **Flow**: `AchievementService/GetUsersProgess` (sic) → `GetUsersProgressQueryHandler` → `loginCriteria.findUnique` and `attemptCriteria.findUnique` by `uid`. Response `ProgressDto { loginProgress?: { longestStreak, streak, total }, submissionProgress?: { goodScore, perfectScore, total } }`; each part is absent when the user has no row yet. `streak` is `loginStreakDays(startedAt, lastLogin)` (`apps/achievement/src/domain/entities/login-badge-manager.entity.ts`), see Findings.
+- **Flow**: `AchievementService/GetUsersProgess` (sic) → `GetUsersProgressQueryHandler` → `loginCriteria.findUnique` and `attemptCriteria.findUnique` by `uid`. Response `ProgressDto { loginProgress?: { longestStreak, streak, total }, submissionProgress?: { goodScore, perfectScore, total } }`; each part is absent when the user has no row yet. `streak` is `currentLoginStreakDays(startedAt, lastLogin, now)` (`apps/achievement/src/domain/entities/login-badge-manager.entity.ts`): the streak length while the last login was today or yesterday (UTC days, as in `updateProgress`), 0 once a whole UTC day has been missed. `longestStreak` is returned as stored.
 
 ### GET /api/v1/achievements/badges/:uid
 
@@ -63,14 +62,14 @@ Creates a `files` row and returns a presigned POST policy for direct browser upl
 
 - **Access**: JWT. `uploadedBy` is set from `req.user.sub`; the body cannot supply it.
 - **Flow**:
-  1. Gateway DTO `GetPresignedUrlDto` (`apps/gateway/src/file-gateway/dtos/req/get-presigned-url.req.dto.ts`): `isPublicFile` boolean, `fileName` string, `fileSize` number, `contentType` `@IsMimeType()`. Calls `FileService/GetPresignedUrl({ ...body, uploadedBy: sub })`.
+  1. Gateway DTO `GetPresignedUrlDto` (`apps/gateway/src/file-gateway/dtos/req/get-presigned-url.req.dto.ts`): `isPublicFile` boolean, `fileName` string, `fileSize` positive int, `contentType` `@IsMimeType()`; it `implements Omit<file.GetPresignedUrlDto, 'uploadedBy'>`. Calls `FileService/GetPresignedUrl({ ...body, uploadedBy: sub })`.
   2. `FileController.getPresignedUrl` (`apps/file-service/src/presentation/controllers/file.controller.ts`) → `FileService.getPresignedUrl` (`apps/file-service/src/app/services/file.service.ts`).
-  3. Checks `fileSize <= 10 MiB` (`file.service.ts:125`) and `contentType` in `image/jpeg, image/png, application/pdf, video/mp4, audio/mpeg` (`file.service.ts:129`).
+  3. Checks that `fileSize` is a whole number from 1 byte to 10 MiB and `contentType` is one of `image/jpeg, image/png, application/pdf, video/mp4, audio/mpeg`; each violation is a `BadRequestException` with the reason.
   4. `FilePrismaRepositoryImpl.create` inserts `File` (`files`): server-generated uuid `id`, `name`, `size`, `mime_type`, `isPublic`, `uploaded_by`; `ref_count` 0, `is_system` false. Not in a `@Transactional()` (single statement).
   5. Builds a MinIO `PostPolicy`: bucket `public` or `private`, key = the new row id, expiry 15 min (`UPLOAD_URL_EXPIRY_SECONDS`), content length 1..`fileSize` (`file.service.ts:142`), `Content-Type` equal to the declared type (header only; the object body is not inspected). Signed with `signingClient`, a MinIO client pointed at `MINIO_PUBLIC_URL` when set, so the signature matches the host the browser uses. Signing is local (fixed region `us-east-1`).
   6. Response `PresignedUrlResponseDto { id, fileName, uploadUrl, formData }` (`strategy: 'exposeAll'`). The browser then POSTs the file to `uploadUrl` with `formData`; that upload never passes through the gateway.
 - **Async**: none. The row stays at `ref_count` 0 until an attaching service publishes `<svc>.file.added`; if that never happens it is deleted by [the orphan cleanup](#bullmq-cleanup-orphaned-files-every-5-min) once untouched for 1 h.
-- **Errors**: size and MIME violations are plain `Error`s, so `GlobalRpcExceptionFilter` sends gRPC `UNKNOWN` "An internal error occurred" and the gateway's `rpc-to-http` filter maps it to **502** (see Findings). Bucket creation and the public-read policy on `public` are set up in `FileService.onModuleInit`.
+- **Errors**: 400 for a non-integer, zero or negative `fileSize` (gateway DTO), and for a file over 10 MiB or a disallowed type (file-service, message names the limit or the allowed types). Bucket creation and the public-read policy on `public` are set up in `FileService.onModuleInit`.
 
 ### gRPC FileService/CheckFilesOwnedBy
 
@@ -87,7 +86,7 @@ No HTTP route. Called by auth (avatar hydration) and exam (question/section/atte
 
 ## Authorization (ownership store)
 
-The service exposes `AuthorizationService` (`apps/authorization/src/app/services/authorization.grpc.controller.ts`) backed by `OwnershipPrismaRepositoryImpl` (`apps/authorization/src/app/infra/repositories/ownership.prisma.repository.ts`) on table `resource_ownership` (`ResourceOwnership`, unique `(resource_type, resource_id)`). Background and the list of `@ResourceAccess` routes: [../authorization.md §5](../authorization.md#5-legacy-resourceaccess-and-the-authorization-service). Of the gateway guards in `apps/gateway/src/auth/guards/`, only `ResourceAccessGuard` calls this service; `JwtAuthGuard`, `RolesGuard`, `PermissionsGuard` and `CookieIssuanceGuard` are local checks (see ../authorization.md §2-4).
+The service exposes `AuthorizationService` with the single RPC `CheckOwnership` (`apps/authorization/src/app/services/authorization.grpc.controller.ts`) backed by `OwnershipPrismaRepositoryImpl` (`apps/authorization/src/app/infra/repositories/ownership.prisma.repository.ts`) on table `resource_ownership` (`ResourceOwnership`, unique `(resource_type, resource_id)`). Background and the list of `@ResourceAccess` routes: [../authorization.md §5](../authorization.md#5-legacy-resourceaccess-and-the-authorization-service). Of the gateway guards in `apps/gateway/src/auth/guards/`, only `ResourceAccessGuard` calls this service; `JwtAuthGuard`, `RolesGuard`, `PermissionsGuard` and `CookieIssuanceGuard` are local checks (see ../authorization.md §2-4).
 
 ### ResourceAccessGuard → AuthorizationService/CheckOwnership
 
@@ -99,10 +98,6 @@ Used by `PATCH`/`DELETE /api/v1/resources/blogs/:id` (`blog`), `PATCH`/`DELETE /
   3. Service side: `checkOwnership` = `resourceOwnership.findUnique` on `(resourceType, resourceId)`, `isOwner = record?.ownerId === userId`. A missing row is "not owner". Response `CheckOwnershipResponseDto { isOwner }`.
 - **Errors**: no matching rule → 403 `Access denied. You do not have the required role or ownership for this resource.` (raised before the owning service is called, so ids of others' blogs/cards get 403, not 404). Authorization service down → gRPC `UNAVAILABLE` → 503 via the gateway's gRPC filter. The ownership row is written asynchronously from the owning service's outbox, so a resource edited within ~1 s of creation (relay poll) can be refused.
 
-### gRPC RegisterOwnership / RemoveOwnership
-
-Implemented but not called by any app (the consumers below call the repository directly). `RegisterOwnership` = `createMany(..., skipDuplicates)` (first owner wins); `RemoveOwnership` = `delete`, P2025 ignored. Neither checks the caller.
-
 ## Background work
 
 ### Achievement consumers
@@ -112,7 +107,7 @@ Shared shape (`apps/achievement/src/app/events/handlers/*.handler.ts`): `@UseCls
 Repository (`apps/achievement/src/infra/repositories/badge-manager.prisma.repository.impl.ts`):
 
 - **Load**: `upsert` the criteria row by `uid` (create defaults; `login_criteria` gets `started_at = last_login = now()`), then `userBadge.findMany` filtered to the manager's `BadgeType` (`LOGIN`, `ATTEMPT_COUNT`, `ATTEMPT_SCORE`; `apps/achievement/src/enums/badge.enum.ts`).
-- **Save**: `update where { uid, version }` with `version + 1` (`:132`, `:146`, `:160`); a stale version raises P2025, which triggers the retry. Then for each `BadgeAddedEvent` raised by the aggregate: `userBadge.createMany(..., skipDuplicates)` and, if a row was inserted, `outbox.add('achievement.badge.earned', { uid, badgeName: <display name> })` (enveloped) in the same transaction (`:179-187`).
+- **Save**: `update where { uid, version }` with `version + 1` (`:132`, `:146`, `:160`); a stale version raises P2025, which triggers the retry. Then for each `BadgeAddedEvent` raised by the aggregate: `userBadge.createMany(..., skipDuplicates)` (conflicts on the unique `(uid, badge)` index) and, if a row was inserted, `outbox.add('achievement.badge.earned', { uid, badgeName: <display name> })` (enveloped) in the same transaction (`:179-187`).
 - `AttemptCounterBadgeManager` and `AttemptScoreBadgeManager` share the `attempt_criteria` row and its `version`, so the submitted and scored queues conflict with each other; the conflict retry absorbs it.
 
 `achievement.badge.earned` → `notification.events.badge.earned` → `apps/notification/src/app/events/handlers/achievement-earned.handler.ts` (inbox yes): if the user's `achievement` preference is enabled, creates an `achievement` notification for `uid`.
@@ -146,7 +141,7 @@ Published by `apps/exam/src/app/events/publishers/attempt-scored.publisher.ts` a
 
 #### `*.file.removed`, `*.files.removed` → `file.events.files.removed`
 
-`apps/file-service/src/app/events/handlers/files-removed.handler.ts`, bound to both keys. Payload `{ file?: { id, count } }` or `{ files: { id, count }[] }`. `decrementRef`: one `updateMany ref_count - count` per file, sequential in the transaction; unknown ids are skipped. Publishers on this branch: `auth.files.removed` and `exam.files.removed`, both from BullMQ jobs that drain the publisher's `deleted_files` table (`apps/exam/src/app/events/publishers/files-removed.publisher.ts`: `publish-deleted-files` every 60 s; auth's `files-removed.publisher.ts` likewise). No app publishes the singular `*.file.removed`. `ref_count` is not clamped and can go below 0.
+`apps/file-service/src/app/events/handlers/files-removed.handler.ts`, bound to both keys. Payload `{ file?: { id, count } }` or `{ files: { id, count }[] }`. `decrementRef`: one `updateMany ref_count - count` per file, sequential in the transaction, then one `updateMany ref_count = 0 where ref_count < 0` over those ids, so a count never goes below 0; unknown ids are skipped. Publishers on this branch: `auth.files.removed` and `exam.files.removed`, both from BullMQ jobs that drain the publisher's `deleted_files` table (`apps/exam/src/app/events/publishers/files-removed.publisher.ts`: `publish-deleted-files` every 60 s; auth's `files-removed.publisher.ts` likewise). No app publishes the singular `*.file.removed`.
 
 #### BullMQ `cleanup-orphaned-files` (every 5 min)
 
@@ -160,7 +155,7 @@ Published by `apps/exam/src/app/events/publishers/attempt-scored.publisher.ts` a
 
 ### Ownership consumers
 
-`apps/authorization/src/app/events/handlers/{exam,live,resource}-ownership.handler.ts`, queues in `ownership-queues.ts` (each queue name is also the inbox consumer). All: `@UseCls()` + `@Transactional()`, inbox claim yes, payload taken from `unwrapEvent<T>` without validation, `connection: 'sub'`.
+`apps/authorization/src/app/events/handlers/{exam,live,resource}-ownership.handler.ts`, queues in `ownership-queues.ts` (each queue name is also the inbox consumer). All: `@UseCls()` + `@Transactional()`, inbox claim yes, then the payload is validated with `validatePayload` against the classes in `apps/authorization/src/app/events/integration-events.ts` (non-empty string `resourceId`, plus `ownerId` on `created` and `resourceType` on `resource.resource.*`); a malformed payload fails with `BadRequestException` before any write and goes through the retry/DLQ chain. `connection: 'sub'`.
 
 | Routing key                 | Queue                                   | Publisher                                                                                                                    | Action                                           |
 | --------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
@@ -175,7 +170,7 @@ Published by `apps/exam/src/app/events/publishers/attempt-scored.publisher.ts` a
 
 ### Seed backfill (`apps/authorization/prisma/seed.ts`)
 
-Run by `prisma:seed` / `pnpm db:setup`. Connects directly to `exam_db`, `resource_db` and `live_db` (`EXAM_DB_URL` etc. or built from `POSTGRES_*`). Upserts ownership for every `exams.created_by` (`exam`), `blogs.author_id` (`blog`), `flash_cards.author_id` (`flashcard`) and `flash_card_lists.author_id` (`flashcard-list`), with `update: { ownerId }`, so the seed overwrites existing owners from the source of truth. For rooms it goes the other way: copies `resource_ownership` `room` owners into `live.rooms.created_by` where that is `NULL`. Row-by-row, not transactional, re-runnable.
+Run by `prisma:seed` / `pnpm db:setup`. Connects directly to `exam_db`, `resource_db` and `live_db` (`EXAM_DB_URL` etc. or built from `POSTGRES_*`). Upserts ownership for every `exams.created_by` (`exam`), `blogs.author_id` (`blog`) and `flash_cards.author_id` (`flashcard`), with `update: { ownerId }`, so the seed overwrites existing owners from the source of truth. It deletes the `flashcard-list` rows earlier versions seeded (nothing reads them). For rooms it first copies `resource_ownership` `room` owners into `live.rooms.created_by` where that is `NULL`, then upserts a `room` ownership row for every room with a `created_by`, so a room whose `live.room.created` was lost still gets one. Row-by-row, not transactional, re-runnable.
 
 ### Outbox relay and inbox (`libs/messaging`)
 
@@ -183,14 +178,14 @@ Producers write enveloped rows to `outbox_events` with `OutboxPublisher.add` ins
 
 ## Findings
 
-1. `apps/achievement/src/infra/repositories/badge-manager.prisma.repository.impl.ts:177-181`: `userBadge.createMany({ skipDuplicates: true })` and the "already awarded" `count === 0` check rely on a conflict, but `user_badges` has no unique constraint on `(uid, badge)` (only the `id` PK; `apps/achievement/prisma/schema/badge.prisma`, migrations). Duplicates are prevented only by the in-memory badge set plus the optimistic `version` check.
-2. `apps/achievement/src/infra/repositories/badge.read.prisma.repository.impl.ts:68`: progress `streak` is computed from `startedAt..lastLogin` only, so a user who stopped logging in days ago still sees their old streak as current.
-3. `apps/gateway/src/achievement-gateway/dtos/req/get-users-badges.req.dto.ts:16`: `limit` has no `@Max`, so a caller (including anonymous on `GET /badges/:uid`) can request an unbounded page; AGENTS.md asks for `@Min`/`@Max` bounds.
-4. `apps/file-service/src/app/services/file.service.ts:125-131`: oversized or disallowed uploads throw plain `Error`, which reaches the client as 502 "An internal error occurred" instead of 400 with the reason; the gateway DTO has no size or MIME limits of its own and `fileSize` accepts 0, negatives and fractions (`@IsNumber()`).
-5. `apps/gateway/src/file-gateway/dtos/req/get-presigned-url.req.dto.ts:4`: the gateway DTO does not `implements Omit<file.GetPresignedUrlDto, 'uploadedBy'>`, against the AGENTS.md DTO rule.
-6. `apps/file-service/src/infra/jobs/orphan-cleanup.job.ts:16` with `file-added.handler.ts`: a file presigned more than 1 h before it is attached can be deleted by the cleanup before the attaching service's `file.added` arrives; `incrementRef` then updates 0 rows silently, leaving a dangling file id in auth/exam. (The attach-time `CheckFilesOwnedBy` only narrows this: it passes if the row still exists at that moment.)
-7. `apps/file-service/src/infra/repositories/file.prisma.repository.impl.ts:33-40`: `ref_count` can go negative (no clamp), e.g. on a duplicate legacy un-enveloped `files.removed` (no inbox id); the cleanup treats `<= 0` as orphaned, so the effect is limited to early deletion of a shared file if counts drift.
-8. `apps/authorization/src/app/events/handlers/*.ts` (e.g. `live-ownership.handler.ts:33`): payloads are cast with `unwrapEvent<T>` and never validated; a malformed event fails inside Prisma and goes through the retry chain to the DLQ instead of being rejected clearly.
-9. `apps/authorization/prisma/seed.ts:82`: rooms are never backfilled into `resource_ownership` from `live.rooms.created_by`; a room whose `live.room.created` event was lost (or predates it) has no ownership row, so its owning mod gets 403 on delete/schedule (admins still pass).
-10. `apps/authorization/prisma/seed.ts:72-78`: `flashcard-list` ownership rows are seeded but no event registers or removes them and no `@ResourceAccess` route uses that type, so they are dead data that go stale when lists are deleted.
-11. `apps/authorization/src/app/services/authorization.grpc.controller.ts:34-44`: `RegisterOwnership` and `RemoveOwnership` are exposed without any caller check and are unused; `RemoveOwnership` lets anything that reaches the gRPC port revoke an owner's access.
+1. ~~`user_badges` has no unique constraint on `(uid, badge)`, so `skipDuplicates` never conflicts~~: fixed (see fixed-issues.md).
+2. ~~Progress `streak` shows an old streak as current~~: fixed (see fixed-issues.md).
+3. ~~`GetUsersBadgesDto.limit` has no `@Max`~~: fixed (see fixed-issues.md).
+4. ~~Oversized or disallowed uploads surface as 502; `fileSize` accepts 0, negatives and fractions~~: fixed (see fixed-issues.md).
+5. ~~Gateway `GetPresignedUrlDto` does not implement the generated message~~: fixed (see fixed-issues.md).
+6. ~~Orphan cleanup can delete a file presigned more than 1 h before its late `file.added`~~: backlog X1.
+7. ~~`ref_count` can go negative~~: fixed (see fixed-issues.md).
+8. ~~Ownership event payloads are never validated~~: fixed (see fixed-issues.md).
+9. ~~Rooms are never backfilled into `resource_ownership` from `live.rooms.created_by`~~: fixed (see fixed-issues.md).
+10. ~~Dead `flashcard-list` ownership rows are seeded~~: fixed (see fixed-issues.md).
+11. ~~`RegisterOwnership` / `RemoveOwnership` are unused and unchecked~~: fixed, removed from the proto (see fixed-issues.md).
