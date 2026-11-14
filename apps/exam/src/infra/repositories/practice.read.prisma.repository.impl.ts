@@ -25,7 +25,7 @@ import { type IPracticeReadRepository } from '../../domain/repositories/practice
 import { ExamStatus } from '../../enums/exam-status.enum';
 import { QuestionType, questionTypesThatShowChoices } from '../../enums/question-type.enum';
 import { Skill } from '../../enums/skill.enum';
-import { toWritingBand } from './writing-band';
+import { toAdditionalData, toWritingBand } from './writing-band';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { BadRequestException, Injectable } from '@nestjs/common';
@@ -1125,7 +1125,8 @@ export class PracticeReadPrismaRepositoryImpl implements IPracticeReadRepository
 				isFlagged: r.isFlagged,
 				answers: r.answers,
 				isCorrect: r.isCorrect ?? undefined,
-				additionalData: r.scorerDatas.length ? JSON.stringify(r.scorerDatas[0].comment) : undefined,
+				additionalData:
+					r.scorerDatas.length ? toAdditionalData(r.scorerDatas[0].comment) : undefined,
 			})),
 			sections: treeSections,
 		};

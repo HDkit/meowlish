@@ -324,25 +324,29 @@ export class AttemptPrismaRepositoryImpl implements IAttemptRepository {
 			:	null;
 	}
 
-	async saveScoringFailure(responseId: string, failure: unknown): Promise<boolean> {
+	async saveScoringFailure(responseId: string, failure: Record<string, unknown>): Promise<boolean> {
 		const existing = await this.txHost.tx.scorerData.findUnique({
 			where: { responseId: responseId },
 			select: { comment: true },
 		});
 		if (existing && toWritingBand([existing]) !== null) return false;
+		// a JSON column: the record is plain data from the event (untyped boundary)
+		const json = failure as Prisma.InputJsonObject;
 		await this.txHost.tx.scorerData.upsert({
 			where: { responseId: responseId },
-			create: { responseId: responseId, comment: failure as object },
-			update: { comment: failure as object },
+			create: { responseId: responseId, comment: json },
+			update: { comment: json },
 		});
 		return true;
 	}
 
-	async saveComment(responseId: string, comment: unknown): Promise<string> {
+	async saveComment(responseId: string, comment: Record<string, unknown>): Promise<string> {
+		// a JSON column: the feedback is plain data from the event (untyped boundary)
+		const json = comment as Prisma.InputJsonObject;
 		const saved = await this.txHost.tx.scorerData.upsert({
 			where: { responseId: responseId },
-			create: { responseId: responseId, comment: comment as object },
-			update: { comment: comment as object },
+			create: { responseId: responseId, comment: json },
+			update: { comment: json },
 			select: { response: { select: { attemptId: true } } },
 		});
 		return saved.response.attemptId;

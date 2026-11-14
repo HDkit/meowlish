@@ -392,7 +392,7 @@ The finished attempt with the correct answers.
   1. `GetAttemptReviewQueryHandler` runs `getAttemptReview`, which reads `attempts where ended_at is not null` (404 otherwise), responses with `is_correct` and `scorer_data`, and the section tree with choices **including** `is_correct` and explanations.
   2. Files are swapped for URLs through `GetUrls` (503 if that fails).
 - Response: `AttemptReviewDto { startedAt, endedAt, durationLimit, totalPoints?, responses[{ questionId, answers, isCorrect?, isFlagged, note?, additionalData? }], sections }`.
-- `additionalData` is `JSON.stringify(scorer_data.comment)`. Because the handler stored `JSON.stringify(payload.data)`, the value is a JSON string inside a JSON string, and the client has to `JSON.parse` it twice.
+- `additionalData` is the response's `scorer_data.comment` JSON-encoded **once** (`toAdditionalData` in `infra/repositories/writing-band.ts`): one `JSON.parse` gives the feedback object (`{ overall_score, sub_scores, detailed_feedback, corrected_version, corrections? }`) or the failure record (`{ status: 'error', error_code, error_message, failed_at }`). New rows store that object in the JSON column; rows written before C26 hold its JSON encoding as a JSON string value, which is returned as is, so old and new rows look the same on the wire.
 
 ### Public catalogue reads
 
@@ -471,12 +471,12 @@ No events are published for tag changes.
 | Queue       | `exam.events.writing.scored` (`defineConsumerQueue`; retries `.retry.1..5` at 1-16 s, then `.dlq`)                                                                                                                           |
 | Inbox       | **no**. The input is a bare payload; a re-run re-saves the same feedback.                                                                                                                                                    |
 | Validation  | parameter type `WritingScoredEvent` (class-validator classes in the same file), via the global `GlobalValidationPipe` (`APP_PIPE` in `exam.module.ts`). Unclear: whether golevelup applies global pipes to `@RabbitPayload`. |
-| Tables      | `scorer_data` (upsert by `response_id`, `comment` = `JSON.stringify(payload.data)`, or the failure record), `attempts.score/total_points/version`, `attempt_responses.is_correct`                                            |
+| Tables      | `scorer_data` (upsert by `response_id`, `comment` = the `payload.data` object itself, or the failure record object), `attempts.score/total_points/version`, `attempt_responses.is_correct`                                   |
 | Events out  | none (`recomputeScore` raises none; `exam.attempt.scored` is not re-sent)                                                                                                                                                    |
 
 Flow:
 
-1. `status === 'error'`, `error_code`, `error_message`, or no `data` → `saveFailure`: `saveScoringFailure(response_id, JSON.stringify({ status: 'error', error_code, error_message, failed_at }))` in one transaction, skipped (warning logged) when the response already has a band; the attempt score is not recomputed (an ungraded essay adds no points either way). The message is acked, not retried: the scorer already retried on its side.
+1. `status === 'error'`, `error_code`, `error_message`, or no `data` → `saveFailure`: `saveScoringFailure(response_id, { status: 'error', error_code, error_message, failed_at })` (the object, stored as JSON) in one transaction, skipped (warning logged) when the response already has a band; the attempt score is not recomputed (an ungraded essay adds no points either way). The message is acked, not retried: the scorer already retried on its side.
 2. Otherwise it runs `retryAttemptConflicts` around the `@Transactional()` `saveFeedbackAndRescore`:
    - `saveComment(response_id, …)` returns the attempt id; `attempt_id` from the payload is not used;
    - `getScoreEvaluator` → `AttemptEvaluator.recomputeScore()`. Writing points are `round(points × clamp(overall_score / 9, 0, 1))`, with the band read by `toWritingBand` (`infra/repositories/writing-band.ts`);

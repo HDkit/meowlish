@@ -4,6 +4,7 @@ import {
 	AttemptResponseResult,
 } from '../../src/domain/entities/attempt-evaluator.entity';
 import { QuestionType } from '../../src/enums/question-type.enum';
+import { toWritingBand } from '../../src/infra/repositories/writing-band';
 import {
 	SEED_ATTEMPT_PREFIX,
 	type SeedAttemptPlan,
@@ -220,7 +221,8 @@ describe('buildResponses', () => {
 			questions,
 		);
 		const essay = responses.find(r => r.questionId === 'essay');
-		expect(JSON.parse(essay?.writingFeedback ?? '{}')).toMatchObject({ overall_score: 6 });
+		expect(essay?.writingFeedback).toMatchObject({ overall_score: 6 });
+		expect(toWritingBand([{ comment: essay?.writingFeedback ?? null }])).toBe(6);
 	});
 
 	it('is deterministic', () => {

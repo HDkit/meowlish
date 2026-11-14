@@ -54,7 +54,8 @@ describe('WritingScoredHandler (C9)', () => {
 	it('saves the feedback, then saves a score that includes the writing points', async () => {
 		const { repo, handler } = setup();
 		await handler.handle(payload());
-		expect(repo.saveComment).toHaveBeenCalledWith('r1', JSON.stringify(payload().data));
+		// the object itself, not a JSON string (C26)
+		expect(repo.saveComment).toHaveBeenCalledWith('r1', payload().data);
 		expect(repo.getScoreEvaluator).toHaveBeenCalledWith('a1');
 		const [saved] = repo.save.mock.calls[0];
 		expect(saved.score).toBe(7);
@@ -81,9 +82,9 @@ describe('WritingScoredHandler (C9)', () => {
 		);
 		expect(repo.saveComment).not.toHaveBeenCalled();
 		expect(repo.save).not.toHaveBeenCalled();
-		const [responseId, stored] = repo.saveScoringFailure.mock.calls[0] as [string, string];
+		const [responseId, stored] = repo.saveScoringFailure.mock.calls[0] as [string, object];
 		expect(responseId).toBe('r1');
-		expect(JSON.parse(stored)).toMatchObject({
+		expect(stored).toMatchObject({
 			status: 'error',
 			error_code: 'LLM_PARSE_ERROR',
 			error_message: 'no band',
@@ -93,9 +94,7 @@ describe('WritingScoredHandler (C9)', () => {
 	it('treats a success without feedback as a failure', async () => {
 		const { repo, handler } = setup();
 		await handler.handle(Object.assign(payload(), { data: undefined }));
-		expect(
-			JSON.parse((repo.saveScoringFailure.mock.calls[0] as [string, string])[1]),
-		).toMatchObject({
+		expect((repo.saveScoringFailure.mock.calls[0] as [string, object])[1]).toMatchObject({
 			error_code: 'INVALID_RESULT',
 		});
 	});

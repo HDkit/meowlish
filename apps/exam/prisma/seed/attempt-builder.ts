@@ -57,7 +57,7 @@ export interface SeedResponseRow {
 	answers: string[];
 	isCorrect: boolean | null;
 	/** Writing only: the stored AI feedback (`scorer_data.comment`). */
-	writingFeedback?: string;
+	writingFeedback?: WritingFeedback;
 }
 
 export interface SeedAttemptRow {
@@ -148,10 +148,24 @@ function wrongAnswer(q: SeedQuestion, pool: string[], random: () => number): str
 const writingPoints = (points: number, band: number): number =>
 	Math.round(points * Math.min(Math.max(band / MAX_WRITING_BAND, 0), 1));
 
-/** Feedback in the shape the AI writing scorer stores (a JSON-encoded string value). */
-function writingFeedback(band: number): string {
+/** The AI writing scorer's feedback, stored as a JSON object in `scorer_data.comment`. */
+export type WritingFeedback = {
+	overall_score: number;
+	sub_scores: Record<string, number>;
+	detailed_feedback: string;
+	corrected_version: string;
+	corrections: {
+		error_type: string;
+		original_text: string;
+		corrected_text: string;
+		explanation: string;
+	}[];
+};
+
+/** Feedback in the shape the AI writing scorer stores (the object itself, not a JSON string). */
+function writingFeedback(band: number): WritingFeedback {
 	const sub = (delta: number) => Math.min(Math.max(band + delta, 0), MAX_WRITING_BAND);
-	return JSON.stringify({
+	return {
 		overall_score: band,
 		sub_scores: {
 			'Task Achievement': sub(0),
@@ -177,7 +191,7 @@ function writingFeedback(band: number): string {
 				explanation: 'A more precise, academic adjective.',
 			},
 		],
-	});
+	};
 }
 
 /**

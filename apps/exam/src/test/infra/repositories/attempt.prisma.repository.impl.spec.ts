@@ -70,7 +70,43 @@ describe('AttemptPrismaRepositoryImpl optimistic locking (C4)', () => {
 describe('AttemptPrismaRepositoryImpl writing feedback (C9)', () => {
 	it('saveComment returns the attempt the response belongs to', async () => {
 		const { repo } = setup();
-		await expect(repo.saveComment('r1', '{}')).resolves.toBe('a1');
+		await expect(repo.saveComment('r1', {})).resolves.toBe('a1');
+	});
+
+	it('saveComment stores the feedback object itself, not a JSON string (C26)', async () => {
+		const { tx, repo } = setup();
+		const feedback = { overall_score: 7, sub_scores: {} };
+		await repo.saveComment('r1', feedback);
+		expect(tx.scorerData.upsert).toHaveBeenCalledWith(
+			expect.objectContaining({
+				create: { responseId: 'r1', comment: feedback },
+				update: { comment: feedback },
+			}),
+		);
+	});
+
+	it('loads the band of a feedback stored as an object (C26)', async () => {
+		const { tx, repo } = setup();
+		tx.attempt.findUnique.mockResolvedValue({
+			id: 'a1',
+			examId: 'e1',
+			version: 3,
+			attemptSections: [],
+			attemptResponses: [
+				{
+					id: 'r1',
+					questionId: 'q1',
+					answers: ['essay'],
+					isCorrect: null,
+					scorerDatas: [{ comment: { overall_score: 6 } }],
+				},
+			],
+		});
+		tx.question.findMany.mockResolvedValue([
+			{ id: 'q1', type: QuestionType.Writing, choices: [], points: 9 },
+		]);
+		const evaluator = await repo.getScoreEvaluator('a1');
+		expect(evaluator?.responses.get('q1')?.writingBand).toBe(6);
 	});
 
 	it('loads the stored AI band into the score evaluator', async () => {
@@ -86,7 +122,7 @@ describe('AttemptPrismaRepositoryImpl writing feedback (C9)', () => {
 					questionId: 'q1',
 					answers: ['essay'],
 					isCorrect: null,
-					// stored as the JSON-encoded WritingScoreDataDto
+					// a row written before C26: the JSON-encoded WritingScoreDataDto
 					scorerDatas: [{ comment: JSON.stringify({ overall_score: 6 }) }],
 				},
 				{ id: 'r2', questionId: 'q2', answers: ['essay'], isCorrect: null, scorerDatas: [] },
@@ -110,7 +146,7 @@ describe('AttemptPrismaRepositoryImpl writing feedback (C9)', () => {
 });
 
 describe('AttemptPrismaRepositoryImpl.saveScoringFailure (C21)', () => {
-	const failure = JSON.stringify({ status: 'error', error_code: 'LLM_TIMEOUT' });
+	const failure = { status: 'error', error_code: 'LLM_TIMEOUT' };
 
 	it('stores the failure when the response has no feedback yet, or only an earlier failure', async () => {
 		const { tx, repo } = setup();

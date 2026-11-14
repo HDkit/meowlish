@@ -10,7 +10,7 @@ import { Transactional } from '@nestjs-cls/transactional';
 import { Inject, Injectable, NotFoundException, UseFilters } from '@nestjs/common';
 import { AppLoggerService } from '@server/logger';
 import { GlobalRmqExceptionFilter } from '@server/utils';
-import { Type } from 'class-transformer';
+import { Type, instanceToPlain } from 'class-transformer';
 import { IsArray, IsNumber, IsObject, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { UseCls } from 'nestjs-cls';
 
@@ -118,11 +118,8 @@ export class WritingScoredHandler {
 				errorCode ? 'The scorer sent a result without feedback' : (payload.error_message ?? null),
 			failed_at: new Date().toISOString(),
 		};
-		// stored like the feedback itself: a JSON string, read back through the review's additionalData
-		const stored = await this.attemptRepository.saveScoringFailure(
-			payload.response_id,
-			JSON.stringify(failure),
-		);
+		// stored like the feedback itself (a JSON object), read back through the review's additionalData
+		const stored = await this.attemptRepository.saveScoringFailure(payload.response_id, failure);
 		if (!stored)
 			this.logger.warn(
 				`Scoring failure for response ${payload.response_id} ignored: it already has a band`,
@@ -132,9 +129,10 @@ export class WritingScoredHandler {
 	/** Saves the AI feedback and the attempt score that now includes its points, atomically. */
 	@Transactional()
 	private async saveFeedbackAndRescore(payload: WritingScoredEvent): Promise<void> {
+		// the feedback object itself, not a JSON string of it (C26)
 		const attemptId = await this.attemptRepository.saveComment(
 			payload.response_id,
-			JSON.stringify(payload.data),
+			instanceToPlain(payload.data),
 		);
 		const evaluator = await this.attemptRepository.getScoreEvaluator(attemptId);
 		if (!evaluator) throw new NotFoundException('Attempt not found');
