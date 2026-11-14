@@ -2,6 +2,27 @@
 
 Steps an operator must take when deploying a build over an existing environment. Newest release first. Queue-level details live in [observability.md](observability.md) ("One-time upgrade: recreate consumer queues").
 
+## November 2026 backlog decisions (S21–S25, C23–C40)
+
+Details of each change are in [`../fixed-issues.md`](../fixed-issues.md#backlog-decisions-november-2026).
+
+1. **Configuration:** notification now needs `REDIS_HOST` / `REDIS_PORT` (SSE fan-out between replicas) and refuses to start without them. Docker already passes them through `.env.services`; add them to any `apps/notification/.env`.
+2. **Database** (back up first):
+   - `prisma migrate deploy` for **exam** (`20261115100000_goal_target_decimal`: `goals.target` becomes a double, every value is kept).
+   - `prisma db push` for **notification** (`forum_quote_enabled`, `flashcard_enabled`, default true) and **resource** (`flash_cards.position`, nullable). Both only add columns.
+3. **Deploy order:**
+   - **notification before resource**: resource now publishes `resource.flashcard-proposal.withdrawn`, which is unroutable (it stays in the outbox and trips `OutboxStuck`) until notification's queue exists.
+   - **resource before gateway**: flash card update/delete moved to the requester pattern; a new gateway with an old resource would leave card edits without an owner check, while the other way round fails safe (400).
+   - **gateway with exam** (goal `target` changed from int32 to double, not wire-compatible) and **gateway with live** (`GetChatLogRequest.requester_id` is required).
+   - auth and gateway can go in either order (refresh rotation just doesn't rotate in a mixed pair).
+4. **Behaviour operators will see:**
+   - Every Google login needs the `oauth2_state` cookie on the callback, so `BASE_URL` (and every `GOOGLE_OAUTH_FRONTENDS` origin) must be the frontend origin that proxies `/api`. Callbacks without a state were accepted until `LEGACY_STATE_ACCEPTED_UNTIL` (2026-11-15 06:00 UTC); remove that constant in the next release.
+   - Refresh tokens rotate (see the note in the release below); a refresh token reused after the 30 s grace revokes its session.
+   - New usernames must match `^[a-z0-9._-]{3,30}$`; existing ones are kept until changed.
+   - Approved exams and resolved/rejected/dismissed/closed reports are frozen (409 for any change); an approved exam can still be deleted (cascades to its attempts).
+   - Rate-limit counters live in Redis (`throttle:*` keys), shared by every gateway replica; while Redis is down the gateway counts in memory and logs one warning.
+   - Unreferenced uploads are kept 24 h (was 1 h) before the orphan cleanup deletes them.
+
 ## November 2026 backlog release (branch `chore/local-dev-fixes`)
 
 Covers cookie sessions, requester-scoped authorization on exam/live/files, consumer retries with backoff, attempt versioning, tag IDs, Google Calendar tokens kept server-side, and UTC login streaks.

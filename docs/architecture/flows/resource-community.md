@@ -240,8 +240,8 @@ Notification consumers of the events above (all in `apps/notification/src/app/ev
 - ~~The SSE push happened inside the consumer's transaction, before the commit~~: fixed, pushed after the commit (see fixed-issues.md).
 - ~~The forum reply notification link's page number assumed the frontend's 20 replies per page~~: fixed (C39), the link is `/forum/thread/<id>?reply=<replyId>` and `data.position` lets the frontend find the page.
 - ~~A whitespace-only proposal title is stored as empty~~: fixed (see fixed-issues.md; 400).
-- ~~Withdrawing publishes no event~~: backlog X5 (needs a notification consumer before resource may publish it).
+- ~~Withdrawing publishes no event~~: fixed (C33): `resource.flashcard-proposal.withdrawn` removes the owner's review notification (see fixed-issues.md).
 - ~~"One open proposal per copy" is a read-then-insert check~~: fixed (see fixed-issues.md; the copy's row is locked first, no schema change).
 - ~~Accepted added cards copy the proposer's `image`~~: not a bug (`image` is a free URL string the frontend shows only when it starts with `http(s)://`, not a file-service id; cards never reference-count it).
-- ~~`getThread` throws P2025 when the thread is deleted mid-read~~: fixed (see fixed-issues.md; 404). The missing per-user view dedupe is backlog X6.
+- ~~`getThread` throws P2025 when the thread is deleted mid-read~~: fixed (see fixed-issues.md; 404). Every view counts, with no per-user dedupe: kept by decision (C34).
 - ~~Moderation accepts an empty body~~: fixed (see fixed-issues.md; 400 `Nothing to update`).

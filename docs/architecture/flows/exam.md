@@ -510,15 +510,15 @@ There are no socket.io or SSE endpoints in exam.
 ## Findings
 
 1. ~~Status codes~~: fixed (see fixed-issues.md). exam no longer throws `MethodNotAllowedException` (an unapproved exam or an open attempt is 409, a tag cycle 400), and the expected Prisma/PG errors are 409/404/400 at the source: stale `exams.version` 409, duplicate tag name 409, unknown tag on rename 404, second goal 409, missing goal 404, section cycle 400 (checked before the trigger), unknown question on flag/note 409 (finding 3).
-2. ~~Fractional goal targets fail~~: fixed by validation (see fixed-issues.md): `target` must be an integer 0-990 at the gateway and in exam (400). Supporting IELTS half bands needs a proto and schema change: backlog X1.
+2. ~~Fractional goal targets fail~~: fixed (C25): `goals.target` is a double and each type has its own scale (IELTS 0-9 by 0.5, TOEIC 10-990 by 5, TOEFL 0-120, VSTEP 0-10 by 0.5; see fixed-issues.md).
 3. ~~Flag and note skip checks~~: fixed (see fixed-issues.md); they apply the same submitted, expiry and question-in-attempt checks as `answer`.
-4. ~~Double-encoded feedback~~: backlog X2 (the frontend decodes both layers; changing the shape needs a coordinated frontend change).
+4. ~~Double-encoded feedback~~: fixed (C26): the feedback object is stored and `additionalData` is encoded once, old rows included (see fixed-issues.md).
 5. ~~Missing `data` on success~~: already fixed by C21: a success without `data` is stored as a failure (`INVALID_RESULT`) and acked.
 6. ~~Goal type ignored~~: fixed (see fixed-issues.md): `target_score` is sent only when the goal's type matches the exam's tags, else 0. `exam_type`/`task_type` keep their comma-joined format, which the AI worker parses.
-7. ~~Deleting approved exams~~: backlog X3 (Decision).
-8. ~~Approval is one-way~~: backlog X4 (Decision).
+7. ~~Deleting approved exams~~: kept by decision (C27): an approved exam can be deleted, and the delete cascades to every attempt.
+8. ~~Approval is one-way~~: intended (C28): an approved exam is frozen for everyone, status included; only delete is allowed. Tag changes are now refused too (see fixed-issues.md).
 9. ~~Unbounded `limit`~~: fixed (see fixed-issues.md): `limit` is 1-100 on the three routes, at the gateway and in exam.
-10. ~~Public explanations~~: backlog X5 (Decision).
+10. ~~Public explanations~~: kept by decision (S24): question explanations are public.
 11. ~~No-op event publishing~~: fixed (see fixed-issues.md): the `EventBus.publishAll` calls in `UpdateExamHandler`, `AttemptHandler` and `EndAttemptHandler` (nothing listened; scoring runs from the outbox) are removed.
 12. ~~Stale doc~~: `messaging.md` §5 had the old retry settings; corrected to 6 attempts, `jitter(10, 60)`.
 13. ~~Racy attempt start~~: fixed (see fixed-issues.md): the order is read and the attempt inserted in one transaction with `ON CONFLICT DO NOTHING`; the loser of two concurrent starts gets 409, and a start racing the submit of the previous attempt retries once.

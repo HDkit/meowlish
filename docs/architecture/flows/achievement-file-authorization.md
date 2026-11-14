@@ -183,7 +183,7 @@ Producers write enveloped rows to `outbox_events` with `OutboxPublisher.add` ins
 3. ~~`GetUsersBadgesDto.limit` has no `@Max`~~: fixed (see fixed-issues.md).
 4. ~~Oversized or disallowed uploads surface as 502; `fileSize` accepts 0, negatives and fractions~~: fixed (see fixed-issues.md).
 5. ~~Gateway `GetPresignedUrlDto` does not implement the generated message~~: fixed (see fixed-issues.md).
-6. ~~Orphan cleanup can delete a file presigned more than 1 h before its late `file.added`~~: backlog X1, then C40 (the age is now 24 h, and a `file.added` for a missing file logs a warning).
+6. ~~Orphan cleanup can delete a file presigned more than 1 h before its late `file.added`~~: fixed (C40): the age is now 24 h, and a `file.added` for a missing file logs a warning (see fixed-issues.md).
 7. ~~`ref_count` can go negative~~: fixed (see fixed-issues.md).
 8. ~~Ownership event payloads are never validated~~: fixed (see fixed-issues.md).
 9. ~~Rooms are never backfilled into `resource_ownership` from `live.rooms.created_by`~~: fixed (see fixed-issues.md).

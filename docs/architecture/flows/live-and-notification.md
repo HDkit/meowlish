@@ -233,5 +233,5 @@ The other five consumers (`resource.blog-comment.created`, `resource.forum-reply
 - ~~SSE fan-out was in-process, with no heartbeat or `id`/`Last-Event-ID` replay~~: fixed (C35), Redis pub/sub fan-out, 25 s comment heartbeat, notification id as SSE `id`, replay of up to 100 missed notifications.
 - ~~WebSocket upgrades were only proxied after a first HTTP request~~: fixed (C22; see [fixed-issues.md](../../fixed-issues.md)).
 - ~~`enableCors()` allowed any origin on notification's HTTP/SSE port~~: fixed, CORS removed there (only the gateway reaches it, server-side; see fixed-issues.md). The port itself is localhost-only since S16; the stream still trusts its path, so anything that reaches the port directly can subscribe to any user (covered by the S16 note on forwarding the JWT).
-- Preferences `emailEnabled`, `pushEnabled`, `systemEnabled` are stored and exposed but never read anywhere in `apps/notification/src`: backlog X3 (Decision).
+- Preferences `emailEnabled`, `pushEnabled`, `systemEnabled` are stored and exposed but never read anywhere in `apps/notification/src`: kept by decision (C36), for when e-mail, push or system notifications exist.
 - ~~Doc drift~~: the notification section of `services-and-data.md` now lists all preference columns and the seven consumed events.

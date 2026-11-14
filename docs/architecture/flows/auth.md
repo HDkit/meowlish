@@ -335,13 +335,13 @@ Same handler as `GET /google/calendar/token` (`GetGoogleCalendarTokenQuery`); it
 3. ~~Google `loginToken` exchange was GET then DEL~~: fixed, `GETDEL` (see fixed-issues.md).
 4. ~~Refresh tokens are not rotated or invalidated on use~~: fixed (S22), rotation with reuse detection per family (see fixed-issues.md).
 5. ~~"Cannot remove your last credential" was 405 (HTTP 499)~~: fixed, 409 (see fixed-issues.md).
-6. ~~P2025 version miss and the unknown-`roleId` FK failure reached clients as 502~~: fixed, 409 and 404 (see fixed-issues.md); the malformed-cursor plain `Error` comes from the shared `CursorPaginationHelper` (libs/utils): backlog X3.
+6. ~~P2025 version miss and the unknown-`roleId` FK failure reached clients as 502~~: fixed, 409 and 404 (see fixed-issues.md); the malformed-cursor plain `Error` comes from the shared `CursorPaginationHelper` (libs/utils): fixed there too, every malformed cursor is a 400 (see fixed-issues.md).
 7. ~~Doc drift~~: `messaging.md` §7 said Google sign-up emits `auth.user.login`; corrected (only logins to an existing account do).
 8. ~~`logout-all` had no `CookieIssuanceGuard`~~: fixed (see fixed-issues.md).
 9. ~~Phone search used loose `@Query()` params; no `@Max` on `limit`~~: fixed, `FindIdentitiesByPhoneDto` and `limit` 1-100 (see fixed-issues.md).
-10. ~~Soft-deleted identities appeared in search~~: fixed for `findIdentities`, `findIdentityIds`, `findIdentitiesByPhone` (see fixed-issues.md); `hydrate`/`hydrateMany` still return them: backlog X4.
+10. ~~Soft-deleted identities appeared in search~~: fixed for `findIdentities`, `findIdentityIds`, `findIdentitiesByPhone` (see fixed-issues.md); `hydrate`/`hydrateMany` still return them, kept by decision (C23: authors of old content still render).
 11. ~~Password change revoked the caller's own session without new cookies~~: fixed, fresh cookies, cleared if they can't be issued (see fixed-issues.md).
-12. ~~Throttler storage is per gateway replica~~: backlog X5, then S23 (Redis storage).
+12. ~~Throttler storage is per gateway replica~~: fixed (S23), counters in Redis, in memory while Redis is down (see fixed-issues.md).
 13. ~~Passwords hashed with `bcrypt.hashSync`~~: fixed, async `bcrypt.hash` (see fixed-issues.md).
 14. ~~`username` was only `@IsString()`~~: fixed, `^[a-z0-9._-]{3,30}$` on register and on a username change (C24, see fixed-issues.md).
 15. ~~`oauth2_state` cookie ignored production `Secure` and was never cleared~~: fixed (see fixed-issues.md).
