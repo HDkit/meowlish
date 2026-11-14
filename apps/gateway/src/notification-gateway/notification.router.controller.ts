@@ -117,6 +117,7 @@ export class NotificationGatewayController implements OnModuleInit {
 			blogCommentEnabled: body.blogCommentEnabled,
 			commentReplyEnabled: body.commentReplyEnabled,
 			forumReplyEnabled: body.forumReplyEnabled,
+			forumQuoteEnabled: body.forumQuoteEnabled,
 			identityId: req.user.sub,
 		});
 	}

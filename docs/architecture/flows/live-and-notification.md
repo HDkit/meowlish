@@ -162,16 +162,16 @@ Admin creates an arbitrary notification for any user.
 ### GET /api/v1/notifications/preferences
 
 - **Access**: signed-in; `identityId: req.user.sub`.
-- **Flow**: `notification.NotificationPreferencesService/GetPreferences` → `NotificationPreferencesService.getPreferences`: `NotificationPreference.upsert` with `update: {}` (a read that creates the all-`true` default row on first call). Response `NotificationPreferencesDto { id, identityId, emailEnabled, pushEnabled, achievementEnabled, reportEnabled, systemEnabled, blogCommentEnabled, commentReplyEnabled, forumReplyEnabled, updatedAt }`.
+- **Flow**: `notification.NotificationPreferencesService/GetPreferences` → `NotificationPreferencesService.getPreferences`: `NotificationPreference.upsert` with `update: {}` (a read that creates the all-`true` default row on first call). Response `NotificationPreferencesDto { id, identityId, emailEnabled, pushEnabled, achievementEnabled, reportEnabled, systemEnabled, blogCommentEnabled, commentReplyEnabled, forumReplyEnabled, forumQuoteEnabled, updatedAt }`.
 
 ### PATCH /api/v1/notifications/preferences
 
 - **Access**: signed-in; `identityId: req.user.sub`.
 - **Flow**:
-  1. Gateway `UpdatePreferencesReqDto`: all eight switches optional booleans (`blogCommentEnabled` = comment on my blog post, `commentReplyEnabled` = reply to my blog comment or quote of my forum reply, `forumReplyEnabled` = reply in my thread) → `notification.NotificationPreferencesService/UpdatePreferences` (proto `optional BoolValue`, so omitted stays `undefined`).
+  1. Gateway `UpdatePreferencesReqDto`: all nine switches optional booleans (`blogCommentEnabled` = comment on my blog post, `commentReplyEnabled` = reply to my blog comment, `forumReplyEnabled` = reply in my thread, `forumQuoteEnabled` = quote of my forum reply) → `notification.NotificationPreferencesService/UpdatePreferences` (proto `optional BoolValue`, so omitted stays `undefined`).
   2. `updatePreferences`: `NotificationPreference.upsert` by `identity_id`; omitted fields are left unchanged (update) or take the schema default `true` (create).
   3. Response `NotificationPreferencesDto`.
-- Only `achievement`, `report`, `blogComment`, `commentReply`, `forumReply` are ever consulted (`isEnabled`, by the consumers); `emailEnabled`, `pushEnabled`, `systemEnabled` are stored but nothing reads them.
+- Only `achievement`, `report`, `blogComment`, `commentReply`, `forumReply`, `forumQuote` are ever consulted (`isEnabled`, by the consumers); `emailEnabled`, `pushEnabled`, `systemEnabled` are stored but nothing reads them.
 
 ### GET /api/v1/notifications
 

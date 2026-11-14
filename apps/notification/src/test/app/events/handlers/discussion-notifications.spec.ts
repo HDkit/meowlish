@@ -116,6 +116,30 @@ describe('ForumReplyCreatedHandler', () => {
 		expect(JSON.parse(n.data)).toMatchObject({ action: '/forum/thread/t1?page=3#reply-r1' });
 	});
 
+	it('notifies a quoted author with its own type and switch, separate from blog replies', async () => {
+		const d = deps();
+		await new ForumReplyCreatedHandler(
+			d.notifications as never,
+			d.preferences as never,
+			d.inbox as never,
+		).handle(event({ ...reply, quotedAuthorId: 'quoted' }));
+		expect(sent(d)).toEqual(['quoted:forum_quote', 'starter:forum_reply']);
+		expect(d.preferences.isEnabled.mock.calls).toEqual([
+			['quoted', 'forumQuote'],
+			['starter', 'forumReply'],
+		]);
+	});
+
+	it('skips a quoted author who muted forum quotes', async () => {
+		const d = deps({ disabled: ['quoted'] });
+		await new ForumReplyCreatedHandler(
+			d.notifications as never,
+			d.preferences as never,
+			d.inbox as never,
+		).handle(event({ ...reply, quotedAuthorId: 'quoted' }));
+		expect(sent(d)).toEqual(['starter:forum_reply']);
+	});
+
 	it('builds first-page links without a page number', () => {
 		expect(forumReplyAction('t1', 'r1', 20)).toBe('/forum/thread/t1#reply-r1');
 		expect(blogCommentAction('b 1', 'c1')).toBe('/blog/b%201#comment-c1');

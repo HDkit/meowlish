@@ -85,10 +85,12 @@ export interface NotificationPreferencesResponse {
   updatedAt: string;
   /** someone commented on my blog post */
   blogCommentEnabled: boolean;
-  /** someone replied to my blog comment or quoted my forum reply */
+  /** someone replied to my blog comment */
   commentReplyEnabled: boolean;
   /** someone replied in my forum thread */
   forumReplyEnabled: boolean;
+  /** someone quoted my forum reply */
+  forumQuoteEnabled: boolean;
 }
 
 export interface GetPreferencesRequest {
@@ -105,6 +107,7 @@ export interface UpdatePreferencesRequest {
   blogCommentEnabled?: boolean | undefined;
   commentReplyEnabled?: boolean | undefined;
   forumReplyEnabled?: boolean | undefined;
+  forumQuoteEnabled?: boolean | undefined;
 }
 
 function createBaseNotificationResponse(): NotificationResponse {
@@ -719,6 +722,7 @@ function createBaseNotificationPreferencesResponse(): NotificationPreferencesRes
     blogCommentEnabled: false,
     commentReplyEnabled: false,
     forumReplyEnabled: false,
+    forumQuoteEnabled: false,
   };
 }
 
@@ -756,6 +760,9 @@ export const NotificationPreferencesResponse: MessageFns<NotificationPreferences
     }
     if (message.forumReplyEnabled !== false) {
       writer.uint32(88).bool(message.forumReplyEnabled);
+    }
+    if (message.forumQuoteEnabled !== false) {
+      writer.uint32(96).bool(message.forumQuoteEnabled);
     }
     return writer;
   },
@@ -861,6 +868,14 @@ export const NotificationPreferencesResponse: MessageFns<NotificationPreferences
             message.forumReplyEnabled = reader.bool();
             continue;
           }
+          case 12: {
+            if (tag !== 96) {
+              break;
+            }
+
+            message.forumQuoteEnabled = reader.bool();
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -953,6 +968,9 @@ export const UpdatePreferencesRequest: MessageFns<UpdatePreferencesRequest> = {
     if (message.forumReplyEnabled !== undefined) {
       BoolValue.encode({ value: message.forumReplyEnabled! }, writer.uint32(74).fork()).join();
     }
+    if (message.forumQuoteEnabled !== undefined) {
+      BoolValue.encode({ value: message.forumQuoteEnabled! }, writer.uint32(82).fork()).join();
+    }
     return writer;
   },
 
@@ -1039,6 +1057,14 @@ export const UpdatePreferencesRequest: MessageFns<UpdatePreferencesRequest> = {
             }
 
             message.forumReplyEnabled = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 10: {
+            if (tag !== 82) {
+              break;
+            }
+
+            message.forumQuoteEnabled = BoolValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }

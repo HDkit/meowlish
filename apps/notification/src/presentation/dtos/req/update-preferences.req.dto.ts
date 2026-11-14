@@ -36,4 +36,8 @@ export class UpdatePreferencesReqDto implements notification.UpdatePreferencesRe
 	@IsBoolean()
 	@IsOptional()
 	forumReplyEnabled?: boolean;
+
+	@IsBoolean()
+	@IsOptional()
+	forumQuoteEnabled?: boolean;
 }

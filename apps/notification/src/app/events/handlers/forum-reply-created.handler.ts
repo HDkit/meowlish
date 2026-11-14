@@ -35,7 +35,7 @@ export const forumReplyAction = (threadId: string, replyId: string, position: nu
 	return `/forum/thread/${encodeURIComponent(threadId)}${query}#reply-${encodeURIComponent(replyId)}`;
 };
 
-/** Tells the thread author about a new reply, and the quoted reply's author about the quote. */
+/** Tells the thread author about a new reply (`forum_reply`), and the quoted reply's author about the quote (`forum_quote`). */
 @Injectable()
 export class ForumReplyCreatedHandler {
 	constructor(
@@ -67,7 +67,7 @@ export class ForumReplyCreatedHandler {
 		const recipients = discussionRecipients(
 			event.authorId,
 			{ id: event.threadAuthorId, preference: 'forumReply' },
-			{ id: event.quotedAuthorId ?? null, preference: 'commentReply' },
+			{ id: event.quotedAuthorId ?? null, preference: 'forumQuote' },
 		);
 		for (const recipient of recipients) {
 			if (!(await this.preferencesService.isEnabled(recipient.id, recipient.preference))) continue;
@@ -75,8 +75,8 @@ export class ForumReplyCreatedHandler {
 			created.push(
 				await this.notificationService.createNotification({
 					recipientId: recipient.id,
-					type: quoted ? 'comment_reply' : 'forum_reply',
-					title: quoted ? 'Có người trả lời bình luận của bạn' : 'Chủ đề của bạn có trả lời mới',
+					type: quoted ? 'forum_quote' : 'forum_reply',
+					title: quoted ? 'Có người trích dẫn trả lời của bạn' : 'Chủ đề của bạn có trả lời mới',
 					message: `Trong chủ đề "${event.threadTitle}": ${event.excerpt}`,
 					data: JSON.stringify({
 						threadId: event.threadId,

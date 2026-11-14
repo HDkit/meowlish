@@ -212,9 +212,9 @@ Notification consumers of the events above (all in `apps/notification/src/app/ev
 ### resource.forum-reply.created
 
 - Queue `notification.events.forum-reply.created`; `ForumReplyCreatedHandler` (`forum-reply-created.handler.ts`); inbox yes.
-- Recipients from `discussionRecipients(authorId, owner = { threadAuthorId, 'forumReply' }, replied = { quotedAuthorId, 'commentReply' })` (`discussion-recipients.ts`): the quoted author first (kind `replied`) unless they wrote the reply; then the thread author (kind `owner`) unless they wrote the reply or are the quoted author. So nobody is notified about their own reply, and a thread author quoted in their own thread gets one `replied` notification.
-- Preference check per recipient: `NotificationPreferencesService.isEnabled(id, preference)` (`apps/notification/src/app/services/notification-preferences.service.ts:69`) reads `notification_preferences` by `identity_id`; no row = enabled. Thread author → `forumReplyEnabled`; quoted author → `commentReplyEnabled`.
-- Notification: `type` `comment_reply` (quoted) or `forum_reply` (owner); Vietnamese title; message `Trong chủ đề "<threadTitle>": <excerpt>`; `data { threadId, replyId, action }` where `action = /forum/thread/<threadId>[?page=N]#reply-<replyId>` with `N = ceil(position / 20)` (`REPLIES_PER_PAGE = 20`, copied from the frontend).
+- Recipients from `discussionRecipients(authorId, owner = { threadAuthorId, 'forumReply' }, replied = { quotedAuthorId, 'forumQuote' })` (`discussion-recipients.ts`): the quoted author first (kind `replied`) unless they wrote the reply; then the thread author (kind `owner`) unless they wrote the reply or are the quoted author. So nobody is notified about their own reply, and a thread author quoted in their own thread gets one `replied` notification.
+- Preference check per recipient: `NotificationPreferencesService.isEnabled(id, preference)` (`apps/notification/src/app/services/notification-preferences.service.ts:69`) reads `notification_preferences` by `identity_id`; no row = enabled. Thread author → `forumReplyEnabled`; quoted author → `forumQuoteEnabled` (its own switch, separate from blog comment replies).
+- Notification: `type` `forum_quote` (quoted) or `forum_reply` (owner); Vietnamese title; message `Trong chủ đề "<threadTitle>": <excerpt>`; `data { threadId, replyId, action }` where `action = /forum/thread/<threadId>[?page=N]#reply-<replyId>` with `N = ceil(position / 20)` (`REPLIES_PER_PAGE = 20`, copied from the frontend).
 
 ### resource.flashcard-proposal.created
 
@@ -230,7 +230,7 @@ Notification consumers of the events above (all in `apps/notification/src/app/ev
 
 ## Findings
 
-- `apps/notification/src/app/events/handlers/forum-reply-created.handler.ts:62`: a forum quote notification is gated by the `commentReply` preference and typed `comment_reply`, the same switch and type as blog comment replies, so users cannot mute forum quotes separately from blog replies (may be intentional): backlog X4 (Decision).
+- ~~A forum quote notification shared the `commentReply` switch and `comment_reply` type with blog comment replies~~: fixed (C37), own `forumQuoteEnabled` switch and `forum_quote` type.
 - `apps/notification/src/app/events/handlers/flashcard-proposal-created.handler.ts` and `flashcard-proposal-decided.handler.ts`: proposal notifications skip the preference check entirely; `OptionalNotificationType` (`apps/notification/src/app/types/notification.input.ts`) has no flash card entry, so they cannot be turned off: backlog X5 (needs a column, proto field and a frontend switch).
 - ~~The SSE push happened inside the consumer's transaction, before the commit~~: fixed, pushed after the commit (see fixed-issues.md).
 - `apps/notification/src/app/events/handlers/forum-reply-created.handler.ts:17`: the notification link's page number assumes 20 replies per page (a constant copied from the frontend), while the gateway's default `limit` is 10; a frontend change silently breaks the deep links: backlog X6 (the frontend does use 20 today, so the links are right for now).

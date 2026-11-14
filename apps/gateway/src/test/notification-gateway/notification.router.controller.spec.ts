@@ -63,6 +63,13 @@ describe('NotificationGatewayController preferences', () => {
 		);
 	});
 
+	it('PATCH /preferences forwards the forum quote switch', async () => {
+		await request(server()).patch('/preferences').send({ forumQuoteEnabled: false }).expect(200);
+		expect(updatePreferences).toHaveBeenCalledWith(
+			expect.objectContaining({ identityId: 'jwt-user', forumQuoteEnabled: false }),
+		);
+	});
+
 	it('PATCH /preferences rejects non-boolean flags', async () => {
 		await request(server()).patch('/preferences').send({ pushEnabled: 'x' }).expect(400);
 		expect(updatePreferences).not.toHaveBeenCalled();

@@ -25,8 +25,15 @@ export interface UpdatePreferencesInput {
 	blogCommentEnabled?: boolean;
 	commentReplyEnabled?: boolean;
 	forumReplyEnabled?: boolean;
+	forumQuoteEnabled?: boolean;
 }
 
 /** Notification types a user can opt out of via preferences. */
 export type OptionalNotificationType =
-	'achievement' | 'report' | 'system' | 'blogComment' | 'commentReply' | 'forumReply';
+	| 'achievement'
+	| 'report'
+	| 'system'
+	| 'blogComment'
+	| 'commentReply'
+	| 'forumReply'
+	| 'forumQuote';

@@ -9,5 +9,6 @@ export interface NotificationPreferencesReadModel {
 	blogCommentEnabled: boolean;
 	commentReplyEnabled: boolean;
 	forumReplyEnabled: boolean;
+	forumQuoteEnabled: boolean;
 	updatedAt: string;
 }

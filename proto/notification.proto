@@ -90,10 +90,12 @@ message NotificationPreferencesResponse {
 	string updated_at          = 8;
 	// someone commented on my blog post
 	bool   blog_comment_enabled = 9;
-	// someone replied to my blog comment or quoted my forum reply
+	// someone replied to my blog comment
 	bool   comment_reply_enabled = 10;
 	// someone replied in my forum thread
 	bool   forum_reply_enabled = 11;
+	// someone quoted my forum reply
+	bool   forum_quote_enabled = 12;
 }
 
 message GetPreferencesRequest {
@@ -110,4 +112,5 @@ message UpdatePreferencesRequest {
 	optional google.protobuf.BoolValue   blog_comment_enabled = 7;
 	optional google.protobuf.BoolValue   comment_reply_enabled = 8;
 	optional google.protobuf.BoolValue   forum_reply_enabled = 9;
+	optional google.protobuf.BoolValue   forum_quote_enabled = 10;
 }
