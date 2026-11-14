@@ -2,7 +2,7 @@
 
 Guide for AI coding agents (Claude Code, Codex, opencode, …) working in this repo.
 Read it before changing anything. Human-facing setup docs live in `README.md`.
-Architecture overview: `docs/architecture/README.md`.
+Architecture overview: `docs/architecture/README.md`. What each operation does internally (gRPC, tables, events, consumers): `docs/architecture/flows/`. When you change an operation's flow, update its section there.
 
 ## What this is
 

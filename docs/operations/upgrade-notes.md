@@ -67,6 +67,21 @@ Set these before starting the new build (`docker/.env.services`, or each app's `
 
 **Never run it in production or alongside the real AI scorer.** Both would consume `exam.writing.submitted` (each with its own queue, so every submission is scored twice and the later result overwrites the earlier one).
 
+### 3b. Real AI scorer (Docker profile `ai`)
+
+`docker compose --profile ai up -d` starts `ai-llm` (llama.cpp with the Phi-3 IELTS model) and `ai-scorer` (the evaluator worker); see the README section "Real AI scorer" and [services-and-data.md](../architecture/services-and-data.md#ai-writing-scorer-docker-profile-ai).
+
+1. Check disk: the llama.cpp image is about 1.2 GB and the model 2.2 GB (volume `ai-models`, downloaded on first start; `ai-llm` is healthy once loaded, allow up to 15 min).
+2. Stop `mock-ai-scorer`, check its queues are empty, then **delete** `mock-ai-scorer.writing.submitted`, `.retry.1`-`.5` and `.dlq`. The queue is durable and stays bound to `exam.writing.submitted`: left in place it keeps collecting submissions, and a restarted mock would overwrite real feedback.
+3. Start `ai-scorer`; it declares `writing.evaluate` (TTL 1 h) and `writing.evaluate.dlq`.
+
+| Variable         | Default | Meaning                             |
+| ---------------- | ------- | ----------------------------------- |
+| `AI_LLM_THREADS` | `8`     | llama.cpp threads                   |
+| `AI_LLM_CPUS`    | `8`     | CPU limit of the `ai-llm` container |
+
+Essays are graded one at a time (about 1 minute each on CPU); simultaneous submissions queue.
+
 ### 4. Database
 
 Run in this order:
@@ -74,7 +89,8 @@ Run in this order:
 1. **Stop the achievement consumers** (the achievement container). Migration `20261112152409_count_first_login_day` adds +1 to every `login_criteria` row's `total` and `longest_streak` (the first login day was never counted). Logins processed by the old consumer while or after it runs use the old counting rules on corrected rows, so stop it first. Queued `user.login` events wait in RabbitMQ and are processed by the new build.
 2. `prisma migrate deploy` for **achievement**, **exam** (`attempt_version_scorer_data_cascade`: attempt version column, cascading scorer data), **file-service** (`add_file_uploaded_by`, `add_file_is_system`) and **auth** (`add_identity_is_demo`: additive `identities.is_demo` flag, default `false`; re-run the auth seed afterwards to create the shared demo account). `pnpm db:setup` does all of it locally.
 3. `prisma db push` for **live** (`Room.createdBy`), then re-run the **authorization seed**, which backfills `createdBy` from the authorization service's room ownership rows. Rooms without an ownership row stay `NULL`, so only admins can moderate them.
-4. Start the new build.
+4. `prisma db push` for **notification** (`blog_comment_enabled`, `comment_reply_enabled`, `forum_reply_enabled`, all default true) and **resource** (blog comments and forum tables).
+5. Start the new build.
 
 After the release:
 

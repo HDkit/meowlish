@@ -18,7 +18,8 @@ The short version of what an operator needs. Full runbooks: [`docs/operations/ob
 | `NODE_ENV`                                                     | all                                                                       | `production` forces `Secure` cookies                                                                                                                                                                                                                                                                                           |
 | `NEXT_PUBLIC_API_URL`                                          | frontend (`meowlish-fe/next.config.ts`), build time                       | Gateway origin targeted by the `/api/*` and `/socket.io/*` rewrites                                                                                                                                                                                                                                                            |
 | `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SDK_DISABLED`             | all apps (`@server/telemetry`)                                            | OTLP target (`http://lgtm:4318` in Docker, SDK default `http://localhost:4318` locally); `true` disables telemetry                                                                                                                                                                                                             |
-| `MOCK_SCORER_MIN_DELAY_MS` / `_MAX_DELAY_MS`                   | mock-ai-scorer                                                            | Random scoring delay, defaults 2000 / 8000                                                                                                                                                                                                                                                                                     |
+| `MOCK_SCORER_MIN_DELAY_MS` / `_MAX_DELAY_MS`                   | mock-ai-scorer                                                            | Random scoring delay, defaults 60000 / 180000 (1-3 min)                                                                                                                                                                                                                                                                        |
+| `AI_LLM_THREADS` / `AI_LLM_CPUS`                               | compose, `ai-llm` (profile `ai`)                                          | llama.cpp threads and the container's CPU limit, default 8 each. Grading is one essay at a time                                                                                                                                                                                                                                |
 
 Every app also needs its database URL and `RMQ_*` (or `messageQueue`) settings; see each `apps/<svc>/.env.example` and `docker/.env.services.example`.
 
@@ -26,18 +27,20 @@ Every app also needs its database URL and `RMQ_*` (or `messageQueue`) settings; 
 
 Served by `HealthModule.forRoot` from `@server/telemetry` (`libs/telemetry/src/lib/health/`). `GET /health/live` is always 200 while the process runs; `GET /health/ready` is 200 when every check passes (database `SELECT 1`, RabbitMQ connection when `rabbitmq: true`, registered checks; each time-boxed to 1 s), else 503 naming the failing check.
 
-| App            | Health address (compose)                        |
-| -------------- | ----------------------------------------------- |
-| gateway        | HTTP port 3000, outside `/api`, never throttled |
-| auth           | `HEALTH_PORT` 9101                              |
-| exam           | 9102                                            |
-| achievement    | 9103                                            |
-| resource       | 9104                                            |
-| file-service   | 9106                                            |
-| authorization  | 9108                                            |
-| mock-ai-scorer | 9110                                            |
-| live           | `HTTP_PORT` 1511                                |
-| notification   | `HTTP_PORT` 50061                               |
+| App            | Health address (compose)                                      |
+| -------------- | ------------------------------------------------------------- |
+| gateway        | HTTP port 3000, outside `/api`, never throttled               |
+| auth           | `HEALTH_PORT` 9101                                            |
+| exam           | 9102                                                          |
+| achievement    | 9103                                                          |
+| resource       | 9104                                                          |
+| file-service   | 9106                                                          |
+| authorization  | 9108                                                          |
+| mock-ai-scorer | 9110                                                          |
+| ai-scorer      | 8081 (`/health`, RabbitMQ connection only; profile `ai`)      |
+| ai-llm         | 8080 (`/health`, llama.cpp; healthy once the model is loaded) |
+| live           | `HTTP_PORT` 1511                                              |
+| notification   | `HTTP_PORT` 50061                                             |
 
 Docker healthchecks call `/health/ready` inside each container (`docker/docker-compose.app.yaml`); the health ports are not published to the host.
 

@@ -101,18 +101,23 @@ This means the private key must only exist in the auth service environment, whil
 │   ├── exam/                 # Exam management, practice, tags, goals
 │   ├── mock-ai-scorer/       # Dev-only random writing scorer (no DB, no gRPC)
 │   ├── achievement/          # Badges and user progress
-│   ├── resource/             # Blogs, flash cards, reports
+│   ├── resource/             # Blogs + comments, forum, flash cards (copies, proposals), reports
 │   ├── file-service/         # Presigned URLs & file metadata (MinIO)
 │   ├── live/                 # Chat rooms, Socket.IO + gRPC
 │   └── notification/         # Notifications & preferences (gRPC + SSE)
+│       (each app: src/{presentation,app,domain,infra,configs}, tests in src/test/ mirroring src/)
 ├── libs/                     # Shared libraries
 │   ├── generated/            # Generated gRPC client/server code (from proto)
 │   ├── database/             # Prisma/Postgres module helpers
 │   ├── logger/               # Winston-based logger
+│   ├── messaging/            # Outbox + relay, inbox, consumer queues with retries/DLQ
+│   ├── telemetry/            # OpenTelemetry start-up, /health endpoints
 │   ├── utils/                # Shared pipes, filters, interceptors, types
 │   └── typing/               # TypeScript utility types
 ├── proto/                    # protobuf (*.proto) contracts
-├── docker/                   # Dockerfiles, docker-compose, Envoy configs, env examples
+├── docker/                   # Dockerfiles, docker-compose, Envoy configs, env examples,
+│                             #   ai-scorer/ (real AI writing scorer image + patches)
+├── docs/                     # Architecture (incl. per-operation flows), operations, backlog
 ├── migrations.json           # Nx package migration config
 └── package.json              # pnpm workspace root
 ```

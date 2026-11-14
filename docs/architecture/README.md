@@ -7,6 +7,7 @@ A map of the whole system on branch `chore/local-dev-fixes`, verified against th
 | [services-and-data.md](services-and-data.md)                       | Every service: Prisma tables, gRPC RPCs, events published/consumed, infra used                                                   |
 | [authorization.md](authorization.md)                               | JWT and cookie sessions, Google login, role gates, `@ResourceAccess`, requester pattern, five traced examples, target vs current |
 | [messaging.md](messaging.md)                                       | Envelope, outbox + relay, inbox, RabbitMQ topology with retries and DLQs, full event table, before/after this branch             |
+| [flows/](flows/README.md)                                          | **Per operation**: route → gRPC → service → tables → outbox events → consumers, plus Redis, MinIO, BullMQ, socket.io and SSE     |
 | [operations.md](operations.md)                                     | Cross-cutting env vars, health endpoints, dashboards, alerts, ports                                                              |
 | [`../operations/observability.md`](../operations/observability.md) | Observability runbook (existing)                                                                                                 |
 | [`../operations/upgrade-notes.md`](../operations/upgrade-notes.md) | Deploy order for this branch (existing)                                                                                          |
@@ -17,7 +18,7 @@ A map of the whole system on branch `chore/local-dev-fixes`, verified against th
 - **Frontend** (separate repo `meowlish-fe`, Next.js): the browser talks only to the frontend's origin. `next.config.ts` rewrites `/api/*` to the gateway and `/socket.io/*` to the gateway's live proxy, so session cookies are first-party.
 - **Gateway** (`apps/gateway`): the only HTTP API. `/api/v1/*`, Scalar docs at `/reference`, health at `/health/*`. Verifies JWTs (RS256 public key), applies throttling, role/permission and ownership guards, and calls services over gRPC. Proxies socket.io to live and SSE to notification.
 - **gRPC services**: `auth`, `authorization`, `exam`, `achievement`, `resource`, `file-service`, `live`, `notification`. One Postgres database each (Prisma). Events over RabbitMQ through a transactional outbox.
-- **mock-ai-scorer** (`apps/mock-ai-scorer`): optional (`--profile mock-ai`) stand-in for the **external AI writing scorer**, which is not in this repo. Both speak only RabbitMQ.
+- **AI writing scorer** (Docker profile `ai`): `ai-llm` (llama.cpp running the fine-tuned Phi-3 IELTS model) and `ai-scorer` (the external `ai-language-evaluator` worker, built from a pinned commit with local patches, `docker/ai-scorer`). **mock-ai-scorer** (`apps/mock-ai-scorer`, profile `mock-ai`) is a random-score stand-in. Run one or the other; both speak only RabbitMQ.
 - **Infrastructure** (`docker/docker-compose.db.yaml`): Postgres 18, Redis (redis-stack), MinIO, RabbitMQ 4.2 with management, prometheus and shovel plugins, Adminer.
 - **Envoy** (`docker/docker-compose.app.yaml`, `docker/envoy/*.yaml`): one sidecar per app except authorization and mock-ai-scorer. The gateway's is an HTTP proxy on 8080 that sets `X-Forwarded-For`; the others expose each gRPC service over gRPC-web on a host port.
 - **Observability**: `@server/telemetry` (`libs/telemetry`) starts OpenTelemetry before Nest in every `main.ts` and provides `/health/live` + `/health/ready`; data goes over OTLP to Grafana LGTM (`docker/docker-compose.observability.yaml`) with provisioned dashboards and alerts (`docker/observability/`).
@@ -72,7 +73,7 @@ flowchart LR
   MQ{{"RabbitMQ<br/>eventbus / eventbus.dlx"}}
   AUTH & EXAM & ACH & RES & LIVE -->|"outbox relay"| MQ
   MQ -->|consume| AZ & ACH & FILE & NOTI & EXAM
-  MQ <-->|"exam.writing.submitted / .scored (bare)"| AI["external AI scorer"]
+  MQ <-->|"exam.writing.submitted / .scored (bare)"| AI["AI scorer (profile ai):<br/>ai-scorer worker + ai-llm"]
   MQ <-->|"same contract, dev only"| MOCK["mock-ai-scorer"]
 
   LGTM["Grafana LGTM<br/>OTLP :4317/:4318, Grafana :3001"]
@@ -100,7 +101,7 @@ sequenceDiagram
 
   B->>FE: DELETE /api/v1/exams/management/42 (Cookie: access_token)
   FE->>G: rewrite to NEXT_PUBLIC_API_URL/api/v1/...
-  G->>G: ThrottlerGuard (100/min per IP)
+  G->>G: ThrottlerGuard (100/min per IP+account, per IP when signed out)
   G->>G: JwtAuthGuard: cookie else Bearer, RS256 verify, payload schema
   G->>A: gRPC ValidateAccess(sub, iat, iatMs)
   A-->>G: ok (not revoked in Redis, not locked)
@@ -155,6 +156,6 @@ Notes on the path:
 
 ## 6. Things I could not verify from this repo
 
-- The external AI scorer: its queue name, deployment and behaviour beyond the message shapes exam publishes and validates.
+- The AI scorer's own code lives in another repository (`linhma139/ai-language-evaluator`); this repo pins a commit and patches it (`docker/ai-scorer`). Its end-to-end behaviour was checked on the running stack (one IELTS Writing attempt, November 2026), not under load.
 - Production topology: whether the Envoy sidecar ports are reachable from outside, what reverse proxy sits in front of the frontend, and which `TRUST_PROXY` value production uses.
-- Runtime behaviour in general: everything here is read from code and config, not observed on a running system. Observations that look like bugs are marked as such in the detail pages (report files and orphan cleanup in services-and-data.md; P2002 catches inside transactions in messaging.md §11).
+- Runtime behaviour in general: apart from the AI scorer round trip, everything here is read from code and config, not observed on a running system. Observations that look like bugs are marked as such in the detail pages (report files and orphan cleanup in services-and-data.md; P2002 catches inside transactions in messaging.md §11).
