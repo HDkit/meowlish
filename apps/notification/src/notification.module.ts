@@ -34,6 +34,11 @@ import {
 import { ClsGuard, ClsModule } from 'nestjs-cls';
 
 const databaseModule = DatabaseModule.forRoot(PrismaClient);
+// shared with MessagingModule so OutboxRelay can resolve AmqpConnectionManager
+const rmqPubModule = RabbitMQModule.forRootAsync({
+	inject: [ConfigService],
+	useFactory: rmqPubConfig,
+});
 
 @Module({
 	controllers: [
@@ -46,7 +51,7 @@ const databaseModule = DatabaseModule.forRoot(PrismaClient);
 			serviceName: 'notification',
 			prismaToken: DATABASE_SERVICE,
 			// publishes nothing yet; the relay runs so outbox metrics and alerts cover it too
-			imports: [databaseModule],
+			imports: [databaseModule, rmqPubModule],
 		}),
 		HealthModule.forRoot({
 			serviceName: 'notification',
@@ -77,7 +82,7 @@ const databaseModule = DatabaseModule.forRoot(PrismaClient);
 			],
 		}),
 		RabbitMQModule.forRootAsync({ inject: [ConfigService], useFactory: rmqSubConfig }),
-		RabbitMQModule.forRootAsync({ inject: [ConfigService], useFactory: rmqPubConfig }),
+		rmqPubModule,
 		LoggerModule.forRoot({ appName: 'NotificationModule' }),
 	],
 	providers: [

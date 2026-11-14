@@ -30,6 +30,11 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 import { NestMinioModule } from 'nestjs-minio';
 
 const databaseModule = DatabaseModule.forRoot(PrismaClient);
+// shared with MessagingModule so OutboxRelay can resolve AmqpConnectionManager
+const rmqSubModule = RabbitMQModule.forRootAsync({
+	inject: [ConfigService],
+	useFactory: rmqSubConfig,
+});
 
 @Module({
 	controllers: [FileController],
@@ -40,7 +45,7 @@ const databaseModule = DatabaseModule.forRoot(PrismaClient);
 			// file-service publishes nothing yet; the relay runs anyway (on its only connection) so
 			// outbox metrics and alerts cover it like every other service, and an outbox.add just works
 			connectionName: 'sub',
-			imports: [databaseModule],
+			imports: [databaseModule, rmqSubModule],
 		}),
 		HealthModule.forRoot({
 			serviceName: 'file-service',
@@ -70,7 +75,7 @@ const databaseModule = DatabaseModule.forRoot(PrismaClient);
 		}),
 		BullModule.forRootAsync({ inject: [ConfigService], useFactory: bullConfig }),
 		BullModule.registerQueue({ name: 'file' }),
-		RabbitMQModule.forRootAsync({ inject: [ConfigService], useFactory: rmqSubConfig }),
+		rmqSubModule,
 		NestMinioModule.registerAsync({ inject: [ConfigService], useFactory: minioConfig }),
 		LoggerModule.forRoot({ appName: 'FileModule' }),
 	],
