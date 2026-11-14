@@ -35,3 +35,6 @@
 **/dist
 LICENSE
 README.md
+
+# local agent worktrees: duplicate Nx projects break the build
+**/.claude
