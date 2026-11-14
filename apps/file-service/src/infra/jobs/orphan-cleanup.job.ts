@@ -11,8 +11,12 @@ import type { PrismaClient } from '@prisma-client/file';
 import { AppLoggerService } from '@server/logger';
 import { Job, Queue } from 'bullmq';
 
-/** Only files untouched (not uploaded or re-referenced) for this long are cleaned up. */
-export const MIN_ORPHAN_AGE_MS = 60 * 60 * 1000;
+/**
+ * Only files untouched (not uploaded or re-referenced) for this long are cleaned up. A day, so a
+ * file uploaded long before the form that uses it is saved (or whose `file.added` is retried for a
+ * while) is still there when the reference arrives.
+ */
+export const MIN_ORPHAN_AGE_MS = 24 * 60 * 60 * 1000;
 const ORPHAN_BATCH_SIZE = 500;
 /** The transaction holds the row locks while the objects are deleted. */
 const CLEANUP_TRANSACTION_TIMEOUT_MS = 60_000;

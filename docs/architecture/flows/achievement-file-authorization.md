@@ -68,7 +68,7 @@ Creates a `files` row and returns a presigned POST policy for direct browser upl
   4. `FilePrismaRepositoryImpl.create` inserts `File` (`files`): server-generated uuid `id`, `name`, `size`, `mime_type`, `isPublic`, `uploaded_by`; `ref_count` 0, `is_system` false. Not in a `@Transactional()` (single statement).
   5. Builds a MinIO `PostPolicy`: bucket `public` or `private`, key = the new row id, expiry 15 min (`UPLOAD_URL_EXPIRY_SECONDS`), content length 1..`fileSize` (`file.service.ts:142`), `Content-Type` equal to the declared type (header only; the object body is not inspected). Signed with `signingClient`, a MinIO client pointed at `MINIO_PUBLIC_URL` when set, so the signature matches the host the browser uses. Signing is local (fixed region `us-east-1`).
   6. Response `PresignedUrlResponseDto { id, fileName, uploadUrl, formData }` (`strategy: 'exposeAll'`). The browser then POSTs the file to `uploadUrl` with `formData`; that upload never passes through the gateway.
-- **Async**: none. The row stays at `ref_count` 0 until an attaching service publishes `<svc>.file.added`; if that never happens it is deleted by [the orphan cleanup](#bullmq-cleanup-orphaned-files-every-5-min) once untouched for 1 h.
+- **Async**: none. The row stays at `ref_count` 0 until an attaching service publishes `<svc>.file.added`; if that never happens it is deleted by [the orphan cleanup](#bullmq-cleanup-orphaned-files-every-5-min) once untouched for 24 h (`MIN_ORPHAN_AGE_MS`).
 - **Errors**: 400 for a non-integer, zero or negative `fileSize` (gateway DTO), and for a file over 10 MiB or a disallowed type (file-service, message names the limit or the allowed types). Bucket creation and the public-read policy on `public` are set up in `FileService.onModuleInit`.
 
 ### gRPC FileService/CheckFilesOwnedBy
@@ -137,7 +137,7 @@ Published by `apps/exam/src/app/events/publishers/attempt-scored.publisher.ts` a
 
 #### `*.file.added` → `file.events.file.added`
 
-`apps/file-service/src/app/events/handlers/file-added.handler.ts`. Publishers: `auth.file.added` (`apps/auth/src/app/events/publisher/file-added.publisher.ts`, avatar) and `exam.file.added` (`apps/exam/src/app/events/publishers/file-added.publisher.ts`, question/section files). Payload `{ fileId }`. `incrementRef([fileId])`: `updateMany files set ref_count + 1` (also bumps `updatedAt`). An unknown or already-deleted id updates 0 rows silently. `resource.file.added` (report attachments, `apps/resource/src/app/services/report.service.ts`).
+`apps/file-service/src/app/events/handlers/file-added.handler.ts`. Publishers: `auth.file.added` (`apps/auth/src/app/events/publisher/file-added.publisher.ts`, avatar) and `exam.file.added` (`apps/exam/src/app/events/publishers/file-added.publisher.ts`, question/section files). Payload `{ fileId }`. `incrementRef([fileId])`: `updateMany files set ref_count + 1` (also bumps `updatedAt`). An unknown or already-deleted id updates 0 rows and logs a warning (`file.added for unknown file …`): the attaching service then holds a dangling id. `resource.file.added` (report attachments, `apps/resource/src/app/services/report.service.ts`).
 
 #### `*.file.removed`, `*.files.removed` → `file.events.files.removed`
 
@@ -148,7 +148,7 @@ Published by `apps/exam/src/app/events/publishers/attempt-scored.publisher.ts` a
 `apps/file-service/src/infra/jobs/orphan-cleanup.job.ts`. `OrphanCleanupScheduler.onModuleInit` adds a repeatable job (`jobId: 'cleanup-orphaned-files'`, `repeat.every: 300 000 ms`) to queue `file` (Redis from `bullmq.config.ts`). `OrphanCleanupWorker.process`:
 
 1. One transaction, timeout 60 s.
-2. `lockOrphanedFiles`: raw `SELECT id, "isPublic" FROM files WHERE ref_count <= 0 AND is_system = false AND "updatedAt" < now - 1 h ORDER BY "updatedAt" LIMIT 500 FOR UPDATE SKIP LOCKED`.
+2. `lockOrphanedFiles`: raw `SELECT id, "isPublic" FROM files WHERE ref_count <= 0 AND is_system = false AND "updatedAt" < now - 24 h ORDER BY "updatedAt" LIMIT 500 FOR UPDATE SKIP LOCKED`.
 3. `FileService.removeObjects`: MinIO `removeObjects` per bucket (`public`, `private`); keys the storage reports as failed are kept.
 4. `removeOrphaned(removedIds)`: `deleteMany where id in ids and ref_count <= 0 and is_system = false`.
 5. Errors are caught and logged, so the job never fails in BullMQ; a failed MinIO request rolls the transaction back and the rows are retried next run. A concurrent `incrementRef` blocks on the row lock and then updates 0 rows.
@@ -183,7 +183,7 @@ Producers write enveloped rows to `outbox_events` with `OutboxPublisher.add` ins
 3. ~~`GetUsersBadgesDto.limit` has no `@Max`~~: fixed (see fixed-issues.md).
 4. ~~Oversized or disallowed uploads surface as 502; `fileSize` accepts 0, negatives and fractions~~: fixed (see fixed-issues.md).
 5. ~~Gateway `GetPresignedUrlDto` does not implement the generated message~~: fixed (see fixed-issues.md).
-6. ~~Orphan cleanup can delete a file presigned more than 1 h before its late `file.added`~~: backlog X1.
+6. ~~Orphan cleanup can delete a file presigned more than 1 h before its late `file.added`~~: backlog X1, then C40 (the age is now 24 h, and a `file.added` for a missing file logs a warning).
 7. ~~`ref_count` can go negative~~: fixed (see fixed-issues.md).
 8. ~~Ownership event payloads are never validated~~: fixed (see fixed-issues.md).
 9. ~~Rooms are never backfilled into `resource_ownership` from `live.rooms.created_by`~~: fixed (see fixed-issues.md).

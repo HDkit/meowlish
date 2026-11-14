@@ -2,6 +2,17 @@
 
 What was fixed from [`backlog.md`](backlog.md), and how. Newest first. Each entry says what was wrong, what changed (files), what it means for running systems, and how it is tested. The backlog row is deleted in the same commit as the fix.
 
+## Backlog decisions (November 2026)
+
+The items in the backlog that needed a decision (S21–S25, C23–C40), after the product owner decided each one. Kept as they are, by decision: **S24** (question explanations stay public), **C23** (deleted users' identities are still returned by hydration), **C27** (approved exams can be deleted, and the delete cascades to every attempt), **C34** (every thread view counts), **C36** (the unused email/push/system switches stay).
+
+### C40: a late `file.added` could find its file deleted
+
+- **Problem:** the orphan cleanup deleted files with `ref_count 0` untouched for 1 h. A file uploaded more than an hour before the form that uses it was saved (or whose `file.added` was retried for a while) could be gone when the reference arrived; `incrementRef` then updated 0 rows silently and auth/exam kept a dangling id.
+- **Fix:** `MIN_ORPHAN_AGE_MS` is 24 h (`apps/file-service/src/infra/jobs/orphan-cleanup.job.ts`), so abandoned uploads are kept a day longer. `incrementRef` returns the number of rows it updated (`file.repository.ts`, `file.prisma.repository.impl.ts`), and `FileAddedHandler` logs `file.added for unknown file <id>; the reference is dangling` when it is 0.
+- **Deploy:** nothing; files already waiting are simply kept longer.
+- **Tests:** `apps/file-service/src/test/infra/jobs/orphan-cleanup.job.spec.ts` ("only considers files untouched for at least 24 hours"), `apps/file-service/src/test/app/events/handlers/file-added.handler.spec.ts`.
+
 ## Findings from the flow docs (November 2026)
 
 The candidate issues listed under "Findings" in `docs/architecture/flows/` were re-checked one by one; the real ones are fixed below, the ones that need a decision are in the backlog (S21+, C23+), and each flows page marks what happened to every finding.

@@ -22,11 +22,12 @@ export class FilePrismaRepositoryImpl implements IFileRepository {
 		return newFile.id;
 	}
 
-	async incrementRef(ids: string[], count = 1): Promise<void> {
-		await this.txHost.tx.file.updateMany({
+	async incrementRef(ids: string[], count = 1): Promise<number> {
+		const { count: updated } = await this.txHost.tx.file.updateMany({
 			where: { id: { in: ids } },
 			data: { refCount: { increment: count } },
 		});
+		return updated;
 	}
 
 	async decrementRef(files: { id: string; count?: number }[]): Promise<void> {

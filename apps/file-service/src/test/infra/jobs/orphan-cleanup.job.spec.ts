@@ -56,11 +56,11 @@ describe('OrphanCleanupWorker', () => {
 		expect(calls).toEqual(['begin', 'lock:true', 'objects:a,b', 'rows:a,b:true', 'commit']);
 	});
 
-	it('only considers files untouched for at least 1 hour', async () => {
+	it('only considers files untouched for at least 24 hours', async () => {
 		const { worker, repo } = setup();
 		await worker.cleanupOrphans(now);
 		expect(repo.lockOrphanedFiles).toHaveBeenCalledWith(
-			new Date('2026-11-12T11:00:00Z'),
+			new Date('2026-11-11T12:00:00Z'),
 			expect.any(Number),
 		);
 	});

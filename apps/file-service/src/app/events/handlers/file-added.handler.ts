@@ -5,6 +5,7 @@ import {
 import { RabbitPayload, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import { Transactional } from '@nestjs-cls/transactional';
 import { Inject, Injectable, UseFilters } from '@nestjs/common';
+import { AppLoggerService } from '@server/logger';
 import { InboxService, defineConsumerQueue, unwrapEvent } from '@server/messaging';
 import { GlobalRmqExceptionFilter, validatePayload } from '@server/utils';
 import { IsString } from 'class-validator';
@@ -22,6 +23,7 @@ export class FileAddedHandler {
 	constructor(
 		@Inject(IFileRepositoryToken) private readonly fileRepository: IFileRepository,
 		private readonly inbox: InboxService,
+		private readonly logger: AppLoggerService,
 	) {}
 
 	@UseFilters(GlobalRmqExceptionFilter)
@@ -37,6 +39,9 @@ export class FileAddedHandler {
 		const { id, payload } = unwrapEvent<unknown>(message);
 		if (!(await this.inbox.claim(id, FILE_ADDED_QUEUE.name))) return;
 		const event = await validatePayload(FileAddedEvent, payload);
-		await this.fileRepository.incrementRef([event.fileId]);
+		const updated = await this.fileRepository.incrementRef([event.fileId]);
+		// the attaching service now holds an id with no file (deleted as an orphan, or never uploaded)
+		if (updated === 0)
+			this.logger.warn(`file.added for unknown file ${event.fileId}; the reference is dangling`);
 	}
 }

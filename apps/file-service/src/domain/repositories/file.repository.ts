@@ -3,7 +3,8 @@ import { FileMetadata } from '../../types/file-metadata.type';
 export interface IFileRepository {
 	// returns id
 	create(fileMetadata: FileMetadata, isPublic: boolean, uploadedBy: string): Promise<string>;
-	incrementRef(ids: string[], count?: number): Promise<void>;
+	/** Returns how many rows were updated (unknown or already deleted ids are skipped). */
+	incrementRef(ids: string[], count?: number): Promise<number>;
 	decrementRef(files: { id: string; count?: number }[]): Promise<void>;
 	/**
 	 * Locks (`FOR UPDATE SKIP LOCKED`) up to `limit` unreferenced, non-system files untouched
