@@ -197,8 +197,9 @@ export class ChatService {
 		who: { requesterId: string; privileged: boolean },
 	): Promise<void> {
 		await this.assertCanModerate(roomId, who);
-		this.chatGateway.disconnectUser(uid, roomId);
+		// save the ban first: a kicked user who re-joins before it is stored would get back in
 		await this.roomRepository.banUserFrom(roomId, uid, reason);
+		await this.chatGateway.disconnectUser(uid, roomId);
 	}
 
 	async unbanUserFrom(

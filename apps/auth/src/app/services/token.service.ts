@@ -4,6 +4,7 @@ import { RedisService } from '@liaoliaots/nestjs-redis';
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { TokenType } from '@server/typing';
 import { Claims } from '@server/utils';
 import Redis from 'ioredis';
 
@@ -38,6 +39,7 @@ export class TokenService {
 	private async generateAccessToken(claims: Claims): Promise<string> {
 		return await this.AccessTokenService.signAsync({
 			...claims,
+			typ: TokenType.Access,
 			jti: crypto.randomUUID(),
 			iatMs: Date.now(),
 		});
@@ -46,6 +48,7 @@ export class TokenService {
 	private async generateRefreshToken(claims: Claims): Promise<string> {
 		const token = await this.RefreshTokenService.signAsync({
 			sub: claims.sub,
+			typ: TokenType.Refresh,
 			jti: crypto.randomUUID(),
 			iatMs: Date.now(),
 		});

@@ -87,7 +87,7 @@ Mint a new access + refresh token pair from a refresh token.
 
 - **Access**: `@IsPublic()` (skips the access guard), `CookieIssuanceGuard`, then `JwtRefreshAuthGuard` (`refresh-jwt`), `@StrictThrottleByRefreshToken()` (10/min per `<ip>:sub:<id>` taken from the `refresh_token` cookie or Bearer).
 - **Flow**:
-  1. `JwtRefreshStrategy` (`apps/gateway/src/auth-gateway/strategies/jwt-refresh.strategy.ts`): token from `refresh_token` cookie, else `Authorization: Bearer`; RS256 verify with the public key; `refreshPayloadSchema.safeParse` (401 on mismatch).
+  1. `JwtRefreshStrategy` (`apps/gateway/src/auth-gateway/strategies/jwt-refresh.strategy.ts`): token from `refresh_token` cookie, else `Authorization: Bearer`; RS256 verify with the public key; the token must be a refresh token (`isRefreshTokenPayload`: `typ` REFRESH, or no `typ` and no roles/permissions for tokens issued before the claim) and match `refreshPayloadSchema`, else 401. Tokens are signed with `typ` ACCESS / REFRESH by `TokenService`; `JwtStrategy` and live's socket handshake accept only access tokens.
   2. Calls [`ValidateRefresh`](#grpc-validaterefresh) → `req.user = { sub, roles, permissions }`.
   3. Gateway `refresh` (`:145`) → `auth.AuthService/Refresh({ identityId: sub })` → `RefreshCommandHandler` (`refresh.handler.ts`): reloads `Identity` (401 missing, 403 locked) and claims, signs a new pair.
   4. Gateway sets both cookies; `data: null`.
@@ -324,7 +324,7 @@ Same handler as `GET /google/calendar/token` (`GetGoogleCalendarTokenQuery`); it
 
 ## Findings
 
-1. `libs/utils/src/types/payload.type.ts:13` + `apps/auth/src/configs/jwt-refresh.config.ts`: access and refresh tokens are signed with the same private key and have no type claim, and `refreshPayloadSchema` (a non-strict `payloadSchema.omit`) accepts an access token, so `POST /auth/refresh` with an access token as Bearer mints a 7-day refresh token from a 15-minute access token.
+1. ~~An access token was accepted by `POST /auth/refresh`~~: fixed (S18, `typ` claim; see [fixed-issues.md](../../fixed-issues.md)).
 2. `apps/gateway/src/auth/guards/google-oauth2.guard.ts:101`: the default-frontend Google login sends no `state` and the strategy uses passport-oauth2's null state store, so `/google/callback` accepts any code; an attacker's own code sent to a victim yields a `loginToken` redirect that the frontend exchanges, logging the victim into the attacker's account (login CSRF), unless the frontend adds its own check (unclear, frontend not in this repo).
 3. `apps/gateway/src/auth-gateway/auth.router.controller.ts:245-249`: the Google `loginToken` exchange is `GET` then `DEL`, not atomic, so two concurrent requests with the same token can both receive cookies (the callback guard uses the `DEL` result as its single-use gate; this route does not).
 4. Refresh tokens are not rotated or invalidated on use (`refresh.handler.ts`); a stolen refresh token keeps working until `exp` or a logout-all.

@@ -23,7 +23,12 @@ import {
 	WebSocketServer,
 } from '@nestjs/websockets';
 import { AppLoggerService } from '@server/logger';
-import { GlobalValidationPipe, GlobalWsExceptionFilter, readCookie } from '@server/utils';
+import {
+	GlobalValidationPipe,
+	GlobalWsExceptionFilter,
+	isAccessTokenPayload,
+	readCookie,
+} from '@server/utils';
 import { isUUID } from 'class-validator';
 import jwt from 'jsonwebtoken';
 import { ClsGuard } from 'nestjs-cls';
@@ -79,7 +84,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 			const token = this.extractToken(socket);
 			if (!token || !this.jwtPublicKey) throw new Error('Missing token');
 			const payload = jwt.verify(token, this.jwtPublicKey, { algorithms: ['RS256'] });
-			if (typeof payload === 'string' || typeof payload.sub !== 'string') {
+			if (
+				typeof payload === 'string' ||
+				typeof payload.sub !== 'string' ||
+				// a refresh token is signed with the same key but must not open sockets
+				!isAccessTokenPayload(payload)
+			) {
 				throw new Error('Invalid token payload');
 			}
 			socket.data.uid = payload.sub;
@@ -119,7 +129,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 	}
 
 	@SubscribeMessage('leave-room')
-	async handleLeave(@MessageBody() roomId: string, @ConnectedSocket() socket: ModifiedSocket) {
+	async handleLeave(@MessageBody() roomId: unknown, @ConnectedSocket() socket: ModifiedSocket) {
+		// Only chat rooms (UUIDs). Leaving one's own uid room would hide the socket from ban kicks
+		// and private pushes.
+		if (typeof roomId !== 'string' || !isUUID(roomId)) {
+			throw new UnauthorizedException('User is not allowed to leave this room');
+		}
 		await socket.leave(roomId);
 	}
 
@@ -139,8 +154,20 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 		});
 	}
 
-	disconnectUser(uid: string, roomId: string) {
+	/**
+	 * Removes every socket of `uid` from `roomId` (a ban). Sockets are found by the uid verified at
+	 * connect (`socket.data.uid`, shared through the Redis adapter), not through the user's uid room,
+	 * which a client could have left.
+	 */
+	async disconnectUser(uid: string, roomId: string): Promise<void> {
 		this.server.in(uid).socketsLeave(roomId);
+		const sockets = await this.server.in(roomId).fetchSockets();
+		for (const socket of sockets) {
+			const data: unknown = socket.data;
+			if (typeof data === 'object' && data !== null && 'uid' in data && data.uid === uid) {
+				socket.leave(roomId);
+			}
+		}
 	}
 
 	/** Removes every socket from a room (e.g. after it is deleted). */

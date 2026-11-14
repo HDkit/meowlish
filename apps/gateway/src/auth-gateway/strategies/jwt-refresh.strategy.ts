@@ -6,7 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { type ClientGrpc } from '@nestjs/microservices';
 import { PassportStrategy } from '@nestjs/passport';
 import { auth } from '@server/generated';
-import { Claims, refreshPayloadSchema } from '@server/utils';
+import { Claims, isRefreshTokenPayload, refreshPayloadSchema } from '@server/utils';
 import { AuthRefreshPayload } from '@server/utils';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { lastValueFrom } from 'rxjs';
@@ -39,7 +39,8 @@ export class JwtRefreshStrategy
 
 	async validate(payload: AuthRefreshPayload): Promise<Claims> {
 		// safeParse: a malformed (but validly signed) payload is a 401, not a 500.
-		if (!refreshPayloadSchema.safeParse(payload).success) {
+		// an access token (same signing key, zod strips its extra claims) must not mint sessions
+		if (!isRefreshTokenPayload(payload) || !refreshPayloadSchema.safeParse(payload).success) {
 			throw new UnauthorizedException('Invalid token');
 		}
 

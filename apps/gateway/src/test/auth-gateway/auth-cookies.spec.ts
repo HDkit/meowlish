@@ -44,7 +44,11 @@ describe('auth cookies', () => {
 	let app: INestApplication;
 	let base: string;
 	const accessToken = sign('user-1', 900);
-	const refreshToken = sign('user-1', 7 * 24 * 3600);
+	// shaped like auth's refresh tokens: no roles/permissions, typ REFRESH
+	const refreshToken = jwt.sign({ sub: 'user-1', typ: 'REFRESH', iatMs: Date.now() }, privateKey, {
+		algorithm: 'RS256',
+		expiresIn: 7 * 24 * 3600,
+	});
 	const authService = {
 		loginMail: jest.fn(() => of({ accessToken: accessToken, refreshToken: refreshToken })),
 		registerMail: jest.fn(() => of({ accessToken: accessToken, refreshToken: refreshToken })),
@@ -123,6 +127,29 @@ describe('auth cookies', () => {
 			body: '{}',
 		});
 		expect(setCookies(res)['access_token']).toMatch(/Secure/);
+	});
+
+	it('refuses an access token on /refresh (it would turn 15 minutes into 7 days)', async () => {
+		for (const token of [
+			sign('user-1', 900),
+			jwt.sign({ sub: 'user-1', typ: 'ACCESS' }, privateKey, {
+				algorithm: 'RS256',
+				expiresIn: 900,
+			}),
+		]) {
+			const res = await fetch(`${base}/refresh`, {
+				method: 'POST',
+				headers: { Authorization: `Bearer ${token}` },
+			});
+			expect(res.status).toBe(401);
+		}
+	});
+
+	it('refuses a refresh token as an access token', async () => {
+		const res = await fetch(`${base}/probe`, {
+			headers: { Authorization: `Bearer ${refreshToken}` },
+		});
+		expect(res.status).toBe(401);
 	});
 
 	it('refresh reads the refresh cookie and rotates both cookies', async () => {

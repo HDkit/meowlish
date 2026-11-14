@@ -6,7 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { ClientGrpc } from '@nestjs/microservices';
 import { PassportStrategy } from '@nestjs/passport';
 import { auth } from '@server/generated';
-import { Claims, payloadSchema } from '@server/utils';
+import { Claims, isAccessTokenPayload, payloadSchema } from '@server/utils';
 import { AuthPayload } from '@server/utils';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { lastValueFrom } from 'rxjs';
@@ -36,7 +36,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'access-jwt') implem
 
 	async validate(payload: AuthPayload): Promise<Claims> {
 		// safeParse: a malformed (but validly signed) payload is a 401, not a 500.
-		if (!payloadSchema.safeParse(payload).success) {
+		// a refresh token (same signing key) must not authenticate requests
+		if (!isAccessTokenPayload(payload) || !payloadSchema.safeParse(payload).success) {
 			throw new UnauthorizedException('Invalid token');
 		}
 

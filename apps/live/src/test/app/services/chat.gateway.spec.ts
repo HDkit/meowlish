@@ -12,6 +12,10 @@ const { privateKey, publicKey } = generateKeyPairSync('rsa', {
 
 const logger = { warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 
+/** Same claims as auth's access tokens (`typ` ACCESS, roles, permissions). */
+const accessToken = (sub: string, extra: object = { typ: 'ACCESS', roles: [], permissions: [] }) =>
+	jwt.sign({ sub: sub, ...extra }, privateKey, { algorithm: 'RS256' });
+
 const makeGateway = (canJoin: () => Promise<boolean> = () => Promise.resolve(true)) => {
 	const config = { get: () => publicKey } as unknown as ConfigService;
 	return new ChatGateway(
@@ -48,7 +52,7 @@ describe('ChatGateway authentication', () => {
 	});
 
 	it('takes the uid from a valid RS256 token', async () => {
-		const token = jwt.sign({ sub: 'user-1' }, privateKey, { algorithm: 'RS256' });
+		const token = accessToken('user-1');
 		const socket = makeSocket({ headers: { authorization: `Bearer ${token}` } });
 		await makeGateway().handleConnection(socket as never);
 		expect(socket.disconnect).not.toHaveBeenCalled();
@@ -56,7 +60,7 @@ describe('ChatGateway authentication', () => {
 	});
 
 	it('socket accepts the cookie', async () => {
-		const token = jwt.sign({ sub: 'user-2' }, privateKey, { algorithm: 'RS256' });
+		const token = accessToken('user-2');
 		const socket = makeSocket({ headers: { cookie: `theme=dark; access_token=${token}` } });
 		await makeGateway().handleConnection(socket as never);
 		expect(socket.disconnect).not.toHaveBeenCalled();
@@ -64,13 +68,53 @@ describe('ChatGateway authentication', () => {
 	});
 
 	it('prefers the cookie over the header', async () => {
-		const cookie = jwt.sign({ sub: 'from-cookie' }, privateKey, { algorithm: 'RS256' });
-		const header = jwt.sign({ sub: 'from-header' }, privateKey, { algorithm: 'RS256' });
+		const cookie = accessToken('from-cookie');
+		const header = accessToken('from-header');
 		const socket = makeSocket({
 			headers: { cookie: `access_token=${cookie}`, authorization: `Bearer ${header}` },
 		});
 		await makeGateway().handleConnection(socket as never);
 		expect(socket.data.uid).toBe('from-cookie');
+	});
+
+	it('rejects a refresh token (same key, no roles)', async () => {
+		for (const claims of [{ typ: 'REFRESH' }, {}]) {
+			const socket = makeSocket({ auth: { token: accessToken('user-1', claims) } });
+			await makeGateway().handleConnection(socket as never);
+			expect(socket.disconnect).toHaveBeenCalledWith(true);
+			expect(socket.data.uid).toBeUndefined();
+		}
+	});
+
+	it('accepts a pre-typ access token (roles, no typ)', async () => {
+		const socket = makeSocket({
+			auth: { token: accessToken('user-1', { roles: ['STUDENT'], permissions: [] }) },
+		});
+		await makeGateway().handleConnection(socket as never);
+		expect(socket.data.uid).toBe('user-1');
+	});
+
+	it('refuses to leave a non-room id such as its own uid room', async () => {
+		const socket = { ...makeSocket({}), leave: jest.fn() };
+		socket.data.uid = 'me';
+		await expect(makeGateway().handleLeave('me', socket as never)).rejects.toThrow();
+		expect(socket.leave).not.toHaveBeenCalled();
+	});
+
+	it('kicks a banned user by socket uid even if it left its uid room', async () => {
+		const gateway = makeGateway();
+		const mine = { data: { uid: 'banned' }, leave: jest.fn() };
+		const other = { data: { uid: 'someone' }, leave: jest.fn() };
+		const socketsLeave = jest.fn();
+		gateway.server = {
+			in: jest.fn((room: string) => ({
+				socketsLeave: socketsLeave,
+				fetchSockets: () => Promise.resolve(room === 'room-1' ? [mine, other] : []),
+			})),
+		} as never;
+		await gateway.disconnectUser('banned', 'room-1');
+		expect(mine.leave).toHaveBeenCalledWith('room-1');
+		expect(other.leave).not.toHaveBeenCalled();
 	});
 
 	it('refuses to join a non-room id, e.g. another user uid room', async () => {
