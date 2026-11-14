@@ -448,10 +448,11 @@ No events are published for tag changes.
 
 ## Goals (`GoalGatewayController`)
 
-`@Controller('goals')`, so routes live under `/api/v1/exams/goals`. Signed in only. `uid` is always `req.user.sub`. Service: `GoalController` → `GoalService` → `GoalPrismaRepositoryImpl` (`goals`, PK `uid`, `target Int`).
+`@Controller('goals')`, so routes live under `/api/v1/exams/goals`. Signed in only. `uid` is always `req.user.sub`. Service: `GoalController` → `GoalService` → `GoalPrismaRepositoryImpl` (`goals`, PK `uid`, `target Float`, i.e. double precision; proto `DoubleValue`/`double`).
 
-- `POST /api/v1/exams/goals/my`: `SetGoalDto { date, target: integer 0-990, type: IELTS|TOEIC|VSTEP|TOEFL }` → `goals.create`. Returns `GoalResDto`. A second call gives **409**. A fractional target (IELTS 6.5) is a **400**: the column and the proto field are integers.
-- `PATCH /api/v1/exams/goals/my`: same DTO (all fields required) → `goals.update`. When there is no goal, **404**.
+- `POST /api/v1/exams/goals/my`: `SetGoalDto { date, target: number, type: IELTS|TOEIC|VSTEP|TOEFL }` → `goals.create`. Returns `GoalResDto` (`target` is a number and may be fractional). A second call gives **409**.
+  - The gateway only checks that `target` is a finite number in 0-990. `GoalService` then runs `assertValidGoalTarget` (`domain/entities/goal.entity.ts`, `goalScales`) and answers **400** unless the target fits its type: IELTS 0-9 in steps of 0.5, TOEIC 10-990 in steps of 5, TOEFL 0-120 whole numbers, VSTEP 0-10 in steps of 0.5 (C25).
+- `PATCH /api/v1/exams/goals/my`: same DTO and checks (all fields required) → `goals.update`. When there is no goal, **404**.
 - `DELETE /api/v1/exams/goals/my`: `goals.delete`. **404** when there is no goal.
 - `GET /api/v1/exams/goals/my`: `findUnique`, 404 `Goal not found`.
 

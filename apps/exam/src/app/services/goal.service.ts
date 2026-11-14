@@ -1,4 +1,4 @@
-import { Goal } from '../../domain/entities/goal.entity';
+import { Goal, assertValidGoalTarget } from '../../domain/entities/goal.entity';
 import {
 	type IGoalRepository,
 	IGoalRepositoryToken,
@@ -10,6 +10,7 @@ export class GoalService {
 	constructor(@Inject(IGoalRepositoryToken) private readonly goalRepository: IGoalRepository) {}
 
 	async setGoal(goal: Goal): Promise<Goal> {
+		assertValidGoalTarget(goal);
 		return await this.goalRepository.setGoal(goal);
 	}
 
@@ -18,6 +19,7 @@ export class GoalService {
 	}
 
 	async updateGoal(goal: Goal): Promise<Goal> {
+		assertValidGoalTarget(goal);
 		return await this.goalRepository.updateGoal(goal);
 	}
 

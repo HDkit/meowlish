@@ -734,17 +734,19 @@ message TagTrees {
 	}
 }
 
+// target is in the goal type's own scale: IELTS 0-9 by 0.5, TOEIC 10-990 by 5, TOEFL 0-120 by 1,
+// VSTEP 0-10 by 0.5
 message SetGoalDto {
 	google.protobuf.StringValue uid    = 1;
 	google.protobuf.Timestamp   date   = 2;
-	google.protobuf.Int32Value  target = 3;
+	google.protobuf.DoubleValue target = 3;
 	google.protobuf.StringValue type   = 4;
 }
 
 message UpdateGoalDto {
 	google.protobuf.StringValue uid    = 1;
 	google.protobuf.Timestamp   date   = 2;
-	google.protobuf.Int32Value  target = 3;
+	google.protobuf.DoubleValue target = 3;
 	google.protobuf.StringValue type   = 4;
 }
 
@@ -759,7 +761,7 @@ message GetGoalDto {
 message GoalResponse {
 	string                    uid    = 1;
 	google.protobuf.Timestamp date   = 2;
-	int32                     target = 3;
+	double                    target = 3;
 	string                    type   = 4;
 }
 

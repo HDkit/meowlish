@@ -12,7 +12,7 @@ import { wrappers } from "protobufjs";
 import { Observable } from "rxjs";
 import { Empty } from "./google/protobuf/empty";
 import { Timestamp } from "./google/protobuf/timestamp";
-import { BoolValue, Int32Value, StringValue } from "./google/protobuf/wrappers";
+import { BoolValue, DoubleValue, Int32Value, StringValue } from "./google/protobuf/wrappers";
 
 /** Request */
 export interface CreateExamDto {
@@ -728,6 +728,10 @@ export interface TagTrees_TagTree {
   children: TagTrees_TagTree[];
 }
 
+/**
+ * target is in the goal type's own scale: IELTS 0-9 by 0.5, TOEIC 10-990 by 5, TOEFL 0-120 by 1,
+ * VSTEP 0-10 by 0.5
+ */
 export interface SetGoalDto {
   uid: string | undefined;
   date: Date | undefined;
@@ -8106,7 +8110,7 @@ export const SetGoalDto: MessageFns<SetGoalDto> = {
       Timestamp.encode(toTimestamp(message.date), writer.uint32(18).fork()).join();
     }
     if (message.target !== undefined) {
-      Int32Value.encode({ value: message.target! }, writer.uint32(26).fork()).join();
+      DoubleValue.encode({ value: message.target! }, writer.uint32(26).fork()).join();
     }
     if (message.type !== undefined) {
       StringValue.encode({ value: message.type! }, writer.uint32(34).fork()).join();
@@ -8148,7 +8152,7 @@ export const SetGoalDto: MessageFns<SetGoalDto> = {
               break;
             }
 
-            message.target = Int32Value.decode(reader, reader.uint32()).value;
+            message.target = DoubleValue.decode(reader, reader.uint32()).value;
             continue;
           }
           case 4: {
@@ -8185,7 +8189,7 @@ export const UpdateGoalDto: MessageFns<UpdateGoalDto> = {
       Timestamp.encode(toTimestamp(message.date), writer.uint32(18).fork()).join();
     }
     if (message.target !== undefined) {
-      Int32Value.encode({ value: message.target! }, writer.uint32(26).fork()).join();
+      DoubleValue.encode({ value: message.target! }, writer.uint32(26).fork()).join();
     }
     if (message.type !== undefined) {
       StringValue.encode({ value: message.type! }, writer.uint32(34).fork()).join();
@@ -8227,7 +8231,7 @@ export const UpdateGoalDto: MessageFns<UpdateGoalDto> = {
               break;
             }
 
-            message.target = Int32Value.decode(reader, reader.uint32()).value;
+            message.target = DoubleValue.decode(reader, reader.uint32()).value;
             continue;
           }
           case 4: {
@@ -8356,7 +8360,7 @@ export const GoalResponse: MessageFns<GoalResponse> = {
       Timestamp.encode(toTimestamp(message.date), writer.uint32(18).fork()).join();
     }
     if (message.target !== 0) {
-      writer.uint32(24).int32(message.target);
+      writer.uint32(25).double(message.target);
     }
     if (message.type !== "") {
       writer.uint32(34).string(message.type);
@@ -8394,11 +8398,11 @@ export const GoalResponse: MessageFns<GoalResponse> = {
             continue;
           }
           case 3: {
-            if (tag !== 24) {
+            if (tag !== 25) {
               break;
             }
 
-            message.target = reader.int32();
+            message.target = reader.double();
             continue;
           }
           case 4: {
