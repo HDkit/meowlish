@@ -31,6 +31,14 @@ export interface OutboxRelayPrisma extends RawQueryClient {
 
 type PublishOptions = NonNullable<Parameters<AmqpConnection['publish']>[3]>;
 
+interface ReturnedMessage {
+	properties?: { messageId?: unknown };
+}
+
+interface ReturnEmitter {
+	on(event: 'return', listener: (message: ReturnedMessage) => void): unknown;
+}
+
 interface PendingRow {
 	id: string;
 	routing_key: string;
@@ -58,6 +66,9 @@ export class OutboxRelay implements OnApplicationBootstrap, OnModuleDestroy {
 	private cleanupTimer?: NodeJS.Timeout;
 	private firstCleanupTimer?: NodeJS.Timeout;
 	private running = false;
+	/** Message ids the broker returned as unroutable (no queue bound), see `watchReturns`. */
+	private readonly returned = new Set<string>();
+	private readonly watchedConnections = new WeakSet<object>();
 
 	constructor(
 		@Inject(MESSAGING_PRISMA) private readonly prisma: OutboxRelayPrisma,
@@ -93,6 +104,21 @@ export class OutboxRelay implements OnApplicationBootstrap, OnModuleDestroy {
 		this.cleanupTimer = undefined;
 	}
 
+	/**
+	 * Records the ids of messages the broker returns (published `mandatory` with no queue bound).
+	 * The setup runs on every (re)connected channel of the connection's managed channel.
+	 */
+	private async watchReturns(connection: AmqpConnection): Promise<void> {
+		if (this.watchedConnections.has(connection)) return;
+		this.watchedConnections.add(connection);
+		await connection.managedChannel.addSetup((channel: ReturnEmitter) => {
+			channel.on('return', (message: ReturnedMessage) => {
+				const id = message.properties?.messageId;
+				if (typeof id === 'string') this.returned.add(id);
+			});
+		});
+	}
+
 	/** Publishes one batch; returns the number published. Returns 0 if a run is already in flight. */
 	async relayOnce(): Promise<number> {
 		if (this.running) return 0;
@@ -116,6 +142,7 @@ export class OutboxRelay implements OnApplicationBootstrap, OnModuleDestroy {
 		if (!connection) {
 			throw new Error(`AMQP connection "${this.options.connectionName}" not found`);
 		}
+		await this.watchReturns(connection);
 		return this.prisma.$transaction(
 			async tx => {
 				const rows = await tx.$queryRaw<PendingRow[]>`
@@ -127,9 +154,16 @@ export class OutboxRelay implements OnApplicationBootstrap, OnModuleDestroy {
 					try {
 						await connection.publish(EXCHANGE, row.routing_key, row.payload, {
 							persistent: true,
+							// unroutable messages come back instead of being dropped silently
+							mandatory: true,
 							messageId: row.id,
 							timeout: PUBLISH_TIMEOUT_MS,
 						} as PublishOptions);
+						// The broker sends basic.return before the confirm of the same message, so a
+						// returned id is known by the time the publish resolves.
+						if (this.returned.delete(row.id)) {
+							throw new Error(`unroutable: no queue is bound to ${row.routing_key}`);
+						}
 					} catch (err) {
 						const attempts = row.attempts + 1;
 						const delaySeconds = Math.min(2 ** attempts, MAX_BACKOFF_SECONDS);

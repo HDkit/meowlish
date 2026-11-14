@@ -48,12 +48,10 @@ describe('InboxService', () => {
 		await expect(service.claim(EVENT_ID, 'exam.scoring')).rejects.toBe(failure);
 	});
 
-	it('claim returns true without writing for legacy messages', async () => {
+	it('claim rejects a missing id', async () => {
 		const { createMany, service } = setup();
 
-		const claimed = await service.claim(undefined, 'exam.scoring');
-
-		expect(claimed).toBe(true);
+		await expect(service.claim('', 'exam.scoring')).rejects.toThrow('needs an event id');
 		expect(createMany).not.toHaveBeenCalled();
 	});
 

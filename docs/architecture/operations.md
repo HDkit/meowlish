@@ -76,5 +76,5 @@ authorization has no Envoy sidecar. See [authorization.md §10](authorization.md
 
 - Backend and frontend ship together (cookie sessions, `POST /auth/google/tokens`, tag ids). Gateway and auth ship together.
 - Migrate/push schemas before starting the new build (outbox/inbox tables must exist, or logins fail).
-- Start consumers (achievement, notification, file-service, authorization) before publishers (auth, exam, live, resource): the relay publishes without `mandatory`.
+- Start consumers (achievement, notification, file-service, authorization) before publishers (auth, exam, live, resource). Publishes are `mandatory`, so an event that arrives before its queue exists is kept in the outbox and retried (and `OutboxStuck` fires) rather than lost, but starting consumers first avoids the delay.
 - Queues whose arguments changed must be deleted once (`PRECONDITION_FAILED` otherwise).

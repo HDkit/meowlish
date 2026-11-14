@@ -37,19 +37,19 @@ export class InboxService {
 
 	/**
 	 * Records that `consumer` processed `eventId`. Returns `false` when it was already processed.
-	 * Legacy messages without an id cannot be deduplicated, so they are always claimed.
+	 * An event without an id cannot be deduplicated, so it is refused.
 	 * Must run inside a transaction so the claim commits together with the handler's writes.
 	 *
 	 * Uses `createMany` with `skipDuplicates` (`ON CONFLICT DO NOTHING`) rather than catching a
 	 * unique violation: a caught P2002 leaves a PostgreSQL transaction aborted (25P02), which
 	 * would fail every later statement in the same handler transaction.
 	 */
-	async claim(eventId: string | undefined, consumer: string): Promise<boolean> {
+	async claim(eventId: string, consumer: string): Promise<boolean> {
 		if (!this.txHost.isTransactionActive()) {
 			throw new Error('InboxService.claim must run inside a transaction');
 		}
-		if (eventId === undefined) {
-			return true;
+		if (!eventId) {
+			throw new Error(`InboxService.claim needs an event id (consumer ${consumer})`);
 		}
 		const { count } = await this.txHost.tx.inboxEvent.createMany({
 			data: [{ id: eventId, consumer: consumer }],

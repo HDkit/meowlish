@@ -103,13 +103,11 @@ describe('LoginHandler', () => {
 		expect(activeDuringSave).toBe(true);
 	});
 
-	it('processes a legacy bare payload without inbox dedup', async () => {
-		const legacy = { uid: 'u1', date: '2026-11-12T08:00:00.000Z' };
-		await handler.handle(legacy);
-		await handler.handle(legacy);
-
-		expect(inbox.claim).toHaveBeenCalledWith(undefined, 'achievement.events.user.login');
-		expect(repo.saveLoginBadgeManager).toHaveBeenCalledTimes(2);
+	it('rejects a bare payload (no envelope, so no id to deduplicate) so it dead-letters', async () => {
+		await expect(handler.handle({ uid: 'u1', date: '2026-11-12T08:00:00.000Z' })).rejects.toThrow(
+			'Not an event envelope',
+		);
+		expect(repo.saveLoginBadgeManager).not.toHaveBeenCalled();
 	});
 
 	it('throws on an invalid payload so the message dead-letters', async () => {

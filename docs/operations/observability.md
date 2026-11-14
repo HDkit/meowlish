@@ -138,7 +138,7 @@ Do these steps in order.
 1. Apply the schema first: `pnpm db:setup` (or, per service, `prisma migrate deploy` / `prisma db push`) so the `outbox_events` and `inbox_events` tables exist. Without them, logins fail (the outbox insert throws) and consumed messages dead-letter (the inbox table is missing).
 2. Delete the queues listed below (see "Delete the queues").
 3. Start the consumer services first: achievement, notification, file-service and authorization. This creates their queues and bindings.
-4. Then start the publishers: auth, exam, live and resource. The relay publishes without `mandatory`, so an event published to an exchange with no bound queue is confirmed and silently dropped. Example: `exam.exam.created` published before authorization is up leaves the creator locked out.
+4. Then start the publishers: auth, exam, live and resource. The relay publishes `mandatory`: an event whose queue does not exist yet is returned by the broker, kept in the outbox and retried with back-off (up to 5 min between tries), so it arrives once the consumer has declared its queue. Starting consumers first just avoids that wait.
 
 This ordering (consumers before publishers) also applies to any fresh broker.
 

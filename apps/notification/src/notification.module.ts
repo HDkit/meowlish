@@ -45,7 +45,7 @@ const databaseModule = DatabaseModule.forRoot(PrismaClient);
 		MessagingModule.forRoot({
 			serviceName: 'notification',
 			prismaToken: DATABASE_SERVICE,
-			relay: false,
+			// publishes nothing yet; the relay runs so outbox metrics and alerts cover it too
 			imports: [databaseModule],
 		}),
 		HealthModule.forRoot({

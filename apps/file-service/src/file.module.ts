@@ -37,7 +37,9 @@ const databaseModule = DatabaseModule.forRoot(PrismaClient);
 		MessagingModule.forRoot({
 			serviceName: 'file-service',
 			prismaToken: DATABASE_SERVICE,
-			relay: false,
+			// file-service publishes nothing yet; the relay runs anyway (on its only connection) so
+			// outbox metrics and alerts cover it like every other service, and an outbox.add just works
+			connectionName: 'sub',
 			imports: [databaseModule],
 		}),
 		HealthModule.forRoot({

@@ -48,12 +48,33 @@ function setup(rows: Row[], publish: jest.Mock = jest.fn().mockResolvedValue(und
 		...tx,
 		$transaction: jest.fn((fn: (t: typeof tx) => Promise<unknown>) => fn(tx)),
 	};
-	const amqp = { getConnection: jest.fn().mockReturnValue({ publish: publish }) };
+	// the relay registers a 'return' listener on each channel; `emitReturn` plays the broker
+	const listeners: ((message: { properties: { messageId: string } }) => void)[] = [];
+	const channel = { on: (_event: string, fn: (typeof listeners)[number]) => listeners.push(fn) };
+	const managedChannel = {
+		addSetup: jest.fn((fn: (c: typeof channel) => void) => {
+			fn(channel);
+			return Promise.resolve();
+		}),
+	};
+	const emitReturn = (messageId: string) =>
+		listeners.forEach(l => l({ properties: { messageId: messageId } }));
+	const amqp = {
+		getConnection: jest.fn().mockReturnValue({ publish: publish, managedChannel: managedChannel }),
+	};
 	const relay = new OutboxRelay(prisma as unknown as OutboxRelayPrisma, amqp as never, {
 		serviceName: 'svc',
 		connectionName: 'pub',
 	});
-	return { relay: relay, prisma: prisma, publish: publish, executed: executed, selects: selects };
+	return {
+		relay: relay,
+		prisma: prisma,
+		publish: publish,
+		executed: executed,
+		selects: selects,
+		emitReturn: emitReturn,
+		managedChannel: managedChannel,
+	};
 }
 
 const row = (id: string, attempts = 0): Row => ({
@@ -83,9 +104,35 @@ describe('OutboxRelay', () => {
 			'eventbus',
 			'rk.a',
 			{ id: 'a' },
-			{ persistent: true, messageId: 'a', timeout: 5000 },
+			{ persistent: true, mandatory: true, messageId: 'a', timeout: 5000 },
 		);
 		expect(rows.every(r => r.publishedAt !== null)).toBe(true);
+	});
+
+	it('keeps an unroutable event (returned by the broker) and retries it later', async () => {
+		jest.useFakeTimers({ now: new Date('2026-01-01T00:00:00Z') });
+		const rows = [row('a'), row('b')];
+		const publish = jest.fn();
+		const ctx = setup(rows, publish);
+		// the broker returns 'a' (no queue bound) before confirming it
+		publish.mockImplementationOnce(() => {
+			ctx.emitReturn('a');
+			return Promise.resolve();
+		});
+		publish.mockResolvedValue(undefined);
+
+		await expect(ctx.relay.relayOnce()).resolves.toBe(0);
+		expect(rows[0]).toMatchObject({
+			publishedAt: null,
+			attempts: 1,
+			lastError: 'unroutable: no queue is bound to rk.a',
+		});
+
+		jest.setSystemTime(Date.now() + 2500);
+		await expect(ctx.relay.relayOnce()).resolves.toBe(2);
+		expect(rows.every(r => r.publishedAt !== null)).toBe(true);
+		// the return listener is registered once per connection
+		expect(ctx.managedChannel.addSetup).toHaveBeenCalledTimes(1);
 	});
 
 	it('backs off after a publish failure and retries later', async () => {

@@ -69,7 +69,7 @@ Not in Postgres: revocation timestamps in Redis (`jwt:blacklist:user:<id>`).
 
 gRPC `AuthService` (`proto/auth.proto`): register/login mail, add mail credential, update password, register-or-login Google, add Google credential, get/remove credentials, `Refresh`, `ValidateRefresh`, `ValidateAccess`, `LogOutAll`, role/permission lists, assign/remove role, `UpdateIdentity`, lock/unlock, Google Calendar connect/disconnect/get/refresh token, find/hydrate identities.
 
-Events: `auth.user.login` (mail login, Google login), `auth.user.locked` (no consumer in the repo), `auth.file.added` (avatar), `auth.files.removed` (BullMQ job).
+Events: `auth.user.login` (mail login, Google login), `auth.user.locked` (live disconnects the user's sockets), `auth.file.added` (avatar), `auth.files.removed` (BullMQ job).
 
 ## authorization (`apps/authorization`)
 

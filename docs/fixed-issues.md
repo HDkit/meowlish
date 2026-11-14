@@ -4,6 +4,30 @@ What was fixed from [`backlog.md`](backlog.md), and how. Newest first. Each entr
 
 ## November 2026
 
+### Messaging: unroutable events were dropped; two services ran no relay; legacy bare payloads
+
+Three items from the backlog's Conventions list, fixed together in `@server/messaging`.
+
+- **Unroutable events were silently dropped.** The relay published without `mandatory`, so an event whose routing key had no bound queue (a consumer not deployed yet) was confirmed and lost. Now it publishes `mandatory: true` and records `basic.return` messages per channel (`watchReturns` in `libs/messaging/src/lib/outbox.relay.ts`; the broker sends the return before the confirm). A returned event is treated as a failed publish: it stays in the outbox, is retried with the normal back-off and trips `OutboxStuck`, so it arrives once its queue exists. `auth.user.locked`, the one key that had no consumer, now has one (S17).
+- **file-service and notification ran no relay**, so they had no outbox metrics or alerts and, since inbox cleanup runs inside the relay, their `inbox_events` were never pruned. Both run it now (file-service on its only connection, `sub`).
+- **Legacy bare payloads** (no envelope, so no id) were accepted by `unwrapEvent` and always claimed by the inbox, i.e. processed without deduplication. Every publisher writes envelopes, so `unwrapEvent` now throws for anything else and `InboxService.claim` requires an id; a stray bare message retries and dead-letters where it can be seen. `exam.writing.submitted` stays bare on purpose and is not read through `unwrapEvent`.
+- **Running systems:** before the deploy every queue was checked for old-format messages (none). `achievement.events.user.login.dlq` held 11 enveloped logins that had failed on 13 November with the older achievement code; they were replayed into `achievement.events.user.login` and all processed (logins older than a user's last login change nothing).
+- **Tests:** `outbox.relay.spec.ts` (an unroutable event is kept and retried; the return listener is registered once), `envelope.spec.ts` ("rejects a bare payload"), `inbox.service.spec.ts` ("rejects a missing id"), `apps/achievement/src/test/app/events/handlers/login.handler.spec.ts`.
+
+### S17: revoked or locked accounts kept their chat sockets
+
+- **Problem:** live's socket handshake only checked the JWT signature, expiry and `sub`, so a token revoked by logout-all or a password change, or an account locked by an admin, could still open sockets until the token expired (up to 15 min). Nothing consumed `auth.user.locked`, so sockets already open stayed connected.
+- **Fix:**
+  - The handshake calls auth's `ValidateAccess` (same revocation and lock check as the gateway) and refuses the socket on any failure (`apps/live/src/app/services/chat.gateway.ts`; new `AUTH_CLIENT` in `apps/live/src/live.module.ts`, `authService` in `apps/live/src/configs/config.ts`).
+  - New consumer `UserLockedHandler` (`apps/live/src/app/events/handlers/user-locked.handler.ts`, queue `live.events.user.locked`, inbox) disconnects every socket of the locked user on every node (`disconnectAllOf`).
+- **Running systems:** live needs `AUTH_SERVICE_HOST` / `AUTH_SERVICE_PORT` (or `AUTH_SERVICE_URL`); compose sets them. Start live before auth publishes a lock, or the event waits in the outbox until the queue exists (see the messaging entry).
+- **Tests:** `chat.gateway.spec.ts` (revoked token refused, locked user disconnected), `apps/live/src/test/app/events/handlers/user-locked.handler.spec.ts`.
+
+### Conventions: exam gateway DTOs and `process.env`
+
+- **Exam gateway request DTOs** (`apps/gateway/src/exam-gateway/dtos/req/**`, 23 classes) now `implements` their generated `exam.*` message (with `Omit<…>` for ids from the path and the requester fields), so the compiler keeps them in sync with the proto. `ReviewExamDto.status` is an enum (`apps/gateway/src/enums/exam-status.enum.ts`), so a bad status is a 400 at the gateway.
+- **`process.env`** is no longer read in gRPC client providers or listeners: all ten apps read `HOST`/`PORT`/`HEALTH_PORT` (live and notification: `GRPC_*`, `HTTP_*`) and every `*_SERVICE_HOST`/`_PORT`/`_URL` through their zod config and `ConfigService`, with the same names and defaults as before. Only `startTelemetry` (runs before Nest) and `resolveDatabaseUrl` still read `process.env`.
+
 ### C21: a scorer failure left the essay unscored with no trace
 
 - **Problem:** when the AI scorer gave up (`status: 'error'`, e.g. `LLM_PARSE_ERROR` or `LLM_TIMEOUT` after its own retries), `WritingScoredHandler` threw. The message was retried five times and dead-lettered, nothing was stored, and the results page polled for five minutes before giving up. A success without `data` failed the same way.

@@ -20,11 +20,17 @@ export function createEnvelope<T>(
 	};
 }
 
-export function unwrapEvent<T>(message: unknown): { id?: string; type?: string; payload: T } {
-	if (isEnvelope(message)) {
-		return { id: message.id, type: message.type, payload: message.payload as T };
+/**
+ * The id, type and payload of an enveloped event. Anything else is refused: every publisher writes
+ * envelopes through the outbox, and a message without an id could not be deduplicated by the
+ * inbox. (The one bare key, `exam.writing.submitted`, is not read through here.) The throw sends
+ * the message through the consumer's retries to its DLQ, where it can be inspected.
+ */
+export function unwrapEvent<T>(message: unknown): { id: string; type: string; payload: T } {
+	if (!isEnvelope(message)) {
+		throw new Error('Not an event envelope ({ id, type, occurredAt, payload })');
 	}
-	return { payload: message as T };
+	return { id: message.id, type: message.type, payload: message.payload as T };
 }
 
 function isEnvelope(message: unknown): message is { id: string; type: string; payload: object } {

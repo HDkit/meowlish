@@ -34,13 +34,13 @@ describe('envelope', () => {
 		});
 	});
 
-	it('unwrapEvent treats a bare payload as legacy', () => {
-		expect(unwrapEvent({ uid: 'u1' })).toStrictEqual({ payload: { uid: 'u1' } });
+	it('unwrapEvent rejects a bare payload', () => {
+		expect(() => unwrapEvent({ uid: 'u1' })).toThrow('Not an event envelope');
 	});
 
-	it('unwrapEvent treats an object with a non-string id as legacy', () => {
+	it('unwrapEvent rejects an object with a non-string id', () => {
 		const message = { id: 42, type: 'exam.created', payload: { examId: 'e1' } };
 
-		expect(unwrapEvent(message)).toStrictEqual({ payload: message });
+		expect(() => unwrapEvent(message)).toThrow('Not an event envelope');
 	});
 });

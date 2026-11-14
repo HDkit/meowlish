@@ -314,7 +314,7 @@ sequenceDiagram
 
 Consequences:
 
-- Until the relay and consumer have run (normally about a second), the creator gets **403** on their own new card. If the event never arrives (e.g. published before the authorization queue existed, which the relay can't detect without `mandatory`), the creator is locked out until the seed is re-run.
+- Until the relay and consumer have run (normally about a second), the creator gets **403** on their own new card. If the authorization queue doesn't exist yet, the relay keeps the event and retries it (publishes are `mandatory`), so the ownership arrives once authorization is up.
 - A user whose roles are only `parent` or `mentor` matches no rule and gets 403 even on their own card.
 - Unknown ids also give 403 (no ownership row), not 404.
 - `FlashcardService.updateFlashCard` (`apps/resource/src/app/services/flashcard.service.ts`) does no ownership check of its own: the gateway guard is the only gate.
@@ -354,6 +354,6 @@ Two documents describe where this is going:
 ## 10. Risks visible in the current design
 
 - **Services trust the request message** (backlog S16). `requesterId`, `privileged`, `mayAttachAnyFile`, `userId`, `recipientId` are plain gRPC fields. In `docker/docker-compose.app.yaml` each gRPC service except authorization has an Envoy sidecar that publishes a host port with the gRPC-web filter (`docker/envoy/*.yaml`, e.g. exam on `8082`). Anyone who can reach those ports can call `UpdateExam` with `privileged: true`. This is the reason the Actor design re-verifies the JWT in each service. Whether those ports are reachable in a given deployment depends on its firewall, which this repo doesn't show.
-- Revocation is checked only in the gateway (backlog S17) (`ValidateAccess`); live's socket handshake checks only signature, expiry and `sub` (`ChatGateway.handleConnection` in `chat.gateway.ts`), so a revoked or locked account can still open a socket until its access token expires.
+- Revocation (`ValidateAccess`) is checked by the gateway on every request and by live's socket handshake (`ChatGateway.handleConnection`). A lock also closes the user's open sockets (`auth.user.locked` → live `UserLockedHandler`). A socket opened before a logout-all or password change stays open until it disconnects; only new connections are refused.
 - `@ResourceAccess` ownership is eventually consistent (403 right after create) and can be lost if an event is dropped (no `mandatory` publish).
 - `logout` doesn't revoke; only `logout-all` does.
