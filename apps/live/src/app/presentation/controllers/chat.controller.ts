@@ -50,7 +50,7 @@ export class ChatController implements live.ChatServiceController {
 	}
 
 	async banUserFromRoom(@Payload() request: BanUserDto): Promise<void> {
-		return this.chatService.banUserFrom(request.roomId, request.uid, request.reason, request);
+		return this.chatService.banUserFrom(request.roomId, request.uid, request.reason ?? '', request);
 	}
 
 	async unbanUserFromRoom(@Payload() request: UnbanUserDto): Promise<void> {
