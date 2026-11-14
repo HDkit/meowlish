@@ -175,8 +175,10 @@ app/            commands/, queries/ (+ handlers/), events/ (+ handlers/, publish
 domain/         entities/, repositories/ (interfaces + DI tokens), read-models/, events/
 infra/          repositories/*.prisma.repository.impl.ts
 configs/        config.ts (zod env schema), rmq/bullmq configs
+test/           *.spec.ts, mirroring the folders above (no specs next to the source)
 ```
 
+- **Tests** live in `src/test/`, at the same path as the code they test: `src/app/services/blog.service.ts` → `src/test/app/services/blog.service.spec.ts`. Import the code under test by relative path. `tsconfig.app.json` excludes `src/test/**`, so test helpers never reach the build. (Libs keep their specs next to the source.)
 - **Dependencies point inward.** `domain` imports nothing from `app`, `infra`, or `presentation`.
 - **Repositories:** the interface and its token live together in `domain/repositories/<name>.repository.ts` as `export interface IXRepository` and `export const IXRepositoryToken = Symbol('IXRepository')`. The implementation goes in `infra/repositories/<name>.prisma.repository.impl.ts`. Inject with `@Inject(IXRepositoryToken) private readonly xRepository: IXRepository`.
 - Read-side queries use separate `*.read.repository.ts` interfaces that return `domain/read-models`.
