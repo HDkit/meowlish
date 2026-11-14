@@ -6,6 +6,9 @@ export class BlogDto implements resource.BlogResponse {
 	id!: string;
 
 	@Expose()
+	slug?: string;
+
+	@Expose()
 	title!: string;
 
 	@Expose()

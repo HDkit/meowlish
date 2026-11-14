@@ -1,5 +1,8 @@
 model Blog {
   id        String   @id @default(uuid())
+  /// Readable URL key from the title (`lam-the-nao-de-viet-email`, `-2` on a clash). Set once on
+  /// create and never changed, so links keep working. Null only until the startup backfill runs.
+  slug      String?  @unique
   title     String
   content   String
   authorId  String   @map("author_id")

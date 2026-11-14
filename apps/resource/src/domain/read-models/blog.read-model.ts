@@ -1,5 +1,7 @@
 export interface BlogReadModel {
 	id: string;
+	/** Readable URL key; unset only on rows the backfill has not reached yet. */
+	slug?: string;
 	title: string;
 	content: string;
 	authorId: string;

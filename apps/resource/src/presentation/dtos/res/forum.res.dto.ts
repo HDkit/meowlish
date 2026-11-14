@@ -6,6 +6,9 @@ export class ForumThreadSummaryDto implements resource.ForumThreadSummaryRespons
 	id!: string;
 
 	@Expose()
+	slug?: string;
+
+	@Expose()
 	categoryId!: string;
 
 	@Expose()
@@ -78,6 +81,9 @@ export class ListForumCategoriesDto implements resource.ListForumCategoriesRespo
 export class ForumThreadDto implements resource.ForumThreadResponse {
 	@Expose()
 	id!: string;
+
+	@Expose()
+	slug?: string;
 
 	@Expose()
 	categoryId!: string;

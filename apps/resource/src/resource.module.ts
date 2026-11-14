@@ -8,6 +8,7 @@ import { FlashcardProposalService } from './app/services/flashcard-proposal.serv
 import { FlashcardService } from './app/services/flashcard.service';
 import { ForumService } from './app/services/forum.service';
 import { ReportService } from './app/services/report.service';
+import { SlugBackfillService } from './app/services/slug-backfill.service';
 import { IEnvVars, config } from './configs/config';
 import { rmqPubConfig } from './configs/rmq.pub.config';
 import { FILE_CLIENT } from './constants/file';
@@ -104,6 +105,7 @@ const rmqPubModule = RabbitMQModule.forRootAsync({
 		FlashcardProposalService,
 		ForumService,
 		ReportService,
+		SlugBackfillService,
 		ResourceEventsPublisher,
 		FileOwnershipService,
 		{

@@ -66,9 +66,10 @@ Create a blog post.
 - **Access**: any authenticated user; `authorId = req.user.sub`.
 - **Flow**:
   1. Gateway: `CreateBlogDto` (`title`, `content` strings; optional `tags: string[]`, defaulted to `[]`) → `resource.BlogService/CreateBlog`.
-  2. `BlogController.createBlog` → `BlogService.createBlog` (`apps/resource/src/app/services/blog.service.ts:38`), `@Transactional()`.
-  3. Insert `Blog`; in the same transaction outbox `resource.resource.created` `{ resourceType: 'blog', resourceId, ownerId: authorId }`.
-  4. Response `BlogDto`.
+  2. `BlogController.createBlog` → `BlogService.createBlog` (`apps/resource/src/app/services/blog.service.ts:40`) → `insertBlog`, `@Transactional()`.
+  3. Pick the slug: read the slugs starting with the title's base slug, take the first free one (`nextFreeSlug(title, taken, 'bai-viet')`, see [Slugs](#slugs)). Insert `Blog` with it; in the same transaction outbox `resource.resource.created` `{ resourceType: 'blog', resourceId, ownerId: authorId }`.
+  4. A lost slug race (P2002 on `slug`) retries the whole transaction, up to 5 attempts (`withSlugRetry`).
+  5. Response `BlogDto` (with `slug`).
 - **Async**: `resource.resource.created` → `authorization.events.resource.created` → `ResourceCreatedHandler` registers ownership (inbox yes). Until then the author's own `PATCH`/`DELETE` returns 403.
 
 ### GET /api/v1/resources/blogs/tags
@@ -77,7 +78,7 @@ Every tag used by blogs with its count, most used first then by name. `BlogServi
 
 ### GET /api/v1/resources/blogs/:id
 
-`resource.BlogService/GetBlog` → `BlogService.getBlog`: `Blog.findUnique`; 404 `Blog not found`. Response `BlogDto`. No visibility rules (all blogs are readable by any logged-in user).
+`:id` is the id **or** the slug. `resource.BlogService/GetBlog` → `BlogService.getBlog` → `findBlog`: `Blog.findUnique` by id (same query as before), then by `slug` if that misses; 404 `Blog not found`. Response `BlogDto`. No visibility rules (all blogs are readable by any logged-in user).
 
 ### PATCH /api/v1/resources/blogs/:id
 
@@ -86,19 +87,25 @@ Update a blog post.
 - **Access**: `@ResourceAccess` `blog` (see [above](#how-resourceaccess-routes-are-checked)).
 - **Flow**:
   1. Gateway: `UpdateBlogDto` (all optional; `tags` defaulted to `[]`) → `resource.BlogService/UpdateBlog { ...body, id, replaceTags: tags was in the body }`.
-  2. `BlogService.updateBlog`: `findUnique` (404), then `update` with `title ?? old`, `content ?? old`, `tags` replaced when `replaceTags` (so `[]` clears them) or non-empty, else kept. Not `@Transactional`; no version check.
+  2. `BlogService.updateBlog`: `findUnique` (404), then `update` with `title ?? old` (the slug is never changed, so links keep working), `content ?? old`, `tags` replaced when `replaceTags` (so `[]` clears them) or non-empty, else kept. Not `@Transactional`; no version check.
   3. Response `BlogDto`.
 - **Errors**: 403 from the guard; 404 if the row is gone.
 
 ### DELETE /api/v1/resources/blogs/:id
 
-- **Access**: `@ResourceAccess` `blog`.
+- **Access**: `@ResourceAccess` `blog`. `PATCH` and `DELETE` take the real id only (ownership is keyed by it), so the frontend uses `id`, not `slug`, for them.
 - **Flow**: `resource.BlogService/DeleteBlog` → `BlogService.deleteBlog`, `@Transactional()`: `findUnique` (404) → `Blog.delete` (FK cascade removes its `BlogComment` rows) → outbox `resource.resource.deleted` `{ resourceType: 'blog', resourceId }`. Response empty.
 - **Async**: `authorization.events.resource.deleted` → `ResourceDeletedHandler` removes the ownership row (inbox yes).
 
 ### GET /api/v1/resources/blogs
 
 `ListBlogsQueryDto` (`authorId?`, `tags` via `ToStringArray`, page/limit) → `resource.BlogService/ListBlogs` → `BlogService.listBlogs`: `where authorId`, `tags hasSome` (any of the tags), order `createdAt desc`, `findMany` + `count` in parallel. Response `ListBlogsDto { blogs, totalCount }`.
+
+## Slugs
+
+Blog posts (and forum threads, see [community flows](resource-community.md#forum)) have a readable, unique `slug` (`Blog.slug`, `ForumThread.slug`, `String? @unique`) from their title, e.g. `Làm thế nào để viết email` → `lam-the-nao-de-viet-email`. Rules (`apps/resource/src/app/slugs/slugs.ts`, `slugify` / `nextFreeSlug` from `@server/utils`): accents dropped and `đ` → `d`, at most 80 characters; `bai-viet` (blog) or `chu-de` (thread) when nothing usable is left; on a clash the first free `-2`, `-3`, … (one `startsWith` query reads the taken ones). The slug is set once on create and never changes when the title is edited, so links do not break. Responses (`BlogDto`, `ForumThreadSummaryDto`, `ForumThreadDto`) include `slug`; the frontend links with `slug ?? id`, and every read route that takes the post/thread from the URL accepts either.
+
+**Backfill.** The column is nullable so rows from before slugs stay valid. `SlugBackfillService` (`apps/resource/src/app/services/slug-backfill.service.ts`) runs `backfillSlugs` (`apps/resource/src/app/slugs/slug-backfill.ts`) on every start (`onApplicationBootstrap`, in the background: startup does not wait, a failure is logged and retried on the next start). It fills `slug IS NULL` rows in batches of 200, oldest first (so the oldest post of a title keeps the plain slug), with the create-time rule. Each row is one `updateMany ... where { id, slug: null }` outside any transaction, so it is idempotent and safe on several instances at once: a row filled elsewhere is left alone, a slug taken elsewhere (P2002) is recomputed (5 attempts, then the row is left for the next run). The seed inserts posts and threads without slugs; the next service start fills them.
 
 ## Blog comments
 
@@ -110,7 +117,7 @@ Top-level comments paged (newest first), each with its full reply tree.
 
 - **Flow**:
   1. Gateway: `ListBlogCommentsQueryDto` (`page >= 1`, `1 <= limit <= 50`) → `resource.BlogCommentService/ListBlogComments { ...query, blogId }`. No requester is sent.
-  2. `BlogCommentService.listComments`: 404 `Blog not found` if the blog is missing; then in parallel: page of root ids (`parentId null`, order `createdAt desc, id desc`), count of roots (`totalThreads`, includes placeholders), count of live comments (`totalComments`).
+  2. `BlogCommentService.listComments`: `:id` may be the blog's id or slug (`assertBlogExists` tries the id, then the slug; 404 `Blog not found`), and everything after uses the real id; then in parallel: page of root ids (`parentId null`, order `createdAt desc, id desc`), count of roots (`totalThreads`, includes placeholders), count of live comments (`totalComments`).
   3. One query `blogComment.findMany({ rootId in rootIds })`, then `buildCommentTree` sorts by `path` (siblings oldest first), drops orphans and prunes deleted comments with no remaining replies.
   4. Placeholders are returned with `deleted: true`, empty `authorId`/`content`, no `editedAt`. Response `ListBlogCommentsDto { comments, totalThreads, totalComments }`.
 
@@ -121,7 +128,7 @@ Comment on a post or reply to a comment.
 - **Access**: any user; `requesterOf(req.user, [Mod, Admin])` (only `requesterId` matters here; it becomes `authorId`).
 - **Flow**:
   1. Gateway: `CreateBlogCommentDto` (`content` non-empty, max 5000; optional `parentId`) → `resource.BlogCommentService/CreateBlogComment`.
-  2. `BlogCommentService.createComment`, `@Transactional()`: load blog (404); trim content (400 `content must not be empty` if blank); new id from `randomUUID()`.
+  2. `BlogCommentService.createComment`, `@Transactional()`: load blog by id or slug (404), the comment is stored under the real id; trim content (400 `content must not be empty` if blank); new id from `randomUUID()`.
   3. Top-level: insert with `rootId = id`, `path = ''`, `depth 0`.
   4. Reply: load parent, must be live and on the same blog (else 404 `Comment not found`). Remember `repliedTo = parent.authorId`. The reply is stored under that parent at any depth (no limit). `update parent set childSeq = childSeq + 1` (row lock, hands out the segment) → `path = parent.path + segment`, `depth = path.length / 4`, insert.
   5. Same transaction: outbox `resource.blog-comment.created` `{ commentId, blogId, blogTitle, blogAuthorId, authorId, parentAuthorId (repliedTo or null), excerpt (120 chars) }`.

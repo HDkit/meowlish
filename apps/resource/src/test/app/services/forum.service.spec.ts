@@ -98,7 +98,13 @@ describe('ForumService threads', () => {
 		);
 		expect(tx.forumThread.create).toHaveBeenCalledWith(
 			expect.objectContaining({
-				data: { categoryId: 'ielts', authorId: 'me', title: 'Task 2 help', body: 'body' },
+				data: {
+					slug: 'task-2-help',
+					categoryId: 'ielts',
+					authorId: 'me',
+					title: 'Task 2 help',
+					body: 'body',
+				},
 			}),
 		);
 	});
@@ -255,6 +261,106 @@ describe('ForumService threads', () => {
 			latestThread: { id: 't1' },
 		});
 		expect(categories[1]).toMatchObject({ threadCount: 0, replyCount: 0, latestThread: undefined });
+	});
+});
+
+describe('ForumService slugs', () => {
+	const slug = 'task-2-help';
+	const slugSent = (tx: ReturnType<typeof setup>['tx'], call = 0) =>
+		(tx.forumThread.create.mock.calls as [{ data: { slug: string } }][])[call][0].data.slug;
+
+	it('gives a new thread the next free slug from its title', async () => {
+		const { tx, service } = setup();
+		tx.forumCategory.findUnique.mockResolvedValue(category());
+		tx.forumThread.findMany.mockResolvedValue([{ slug: slug }]);
+		tx.forumThread.create.mockResolvedValue(thread({ slug: 'task-2-help-2' }));
+		const created = await service.createThread(
+			{ categoryId: 'ielts', title: 'Task 2 help', body: 'x' },
+			user('me'),
+		);
+		expect(tx.forumThread.findMany).toHaveBeenCalledWith({
+			where: { slug: { startsWith: slug } },
+			select: { slug: true },
+		});
+		expect(slugSent(tx)).toBe('task-2-help-2');
+		expect(created.slug).toBe('task-2-help-2');
+	});
+
+	it('falls back to "chu-de" and retries a lost slug race', async () => {
+		const { tx, service } = setup();
+		tx.forumCategory.findUnique.mockResolvedValue(category());
+		tx.forumThread.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([{ slug: 'chu-de' }]);
+		tx.forumThread.create
+			.mockRejectedValueOnce(
+				Object.assign(new Error('unique'), { code: 'P2002', meta: { target: ['slug'] } }),
+			)
+			.mockResolvedValue(thread({ slug: 'chu-de-2' }));
+		await service.createThread({ categoryId: 'ielts', title: '!!!', body: 'x' }, user('me'));
+		expect(slugSent(tx, 0)).toBe('chu-de');
+		expect(slugSent(tx, 1)).toBe('chu-de-2');
+	});
+
+	it('reads a thread by id with the same single update as before', async () => {
+		const { tx, service } = setup();
+		tx.forumThread.findUnique.mockResolvedValue(thread({ slug: slug }));
+		const result = await service.getThread('t1');
+		expect(tx.forumThread.updateMany).toHaveBeenCalledTimes(1);
+		expect(tx.forumThread.findUnique).toHaveBeenCalledTimes(1);
+		expect(result.slug).toBe(slug);
+	});
+
+	it('reads a thread by slug and counts the view on its real id', async () => {
+		const { tx, service } = setup();
+		tx.forumThread.updateMany
+			.mockResolvedValueOnce({ count: 0 })
+			.mockResolvedValueOnce({ count: 1 });
+		tx.forumThread.findUnique
+			.mockResolvedValueOnce({ id: 't1' })
+			.mockResolvedValueOnce(thread({ slug: slug }));
+		const result = await service.getThread(slug);
+		expect(tx.forumThread.findUnique).toHaveBeenNthCalledWith(1, {
+			where: { slug: slug },
+			select: { id: true },
+		});
+		expect(tx.forumThread.updateMany).toHaveBeenLastCalledWith({
+			where: { id: 't1' },
+			data: { viewCount: { increment: 1 } },
+		});
+		expect(result).toMatchObject({ id: 't1', slug: slug });
+	});
+
+	it('404s on a slug that matches nothing', async () => {
+		const { tx, service } = setup();
+		tx.forumThread.updateMany.mockResolvedValue({ count: 0 });
+		tx.forumThread.findUnique.mockResolvedValue(null);
+		await expect(service.getThread('nope')).rejects.toBeInstanceOf(NotFoundException);
+	});
+
+	it('lists and adds replies through a slug, on the real thread id', async () => {
+		const { tx, service } = setup();
+		tx.forumThread.findUnique.mockImplementation(({ where }: { where: { slug?: string } }) =>
+			Promise.resolve(where.slug === slug ? thread({ slug: slug }) : null),
+		);
+		await service.listReplies({ threadId: slug });
+		expect(tx.forumReply.findMany).toHaveBeenCalledWith(
+			expect.objectContaining({ where: { threadId: 't1' } }),
+		);
+
+		tx.forumReply.create.mockResolvedValue(reply());
+		await service.createReply({ threadId: slug, body: 'hi' }, user('me'));
+		const { data } = (tx.forumReply.create.mock.calls as [{ data: { threadId: string } }][])[0][0];
+		expect(data.threadId).toBe('t1');
+	});
+
+	it('keeps the slug when the author edits the title', async () => {
+		const { tx, service } = setup();
+		tx.forumThread.findUnique.mockResolvedValue(thread({ slug: slug }));
+		tx.forumThread.update.mockResolvedValue(thread({ slug: slug, title: 'Renamed' }));
+		const result = await service.updateThread({ id: 't1', title: 'Renamed' }, user('author'));
+		const data = (tx.forumThread.update.mock.calls as [{ data: Record<string, unknown> }][])[0][0]
+			.data;
+		expect(data).not.toHaveProperty('slug');
+		expect(result.slug).toBe(slug);
 	});
 });
 

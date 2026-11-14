@@ -9,6 +9,7 @@ import {
 } from '../../domain/read-models/forum.read-model';
 import { toExcerpt } from '../../domain/text/excerpt';
 import { ResourceEventsPublisher } from '../events/resource-events.publisher';
+import { FORUM_THREAD_SLUG_FALLBACK, freeSlug, withSlugRetry } from '../slugs/slugs';
 import {
 	type CreateForumReplyInput,
 	type CreateForumThreadInput,
@@ -83,6 +84,7 @@ export class ForumService {
 	private toSummary(thread: ForumThread): ForumThreadSummaryReadModel {
 		return {
 			id: thread.id,
+			slug: thread.slug ?? undefined,
 			categoryId: thread.categoryId,
 			authorId: thread.authorId,
 			title: thread.title,
@@ -101,6 +103,7 @@ export class ForumService {
 	private toThread(thread: ThreadWithCategory): ForumThreadReadModel {
 		return {
 			id: thread.id,
+			slug: thread.slug ?? undefined,
 			categoryId: thread.categoryId,
 			categoryName: thread.category.name,
 			authorId: thread.authorId,
@@ -153,8 +156,14 @@ export class ForumService {
 		return before + 1;
 	}
 
-	private async findThread(id: string): Promise<ForumThread> {
-		const thread = await this.txHost.tx.forumThread.findUnique({ where: { id: id } });
+	/**
+	 * The thread whose id or slug is `idOrSlug`. The id is tried first, so ids behave exactly as
+	 * before (and win should a slug ever look like another thread's id). Callers use its real `id`.
+	 */
+	private async findThread(idOrSlug: string): Promise<ForumThread> {
+		const thread =
+			(await this.txHost.tx.forumThread.findUnique({ where: { id: idOrSlug } })) ??
+			(await this.txHost.tx.forumThread.findUnique({ where: { slug: idOrSlug } }));
 		if (!thread) throw new NotFoundException('Thread not found');
 		return thread;
 	}
@@ -270,12 +279,34 @@ export class ForumService {
 			throw new ForbiddenException('Only moderators can open threads in this category');
 		}
 
+		const title = requireText(data.title, 'title');
+		const body = requireText(data.body, 'body');
+		// a lost slug race retries in a new transaction (the failed insert aborted the old one)
+		return withSlugRetry(() => this.insertThread(category.id, title, body, requester));
+	}
+
+	@Transactional()
+	private async insertThread(
+		categoryId: string,
+		title: string,
+		body: string,
+		requester: Requester,
+	): Promise<ForumThreadReadModel> {
+		const slug = await freeSlug(title, FORUM_THREAD_SLUG_FALLBACK, async base =>
+			(
+				await this.txHost.tx.forumThread.findMany({
+					where: { slug: { startsWith: base } },
+					select: { slug: true },
+				})
+			).map(t => t.slug),
+		);
 		const created = await this.txHost.tx.forumThread.create({
 			data: {
-				categoryId: category.id,
+				slug: slug,
+				categoryId: categoryId,
 				authorId: requester.id,
-				title: requireText(data.title, 'title'),
-				body: requireText(data.body, 'body'),
+				title: title,
+				body: body,
 			},
 			include: { category: { select: { name: true } } },
 		});
@@ -283,14 +314,28 @@ export class ForumService {
 	}
 
 	/**
-	 * Reading a thread counts a view. `updateMany` matches nothing (instead of throwing P2025) when
-	 * the thread is gone, so a missing or concurrently deleted thread is a 404.
+	 * Reading a thread (by id or slug) counts a view. `updateMany` matches nothing (instead of
+	 * throwing P2025) when the thread is gone, so a missing or concurrently deleted thread is a 404.
+	 * An id costs the same one update as before; a slug is resolved to the id when that misses.
 	 */
-	async getThread(id: string): Promise<ForumThreadReadModel> {
-		const { count } = await this.txHost.tx.forumThread.updateMany({
-			where: { id: id },
-			data: { viewCount: { increment: 1 } },
-		});
+	async getThread(idOrSlug: string): Promise<ForumThreadReadModel> {
+		const countView = (id: string) =>
+			this.txHost.tx.forumThread.updateMany({
+				where: { id: id },
+				data: { viewCount: { increment: 1 } },
+			});
+		let id = idOrSlug;
+		let { count } = await countView(id);
+		if (count === 0) {
+			const bySlug = await this.txHost.tx.forumThread.findUnique({
+				where: { slug: idOrSlug },
+				select: { id: true },
+			});
+			if (bySlug) {
+				id = bySlug.id;
+				({ count } = await countView(id));
+			}
+		}
 		const thread =
 			count > 0 ?
 				await this.txHost.tx.forumThread.findUnique({
@@ -312,6 +357,7 @@ export class ForumService {
 			throw new BadRequestException('Nothing to update');
 		}
 
+		// The slug stays as it is when the title changes, so links keep working.
 		const updated = await this.txHost.tx.forumThread.update({
 			where: { id: thread.id },
 			data: {
@@ -353,9 +399,9 @@ export class ForumService {
 	// ── Replies ──────────────────────────────────────────────────────────────
 
 	async listReplies(data: ListForumRepliesInput): Promise<ForumReplyListReadModel> {
-		await this.findThread(data.threadId);
+		const thread = await this.findThread(data.threadId);
 		const { skip, take } = toSkipTake(data);
-		const where: Prisma.ForumReplyWhereInput = { threadId: data.threadId };
+		const where: Prisma.ForumReplyWhereInput = { threadId: thread.id };
 		const [replies, totalCount] = await Promise.all([
 			this.txHost.tx.forumReply.findMany({
 				where: where,

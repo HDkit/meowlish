@@ -7,6 +7,14 @@ export class ForumThreadSummaryDto {
 	id!: string;
 
 	@Expose()
+	@ApiPropertyOptional({
+		description:
+			'Readable URL key from the title (never changes when the title is edited). Use it in links; the id works in its place. Missing only on old rows not yet backfilled.',
+		example: 'cach-lam-bai-ielts-writing-task-2',
+	})
+	slug?: string;
+
+	@Expose()
 	@ApiProperty()
 	categoryId!: string;
 
@@ -101,6 +109,14 @@ export class ForumThreadDto {
 	@Expose()
 	@ApiProperty()
 	id!: string;
+
+	@Expose()
+	@ApiPropertyOptional({
+		description:
+			'Readable URL key from the title (never changes when the title is edited). Use it in links; the id works in its place. Missing only on old rows not yet backfilled.',
+		example: 'cach-lam-bai-ielts-writing-task-2',
+	})
+	slug?: string;
 
 	@Expose()
 	@ApiProperty()

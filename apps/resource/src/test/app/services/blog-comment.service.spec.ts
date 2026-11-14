@@ -57,6 +57,40 @@ const setup = () => {
 const user = (id: string) => ({ id: id, privileged: false });
 const moderator = { id: 'mod', privileged: true };
 
+describe('BlogCommentService by blog slug', () => {
+	const bySlug = (tx: ReturnType<typeof setup>['tx']) =>
+		tx.blog.findUnique.mockImplementation(({ where }: { where: { slug?: string } }) =>
+			Promise.resolve(
+				where.slug === 'my-post' ? { id: 'b1', title: 'My post', authorId: 'writer' } : null,
+			),
+		);
+
+	it('lists the comments of the post a slug names, by its real id', async () => {
+		const { tx, service } = setup();
+		bySlug(tx);
+		await service.listComments({ blogId: 'my-post' });
+		expect(tx.blogComment.findMany).toHaveBeenCalledWith(
+			expect.objectContaining({ where: { blogId: 'b1', parentId: null } }),
+		);
+	});
+
+	it('stores a comment made through the slug under the real blog id', async () => {
+		const { tx, service } = setup();
+		bySlug(tx);
+		await service.createComment({ blogId: 'my-post', content: 'Hi' }, user('me'));
+		const { data } = (tx.blogComment.create.mock.calls as [{ data: { blogId: string } }][])[0][0];
+		expect(data.blogId).toBe('b1');
+	});
+
+	it('404s when neither id nor slug matches a post', async () => {
+		const { tx, service } = setup();
+		tx.blog.findUnique.mockResolvedValue(null);
+		await expect(service.listComments({ blogId: 'nope' })).rejects.toBeInstanceOf(
+			NotFoundException,
+		);
+	});
+});
+
 describe('BlogCommentService create', () => {
 	it('stores a top-level comment as its own root with an empty path', async () => {
 		const { tx, service } = setup();

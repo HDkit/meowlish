@@ -20,6 +20,8 @@ export interface BlogResponse {
   tags: string[];
   createdAt: string;
   updatedAt: string;
+  /** readable URL key (from the title, never changes); the id still works in its place */
+  slug?: string | undefined;
 }
 
 export interface CreateBlogRequest {
@@ -30,6 +32,7 @@ export interface CreateBlogRequest {
 }
 
 export interface GetBlogRequest {
+  /** id or slug */
   id: string | undefined;
 }
 
@@ -669,6 +672,8 @@ export interface ForumThreadSummaryResponse {
   lastReplyAuthorId?: string | undefined;
   createdAt: string;
   updatedAt: string;
+  /** readable URL key (from the title, never changes); the id still works in its place */
+  slug?: string | undefined;
 }
 
 export interface ForumCategoryResponse {
@@ -710,6 +715,8 @@ export interface ForumThreadResponse {
   editedAt?: string | undefined;
   createdAt: string;
   updatedAt: string;
+  /** readable URL key (from the title, never changes); the id still works in its place */
+  slug?: string | undefined;
 }
 
 export interface ListForumThreadsRequest {
@@ -742,6 +749,7 @@ export interface CreateForumThreadRequest {
 }
 
 export interface GetForumThreadRequest {
+  /** id or slug */
   id: string | undefined;
 }
 
@@ -959,6 +967,9 @@ export const BlogResponse: MessageFns<BlogResponse> = {
     if (message.updatedAt !== "") {
       writer.uint32(58).string(message.updatedAt);
     }
+    if (message.slug !== undefined) {
+      writer.uint32(66).string(message.slug);
+    }
     return writer;
   },
 
@@ -1029,6 +1040,14 @@ export const BlogResponse: MessageFns<BlogResponse> = {
             }
 
             message.updatedAt = reader.string();
+            continue;
+          }
+          case 8: {
+            if (tag !== 66) {
+              break;
+            }
+
+            message.slug = reader.string();
             continue;
           }
         }
@@ -6344,6 +6363,9 @@ export const ForumThreadSummaryResponse: MessageFns<ForumThreadSummaryResponse> 
     if (message.updatedAt !== "") {
       writer.uint32(106).string(message.updatedAt);
     }
+    if (message.slug !== undefined) {
+      writer.uint32(114).string(message.slug);
+    }
     return writer;
   },
 
@@ -6462,6 +6484,14 @@ export const ForumThreadSummaryResponse: MessageFns<ForumThreadSummaryResponse> 
             }
 
             message.updatedAt = reader.string();
+            continue;
+          }
+          case 14: {
+            if (tag !== 114) {
+              break;
+            }
+
+            message.slug = reader.string();
             continue;
           }
         }
@@ -6792,6 +6822,9 @@ export const ForumThreadResponse: MessageFns<ForumThreadResponse> = {
     if (message.updatedAt !== "") {
       writer.uint32(122).string(message.updatedAt);
     }
+    if (message.slug !== undefined) {
+      writer.uint32(130).string(message.slug);
+    }
     return writer;
   },
 
@@ -6926,6 +6959,14 @@ export const ForumThreadResponse: MessageFns<ForumThreadResponse> = {
             }
 
             message.updatedAt = reader.string();
+            continue;
+          }
+          case 16: {
+            if (tag !== 130) {
+              break;
+            }
+
+            message.slug = reader.string();
             continue;
           }
         }

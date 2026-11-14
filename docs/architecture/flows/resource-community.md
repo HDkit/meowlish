@@ -41,67 +41,69 @@ All paths in the table are relative to `/api/v1/resources`.
 
 ## Forum
 
-Service: `ForumService` (`apps/resource/src/app/services/forum.service.ts`), called one-to-one from `ForumController` (`apps/resource/src/presentation/controllers/forum.controller.ts`, gRPC `resource.ForumService`). Models (`apps/resource/prisma/schema/forum.prisma`): `ForumCategory` (`forum_categories`, string id, `moderatorsOnly`), `ForumThread` (`forum_threads`, denormalised `replyCount`, `viewCount`, `lastActivityAt`, `lastReplyAuthorId`, `editedAt`; category `onDelete: Restrict`), `ForumReply` (`forum_replies`, flat, optional `quotedReplyId` → same table `onDelete: SetNull`; thread `onDelete: Cascade`).
+Service: `ForumService` (`apps/resource/src/app/services/forum.service.ts`), called one-to-one from `ForumController` (`apps/resource/src/presentation/controllers/forum.controller.ts`, gRPC `resource.ForumService`). Models (`apps/resource/prisma/schema/forum.prisma`): `ForumCategory` (`forum_categories`, string id, `moderatorsOnly`), `ForumThread` (`forum_threads`, unique nullable `slug`, denormalised `replyCount`, `viewCount`, `lastActivityAt`, `lastReplyAuthorId`, `editedAt`; category `onDelete: Restrict`), `ForumReply` (`forum_replies`, flat, optional `quotedReplyId` → same table `onDelete: SetNull`; thread `onDelete: Cascade`).
 
-Rules decided in the service: only the author edits a thread or reply; the author or a moderator deletes; anyone else gets **404**. Only moderators pin/lock, open threads in `moderatorsOnly` categories, and write in a locked thread (`assertWritable`, `forum.service.ts:178`, **403** `This thread is locked`). Moderators cannot edit other people's posts. Text fields are trimmed and an all-whitespace value is **400** (`requireText`, `forum.service.ts:61`).
+Rules decided in the service: only the author edits a thread or reply; the author or a moderator deletes; anyone else gets **404**. Only moderators pin/lock, open threads in `moderatorsOnly` categories, and write in a locked thread (`assertWritable`, `forum.service.ts:187`, **403** `This thread is locked`). Moderators cannot edit other people's posts. Text fields are trimmed and an all-whitespace value is **400** (`requireText`, `forum.service.ts:62`).
 
 Categories have no write API: they come from the seed (`apps/resource/prisma/seed.ts` `seedForum`, data in `apps/resource/prisma/seed/forum.ts`; `thong-bao` is `moderatorsOnly`).
 
-Read-model mapping: `toSummary` (list rows, `excerpt` = `toExcerpt(body)` 160 chars, `apps/resource/src/domain/text/excerpt.ts`), `toThread` (full body + `categoryName`), `toReply` (with `position` and `quotedReply { id, authorId, excerpt(200) }`). Replies are ordered `createdAt asc, id asc`; a reply's `position` is 1-based in that order (`positionOf`, `forum.service.ts:143`, a `count` of earlier replies).
+Thread slugs: every thread has a readable `slug` from its title (`slugify` from `@server/utils`: `Chào mọi người` → `chao-moi-nguoi`; `chu-de` when the title has no usable characters; `-2`, `-3`, … on a clash), set once on create and never changed by an edit, so links keep working. Everything that takes a thread from the URL (`GET`/`PATCH`/`DELETE /threads/:threadId`, `/moderation`, `GET`/`POST /threads/:threadId/replies`) accepts the id **or** the slug: `findThread` looks up the id first (same query as before), then the slug, and the rest of the flow uses the real id. Summaries and thread responses carry `slug`; the frontend should link with `slug ?? id`. Rows created before slugs existed are filled by `SlugBackfillService` at startup (see [resource flows](resource.md#slugs)).
+
+Read-model mapping: `toSummary` (list rows, `excerpt` = `toExcerpt(body)` 160 chars, `apps/resource/src/domain/text/excerpt.ts`), `toThread` (full body + `categoryName`), `toReply` (with `position` and `quotedReply { id, authorId, excerpt(200) }`). Replies are ordered `createdAt asc, id asc`; a reply's `position` is 1-based in that order (`positionOf`, `forum.service.ts:146`, a `count` of earlier replies).
 
 ### GET /api/v1/resources/forum/categories
 
-Lists categories ordered `position, name`, each with `threadCount`, `replyCount` (one `groupBy` on `ForumThread` summing `replyCount`) and `latestThread` (one `findFirst` per category by `lastActivityAt desc`). `ForumService.listCategories` / `withStats` (`forum.service.ts:186-235`). gRPC `ForumService/ListForumCategories`; response `ListForumCategoriesDto`.
+Lists categories ordered `position, name`, each with `threadCount`, `replyCount` (one `groupBy` on `ForumThread` summing `replyCount`) and `latestThread` (one `findFirst` per category by `lastActivityAt desc`). `ForumService.listCategories` / `withStats` (`forum.service.ts:195-244`). gRPC `ForumService/ListForumCategories`; response `ListForumCategoriesDto`.
 
 ### GET /api/v1/resources/forum/categories/:categoryId
 
-Same shape for one category (`getCategory`, `forum.service.ts:193`); **404** `Category not found`. Response `ForumCategoryDto`.
+Same shape for one category (`getCategory`, `forum.service.ts:202`); **404** `Category not found`. Response `ForumCategoryDto`.
 
 ### GET /api/v1/resources/forum/categories/:categoryId/threads
 
-Query `ListForumThreadsQueryDto`: `page`, `limit`, `search` (max 200, case-insensitive `contains` on `title`). `listThreads` (`forum.service.ts:239`): 404 if the category does not exist, then `findMany` ordered `isPinned desc, lastActivityAt desc, id desc` (matches the `(categoryId, isPinned, lastActivityAt)` index) plus `count`. Response `ListForumThreadsDto { threads: summary[], totalCount }`.
+Query `ListForumThreadsQueryDto`: `page`, `limit`, `search` (max 200, case-insensitive `contains` on `title`). `listThreads` (`forum.service.ts:248`): 404 if the category does not exist, then `findMany` ordered `isPinned desc, lastActivityAt desc, id desc` (matches the `(categoryId, isPinned, lastActivityAt)` index) plus `count`. Response `ListForumThreadsDto { threads: summary[], totalCount }`.
 
 ### POST /api/v1/resources/forum/categories/:categoryId/threads
 
 - **Access**: `requesterOf(user, [Mod, Admin])`; `privileged` required in a `moderatorsOnly` category.
 - **Flow**:
   1. Gateway `CreateForumThreadDto`: `title` (non-empty, max 200), `body` (Markdown, non-empty, max 20000). gRPC `ForumService/CreateForumThread` with `categoryId` from the path.
-  2. `createThread` (`forum.service.ts:261`): load category (404), check `moderatorsOnly` (403), create `ForumThread` with `authorId = requesterId`, trimmed title/body. Single insert, no `@Transactional`.
+  2. `createThread` (`forum.service.ts:270`): load category (404), check `moderatorsOnly` (403), trim title/body (400 if blank), then `insertThread` (`@Transactional()`): read the slugs starting with the title's base slug, pick the first free one (`nextFreeSlug(title, taken, 'chu-de')`) and create `ForumThread` with `authorId = requesterId` and that `slug`. If another insert took the slug in between (P2002 on `slug`), the whole transaction is retried, up to 5 attempts (`withSlugRetry`, `apps/resource/src/app/slugs/slugs.ts`).
 - **Async**: none (thread creation publishes nothing; no ownership row in authorization).
 - **Errors**: 404 category, 403 moderators-only category, 400 empty text. Response `ForumThreadDto`.
 
 ### GET /api/v1/resources/forum/threads/:threadId
 
-`getThread` (`forum.service.ts:286`): `updateMany { where: { id }, viewCount: increment 1 }` (count 0 → 404), then reload the thread with its category (gone by then → 404). Every GET counts, including the author's and repeated reads; no per-user dedupe. Response `ForumThreadDto`.
+`getThread` (`forum.service.ts:321`), `:threadId` = id or slug: `updateMany { where: { id }, viewCount: increment 1 }`; if that matches nothing, look the value up as a slug and run the same `updateMany` on that thread's id (still nothing → 404), then reload the thread with its category (gone by then → 404). Every GET counts, including the author's and repeated reads; no per-user dedupe. Response `ForumThreadDto`.
 
 ### PATCH /api/v1/resources/forum/threads/:threadId
 
 - **Access**: requester; author only.
 - **Flow**:
   1. Gateway `UpdateForumThreadDto`: optional `title` (max 200), `body` (max 20000), each non-empty if present.
-  2. `updateThread` (`forum.service.ts:296`): `findOwnThread` (404 if missing or not the author's), `assertWritable` (403 if locked and not a moderator), 400 `Nothing to update` if both fields absent, then update with `editedAt = now()`.
+  2. `updateThread` (`forum.service.ts:350`): `findOwnThread` (404 if missing or not the author's), `assertWritable` (403 if locked and not a moderator), 400 `Nothing to update` if both fields absent, then update with `editedAt = now()`. The slug is not touched, even when the title changes.
 - **Errors**: 404 (not yours), 403 locked, 400. Response `ForumThreadDto`.
 
 ### PATCH /api/v1/resources/forum/threads/:threadId/moderation
 
 - **Access**: `@HasRoles(Mod, Admin)` in the gateway (403 before any gRPC call), and the service re-checks `privileged` (403 `Only moderators can do this`).
-- **Flow**: `ModerateForumThreadDto { isPinned?, isLocked? }` (booleans). `moderateThread` (`forum.service.ts:318`): `findThread` (404), update the two flags (an absent field is left unchanged; both absent is 400 `Nothing to update`, checked before the lookup).
+- **Flow**: `ModerateForumThreadDto { isPinned?, isLocked? }` (booleans). `moderateThread` (`forum.service.ts:373`): `findThread` (404), update the two flags (an absent field is left unchanged; both absent is 400 `Nothing to update`, checked before the lookup).
 - Response `ForumThreadDto`. No event, no notification to the thread author.
 
 ### DELETE /api/v1/resources/forum/threads/:threadId
 
-`deleteThread` (`forum.service.ts:333`): `findThread` (404), 404 unless author or moderator, then `delete` (DB cascade removes its replies). Allowed on locked threads. Response `data: null` (`@ApiEmptyResponseEntity`). No event.
+`deleteThread` (`forum.service.ts:391`): `findThread` (404), 404 unless author or moderator, then `delete` (DB cascade removes its replies). Allowed on locked threads. Response `data: null` (`@ApiEmptyResponseEntity`). No event.
 
 ### GET /api/v1/resources/forum/threads/:threadId/replies
 
-Query `PageQueryDto`. `listReplies` (`forum.service.ts:343`): 404 if the thread is missing, then `findMany` (oldest first, `include quotedReply`) and `count`. Positions are computed as `skip + i + 1`, so they match `positionOf`. Response `ListForumRepliesDto { replies, totalCount }`. Does not count a view.
+Query `PageQueryDto`. `listReplies` (`forum.service.ts:401`): resolve the thread by id or slug (404 if missing), then, by its real id, `findMany` (oldest first, `include quotedReply`) and `count`. Positions are computed as `skip + i + 1`, so they match `positionOf`. Response `ListForumRepliesDto { replies, totalCount }`. Does not count a view.
 
 ### POST /api/v1/resources/forum/threads/:threadId/replies
 
 - **Access**: requester; anyone signed in, moderators only if the thread is locked.
 - **Flow**:
   1. Gateway `CreateForumReplyDto`: `body` (non-empty, max 20000), optional `quotedReplyId`. gRPC `ForumService/CreateForumReply`.
-  2. `createReply` (`forum.service.ts:364`), `@Transactional()`:
+  2. `createReply` (`forum.service.ts:423`), `@Transactional()`:
      1. `findThread` (404), `assertWritable` (403 locked).
      2. If `quotedReplyId`: `findFirst` reply with that id **in the same thread** (404 `Quoted reply not found` otherwise); remember its `authorId`.
      3. Insert `ForumReply` (trimmed body, `quotedReplyId`).
@@ -113,11 +115,11 @@ Query `PageQueryDto`. `listReplies` (`forum.service.ts:343`): 404 if the thread 
 
 ### PATCH /api/v1/resources/forum/replies/:replyId
 
-`UpdateForumReplyDto { body }` (non-empty, max 20000). `updateReply` (`forum.service.ts:412`): `findReply` (with thread; 404), 404 unless author, `assertWritable(thread)` (403 locked), update `body` + `editedAt`, return with recomputed `position`. No `@Transactional`, no event. Response `ForumReplyDto`.
+`UpdateForumReplyDto { body }` (non-empty, max 20000). `updateReply` (`forum.service.ts:470`): `findReply` (with thread; 404), 404 unless author, `assertWritable(thread)` (403 locked), update `body` + `editedAt`, return with recomputed `position`. No `@Transactional`, no event. Response `ForumReplyDto`.
 
 ### DELETE /api/v1/resources/forum/replies/:replyId
 
-- **Flow**: `deleteReply` (`forum.service.ts:430`), `@Transactional()`: `findReply` (404), 404 unless author or moderator; delete the reply (replies quoting it get `quotedReplyId = null` by the FK); recount the thread's replies and reload the latest one, then set `replyCount = count`, `lastActivityAt = latest.createdAt ?? thread.createdAt`, `lastReplyAuthorId = latest.authorId ?? null`.
+- **Flow**: `deleteReply` (`forum.service.ts:488`), `@Transactional()`: `findReply` (404), 404 unless author or moderator; delete the reply (replies quoting it get `quotedReplyId = null` by the FK); recount the thread's replies and reload the latest one, then set `replyCount = count`, `lastActivityAt = latest.createdAt ?? thread.createdAt`, `lastReplyAuthorId = latest.authorId ?? null`.
 - Allowed on locked threads. Response `data: null`. No event; a notification already sent for the reply stays and its link points at a missing anchor.
 
 ## Flash card copies

@@ -94,6 +94,8 @@ message BlogResponse {
 	repeated string tags       = 5;
 	string          created_at = 6;
 	string          updated_at = 7;
+	// readable URL key (from the title, never changes); the id still works in its place
+	optional string slug       = 8;
 }
 
 message CreateBlogRequest {
@@ -104,6 +106,7 @@ message CreateBlogRequest {
 }
 
 message GetBlogRequest {
+	// id or slug
 	google.protobuf.StringValue id = 1;
 }
 
@@ -645,6 +648,8 @@ message ForumThreadSummaryResponse {
 	optional string last_reply_author_id = 11;
 	string          created_at           = 12;
 	string          updated_at           = 13;
+	// readable URL key (from the title, never changes); the id still works in its place
+	optional string slug                 = 14;
 }
 
 message ForumCategoryResponse {
@@ -685,6 +690,8 @@ message ForumThreadResponse {
 	optional string edited_at            = 13;
 	string          created_at           = 14;
 	string          updated_at           = 15;
+	// readable URL key (from the title, never changes); the id still works in its place
+	optional string slug                 = 16;
 }
 
 message ListForumThreadsRequest {
@@ -711,6 +718,7 @@ message CreateForumThreadRequest {
 }
 
 message GetForumThreadRequest {
+	// id or slug
 	google.protobuf.StringValue id = 1;
 }
 

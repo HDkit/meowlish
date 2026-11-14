@@ -111,7 +111,7 @@ export class ResourceGatewayController implements OnModuleInit {
 	}
 
 	@Get('blogs/:id')
-	@ApiOperation({ summary: 'Get a blog post by ID' })
+	@ApiOperation({ summary: 'Get a blog post by ID or slug' })
 	@ApiResponseEntity(BlogDto)
 	@SerializeOptions({ type: BlogDto, strategy: 'exposeAll' })
 	getBlog(@Param('id') id: string) {
@@ -166,7 +166,9 @@ export class ResourceGatewayController implements OnModuleInit {
 	// ── Blog comments ────────────────────────────────────────────────────────
 
 	@Get('blogs/:id/comments')
-	@ApiOperation({ summary: 'List comments of a blog post (top-level paged, with nested replies)' })
+	@ApiOperation({
+		summary: 'List comments of a blog post by ID or slug (top-level paged, with nested replies)',
+	})
 	@ApiResponseEntity(ListBlogCommentsDto)
 	@SerializeOptions({ type: ListBlogCommentsDto, strategy: 'exposeAll' })
 	listBlogComments(@Param('id') id: string, @Query() query: ListBlogCommentsQueryDto) {
@@ -174,7 +176,7 @@ export class ResourceGatewayController implements OnModuleInit {
 	}
 
 	@Post('blogs/:id/comments')
-	@ApiOperation({ summary: 'Comment on a blog post, or reply to a comment' })
+	@ApiOperation({ summary: 'Comment on a blog post (ID or slug), or reply to a comment' })
 	@ApiResponseEntity(BlogCommentDto)
 	@SerializeOptions({ type: BlogCommentDto, strategy: 'exposeAll' })
 	createBlogComment(

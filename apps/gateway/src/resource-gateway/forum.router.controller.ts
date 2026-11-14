@@ -103,7 +103,7 @@ export class ForumGatewayController implements OnModuleInit {
 	// ── Threads ──────────────────────────────────────────────────────────────
 
 	@Get('threads/:threadId')
-	@ApiOperation({ summary: 'Get a thread (counts a view)' })
+	@ApiOperation({ summary: 'Get a thread by ID or slug (counts a view)' })
 	@ApiResponseEntity(ForumThreadDto)
 	@SerializeOptions({ type: ForumThreadDto, strategy: 'exposeAll' })
 	getThread(@Param('threadId') threadId: string) {
@@ -156,7 +156,7 @@ export class ForumGatewayController implements OnModuleInit {
 	// ── Replies ──────────────────────────────────────────────────────────────
 
 	@Get('threads/:threadId/replies')
-	@ApiOperation({ summary: 'List replies of a thread, oldest first' })
+	@ApiOperation({ summary: 'List replies of a thread (ID or slug), oldest first' })
 	@ApiResponseEntity(ListForumRepliesDto)
 	@SerializeOptions({ type: ListForumRepliesDto, strategy: 'exposeAll' })
 	listReplies(@Param('threadId') threadId: string, @Query() query: PageQueryDto) {
@@ -164,7 +164,7 @@ export class ForumGatewayController implements OnModuleInit {
 	}
 
 	@Post('threads/:threadId/replies')
-	@ApiOperation({ summary: 'Reply to a thread, optionally quoting a reply' })
+	@ApiOperation({ summary: 'Reply to a thread (ID or slug), optionally quoting a reply' })
 	@ApiResponseEntity(ForumReplyDto)
 	@SerializeOptions({ type: ForumReplyDto, strategy: 'exposeAll' })
 	createReply(

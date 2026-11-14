@@ -1,5 +1,7 @@
 export interface ForumThreadSummaryReadModel {
 	id: string;
+	/** Readable URL key; unset only on rows the backfill has not reached yet. */
+	slug?: string;
 	categoryId: string;
 	authorId: string;
 	title: string;
@@ -31,6 +33,8 @@ export interface ForumCategoryListReadModel {
 
 export interface ForumThreadReadModel {
 	id: string;
+	/** Readable URL key; unset only on rows the backfill has not reached yet. */
+	slug?: string;
 	categoryId: string;
 	categoryName: string;
 	authorId: string;

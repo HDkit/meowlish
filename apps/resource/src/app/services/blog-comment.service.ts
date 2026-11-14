@@ -61,13 +61,14 @@ export class BlogCommentService {
 		return this.toReadModel({ ...comment, deleted: comment.deletedAt !== null, replies: [] });
 	}
 
+	/** The post by id or slug (id first, so ids behave as before). Callers use its real `id`. */
 	private async assertBlogExists(
-		blogId: string,
+		idOrSlug: string,
 	): Promise<{ id: string; title: string; authorId: string }> {
-		const blog = await this.txHost.tx.blog.findUnique({
-			where: { id: blogId },
-			select: { id: true, title: true, authorId: true },
-		});
+		const select = { id: true, title: true, authorId: true };
+		const blog =
+			(await this.txHost.tx.blog.findUnique({ where: { id: idOrSlug }, select: select })) ??
+			(await this.txHost.tx.blog.findUnique({ where: { slug: idOrSlug }, select: select }));
 		if (!blog) throw new NotFoundException('Blog not found');
 		return blog;
 	}
@@ -80,8 +81,8 @@ export class BlogCommentService {
 
 	/** A page of top-level comments (newest first), each with its full reply tree. */
 	async listComments(data: ListBlogCommentsInput): Promise<BlogCommentListReadModel> {
-		await this.assertBlogExists(data.blogId);
-		const rootWhere = { blogId: data.blogId, parentId: null };
+		const blog = await this.assertBlogExists(data.blogId);
+		const rootWhere = { blogId: blog.id, parentId: null };
 		const [roots, totalThreads, totalComments] = await Promise.all([
 			this.txHost.tx.blogComment.findMany({
 				where: rootWhere,
@@ -90,7 +91,7 @@ export class BlogCommentService {
 				...toSkipTake(data),
 			}),
 			this.txHost.tx.blogComment.count({ where: rootWhere }),
-			this.txHost.tx.blogComment.count({ where: { blogId: data.blogId, deletedAt: null } }),
+			this.txHost.tx.blogComment.count({ where: { blogId: blog.id, deletedAt: null } }),
 		]);
 		const rootIds = roots.map(r => r.id);
 		const rows =
@@ -135,7 +136,7 @@ export class BlogCommentService {
 			const created = await this.txHost.tx.blogComment.create({
 				data: {
 					id: id,
-					blogId: data.blogId,
+					blogId: blog.id,
 					parentId: null,
 					rootId: id,
 					path: '',
@@ -149,7 +150,7 @@ export class BlogCommentService {
 		}
 
 		const parent = await this.findLiveComment(data.parentId);
-		if (parent.blogId !== data.blogId) throw new NotFoundException('Comment not found');
+		if (parent.blogId !== blog.id) throw new NotFoundException('Comment not found');
 		const repliedTo = parent.authorId;
 
 		// Row-locks the parent and hands out its next segment, so concurrent replies never collide.

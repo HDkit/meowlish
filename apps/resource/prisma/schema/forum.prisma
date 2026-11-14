@@ -14,6 +14,9 @@ model ForumCategory {
 
 model ForumThread {
   id                String    @id @default(uuid())
+  /// Readable URL key from the title; set once on create, never changed. Null only until the
+  /// startup backfill runs.
+  slug              String?   @unique
   categoryId        String    @map("category_id")
   authorId          String    @map("author_id")
   title             String
