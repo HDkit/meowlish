@@ -19,8 +19,11 @@ export const PATH_SEGMENT_WIDTH = 4;
 /** 36^4 = 1,679,616 replies per comment. */
 export const MAX_CHILDREN_PER_COMMENT = 36 ** PATH_SEGMENT_WIDTH;
 
-/** Deepest level a reply is stored at (top-level = 0); replies below it go to the parent's level. */
-export const MAX_COMMENT_DEPTH = 8;
+/*
+ * There is no depth limit. Each level adds PATH_SEGMENT_WIDTH characters to `path`; the only
+ * ceiling is PostgreSQL's B-tree entry size on the (root_id, path) index (about 2,700 bytes, so
+ * roughly 650 levels), far beyond any real thread.
+ */
 
 export const pathSegment = (seq: number): string => {
 	if (!Number.isInteger(seq) || seq < 1 || seq >= MAX_CHILDREN_PER_COMMENT) {

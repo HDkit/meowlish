@@ -1,5 +1,4 @@
 import { BlogCommentService } from '../../../app/services/blog-comment.service';
-import { MAX_COMMENT_DEPTH } from '../../../domain/comments/comment-path';
 import { NoOpTransactionalAdapter, TransactionHost } from '@nestjs-cls/transactional';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 
@@ -98,26 +97,22 @@ describe('BlogCommentService create', () => {
 		});
 	});
 
-	it('attaches replies below the maximum depth next to their parent', async () => {
+	it('nests a reply under the comment it answers at any depth', async () => {
 		const { tx, service } = setup();
-		const deepPath = '0001'.repeat(MAX_COMMENT_DEPTH);
+		const deepPath = '0001'.repeat(20);
 		tx.blogComment.findUnique.mockResolvedValue(
-			comment({
-				id: 'deep',
-				parentId: 'up',
-				rootId: 'r',
-				path: deepPath,
-				depth: MAX_COMMENT_DEPTH,
-			}),
-		);
-		tx.blogComment.findUniqueOrThrow.mockResolvedValue(
-			comment({ id: 'up', rootId: 'r', path: deepPath.slice(4), depth: MAX_COMMENT_DEPTH - 1 }),
+			comment({ id: 'deep', parentId: 'up', rootId: 'r', path: deepPath, depth: 20 }),
 		);
 		tx.blogComment.update.mockResolvedValue({ childSeq: 2 });
 		await service.createComment({ blogId: 'b1', content: 'x', parentId: 'deep' }, user('me'));
 		expect(tx.blogComment.create).toHaveBeenCalledWith({
-			data: expect.objectContaining({ parentId: 'up', depth: MAX_COMMENT_DEPTH }) as unknown,
+			data: expect.objectContaining({
+				parentId: 'deep',
+				depth: 21,
+				path: `${deepPath}0002`,
+			}) as unknown,
 		});
+		expect(tx.blogComment.findUniqueOrThrow).not.toHaveBeenCalled();
 	});
 
 	it('announces comments with the post author and the author the user replied to', async () => {
@@ -133,23 +128,14 @@ describe('BlogCommentService create', () => {
 			}),
 		);
 
-		// a reply below the maximum depth is stored one level up, but names whom it answered
-		const deepPath = '0001'.repeat(MAX_COMMENT_DEPTH);
+		// a deep reply names the author of the comment it answers
 		tx.blogComment.findUnique.mockResolvedValue(
 			comment({
 				id: 'deep',
 				parentId: 'up',
 				authorId: 'deep-author',
-				path: deepPath,
-				depth: MAX_COMMENT_DEPTH,
-			}),
-		);
-		tx.blogComment.findUniqueOrThrow.mockResolvedValue(
-			comment({
-				id: 'up',
-				authorId: 'up-author',
-				path: deepPath.slice(4),
-				depth: MAX_COMMENT_DEPTH - 1,
+				path: '0001'.repeat(12),
+				depth: 12,
 			}),
 		);
 		tx.blogComment.update.mockResolvedValue({ childSeq: 1 });

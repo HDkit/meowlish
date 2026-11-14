@@ -1,4 +1,4 @@
-import { MAX_COMMENT_DEPTH, childPath, depthOf } from '../../domain/comments/comment-path';
+import { childPath, depthOf } from '../../domain/comments/comment-path';
 import { type CommentNode, buildCommentTree } from '../../domain/comments/comment-tree';
 import {
 	type BlogCommentListReadModel,
@@ -109,8 +109,8 @@ export class BlogCommentService {
 	}
 
 	/**
-	 * Adds a top-level comment or a reply. A reply below `MAX_COMMENT_DEPTH` is stored next to its
-	 * parent instead (same thread, one level up), so paths stay short and the UI stays readable.
+	 * Adds a top-level comment or a reply. Replies nest without a depth limit: a reply is always
+	 * stored under the comment it answers (the frontend decides how deep to indent).
 	 */
 	@Transactional()
 	async createComment(
@@ -148,15 +148,9 @@ export class BlogCommentService {
 			return this.single(created);
 		}
 
-		let parent = await this.findLiveComment(data.parentId);
+		const parent = await this.findLiveComment(data.parentId);
 		if (parent.blogId !== data.blogId) throw new NotFoundException('Comment not found');
-		// the person the user answered, even when the reply is stored one level up
 		const repliedTo = parent.authorId;
-		if (parent.depth >= MAX_COMMENT_DEPTH && parent.parentId) {
-			parent = await this.txHost.tx.blogComment.findUniqueOrThrow({
-				where: { id: parent.parentId },
-			});
-		}
 
 		// Row-locks the parent and hands out its next segment, so concurrent replies never collide.
 		const { childSeq } = await this.txHost.tx.blogComment.update({
