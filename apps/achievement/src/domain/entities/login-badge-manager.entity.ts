@@ -92,3 +92,10 @@ const LOGIN_STREAK_BADGES: [number, Badge][] = [
 /** Length in UTC calendar days of the streak running from `startedAt` to `lastLogin`, both included. */
 export const loginStreakDays = (startedAt: Date, lastLogin: Date): number =>
 	utcCalendarDaysBetween(lastLogin, startedAt) + 1;
+
+/**
+ * The streak as it stands at `now`: still running while the last login was today or yesterday
+ * (UTC calendar days, as in `updateProgress`), 0 once a whole UTC day has been missed.
+ */
+export const currentLoginStreakDays = (startedAt: Date, lastLogin: Date, now: Date): number =>
+	utcCalendarDaysBetween(now, lastLogin) >= 2 ? 0 : loginStreakDays(startedAt, lastLogin);

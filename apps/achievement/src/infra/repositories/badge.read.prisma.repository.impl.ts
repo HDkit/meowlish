@@ -1,4 +1,4 @@
-import { loginStreakDays } from '../../domain/entities/login-badge-manager.entity';
+import { currentLoginStreakDays } from '../../domain/entities/login-badge-manager.entity';
 import { Badge, UserBadge } from '../../domain/read-models/badge.read-model';
 import { Progress } from '../../domain/read-models/progress.read-model';
 import { IBadgeReadRepository } from '../../domain/repositories/badge.read.repository';
@@ -65,7 +65,11 @@ export class BadgeReadPrismaRepositoryImpl implements IBadgeReadRepository {
 				loginProgress ?
 					{
 						longestStreak: loginProgress.longestStreak,
-						streak: loginStreakDays(loginProgress.startedAt, loginProgress.lastLogin),
+						streak: currentLoginStreakDays(
+							loginProgress.startedAt,
+							loginProgress.lastLogin,
+							new Date(),
+						),
 						total: loginProgress.total,
 					}
 				:	undefined,
