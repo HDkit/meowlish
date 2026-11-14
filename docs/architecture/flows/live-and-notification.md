@@ -47,12 +47,12 @@ List rooms, newest message per room included, optional case-insensitive name sea
 
 Chat history of a room.
 
-- **Access**: any authenticated user. No membership or ban check (see Findings).
+- **Access**: any authenticated user. No membership or ban check (backlog, see Findings).
 - **Flow**:
-  1. Gateway takes individual `@Query('uid')`, `@Query('cursor')`, `@Query('limit')` params (no DTO, no max on `limit`) → `live.ChatService/GetChatLog`. `dateRange` exists in the proto/live DTO but the gateway never sends it.
-  2. Live `GetChatLogDto` (`limit` `@IsPositive`) → `ChatService.getChatLogsOf`: decodes cursor (namespace `GetChatLogsOf`), cursor's `uid`/`dateRange` win.
-  3. `ChatLogReadPrismaRepositoryImpl.getChatLogsOf`: `Log.findMany` where `roomId`, `room.isDeleted = false`, optional `fromId = uid`, optional `createdAt` range; `orderBy [createdAt asc, id asc]`, cursor + `skip 1`, `take ±limit` (default 10 from the service). The first page is therefore the **oldest** messages.
-  4. Response `ChatLogDto { chats[{ id, uid, message, createdAt }], nextCursor, prevCursor }`. Both cursors are always encoded, even for an empty page.
+  1. Gateway `GetChatLogQueryDto { uid?, cursor?, limit? (1-100) }` (`apps/gateway/src/live-gateway/dtos/req/get-chat-log.query.dto.ts`) → `live.ChatService/GetChatLog`. `dateRange` exists in the proto/live DTO but the gateway never sends it.
+  2. Live `GetChatLogDto` (`limit` `@IsPositive`, `@Max(100)`) → `ChatService.getChatLogsOf`: decodes cursor (namespace `GetChatLogsOf`), cursor's `uid`/`dateRange` win; `limit` defaults to 10.
+  3. `ChatLogReadPrismaRepositoryImpl.getChatLogsOf`: `Log.findMany` where `roomId`, `room.isDeleted = false`, optional `fromId = uid`, optional `createdAt` range; `orderBy [createdAt desc, id desc]`, cursor + `skip 1`, `take ±(limit+1)` (the extra row tells whether another page exists). The first page is therefore the **latest** `limit` messages, newest first.
+  4. Response `ChatLogDto { chats[{ id, uid, message, createdAt }], nextCursor, prevCursor }`, `chats` newest first. `nextCursor` pages to **older** messages, `prevCursor` back to **newer** ones; each is `''` when there is no such page (so the first page has `prevCursor: ''`, the oldest page `nextCursor: ''`, an empty room both).
 
 ### POST /api/v1/chat/rooms
 
@@ -73,10 +73,10 @@ Soft-delete a room and kick everyone out.
 - **Access**: `@HasRoles(Mod, Admin)` + `@ResourceAccess({ resourceType: 'room', resourceIdParam: 'roomId', rules: [{ roles: [Admin] }, { roles: [Mod], requireOwnership: true }] })`: admins pass; mods need `authorization.AuthorizationService/CheckOwnership` to return `isOwner` ([authorization.md §5](../authorization.md#5-legacy-resourceaccess-and-the-authorization-service)).
 - **Flow**:
   1. Gateway → `live.ChatService/RemoveRoom { roomId }`.
-  2. Live `ChatService.removeRoom` (`@Transactional()`): `RoomPrismaRepositoryImpl.removeRoom` updates `Room` where `id` (no `isDeleted` filter) to `isDeleted = true, name = '<id>:deleted'` (frees the unique name); `ChatGateway.closeRoom(roomId)` makes every socket leave the socket.io room (cluster-wide through the Redis adapter, runs before the commit); `OutboxPublisher.add('live.room.deleted', { resourceId })` (envelope).
+  2. Live `ChatService.removeRoom`: in one transaction (`deleteRoom`, `@Transactional()`), `RoomPrismaRepositoryImpl.removeRoom` updates `Room` where `{ id, isDeleted: false }` to `isDeleted = true, name = '<id>:deleted'` (frees the unique name; P2025 → 404) and `OutboxPublisher.add('live.room.deleted', { resourceId })` (envelope). After the commit, `ChatGateway.closeRoom(roomId)` makes every socket leave the socket.io room (cluster-wide through the Redis adapter).
   3. Response empty.
 - **Async**: `live.room.deleted` → `authorization.events.room.deleted` → `RoomDeletedHandler` (same file): inbox claim yes, removes the ownership row.
-- **Errors**: mod on a room it doesn't own (or that doesn't exist) → 403 from the guard. Admin on an unknown id → Prisma P2025 → 502. Deleting an already deleted room succeeds again and emits a second `live.room.deleted`.
+- **Errors**: mod on a room it doesn't own (or that doesn't exist) → 403 from the guard. Admin on an unknown or already deleted room → 404 `Room not found` (no second `live.room.deleted`).
 
 ### PATCH /api/v1/chat/rooms/:roomId/schedule
 
@@ -87,7 +87,7 @@ Set or clear the scheduled live-stream URL and time.
   1. Gateway `UpdateRoomScheduleDto { url?, time? (Date), setUrlNull?, setTimeNull? }`; a non-empty `url` must match `^https?://(www\.)?(youtube\.com|youtu\.be|twitch\.tv)/` or 400 (checked in the controller, not in live).
   2. → `live.ChatService/UpdateRoomSchedule` → `ChatService.updateRoomSchedule`: `setUrlNull`/`setTimeNull` turn into `null`, otherwise `undefined` leaves the column alone.
   3. `RoomPrismaRepositoryImpl.updateRoomSchedule`: single `Room.update` where `{ id, isDeleted: false }` on `scheduled_live_url`, `scheduled_time`. No transaction, no event, no socket notification.
-- **Errors**: 400 bad URL; 403 from the guard; admin on a missing or deleted room → P2025 → 502.
+- **Errors**: 400 bad URL; 403 from the guard; admin on a missing or deleted room → 404 `Room not found` (Prisma P2025 mapped in the repository).
 
 ### POST /api/v1/chat/rooms/:roomId/ban
 
@@ -96,7 +96,7 @@ Ban a user from a room and remove their sockets from it.
 - **Access**: `@HasRoles(Mod, Admin)`, then `requesterOf(req.user, [Admin])`; live `ChatService.assertCanModerate` allows only `rooms.created_by === requesterId` or `privileged` ([authorization.md §7(d)](../authorization.md#d-live-ban--unban-post-apiv1chatroomsroomidban-delete-apiv1chatroomsroomidbanuid)).
 - **Flow**:
   1. Gateway `BanUserFromRoomDto { uid, reason? }` → `live.ChatService/BanUserFromRoom { uid, reason, roomId, requesterId, privileged }`.
-  2. Live `BanUserDto` (requires `reason` as a string, see Findings) → `ChatService.banUserFrom`: `getRoomOwner` (`Room.findFirst` where not deleted) → 404/403 rules → `RoomPrismaRepositoryImpl.banUserFrom` inserts `Banned { roomId, uid, reason }` first (duplicate P2002 ignored, so re-banning is idempotent) → then `ChatGateway.disconnectUser(uid, roomId)`: `server.in(uid).socketsLeave(roomId)` plus `fetchSockets()` on the room, removing every socket whose verified `data.uid` is the user (all nodes, through the Redis adapter). No transaction, no event.
+  2. Live `BanUserDto` (`reason` optional; an omitted reason arrives as `undefined` and is stored as `''`, the column is `NOT NULL`) → `ChatService.banUserFrom`: `getRoomOwner` (`Room.findFirst` where not deleted) → 404/403 rules → `RoomPrismaRepositoryImpl.banUserFrom` inserts `Banned { roomId, uid, reason }` first (duplicate P2002 ignored, so re-banning is idempotent) → then `ChatGateway.disconnectUser(uid, roomId)`: `server.in(uid).socketsLeave(roomId)` plus `fetchSockets()` on the room, removing every socket whose verified `data.uid` is the user (all nodes, through the Redis adapter). No transaction, no event.
   3. Response empty. Later `join-room` attempts are refused by `canJoinRoom`.
 - **Errors**: 403 role (gateway); 404 missing/deleted room; 403 not owner and not admin (ownerless rooms are admin-only).
 
@@ -146,7 +146,7 @@ Live push of new notifications for the caller.
   1. Gateway proxies with `http-proxy-middleware` to `NOTIFICATION_SERVICE_SSE_URL` or `http://NOTIFICATION_SERVICE_HOST:NOTIFICATION_SERVICE_HTTP_PORT` (default 50061), rewriting `^/api/v1/notifications/stream` → `/notifications/stream`.
   2. Notification's HTTP listener (`HTTP_PORT`, 50061 in compose; code default 1520) serves `NotificationSseController` (`apps/notification/src/presentation/controllers/notification-sse.controller.ts`) `@Sse('stream/:recipientId')`, which trusts the path parameter (no auth in the service).
   3. `NotificationSseService.subscribe(recipientId)` (`apps/notification/src/app/services/notification-sse.service.ts`): one process-wide RxJS `Subject`, fed by an `EventEmitter2` listener on `notification.created`; each subscriber gets `filter(recipientId)` → `{ type: 'notification', data: NotificationReadModel }`. No event ids, no replay of missed notifications, no heartbeat; fan-out is in memory, so only clients connected to the replica that created the notification receive it.
-  4. Producers: `NotificationService.createNotification` calls `sseService.emit(recipientId, notification)` right after the insert (both the admin route and every consumer).
+  4. Producers: `NotificationService.createNotification` only stores; `NotificationService.push(notifications)` calls `sseService.emit(recipientId, notification)` for each, and is called after the commit: by the admin route right after its (non-transactional) insert, and by every consumer after its `@Transactional()` `store` step has returned, so a rolled-back delivery pushes nothing.
 - **Errors**: 401 without a valid token; 403 other recipient.
 
 ### POST /api/v1/notifications
@@ -156,7 +156,7 @@ Admin creates an arbitrary notification for any user.
 - **Access**: `@HasRoles(Admin)`.
 - **Flow**:
   1. Gateway `CreateNotificationDto { recipientId, type, title, message, data? (@IsJSON) }` → `notification.NotificationService/CreateNotification` (body passed as is).
-  2. `NotificationService.createNotification`: `parseData` (`JSON.parse`, 400 on failure) → `Notification.create` → `toReadModel` (`data` re-stringified) → SSE emit. No preference check, no recipient existence check, no transaction.
+  2. `NotificationService.createNotification`: `parseData` (`JSON.parse`, 400 on failure) → `Notification.create` → `toReadModel` (`data` re-stringified); the controller then pushes it (`push`). No preference check, no recipient existence check, no transaction.
   3. Response `NotificationDto { id, recipientId, type, title, message, data?, isRead, readAt?, createdAt }`.
 
 ### GET /api/v1/notifications/preferences
@@ -208,7 +208,7 @@ Admin creates an arbitrary notification for any user.
 - **Outbox relay**: none (`relay: false`); notification publishes no events.
 - **BullMQ / cron**: none.
 - **SSE**: see [the stream](#get-apiv1notificationsstreamrecipientid-sse).
-- **RabbitMQ consumers** (`apps/notification/src/app/events/handlers/`, sub connection `apps/notification/src/configs/rmq.sub.config.ts`, exchange `eventbus`, `defaultSubscribeErrorBehavior: NACK`, queues from `defineConsumerQueue` so retry/DLQ follow [messaging.md §6](../messaging.md#6-rabbitmq-topology)). Each handler is `@UseCls()` + `@RabbitSubscribe` + `@Transactional()`, runs `unwrapEvent` → `InboxService.claim(id, queue)` (skip if already processed) → `validatePayload` → work, so the inbox row and the notification rows commit together. They emit no events; every `createNotification` also pushes to SSE.
+- **RabbitMQ consumers** (`apps/notification/src/app/events/handlers/`, sub connection `apps/notification/src/configs/rmq.sub.config.ts`, exchange `eventbus`, `defaultSubscribeErrorBehavior: NACK`, queues from `defineConsumerQueue` so retry/DLQ follow [messaging.md §6](../messaging.md#6-rabbitmq-topology)). Each handler's `handle` is `@UseCls()` + `@RabbitSubscribe` and calls a private `@Transactional()` `store`, which runs `unwrapEvent` → `InboxService.claim(id, queue)` (skip if already processed) → `validatePayload` → work and returns the notifications it created, so the inbox row and the notification rows commit together. Only after `store` returns (committed) does `handle` push them to SSE (`NotificationService.push`). They emit no events.
 
 | Routing key                      | Queue                                       | Handler                            | What it does                                                                                                                                                                                                                                                                                                                                                                                                 | Tables                                                             |
 | -------------------------------- | ------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
@@ -221,15 +221,15 @@ The other four consumers (`resource.blog-comment.created`, `resource.forum-reply
 ## Findings
 
 - ~~`leave-room` accepted the uid room, so ban kicks could be dodged~~: fixed (S19; see [fixed-issues.md](../../fixed-issues.md)).
-- `apps/gateway/src/live-gateway/dtos/req/ban-user-from-room.req.dto.ts:12` makes `reason` optional (proto `optional StringValue`), but live `apps/live/src/app/presentation/dtos/req/ban-user.req.dto.ts:6` requires `@IsString() reason`, so a ban without a reason appears to fail with 400 in live.
-- `apps/live/src/app/services/chat.service.ts:124`: chat-log cursors are always encoded, even for an empty page (`id: undefined`), so following `nextCursor` past the end restarts from the first page instead of stopping (room list returns `''` instead).
-- `apps/live/src/app/infra/repositories/chat-log.read.prisma.repository.ts:57`: logs are ordered `createdAt asc`, so the first page of `GET …/logs` is the oldest messages of the room, not the latest.
-- `apps/gateway/src/live-gateway/live.router.controller.ts:68`: `GET …/logs` uses individual `@Query` params instead of a DTO (against AGENTS.md), with no upper bound on `limit` (live checks only `@IsPositive`), and has no membership or ban check, so any signed-in user, including one banned from the room, can read its full history.
-- `apps/live/src/app/infra/repositories/room.prisma.repository.ts:60`: `removeRoom` updates by `id` without `isDeleted: false`, so deleting an already deleted room succeeds and emits another `live.room.deleted`, and an unknown id raises Prisma P2025, which reaches the client as 502 (same for `updateRoomSchedule` on a missing room); `NotFoundException` would give 404.
-- `apps/live/src/app/services/chat.service.ts:178`: `closeRoom` runs inside the `@Transactional()` before the commit, so if the outbox insert or commit fails, sockets were already removed from a room that still exists.
-- `apps/notification/src/app/services/notification.service.ts:65`: the SSE push happens before the surrounding consumer transaction commits; a later failure (e.g. one admin in the `report-created` loop) rolls the rows back but the pushes already went out, and the retry pushes them again.
-- `apps/notification/src/app/services/notification-sse.service.ts`: fan-out is an in-process `EventEmitter2`/`Subject`, so with more than one notification replica, clients connected to another replica miss notifications; there is no heartbeat or `id`/`Last-Event-ID` replay either.
+- ~~A ban without a `reason` failed with 400 in live~~: fixed (see fixed-issues.md). The ts-proto codec omits an unset `optional StringValue`, so live received `undefined`, not `''`.
+- ~~Chat-log cursors were encoded even past the end, so paging restarted from the first page~~: fixed (see fixed-issues.md).
+- ~~The first page of `GET …/logs` was the oldest messages~~: fixed, newest first (see fixed-issues.md).
+- ~~`GET …/logs` used individual `@Query` params with no upper bound on `limit`~~: fixed (query DTO, `limit` 1-100; see fixed-issues.md). It still has no membership or ban check, so a user banned from a room can read its history: backlog X1 (needs a proto field).
+- ~~Deleting a deleted room succeeded again; unknown rooms on delete/schedule gave 502~~: fixed, 404 (see fixed-issues.md).
+- ~~`closeRoom` ran before the room delete committed~~: fixed, it runs after the commit (see fixed-issues.md).
+- ~~The SSE push happened before the consumer transaction committed~~: fixed, pushed after the commit (see fixed-issues.md).
+- `apps/notification/src/app/services/notification-sse.service.ts`: fan-out is an in-process `EventEmitter2`/`Subject`, so with more than one notification replica, clients connected to another replica miss notifications; there is no heartbeat or `id`/`Last-Event-ID` replay either: backlog X2.
 - ~~WebSocket upgrades were only proxied after a first HTTP request~~: fixed (C22; see [fixed-issues.md](../../fixed-issues.md)).
-- `apps/notification/src/bootstrap.ts:18`: `enableCors()` with no options (any origin) on the HTTP/SSE port, whose `stream/:recipientId` trusts the path; with the Envoy SSE port 8095 published (backlog S16), anyone reaching it can subscribe to any user's stream.
-- Preferences `emailEnabled`, `pushEnabled`, `systemEnabled` are stored and exposed but never read anywhere in `apps/notification/src`.
+- ~~`enableCors()` allowed any origin on notification's HTTP/SSE port~~: fixed, CORS removed there (only the gateway reaches it, server-side; see fixed-issues.md). The port itself is localhost-only since S16; the stream still trusts its path, so anything that reaches the port directly can subscribe to any user (covered by the S16 note on forwarding the JWT).
+- Preferences `emailEnabled`, `pushEnabled`, `systemEnabled` are stored and exposed but never read anywhere in `apps/notification/src`: backlog X3 (Decision).
 - ~~Doc drift~~: the notification section of `services-and-data.md` now lists all preference columns and the seven consumed events.
