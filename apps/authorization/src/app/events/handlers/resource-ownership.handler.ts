@@ -2,14 +2,14 @@ import {
 	type IOwnershipRepository,
 	IOwnershipRepositoryToken,
 } from '../../../domain/repositories/ownership.repository';
-import type { ResourceCreatedEvent, ResourceDeletedEvent } from '../integration-events';
+import { TypedResourceCreatedEvent, TypedResourceDeletedEvent } from '../integration-events';
 import { OWNERSHIP_QUEUES } from './ownership-queues';
 import { RabbitPayload, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import { Transactional } from '@nestjs-cls/transactional';
 import { Inject, Injectable, UseFilters } from '@nestjs/common';
 import { AppLoggerService } from '@server/logger';
 import { InboxService, unwrapEvent } from '@server/messaging';
-import { GlobalRmqExceptionFilter } from '@server/utils';
+import { GlobalRmqExceptionFilter, validatePayload } from '@server/utils';
 import { UseCls } from 'nestjs-cls';
 
 @Injectable()
@@ -30,8 +30,9 @@ export class ResourceCreatedHandler {
 	})
 	@Transactional()
 	async handle(@RabbitPayload() message: unknown): Promise<void> {
-		const { id, payload } = unwrapEvent<ResourceCreatedEvent>(message);
+		const { id, payload: raw } = unwrapEvent<unknown>(message);
 		if (!(await this.inbox.claim(id, OWNERSHIP_QUEUES.resourceCreated.name))) return;
+		const payload = await validatePayload(TypedResourceCreatedEvent, raw);
 		this.logger.debug(
 			`Registering ownership: ${payload.resourceType} ${payload.resourceId} -> ${payload.ownerId}`,
 		);
@@ -61,8 +62,9 @@ export class ResourceDeletedHandler {
 	})
 	@Transactional()
 	async handle(@RabbitPayload() message: unknown): Promise<void> {
-		const { id, payload } = unwrapEvent<ResourceDeletedEvent>(message);
+		const { id, payload: raw } = unwrapEvent<unknown>(message);
 		if (!(await this.inbox.claim(id, OWNERSHIP_QUEUES.resourceDeleted.name))) return;
+		const payload = await validatePayload(TypedResourceDeletedEvent, raw);
 		this.logger.debug(`Removing ownership: ${payload.resourceType} ${payload.resourceId}`);
 		await this.ownershipRepository.removeOwnership(payload.resourceType, payload.resourceId);
 	}
