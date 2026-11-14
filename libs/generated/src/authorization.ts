@@ -9,7 +9,6 @@ import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
 import type { handleUnaryCall, Metadata, UntypedServiceImplementation } from "@grpc/grpc-js";
 import { GrpcMethod, GrpcStreamMethod } from "@nestjs/microservices";
 import { Observable } from "rxjs";
-import { Empty } from "./google/protobuf/empty";
 
 export interface CheckOwnershipRequest {
   userId: string;
@@ -19,17 +18,6 @@ export interface CheckOwnershipRequest {
 
 export interface CheckOwnershipResponse {
   isOwner: boolean;
-}
-
-export interface RegisterOwnershipRequest {
-  resourceType: string;
-  resourceId: string;
-  ownerId: string;
-}
-
-export interface RemoveOwnershipRequest {
-  resourceType: string;
-  resourceId: string;
 }
 
 function createBaseCheckOwnershipRequest(): CheckOwnershipRequest {
@@ -146,153 +134,30 @@ export const CheckOwnershipResponse: MessageFns<CheckOwnershipResponse> = {
   },
 };
 
-function createBaseRegisterOwnershipRequest(): RegisterOwnershipRequest {
-  return { resourceType: "", resourceId: "", ownerId: "" };
-}
-
-export const RegisterOwnershipRequest: MessageFns<RegisterOwnershipRequest> = {
-  encode(message: RegisterOwnershipRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.resourceType !== "") {
-      writer.uint32(10).string(message.resourceType);
-    }
-    if (message.resourceId !== "") {
-      writer.uint32(18).string(message.resourceId);
-    }
-    if (message.ownerId !== "") {
-      writer.uint32(26).string(message.ownerId);
-    }
-    return writer;
-  },
-
-  decode(input: BinaryReader | Uint8Array, length?: number): RegisterOwnershipRequest {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-    if (previousRecursionDepth >= 100) {
-      throw new globalThis.Error("protobuf decode recursion limit exceeded");
-    }
-    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-    try {
-      const end = length === undefined ? reader.len : reader.pos + length;
-      const message = createBaseRegisterOwnershipRequest();
-      while (reader.pos < end) {
-        const tag = reader.uint32();
-        switch (tag >>> 3) {
-          case 1: {
-            if (tag !== 10) {
-              break;
-            }
-
-            message.resourceType = reader.string();
-            continue;
-          }
-          case 2: {
-            if (tag !== 18) {
-              break;
-            }
-
-            message.resourceId = reader.string();
-            continue;
-          }
-          case 3: {
-            if (tag !== 26) {
-              break;
-            }
-
-            message.ownerId = reader.string();
-            continue;
-          }
-        }
-        if ((tag & 7) === 4 || tag === 0) {
-          break;
-        }
-        reader.skip(tag & 7);
-      }
-      return message;
-    } finally {
-      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-    }
-  },
-};
-
-function createBaseRemoveOwnershipRequest(): RemoveOwnershipRequest {
-  return { resourceType: "", resourceId: "" };
-}
-
-export const RemoveOwnershipRequest: MessageFns<RemoveOwnershipRequest> = {
-  encode(message: RemoveOwnershipRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.resourceType !== "") {
-      writer.uint32(10).string(message.resourceType);
-    }
-    if (message.resourceId !== "") {
-      writer.uint32(18).string(message.resourceId);
-    }
-    return writer;
-  },
-
-  decode(input: BinaryReader | Uint8Array, length?: number): RemoveOwnershipRequest {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-    if (previousRecursionDepth >= 100) {
-      throw new globalThis.Error("protobuf decode recursion limit exceeded");
-    }
-    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-    try {
-      const end = length === undefined ? reader.len : reader.pos + length;
-      const message = createBaseRemoveOwnershipRequest();
-      while (reader.pos < end) {
-        const tag = reader.uint32();
-        switch (tag >>> 3) {
-          case 1: {
-            if (tag !== 10) {
-              break;
-            }
-
-            message.resourceType = reader.string();
-            continue;
-          }
-          case 2: {
-            if (tag !== 18) {
-              break;
-            }
-
-            message.resourceId = reader.string();
-            continue;
-          }
-        }
-        if ((tag & 7) === 4 || tag === 0) {
-          break;
-        }
-        reader.skip(tag & 7);
-      }
-      return message;
-    } finally {
-      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-    }
-  },
-};
+/**
+ * Ownership rows are written only by the RabbitMQ consumers in apps/authorization
+ * (`<svc>.<resource>.created` / `.deleted`) and the seed; there is no RPC to change them.
+ */
 
 export interface AuthorizationServiceClient {
   checkOwnership(request: CheckOwnershipRequest, metadata?: Metadata): Observable<CheckOwnershipResponse>;
-
-  registerOwnership(request: RegisterOwnershipRequest, metadata?: Metadata): Observable<Empty>;
-
-  removeOwnership(request: RemoveOwnershipRequest, metadata?: Metadata): Observable<Empty>;
 }
+
+/**
+ * Ownership rows are written only by the RabbitMQ consumers in apps/authorization
+ * (`<svc>.<resource>.created` / `.deleted`) and the seed; there is no RPC to change them.
+ */
 
 export interface AuthorizationServiceController {
   checkOwnership(
     request: CheckOwnershipRequest,
     metadata?: Metadata,
   ): Promise<CheckOwnershipResponse> | Observable<CheckOwnershipResponse> | CheckOwnershipResponse;
-
-  registerOwnership(request: RegisterOwnershipRequest, metadata?: Metadata): void | Promise<void>;
-
-  removeOwnership(request: RemoveOwnershipRequest, metadata?: Metadata): void | Promise<void>;
 }
 
 export function AuthorizationServiceControllerMethods() {
   return function (constructor: Function) {
-    const grpcMethods: string[] = ["checkOwnership", "registerOwnership", "removeOwnership"];
+    const grpcMethods: string[] = ["checkOwnership"];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
       GrpcMethod("AuthorizationService", method)(constructor.prototype[method], method, descriptor);
@@ -309,6 +174,10 @@ export function AuthorizationServiceControllerMethods() {
 
 export const AUTHORIZATION_SERVICE_NAME = "AuthorizationService";
 
+/**
+ * Ownership rows are written only by the RabbitMQ consumers in apps/authorization
+ * (`<svc>.<resource>.created` / `.deleted`) and the seed; there is no RPC to change them.
+ */
 export type AuthorizationServiceService = typeof AuthorizationServiceService;
 export const AuthorizationServiceService = {
   checkOwnership: {
@@ -322,32 +191,10 @@ export const AuthorizationServiceService = {
       Buffer.from(CheckOwnershipResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): CheckOwnershipResponse => CheckOwnershipResponse.decode(value),
   },
-  registerOwnership: {
-    path: "/authorization.AuthorizationService/RegisterOwnership" as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: RegisterOwnershipRequest): Buffer =>
-      Buffer.from(RegisterOwnershipRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): RegisterOwnershipRequest => RegisterOwnershipRequest.decode(value),
-    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
-  },
-  removeOwnership: {
-    path: "/authorization.AuthorizationService/RemoveOwnership" as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: RemoveOwnershipRequest): Buffer =>
-      Buffer.from(RemoveOwnershipRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): RemoveOwnershipRequest => RemoveOwnershipRequest.decode(value),
-    responseSerialize: (value: Empty): Buffer => Buffer.from(Empty.encode(value).finish()),
-    responseDeserialize: (value: Buffer): Empty => Empty.decode(value),
-  },
 } as const;
 
 export interface AuthorizationServiceServer extends UntypedServiceImplementation {
   checkOwnership: handleUnaryCall<CheckOwnershipRequest, CheckOwnershipResponse>;
-  registerOwnership: handleUnaryCall<RegisterOwnershipRequest, Empty>;
-  removeOwnership: handleUnaryCall<RemoveOwnershipRequest, Empty>;
 }
 
 interface MessageFns<T> {
