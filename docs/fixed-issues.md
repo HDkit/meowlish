@@ -4,6 +4,13 @@ What was fixed from [`backlog.md`](backlog.md), and how. Newest first. Each entr
 
 ## November 2026
 
+### S16: the Envoy gRPC-web sidecars were reachable from other machines
+
+- **Problem:** every gRPC service except authorization has an Envoy gRPC-web sidecar, and compose published their ports on all interfaces (`0.0.0.0:8081-8088`, `8095`, plus Envoy's admin port 9900). Services trust `requesterId`, `privileged`, `mayAttachAnyFile` and `recipientId` from the message, so anyone who could reach a sidecar skipped the gateway and its checks (for example `UpdateExam` with `privileged: true`).
+- **Fix:** `docker/docker-compose.app.yaml` publishes every Envoy port on `127.0.0.1` by default: the sidecars (`ENVOY_SIDECAR_BIND_ADDRESS`), the gateway's Envoy (`ENVOY_GATEWAY_BIND_ADDRESS`) and the admin port (always localhost). A reverse proxy on the host is the public entry point; production's Caddy already proxies `meowlish.servebeer.com/api/*` to `localhost:8280`. A deployment without one sets `ENVOY_GATEWAY_BIND_ADDRESS=0.0.0.0`, which publishes only the gateway (`docker/.env.example`).
+- **Not done (needs a separate decision):** forwarding the JWT and re-verifying it in each service (the `Actor` step of the hybrid-authorization spec), which would make the services safe even when reached directly. The database ports are tracked as S20.
+- **Running systems:** recreate the Envoy containers. Anything that used a sidecar port from another machine must go through the gateway (or an SSH tunnel).
+
 ### Exam scoring was not durable; writing points never reached the score badges
 
 Two items from the backlog's Conventions list.

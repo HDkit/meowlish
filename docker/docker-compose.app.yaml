@@ -340,8 +340,11 @@ services:
       context: .
       dockerfile: Dockerfile.envoy
     ports:
-      - "${ENVOY_GATEWAY_PORT:-8080}:8080"
-      - "${ENVOY_GATEWAY_ADMIN_PORT:-9900}:9900"
+      # localhost only: a reverse proxy on the host (Caddy here) is the public entry point.
+      # Without one, set ENVOY_GATEWAY_BIND_ADDRESS=0.0.0.0 to publish the gateway itself.
+      - "${ENVOY_GATEWAY_BIND_ADDRESS:-127.0.0.1}:${ENVOY_GATEWAY_PORT:-8080}:8080"
+      # Envoy admin: never public
+      - "127.0.0.1:${ENVOY_GATEWAY_ADMIN_PORT:-9900}:9900"
     volumes:
       - ./envoy/gateway.yaml:/tmpl/envoy.yaml
     environment:
@@ -361,7 +364,7 @@ services:
       context: .
       dockerfile: Dockerfile.envoy
     ports:
-      - "${ENVOY_AUTH_PORT:-8081}:8081"
+      - "${ENVOY_SIDECAR_BIND_ADDRESS:-127.0.0.1}:${ENVOY_AUTH_PORT:-8081}:8081"
     volumes:
       - ./envoy/auth.yaml:/tmpl/envoy.yaml
     environment:
@@ -381,7 +384,7 @@ services:
       context: .
       dockerfile: Dockerfile.envoy
     ports:
-      - "${ENVOY_EXAM_PORT:-8082}:8082"
+      - "${ENVOY_SIDECAR_BIND_ADDRESS:-127.0.0.1}:${ENVOY_EXAM_PORT:-8082}:8082"
     volumes:
       - ./envoy/exam.yaml:/tmpl/envoy.yaml
     environment:
@@ -401,7 +404,7 @@ services:
       context: .
       dockerfile: Dockerfile.envoy
     ports:
-      - "${ENVOY_ACHIEVEMENT_PORT:-8083}:8083"
+      - "${ENVOY_SIDECAR_BIND_ADDRESS:-127.0.0.1}:${ENVOY_ACHIEVEMENT_PORT:-8083}:8083"
     volumes:
       - ./envoy/achievement.yaml:/tmpl/envoy.yaml
     environment:
@@ -421,7 +424,7 @@ services:
       context: .
       dockerfile: Dockerfile.envoy
     ports:
-      - "${ENVOY_RESOURCE_PORT:-8084}:8084"
+      - "${ENVOY_SIDECAR_BIND_ADDRESS:-127.0.0.1}:${ENVOY_RESOURCE_PORT:-8084}:8084"
     volumes:
       - ./envoy/resource.yaml:/tmpl/envoy.yaml
     environment:
@@ -441,8 +444,8 @@ services:
       context: .
       dockerfile: Dockerfile.envoy
     ports:
-      - "${ENVOY_NOTIFICATION_GRPC_PORT:-8085}:8085"
-      - "${ENVOY_NOTIFICATION_SSE_PORT:-8095}:8095"
+      - "${ENVOY_SIDECAR_BIND_ADDRESS:-127.0.0.1}:${ENVOY_NOTIFICATION_GRPC_PORT:-8085}:8085"
+      - "${ENVOY_SIDECAR_BIND_ADDRESS:-127.0.0.1}:${ENVOY_NOTIFICATION_SSE_PORT:-8095}:8095"
     volumes:
       - ./envoy/notification.yaml:/tmpl/envoy.yaml
     environment:
@@ -464,7 +467,7 @@ services:
       context: .
       dockerfile: Dockerfile.envoy
     ports:
-      - "${ENVOY_FILE_SERVICE_PORT:-8086}:8086"
+      - "${ENVOY_SIDECAR_BIND_ADDRESS:-127.0.0.1}:${ENVOY_FILE_SERVICE_PORT:-8086}:8086"
     volumes:
       - ./envoy/file-service.yaml:/tmpl/envoy.yaml
     environment:
@@ -484,8 +487,8 @@ services:
       context: .
       dockerfile: Dockerfile.envoy
     ports:
-      - "${ENVOY_LIVE_GRPC_PORT:-8087}:8087"
-      - "${ENVOY_LIVE_WS_PORT:-8088}:8088"
+      - "${ENVOY_SIDECAR_BIND_ADDRESS:-127.0.0.1}:${ENVOY_LIVE_GRPC_PORT:-8087}:8087"
+      - "${ENVOY_SIDECAR_BIND_ADDRESS:-127.0.0.1}:${ENVOY_LIVE_WS_PORT:-8088}:8088"
     volumes:
       - ./envoy/live.yaml:/tmpl/envoy.yaml
     environment:
