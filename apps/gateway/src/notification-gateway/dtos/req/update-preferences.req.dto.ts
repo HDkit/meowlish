@@ -30,4 +30,21 @@ export class UpdatePreferencesReqDto implements Omit<
 	@IsOptional()
 	@ApiPropertyOptional()
 	systemEnabled?: boolean;
+
+	@IsBoolean()
+	@IsOptional()
+	@ApiPropertyOptional({ description: 'Someone commented on my blog post' })
+	blogCommentEnabled?: boolean;
+
+	@IsBoolean()
+	@IsOptional()
+	@ApiPropertyOptional({
+		description: 'Someone replied to my blog comment or quoted my forum reply',
+	})
+	commentReplyEnabled?: boolean;
+
+	@IsBoolean()
+	@IsOptional()
+	@ApiPropertyOptional({ description: 'Someone replied in my forum thread' })
+	forumReplyEnabled?: boolean;
 }

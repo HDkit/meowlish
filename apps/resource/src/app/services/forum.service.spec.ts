@@ -78,8 +78,9 @@ const setup = () => {
 			delete: jest.fn(),
 		},
 	};
-	const service = new ForumService({ tx: tx } as never);
-	return { tx: tx, service: service };
+	const events = { forumReplyCreated: jest.fn().mockResolvedValue(undefined) };
+	const service = new ForumService({ tx: tx } as never, events as never);
+	return { tx: tx, service: service, events: events };
 };
 
 const user = (id: string) => ({ id: id, privileged: false });
@@ -256,6 +257,28 @@ describe('ForumService replies', () => {
 		expect(result.position).toBe(3);
 	});
 
+	it('announces the reply with the thread author and the quoted author', async () => {
+		const { tx, service, events } = setup();
+		tx.forumThread.findUnique.mockResolvedValue(thread());
+		tx.forumReply.findFirst.mockResolvedValue({ id: 'q1', authorId: 'quoted' });
+		tx.forumReply.create.mockResolvedValue(reply({ id: 'r9', authorId: 'me', body: '**Agree**' }));
+		tx.forumReply.count.mockResolvedValue(4);
+		await service.createReply(
+			{ threadId: 't1', body: '**Agree**', quotedReplyId: 'q1' },
+			user('me'),
+		);
+		expect(events.forumReplyCreated).toHaveBeenCalledWith({
+			replyId: 'r9',
+			threadId: 't1',
+			threadTitle: 'Task 2 help',
+			threadAuthorId: 'author',
+			authorId: 'me',
+			quotedAuthorId: 'quoted',
+			excerpt: 'Agree',
+			position: 5,
+		});
+	});
+
 	it('refuses replies to a locked thread except from moderators', async () => {
 		const { tx, service } = setup();
 		tx.forumThread.findUnique.mockResolvedValue(thread({ isLocked: true }));
@@ -277,7 +300,7 @@ describe('ForumService replies', () => {
 		).rejects.toBeInstanceOf(NotFoundException);
 		expect(tx.forumReply.findFirst).toHaveBeenCalledWith({
 			where: { id: 'elsewhere', threadId: 't1' },
-			select: { id: true },
+			select: { id: true, authorId: true },
 		});
 		expect(tx.forumReply.create).not.toHaveBeenCalled();
 	});

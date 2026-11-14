@@ -8,6 +8,7 @@ import {
 	type ForumThreadSummaryReadModel,
 } from '../../domain/read-models/forum.read-model';
 import { toExcerpt } from '../../domain/text/excerpt';
+import { ResourceEventsPublisher } from '../events/resource-events.publisher';
 import {
 	type CreateForumReplyInput,
 	type CreateForumThreadInput,
@@ -74,7 +75,10 @@ const requireText = (value: string, field: string): string => {
  */
 @Injectable()
 export class ForumService {
-	constructor(private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>) {}
+	constructor(
+		private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>,
+		private readonly events: ResourceEventsPublisher,
+	) {}
 
 	private toSummary(thread: ForumThread): ForumThreadSummaryReadModel {
 		return {
@@ -364,12 +368,14 @@ export class ForumService {
 	): Promise<ForumReplyReadModel> {
 		const thread = await this.findThread(data.threadId);
 		this.assertWritable(thread, requester);
+		let quotedAuthorId: string | null = null;
 		if (data.quotedReplyId) {
 			const quoted = await this.txHost.tx.forumReply.findFirst({
 				where: { id: data.quotedReplyId, threadId: thread.id },
-				select: { id: true },
+				select: { id: true, authorId: true },
 			});
 			if (!quoted) throw new NotFoundException('Quoted reply not found');
+			quotedAuthorId = quoted.authorId;
 		}
 
 		const created = await this.txHost.tx.forumReply.create({
@@ -389,7 +395,18 @@ export class ForumService {
 				lastReplyAuthorId: requester.id,
 			},
 		});
-		return this.toReply(created, await this.positionOf(created));
+		const position = await this.positionOf(created);
+		await this.events.forumReplyCreated({
+			replyId: created.id,
+			threadId: thread.id,
+			threadTitle: thread.title,
+			threadAuthorId: thread.authorId,
+			authorId: requester.id,
+			quotedAuthorId: quotedAuthorId,
+			excerpt: toExcerpt(created.body, 120),
+			position: position,
+		});
+		return this.toReply(created, position);
 	}
 
 	async updateReply(

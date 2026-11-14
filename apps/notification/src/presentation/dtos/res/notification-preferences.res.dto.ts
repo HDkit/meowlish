@@ -24,5 +24,14 @@ export class NotificationPreferencesDto implements notification.NotificationPref
 	systemEnabled!: boolean;
 
 	@Expose()
+	blogCommentEnabled!: boolean;
+
+	@Expose()
+	commentReplyEnabled!: boolean;
+
+	@Expose()
+	forumReplyEnabled!: boolean;
+
+	@Expose()
 	updatedAt!: string;
 }

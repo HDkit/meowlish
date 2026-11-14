@@ -4,6 +4,8 @@ import {
 	type BlogCommentListReadModel,
 	type BlogCommentReadModel,
 } from '../../domain/read-models/blog-comment.read-model';
+import { toExcerpt } from '../../domain/text/excerpt';
+import { ResourceEventsPublisher } from '../events/resource-events.publisher';
 import {
 	type CreateBlogCommentInput,
 	type ListBlogCommentsInput,
@@ -34,7 +36,10 @@ const requireContent = (value: string): string => {
  */
 @Injectable()
 export class BlogCommentService {
-	constructor(private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>) {}
+	constructor(
+		private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>,
+		private readonly events: ResourceEventsPublisher,
+	) {}
 
 	private toReadModel(node: CommentTreeNode): BlogCommentReadModel {
 		return {
@@ -56,12 +61,15 @@ export class BlogCommentService {
 		return this.toReadModel({ ...comment, deleted: comment.deletedAt !== null, replies: [] });
 	}
 
-	private async assertBlogExists(blogId: string): Promise<void> {
+	private async assertBlogExists(
+		blogId: string,
+	): Promise<{ id: string; title: string; authorId: string }> {
 		const blog = await this.txHost.tx.blog.findUnique({
 			where: { id: blogId },
-			select: { id: true },
+			select: { id: true, title: true, authorId: true },
 		});
 		if (!blog) throw new NotFoundException('Blog not found');
+		return blog;
 	}
 
 	private async findLiveComment(id: string): Promise<BlogComment> {
@@ -109,9 +117,19 @@ export class BlogCommentService {
 		data: CreateBlogCommentInput,
 		requester: Requester,
 	): Promise<BlogCommentReadModel> {
-		await this.assertBlogExists(data.blogId);
+		const blog = await this.assertBlogExists(data.blogId);
 		const content = requireContent(data.content);
 		const id = randomUUID();
+		const announce = (parentAuthorId: string | null) =>
+			this.events.blogCommentCreated({
+				commentId: id,
+				blogId: blog.id,
+				blogTitle: blog.title,
+				blogAuthorId: blog.authorId,
+				authorId: requester.id,
+				parentAuthorId: parentAuthorId,
+				excerpt: toExcerpt(content, 120),
+			});
 
 		if (!data.parentId) {
 			const created = await this.txHost.tx.blogComment.create({
@@ -126,11 +144,14 @@ export class BlogCommentService {
 					content: content,
 				},
 			});
+			await announce(null);
 			return this.single(created);
 		}
 
 		let parent = await this.findLiveComment(data.parentId);
 		if (parent.blogId !== data.blogId) throw new NotFoundException('Comment not found');
+		// the person the user answered, even when the reply is stored one level up
+		const repliedTo = parent.authorId;
 		if (parent.depth >= MAX_COMMENT_DEPTH && parent.parentId) {
 			parent = await this.txHost.tx.blogComment.findUniqueOrThrow({
 				where: { id: parent.parentId },
@@ -156,6 +177,7 @@ export class BlogCommentService {
 				content: content,
 			},
 		});
+		await announce(repliedTo);
 		return this.single(created);
 	}
 

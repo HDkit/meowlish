@@ -31,6 +31,18 @@ export class NotificationPreferencesDto {
 	systemEnabled!: boolean;
 
 	@Expose()
+	@ApiProperty({ description: 'Someone commented on my blog post' })
+	blogCommentEnabled!: boolean;
+
+	@Expose()
+	@ApiProperty({ description: 'Someone replied to my blog comment or quoted my forum reply' })
+	commentReplyEnabled!: boolean;
+
+	@Expose()
+	@ApiProperty({ description: 'Someone replied in my forum thread' })
+	forumReplyEnabled!: boolean;
+
+	@Expose()
 	@ApiProperty()
 	updatedAt!: string;
 }

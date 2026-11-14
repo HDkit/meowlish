@@ -43,6 +43,32 @@ export interface FlashCardProposalDecidedEvent {
 	decisionNote: string | null;
 }
 
+/** A new comment on a blog post (notification tells the post author and the replied-to author). */
+export interface BlogCommentCreatedEvent {
+	commentId: string;
+	blogId: string;
+	blogTitle: string;
+	blogAuthorId: string;
+	authorId: string;
+	/** Author of the comment this one answers (the one the user clicked "reply" on), if any. */
+	parentAuthorId: string | null;
+	excerpt: string;
+}
+
+/** A new reply in a forum thread (notification tells the thread author and the quoted author). */
+export interface ForumReplyCreatedEvent {
+	replyId: string;
+	threadId: string;
+	threadTitle: string;
+	threadAuthorId: string;
+	authorId: string;
+	/** Author of the reply this one quotes, if any. */
+	quotedAuthorId: string | null;
+	excerpt: string;
+	/** 1-based position of the reply in the thread (the frontend opens the page it is on). */
+	position: number;
+}
+
 /**
  * Writes integration events to the outbox; the relay publishes them on the `eventbus` exchange.
  * Call these inside the `@Transactional()` method that writes the data they describe.
@@ -88,5 +114,13 @@ export class ResourceEventsPublisher {
 
 	async reportStatusChanged(event: ReportStatusChangedEvent): Promise<void> {
 		await this.outbox.add('resource.report.status-changed', event);
+	}
+
+	async blogCommentCreated(event: BlogCommentCreatedEvent): Promise<void> {
+		await this.outbox.add('resource.blog-comment.created', event);
+	}
+
+	async forumReplyCreated(event: ForumReplyCreatedEvent): Promise<void> {
+		await this.outbox.add('resource.forum-reply.created', event);
 	}
 }

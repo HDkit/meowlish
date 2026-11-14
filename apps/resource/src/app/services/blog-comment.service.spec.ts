@@ -33,7 +33,9 @@ new TransactionHost<NoOpTransactionalAdapter>({
 
 const setup = () => {
 	const tx = {
-		blog: { findUnique: jest.fn().mockResolvedValue({ id: 'b1' }) },
+		blog: {
+			findUnique: jest.fn().mockResolvedValue({ id: 'b1', title: 'Post', authorId: 'writer' }),
+		},
 		blogComment: {
 			findUnique: jest.fn(),
 			findUniqueOrThrow: jest.fn(),
@@ -48,8 +50,9 @@ const setup = () => {
 			delete: jest.fn(),
 		},
 	};
-	const service = new BlogCommentService({ tx: tx } as never);
-	return { tx: tx, service: service };
+	const events = { blogCommentCreated: jest.fn().mockResolvedValue(undefined) };
+	const service = new BlogCommentService({ tx: tx } as never, events as never);
+	return { tx: tx, service: service, events: events };
 };
 
 const user = (id: string) => ({ id: id, privileged: false });
@@ -115,6 +118,45 @@ describe('BlogCommentService create', () => {
 		expect(tx.blogComment.create).toHaveBeenCalledWith({
 			data: expect.objectContaining({ parentId: 'up', depth: MAX_COMMENT_DEPTH }) as unknown,
 		});
+	});
+
+	it('announces comments with the post author and the author the user replied to', async () => {
+		const { tx, service, events } = setup();
+		await service.createComment({ blogId: 'b1', content: 'Top' }, user('me'));
+		expect(events.blogCommentCreated).toHaveBeenLastCalledWith(
+			expect.objectContaining({
+				blogTitle: 'Post',
+				blogAuthorId: 'writer',
+				authorId: 'me',
+				parentAuthorId: null,
+				excerpt: 'Top',
+			}),
+		);
+
+		// a reply below the maximum depth is stored one level up, but names whom it answered
+		const deepPath = '0001'.repeat(MAX_COMMENT_DEPTH);
+		tx.blogComment.findUnique.mockResolvedValue(
+			comment({
+				id: 'deep',
+				parentId: 'up',
+				authorId: 'deep-author',
+				path: deepPath,
+				depth: MAX_COMMENT_DEPTH,
+			}),
+		);
+		tx.blogComment.findUniqueOrThrow.mockResolvedValue(
+			comment({
+				id: 'up',
+				authorId: 'up-author',
+				path: deepPath.slice(4),
+				depth: MAX_COMMENT_DEPTH - 1,
+			}),
+		);
+		tx.blogComment.update.mockResolvedValue({ childSeq: 1 });
+		await service.createComment({ blogId: 'b1', content: 'x', parentId: 'deep' }, user('me'));
+		expect(events.blogCommentCreated).toHaveBeenLastCalledWith(
+			expect.objectContaining({ parentAuthorId: 'deep-author' }),
+		);
 	});
 
 	it('refuses replies to deleted comments or comments of another post', async () => {

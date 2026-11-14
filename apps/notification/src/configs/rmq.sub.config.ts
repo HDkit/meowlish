@@ -1,4 +1,6 @@
 import { ACHIEVEMENT_EARNED_QUEUE } from '../app/events/handlers/achievement-earned.handler';
+import { BLOG_COMMENT_CREATED_QUEUE } from '../app/events/handlers/blog-comment-created.handler';
+import { FORUM_REPLY_CREATED_QUEUE } from '../app/events/handlers/forum-reply-created.handler';
 import { FLASHCARD_PROPOSAL_CREATED_QUEUE } from '../app/events/handlers/flashcard-proposal-created.handler';
 import { FLASHCARD_PROPOSAL_DECIDED_QUEUE } from '../app/events/handlers/flashcard-proposal-decided.handler';
 import { REPORT_CREATED_QUEUE } from '../app/events/handlers/report-created.handler';
@@ -15,6 +17,8 @@ export const rmqSubConfig = (configService: ConfigService<IEnvVars>): RabbitMQCo
 		exchanges: [...defaultRmqExchanges],
 		queues: [
 			...ACHIEVEMENT_EARNED_QUEUE.queues,
+			...BLOG_COMMENT_CREATED_QUEUE.queues,
+			...FORUM_REPLY_CREATED_QUEUE.queues,
 			...FLASHCARD_PROPOSAL_CREATED_QUEUE.queues,
 			...FLASHCARD_PROPOSAL_DECIDED_QUEUE.queues,
 			...REPORT_CREATED_QUEUE.queues,

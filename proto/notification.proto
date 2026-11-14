@@ -88,6 +88,12 @@ message NotificationPreferencesResponse {
 	bool   report_enabled      = 6;
 	bool   system_enabled      = 7;
 	string updated_at          = 8;
+	// someone commented on my blog post
+	bool   blog_comment_enabled = 9;
+	// someone replied to my blog comment or quoted my forum reply
+	bool   comment_reply_enabled = 10;
+	// someone replied in my forum thread
+	bool   forum_reply_enabled = 11;
 }
 
 message GetPreferencesRequest {
@@ -101,4 +107,7 @@ message UpdatePreferencesRequest {
 	optional google.protobuf.BoolValue   achievement_enabled = 4;
 	optional google.protobuf.BoolValue   report_enabled      = 5;
 	optional google.protobuf.BoolValue   system_enabled      = 6;
+	optional google.protobuf.BoolValue   blog_comment_enabled = 7;
+	optional google.protobuf.BoolValue   comment_reply_enabled = 8;
+	optional google.protobuf.BoolValue   forum_reply_enabled = 9;
 }

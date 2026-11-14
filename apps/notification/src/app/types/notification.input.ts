@@ -22,7 +22,11 @@ export interface UpdatePreferencesInput {
 	achievementEnabled?: boolean;
 	reportEnabled?: boolean;
 	systemEnabled?: boolean;
+	blogCommentEnabled?: boolean;
+	commentReplyEnabled?: boolean;
+	forumReplyEnabled?: boolean;
 }
 
 /** Notification types a user can opt out of via preferences. */
-export type OptionalNotificationType = 'achievement' | 'report' | 'system';
+export type OptionalNotificationType =
+	'achievement' | 'report' | 'system' | 'blogComment' | 'commentReply' | 'forumReply';

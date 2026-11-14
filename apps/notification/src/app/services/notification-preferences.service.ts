@@ -21,6 +21,9 @@ export class NotificationPreferencesService {
 			achievementEnabled: entity.achievementEnabled,
 			reportEnabled: entity.reportEnabled,
 			systemEnabled: entity.systemEnabled,
+			blogCommentEnabled: entity.blogCommentEnabled,
+			commentReplyEnabled: entity.commentReplyEnabled,
+			forumReplyEnabled: entity.forumReplyEnabled,
 			updatedAt: entity.updatedAt.toISOString(),
 		};
 	}
@@ -43,6 +46,9 @@ export class NotificationPreferencesService {
 				achievementEnabled: data.achievementEnabled,
 				reportEnabled: data.reportEnabled,
 				systemEnabled: data.systemEnabled,
+				blogCommentEnabled: data.blogCommentEnabled,
+				commentReplyEnabled: data.commentReplyEnabled,
+				forumReplyEnabled: data.forumReplyEnabled,
 			},
 			create: {
 				identityId: data.identityId,
@@ -51,6 +57,9 @@ export class NotificationPreferencesService {
 				achievementEnabled: data.achievementEnabled,
 				reportEnabled: data.reportEnabled,
 				systemEnabled: data.systemEnabled,
+				blogCommentEnabled: data.blogCommentEnabled,
+				commentReplyEnabled: data.commentReplyEnabled,
+				forumReplyEnabled: data.forumReplyEnabled,
 			},
 		});
 		return this.toReadModel(entity);
@@ -66,6 +75,9 @@ export class NotificationPreferencesService {
 			achievement: prefs.achievementEnabled,
 			report: prefs.reportEnabled,
 			system: prefs.systemEnabled,
+			blogComment: prefs.blogCommentEnabled,
+			commentReply: prefs.commentReplyEnabled,
+			forumReply: prefs.forumReplyEnabled,
 		};
 		return enabledByType[type];
 	}

@@ -6,5 +6,8 @@ export interface NotificationPreferencesReadModel {
 	achievementEnabled: boolean;
 	reportEnabled: boolean;
 	systemEnabled: boolean;
+	blogCommentEnabled: boolean;
+	commentReplyEnabled: boolean;
+	forumReplyEnabled: boolean;
 	updatedAt: string;
 }

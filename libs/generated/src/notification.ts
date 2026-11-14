@@ -83,6 +83,12 @@ export interface NotificationPreferencesResponse {
   reportEnabled: boolean;
   systemEnabled: boolean;
   updatedAt: string;
+  /** someone commented on my blog post */
+  blogCommentEnabled: boolean;
+  /** someone replied to my blog comment or quoted my forum reply */
+  commentReplyEnabled: boolean;
+  /** someone replied in my forum thread */
+  forumReplyEnabled: boolean;
 }
 
 export interface GetPreferencesRequest {
@@ -96,6 +102,9 @@ export interface UpdatePreferencesRequest {
   achievementEnabled?: boolean | undefined;
   reportEnabled?: boolean | undefined;
   systemEnabled?: boolean | undefined;
+  blogCommentEnabled?: boolean | undefined;
+  commentReplyEnabled?: boolean | undefined;
+  forumReplyEnabled?: boolean | undefined;
 }
 
 function createBaseNotificationResponse(): NotificationResponse {
@@ -707,6 +716,9 @@ function createBaseNotificationPreferencesResponse(): NotificationPreferencesRes
     reportEnabled: false,
     systemEnabled: false,
     updatedAt: "",
+    blogCommentEnabled: false,
+    commentReplyEnabled: false,
+    forumReplyEnabled: false,
   };
 }
 
@@ -735,6 +747,15 @@ export const NotificationPreferencesResponse: MessageFns<NotificationPreferences
     }
     if (message.updatedAt !== "") {
       writer.uint32(66).string(message.updatedAt);
+    }
+    if (message.blogCommentEnabled !== false) {
+      writer.uint32(72).bool(message.blogCommentEnabled);
+    }
+    if (message.commentReplyEnabled !== false) {
+      writer.uint32(80).bool(message.commentReplyEnabled);
+    }
+    if (message.forumReplyEnabled !== false) {
+      writer.uint32(88).bool(message.forumReplyEnabled);
     }
     return writer;
   },
@@ -814,6 +835,30 @@ export const NotificationPreferencesResponse: MessageFns<NotificationPreferences
             }
 
             message.updatedAt = reader.string();
+            continue;
+          }
+          case 9: {
+            if (tag !== 72) {
+              break;
+            }
+
+            message.blogCommentEnabled = reader.bool();
+            continue;
+          }
+          case 10: {
+            if (tag !== 80) {
+              break;
+            }
+
+            message.commentReplyEnabled = reader.bool();
+            continue;
+          }
+          case 11: {
+            if (tag !== 88) {
+              break;
+            }
+
+            message.forumReplyEnabled = reader.bool();
             continue;
           }
         }
@@ -899,6 +944,15 @@ export const UpdatePreferencesRequest: MessageFns<UpdatePreferencesRequest> = {
     if (message.systemEnabled !== undefined) {
       BoolValue.encode({ value: message.systemEnabled! }, writer.uint32(50).fork()).join();
     }
+    if (message.blogCommentEnabled !== undefined) {
+      BoolValue.encode({ value: message.blogCommentEnabled! }, writer.uint32(58).fork()).join();
+    }
+    if (message.commentReplyEnabled !== undefined) {
+      BoolValue.encode({ value: message.commentReplyEnabled! }, writer.uint32(66).fork()).join();
+    }
+    if (message.forumReplyEnabled !== undefined) {
+      BoolValue.encode({ value: message.forumReplyEnabled! }, writer.uint32(74).fork()).join();
+    }
     return writer;
   },
 
@@ -961,6 +1015,30 @@ export const UpdatePreferencesRequest: MessageFns<UpdatePreferencesRequest> = {
             }
 
             message.systemEnabled = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 7: {
+            if (tag !== 58) {
+              break;
+            }
+
+            message.blogCommentEnabled = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 8: {
+            if (tag !== 66) {
+              break;
+            }
+
+            message.commentReplyEnabled = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 9: {
+            if (tag !== 74) {
+              break;
+            }
+
+            message.forumReplyEnabled = BoolValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }
