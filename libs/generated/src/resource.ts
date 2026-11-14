@@ -134,10 +134,30 @@ export interface UpdateFlashCardRequest {
    */
   replaceExamples: boolean;
   replaceTags: boolean;
+  /**
+   * Set by the gateway from the JWT; never from client input. Only the owner of the card's list
+   * (or a privileged requester) may update it; anyone else gets NOT_FOUND.
+   */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester may bypass ownership/visibility (role decided by the gateway). */
+  privileged?: boolean | undefined;
 }
 
 export interface DeleteFlashCardRequest {
-  id: string | undefined;
+  id:
+    | string
+    | undefined;
+  /**
+   * Set by the gateway from the JWT; never from client input. Only the owner of the card's list
+   * (or a privileged requester) may delete it; anyone else gets NOT_FOUND.
+   */
+  requesterId:
+    | string
+    | undefined;
+  /** Requester may bypass ownership/visibility (role decided by the gateway). */
+  privileged?: boolean | undefined;
 }
 
 export interface ListFlashCardsRequest {
@@ -1976,7 +1996,7 @@ export const GetFlashCardRequest: MessageFns<GetFlashCardRequest> = {
 };
 
 function createBaseUpdateFlashCardRequest(): UpdateFlashCardRequest {
-  return { id: undefined, examples: [], tags: [], replaceExamples: false, replaceTags: false };
+  return { id: undefined, examples: [], tags: [], replaceExamples: false, replaceTags: false, requesterId: undefined };
 }
 
 export const UpdateFlashCardRequest: MessageFns<UpdateFlashCardRequest> = {
@@ -2013,6 +2033,12 @@ export const UpdateFlashCardRequest: MessageFns<UpdateFlashCardRequest> = {
     }
     if (message.replaceTags !== false) {
       writer.uint32(88).bool(message.replaceTags);
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(98).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(106).fork()).join();
     }
     return writer;
   },
@@ -2118,6 +2144,22 @@ export const UpdateFlashCardRequest: MessageFns<UpdateFlashCardRequest> = {
             message.replaceTags = reader.bool();
             continue;
           }
+          case 12: {
+            if (tag !== 98) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 13: {
+            if (tag !== 106) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -2132,13 +2174,19 @@ export const UpdateFlashCardRequest: MessageFns<UpdateFlashCardRequest> = {
 };
 
 function createBaseDeleteFlashCardRequest(): DeleteFlashCardRequest {
-  return { id: undefined };
+  return { id: undefined, requesterId: undefined };
 }
 
 export const DeleteFlashCardRequest: MessageFns<DeleteFlashCardRequest> = {
   encode(message: DeleteFlashCardRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.id !== undefined) {
       StringValue.encode({ value: message.id! }, writer.uint32(10).fork()).join();
+    }
+    if (message.requesterId !== undefined) {
+      StringValue.encode({ value: message.requesterId! }, writer.uint32(18).fork()).join();
+    }
+    if (message.privileged !== undefined) {
+      BoolValue.encode({ value: message.privileged! }, writer.uint32(26).fork()).join();
     }
     return writer;
   },
@@ -2162,6 +2210,22 @@ export const DeleteFlashCardRequest: MessageFns<DeleteFlashCardRequest> = {
             }
 
             message.id = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.requesterId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.privileged = BoolValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }

@@ -29,11 +29,11 @@ export class FlashcardController implements resource.FlashCardServiceController 
 
 	@SerializeOptions({ type: FlashCardDto, strategy: 'exposeAll' })
 	async updateFlashCard(@Payload() data: UpdateFlashCardReqDto): Promise<FlashCardDto> {
-		return this.flashcardService.updateFlashCard(data);
+		return this.flashcardService.updateFlashCard(data, toRequester(data));
 	}
 
 	async deleteFlashCard(@Payload() data: DeleteFlashCardReqDto): Promise<void> {
-		await this.flashcardService.deleteFlashCard(data.id);
+		await this.flashcardService.deleteFlashCard(data.id, toRequester(data));
 	}
 
 	@SerializeOptions({ type: ListFlashCardsDto, strategy: 'exposeAll' })

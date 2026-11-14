@@ -90,7 +90,7 @@ The service exposes `AuthorizationService` with the single RPC `CheckOwnership` 
 
 ### ResourceAccessGuard → AuthorizationService/CheckOwnership
 
-Used by `PATCH`/`DELETE /api/v1/resources/blogs/:id` (`blog`), `PATCH`/`DELETE /api/v1/resources/flash-cards/:id` (`flashcard`), `DELETE /api/v1/chat/rooms/:roomId` and `PATCH /api/v1/chat/rooms/:roomId/schedule` (`room`).
+Used by `PATCH`/`DELETE /api/v1/resources/blogs/:id` (`blog`), `DELETE /api/v1/chat/rooms/:roomId` and `PATCH /api/v1/chat/rooms/:roomId/schedule` (`room`).
 
 - **Flow**:
   1. Global guard, runs after `JwtAuthGuard`/`RolesGuard`/`PermissionsGuard`. Returns true for `@IsPublic()` routes and routes without `@ResourceAccess` metadata.
@@ -170,7 +170,7 @@ Published by `apps/exam/src/app/events/publishers/attempt-scored.publisher.ts` a
 
 ### Seed backfill (`apps/authorization/prisma/seed.ts`)
 
-Run by `prisma:seed` / `pnpm db:setup`. Connects directly to `exam_db`, `resource_db` and `live_db` (`EXAM_DB_URL` etc. or built from `POSTGRES_*`). Upserts ownership for every `exams.created_by` (`exam`), `blogs.author_id` (`blog`) and `flash_cards.author_id` (`flashcard`), with `update: { ownerId }`, so the seed overwrites existing owners from the source of truth. It deletes the `flashcard-list` rows earlier versions seeded (nothing reads them). For rooms it first copies `resource_ownership` `room` owners into `live.rooms.created_by` where that is `NULL`, then upserts a `room` ownership row for every room with a `created_by`, so a room whose `live.room.created` was lost still gets one. Row-by-row, not transactional, re-runnable.
+Run by `prisma:seed` / `pnpm db:setup`. Connects directly to `exam_db`, `resource_db` and `live_db` (`EXAM_DB_URL` etc. or built from `POSTGRES_*`). Upserts ownership for every `exams.created_by` (`exam`), `blogs.author_id` (`blog`) and `flash_cards.author_id` (`flashcard`), with `update: { ownerId }`, so the seed overwrites existing owners from the source of truth. It deletes the `flashcard-list` rows earlier versions seeded (nothing reads them). The `flashcard` rows are not read by any route either since card update/delete moved to the requester pattern; they are kept so a rolled-back gateway still works. For rooms it first copies `resource_ownership` `room` owners into `live.rooms.created_by` where that is `NULL`, then upserts a `room` ownership row for every room with a `created_by`, so a room whose `live.room.created` was lost still gets one. Row-by-row, not transactional, re-runnable.
 
 ### Outbox relay and inbox (`libs/messaging`)
 

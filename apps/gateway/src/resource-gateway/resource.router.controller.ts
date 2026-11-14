@@ -50,7 +50,7 @@ import { resource } from '@server/generated';
 import { Role } from '@server/typing';
 import { ApiEmptyResponseEntity, ApiResponseEntity } from '@server/utils';
 
-/** Admins may read and manage every flash card list, including private ones. */
+/** Admins may read and manage every flash card and list, including private ones. */
 const FLASH_CARD_ADMIN_ROLES = [Role.Admin] as const;
 /** Staff who triage reports: they see every report, everyone else only their own. */
 const REPORT_STAFF_ROLES = [Role.Mod, Role.Admin] as const;
@@ -248,18 +248,17 @@ export class ResourceGatewayController implements OnModuleInit {
 	}
 
 	@Patch('flash-cards/:id')
-	@ApiOperation({ summary: 'Update a flash card' })
-	@ApiResponseEntity(FlashCardDto)
-	@ResourceAccess({
-		resourceType: 'flashcard',
-		resourceIdParam: 'id',
-		rules: [
-			{ roles: [Role.Admin] },
-			{ roles: [Role.Mod, Role.User, Role.Student, Role.Teacher], requireOwnership: true },
-		],
+	@ApiOperation({
+		summary: 'Update a flash card (owner of its list, or admin)',
+		description: 'Anyone else gets 404, as for a missing card.',
 	})
+	@ApiResponseEntity(FlashCardDto)
 	@SerializeOptions({ type: FlashCardDto, strategy: 'exposeAll' })
-	updateFlashCard(@Param('id') id: string, @Body() body: UpdateFlashCardDto) {
+	updateFlashCard(
+		@Req() req: AuthenticatedRequest,
+		@Param('id') id: string,
+		@Body() body: UpdateFlashCardDto,
+	) {
 		return this.flashCardService.updateFlashCard({
 			...body,
 			examples: body.examples ?? [],
@@ -268,22 +267,21 @@ export class ResourceGatewayController implements OnModuleInit {
 			replaceExamples: body.examples !== undefined,
 			replaceTags: body.tags !== undefined,
 			id: id,
+			...requesterOf(req.user, FLASH_CARD_ADMIN_ROLES),
 		});
 	}
 
 	@Delete('flash-cards/:id')
 	@ApiEmptyResponseEntity()
-	@ApiOperation({ summary: 'Delete a flash card' })
-	@ResourceAccess({
-		resourceType: 'flashcard',
-		resourceIdParam: 'id',
-		rules: [
-			{ roles: [Role.Admin] },
-			{ roles: [Role.Mod, Role.User, Role.Student, Role.Teacher], requireOwnership: true },
-		],
+	@ApiOperation({
+		summary: 'Delete a flash card (owner of its list, or admin)',
+		description: 'Anyone else gets 404, as for a missing card.',
 	})
-	deleteFlashCard(@Param('id') id: string) {
-		return this.flashCardService.deleteFlashCard({ id: id });
+	deleteFlashCard(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
+		return this.flashCardService.deleteFlashCard({
+			id: id,
+			...requesterOf(req.user, FLASH_CARD_ADMIN_ROLES),
+		});
 	}
 
 	@Get('flash-cards')

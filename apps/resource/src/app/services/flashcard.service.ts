@@ -45,6 +45,8 @@ export class FlashcardService {
 				listId: data.listId,
 			},
 		});
+		// Still mirrored to authorization's `resource_ownership`, but no route reads it any more:
+		// update/delete check the list owner here, so the author can edit the card right away.
 		await this.events.resourceCreated('flashcard', created.id, created.authorId);
 		return toFlashCardReadModel(created);
 	}
@@ -57,9 +59,23 @@ export class FlashcardService {
 		return toFlashCardReadModel(entity);
 	}
 
-	async updateFlashCard(data: UpdateFlashCardInput): Promise<FlashCardReadModel> {
-		const entity = await this.txHost.tx.flashCard.findUnique({ where: { id: data.id } });
-		if (!entity) throw new NotFoundException('FlashCard not found');
+	/**
+	 * A card the requester may change: one in a list they own, or any card when privileged (admin).
+	 * Everyone else gets 404, as for a missing card, so card ids in private lists don't leak.
+	 */
+	private async findOwnedCard(id: string, requester: Requester): Promise<void> {
+		const card = await this.txHost.tx.flashCard.findFirst({
+			where: { id: id, ...(requester.privileged ? {} : { list: { authorId: requester.id } }) },
+			select: { id: true },
+		});
+		if (!card) throw new NotFoundException('FlashCard not found');
+	}
+
+	async updateFlashCard(
+		data: UpdateFlashCardInput,
+		requester: Requester,
+	): Promise<FlashCardReadModel> {
+		await this.findOwnedCard(data.id, requester);
 
 		const updated = await this.txHost.tx.flashCard.update({
 			where: { id: data.id },
@@ -78,9 +94,8 @@ export class FlashcardService {
 	}
 
 	@Transactional()
-	async deleteFlashCard(id: string): Promise<void> {
-		const entity = await this.txHost.tx.flashCard.findUnique({ where: { id: id } });
-		if (!entity) throw new NotFoundException('FlashCard not found');
+	async deleteFlashCard(id: string, requester: Requester): Promise<void> {
+		await this.findOwnedCard(id, requester);
 
 		await this.txHost.tx.flashCard.delete({ where: { id: id } });
 		await this.events.resourcesDeleted('flashcard', [id]);

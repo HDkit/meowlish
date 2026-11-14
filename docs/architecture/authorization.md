@@ -4,12 +4,12 @@ How a request is authenticated, how each kind of rule is enforced **today**, fiv
 
 ## 1. Layers at a glance
 
-| #   | Layer                                 | Where                                                                                                                                                                            | Decides                                                        | Failure            |
-| --- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | ------------------ |
-| 1   | Authentication (JWT RS256)            | Gateway `JwtAuthGuard` + `JwtStrategy` (`apps/gateway/src/auth/guards/jwt-auth.guard.ts`, `apps/gateway/src/auth-gateway/strategies/jwt.strategy.ts`), auth `ValidateAccess` RPC | Who you are; token not revoked; account not locked             | 401 / 403 (locked) |
-| 2   | Role and permission gates             | Gateway `RolesGuard`, `PermissionsGuard` (`apps/gateway/src/auth/guards/`) via `@HasRoles`, `@HasPermissions`                                                                    | Coarse capability by role/permission in the JWT                | 403                |
-| 3   | Legacy ownership copy                 | Gateway `ResourceAccessGuard` + authorization service (`apps/authorization`) via `@ResourceAccess`                                                                               | Owner of a blog / flash card / room, from a copy fed by events | 403                |
-| 4   | Requester pattern (local domain auth) | Gateway sends `requesterOf(req.user, ROLES)`; the owning service checks its own rows                                                                                             | Owner-or-privileged, visibility, file uploader                 | 404 / 403          |
+| #   | Layer                                 | Where                                                                                                                                                                            | Decides                                            | Failure            |
+| --- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ------------------ |
+| 1   | Authentication (JWT RS256)            | Gateway `JwtAuthGuard` + `JwtStrategy` (`apps/gateway/src/auth/guards/jwt-auth.guard.ts`, `apps/gateway/src/auth-gateway/strategies/jwt.strategy.ts`), auth `ValidateAccess` RPC | Who you are; token not revoked; account not locked | 401 / 403 (locked) |
+| 2   | Role and permission gates             | Gateway `RolesGuard`, `PermissionsGuard` (`apps/gateway/src/auth/guards/`) via `@HasRoles`, `@HasPermissions`                                                                    | Coarse capability by role/permission in the JWT    | 403                |
+| 3   | Legacy ownership copy                 | Gateway `ResourceAccessGuard` + authorization service (`apps/authorization`) via `@ResourceAccess`                                                                               | Owner of a blog / room, from a copy fed by events  | 403                |
+| 4   | Requester pattern (local domain auth) | Gateway sends `requesterOf(req.user, ROLES)`; the owning service checks its own rows                                                                                             | Owner-or-privileged, visibility, file uploader     | 404 / 403          |
 
 Global guard order is the `APP_GUARD` registration order in `apps/gateway/src/gateway.module.ts`: `ThrottlerGuard` → `JwtAuthGuard` → `RolesGuard` → `PermissionsGuard` → `ResourceAccessGuard`. Route-level `@UseGuards(...)` (e.g. `CookieIssuanceGuard`) run after them. Every guard short-circuits on `@IsPublic()`.
 
@@ -159,7 +159,6 @@ Routes still using it:
 | Route                                                           | `resourceType` | Rules                                                            |
 | --------------------------------------------------------------- | -------------- | ---------------------------------------------------------------- |
 | `PATCH` / `DELETE /api/v1/resources/blogs/:id`                  | `blog`         | admin; or mod/user/student/teacher **and** owner                 |
-| `PATCH` / `DELETE /api/v1/resources/flash-cards/:id`            | `flashcard`    | same                                                             |
 | `DELETE /api/v1/chat/rooms/:roomId`, `PATCH …/:roomId/schedule` | `room`         | (route also `@HasRoles(Mod, Admin)`) admin; or mod **and** owner |
 
 The authorization service (`apps/authorization`) is only this ownership store:
@@ -169,7 +168,7 @@ The authorization service (`apps/authorization`) is only this ownership store:
 - fed by events: `exam.exam.created/deleted`, `live.room.created/deleted`, `resource.resource.created/deleted` (handlers in `apps/authorization/src/app/events/handlers/`, each with `InboxService.claim`). `registerOwnership` is an upsert with `update: {}`: **first owner wins**, a replayed or forged "created" event can't transfer ownership.
 - backfilled by `apps/authorization/prisma/seed.ts` from the owning services' columns (`exams.created_by`, `blogs.author_id`, `flash_cards.author_id`, `live.rooms.created_by`); it deletes the stale `flashcard-list` rows (nothing reads them) and also copies room owners **back** into `live.rooms.created_by` where that column is empty.
 
-Exam ownership rows are still registered (`exam.exam.*` events) but no exam route uses `@ResourceAccess` anymore.
+Exam and flash card ownership rows are still registered (`exam.exam.*`, `resource.resource.*` with `flashcard`) and backfilled, but no exam or flash card route uses `@ResourceAccess` anymore (card update/delete moved to the requester pattern, §7(e)).
 
 ## 6. Requester pattern (authorization in the owning service)
 
@@ -189,7 +188,7 @@ Always derived from the verified JWT, never from body or query. The service deci
 | Exam content (sections, questions, update/delete/move exam) | `requesterOf(req.user, [Role.Admin])`                                                                      | `ExamManagementController.assertCanModify` (`apps/exam/src/presentation/controllers/exam-management.controller.ts`): creator or privileged; move also checks the destination                                                                                                    |
 | Exam file attach (`addFiles`)                               | same                                                                                                       | `assertCanAttach` → `FileOwnershipService.assertOwnedBy` (`apps/exam/src/app/services/file-ownership.service.ts`); privileged skips                                                                                                                                             |
 | Reports                                                     | `requesterOf(req.user, [Role.Mod, Role.Admin])`; attach also `mayAttachAnyFile: hasAnyRole(user, [Admin])` | `ReportService.findVisibleReport`, `listReports` (`apps/resource/src/app/services/report.service.ts`)                                                                                                                                                                           |
-| Flash card lists, reading cards                             | `requesterOf(req.user, [Role.Admin])`                                                                      | `FlashcardListService.findOwnedList` (404 if private and not yours, 403 if visible but not yours), `visibleListsWhere`                                                                                                                                                          |
+| Flash card lists, cards (read, update, delete)              | `requesterOf(req.user, [Role.Admin])`                                                                      | `FlashcardListService.findOwnedList` (404 if private and not yours, 403 if visible but not yours), `visibleListsWhere`; card update/delete `FlashcardService.findOwnedCard` (404 unless the card is in your list)                                                               |
 | Live ban / unban                                            | `requesterOf(req.user, [Role.Admin])` (route `@HasRoles(Mod, Admin)`)                                      | `ChatService.assertCanModerate` (`apps/live/src/app/services/chat.service.ts`)                                                                                                                                                                                                  |
 | Avatar                                                      | `identityId: req.user.sub`                                                                                 | `UpdateIdentityHandler` (`apps/auth/src/app/commands/handlers/update-identity.handler.ts`)                                                                                                                                                                                      |
 | Notifications                                               | `recipientId: req.user.sub`                                                                                | notification service filters by recipient (`findOwned` in `apps/notification/src/app/services/notification.service.ts`); SSE `stream/:recipientId` is refused in the gateway unless it equals `sub` (`apps/gateway/src/notification-gateway/notification.router.controller.ts`) |
@@ -279,9 +278,9 @@ if (!who.privileged && owner !== who.requesterId)
 
 `rooms.created_by` is set by `createRoom` from `req.user.sub`; older rooms are backfilled by the authorization seed from `resource_ownership`. Room delete and schedule still use `@ResourceAccess` (§5), so one room is authorized from two sources: live's own column for ban/unban, the authorization copy for delete/schedule.
 
-### (e) Updating a flash card: `PATCH /api/v1/resources/flash-cards/:id` via `@ResourceAccess`
+### (e) Updating a flash card: `PATCH /api/v1/resources/flash-cards/:id` via the requester pattern
 
-How the ownership row got there:
+Card update and delete used to go through `@ResourceAccess` (the authorization copy, §5). They now follow §6: the gateway forwards who is asking and resource decides from its own rows.
 
 ```mermaid
 sequenceDiagram
@@ -290,51 +289,43 @@ sequenceDiagram
   participant G as Gateway
   participant RS as resource
   participant RDB as resource_db
-  participant MQ as RabbitMQ
-  participant AZ as authorization
-  participant ADB as authorization_db
 
   B->>G: POST /api/v1/resources/flash-cards {listId,...}
   G->>RS: CreateFlashCard {..., authorId: sub}
-  RS->>RDB: tx: list.author_id == authorId? (else 403)<br/>INSERT flash_cards + outbox resource.resource.created<br/>{resourceType:'flashcard', resourceId, ownerId}
+  RS->>RDB: tx: list.author_id == authorId? (else 403)<br/>INSERT flash_cards + outbox resource.resource.created
   RS-->>B: 200 card
-  Note over RS,MQ: relay polls every 1 s
-  RS->>MQ: publish resource.resource.created
-  MQ->>AZ: authorization.events.resource.created
-  AZ->>ADB: tx: inbox.claim + upsert resource_ownership (first owner wins)
 
   B->>G: PATCH /api/v1/resources/flash-cards/:id
-  G->>G: JwtAuth, Roles (none), Permissions (none)
-  G->>G: ResourceAccessGuard rule 1: admin? allow
-  G->>AZ: rule 2 (mod/user/student/teacher): CheckOwnership(sub,'flashcard',id)
-  AZ->>ADB: SELECT owner_id WHERE (resource_type,resource_id)
-  AZ-->>G: isOwner
-  alt owner
-    G->>RS: UpdateFlashCard {id,...}
-    RS->>RDB: update (no further check)
+  G->>G: JwtAuth, Roles (none), Permissions (none), ResourceAccess (none)
+  G->>RS: UpdateFlashCard {id,..., requesterId: sub, privileged: hasAnyRole(user,[Admin])}
+  RS->>RDB: findFirst flash_cards WHERE id AND list.author_id = requesterId<br/>(no list filter when privileged)
+  alt found
+    RS->>RDB: update
     RS-->>B: 200
-  else not owner / no row yet
-    G-->>B: 403
+  else missing or not in your list
+    RS-->>B: 404 FlashCard not found
   end
 ```
 
+`FlashcardService.findOwnedCard` (`apps/resource/src/app/services/flashcard.service.ts`) does the check for both `updateFlashCard` and `deleteFlashCard`; the gateway routes (`apps/gateway/src/resource-gateway/resource.router.controller.ts`) send `requesterOf(req.user, FLASH_CARD_ADMIN_ROLES)` (`[Role.Admin]`).
+
 Consequences:
 
-- Until the relay and consumer have run (normally about a second), the creator gets **403** on their own new card. If the authorization queue doesn't exist yet, the relay keeps the event and retries it (publishes are `mandatory`), so the ownership arrives once authorization is up.
-- A user whose roles are only `parent` or `mentor` matches no rule and gets 403 even on their own card.
-- Unknown ids also give 403 (no ownership row), not 404.
-- `FlashcardService.updateFlashCard` (`apps/resource/src/app/services/flashcard.service.ts`) does no ownership check of its own: the gateway guard is the only gate.
+- The creator can edit or delete a new card immediately: nothing waits for `resource.resource.created` to reach authorization (the event is still published and the seed still backfills `flashcard` ownership rows, but no route reads them any more).
+- Ownership is "owner of the card's list" (`flash_card_lists.author_id`), which is always the card's author (cards are only created in, or moved into, lists by the same author).
+- Any role may change cards in their own lists (the old rules left out `parent` and `mentor`); mods have no override, admins do.
+- Unknown ids and other people's cards give **404** (not 403), so card ids in private lists don't leak.
 - Deleting a list deletes its cards by FK cascade and writes one `resource.resource.deleted` per card (`FlashcardListService.deleteFlashCardList`).
 
 ## 8. Status code policy
 
-| Situation                                               | Code | Example                                                                   |
-| ------------------------------------------------------- | ---- | ------------------------------------------------------------------------- |
-| No/invalid/expired/revoked token                        | 401  | `JwtStrategy`, `ValidateAccess`                                           |
-| Account locked                                          | 403  | `ValidateAccess`                                                          |
-| Wrong role/permission                                   | 403  | `RolesGuard`, `PermissionsGuard`                                          |
-| Private data that isn't yours (existence must not leak) | 404  | reports, private flash card lists                                         |
-| Visible but not yours to change                         | 403  | exam content, public list of someone else, live moderation, foreign files |
+| Situation                                               | Code | Example                                                                         |
+| ------------------------------------------------------- | ---- | ------------------------------------------------------------------------------- |
+| No/invalid/expired/revoked token                        | 401  | `JwtStrategy`, `ValidateAccess`                                                 |
+| Account locked                                          | 403  | `ValidateAccess`                                                                |
+| Wrong role/permission                                   | 403  | `RolesGuard`, `PermissionsGuard`                                                |
+| Private data that isn't yours (existence must not leak) | 404  | reports, private flash card lists, flash cards not in your list (update/delete) |
+| Visible but not yours to change                         | 403  | exam content, public list of someone else, live moderation, foreign files       |
 
 ## 9. Target design vs what is implemented
 
@@ -343,19 +334,19 @@ Two documents describe where this is going:
 - The earlier **Actor/permission model** (previous version of this file, plan `docs/superpowers/plans/2026-11-12-actor-permission-authorization.md`): auth owns roles → permissions; the gateway forwards the JWT over gRPC; each service verifies it (`ActorAuthGuard`) and decides from `Actor { id, permissions }` plus its own rows; `requesterId`/`privileged`, `@ResourceAccess`, `@HasRoles` and the shared `Permission` enum are retired; permissions are named `<context>:<resource>:<action>`.
 - The **hybrid authorization design** (`docs/superpowers/specs/2026-11-12-hybrid-authorization-design.md`, status "agreed in conversation, pending final read-through"), which supersedes the Actor doc's "retire the authorization service" direction: authorization becomes the single source of truth for relationships (tuples `(objectType, objectId, relation, subjectType, subjectId)`, only `owner` today), with a versioned change log; each service keeps a local snapshot synced incrementally (`PullChanges`, nudges on `authz.changed.<type>`, 30 s safety poll, catch-up before ready); non-sensitive operations are decided locally from the snapshot plus JWT permissions and audit-logged; **deleting a top-level object** goes gateway → authorization `DeleteResource` (two-phase `pending_delete`, compensation on failure, 204 within 5 s or 202 + operation id); creation registers ownership via `authz.ownership.register` through the outbox with a provisional local tuple.
 
-| Element of the target                                                                | Implemented now?                                                                                                                   |
-| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Observability stack + health endpoints (hybrid step 1)                               | Yes (`@server/telemetry`, LGTM, dashboards, alerts)                                                                                |
-| Outbox / inbox in every service (step 2)                                             | Yes (`@server/messaging`), with broker retries and DLQs beyond the spec                                                            |
-| Envelope `{ id, type, occurredAt, payload }`                                         | Yes; legacy bare payload still accepted (removal on backlog)                                                                       |
-| `Actor`, `ActorAuthGuard`, JWT forwarded to services                                 | **No**: no such code in `apps/` or `libs/`; the gateway doesn't forward the token                                                  |
-| Tuples, change log, `PullChanges`/`ExportSnapshot`/`Check`/`DeleteResource` (step 3) | **No**: `proto/authorization.proto` has only `CheckOwnership`/`RegisterOwnership`/`RemoveOwnership`; table is `resource_ownership` |
-| Local snapshots, sync metrics, "Authz sync health" dashboard                         | **No** (the observability guide lists that dashboard as "later")                                                                   |
-| Sensitive deletes via authorization                                                  | **No**: deletes go to the owning service (blog/card/room via `@ResourceAccess`, exam via creator check, report via `@HasRoles`)    |
-| Retire `requesterId`/`privileged`                                                    | **No**: it is the current mechanism for exam, reports, lists, live moderation                                                      |
-| Retire `@ResourceAccess`                                                             | Partly: removed from exam; still on blogs, flash cards, room delete/schedule (AGENTS.md: no new uses)                              |
-| Retire gateway `@HasRoles`, per-context permission constants                         | **No**: `@HasRoles` everywhere, shared `Permission` enum in `@server/typing`                                                       |
-| File uploader check on attach                                                        | Yes (not part of either spec)                                                                                                      |
+| Element of the target                                                                | Implemented now?                                                                                                                                    |
+| ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Observability stack + health endpoints (hybrid step 1)                               | Yes (`@server/telemetry`, LGTM, dashboards, alerts)                                                                                                 |
+| Outbox / inbox in every service (step 2)                                             | Yes (`@server/messaging`), with broker retries and DLQs beyond the spec                                                                             |
+| Envelope `{ id, type, occurredAt, payload }`                                         | Yes; legacy bare payload still accepted (removal on backlog)                                                                                        |
+| `Actor`, `ActorAuthGuard`, JWT forwarded to services                                 | **No**: no such code in `apps/` or `libs/`; the gateway doesn't forward the token                                                                   |
+| Tuples, change log, `PullChanges`/`ExportSnapshot`/`Check`/`DeleteResource` (step 3) | **No**: `proto/authorization.proto` has only `CheckOwnership`/`RegisterOwnership`/`RemoveOwnership`; table is `resource_ownership`                  |
+| Local snapshots, sync metrics, "Authz sync health" dashboard                         | **No** (the observability guide lists that dashboard as "later")                                                                                    |
+| Sensitive deletes via authorization                                                  | **No**: deletes go to the owning service (blog/room via `@ResourceAccess`, card via its list owner, exam via creator check, report via `@HasRoles`) |
+| Retire `requesterId`/`privileged`                                                    | **No**: it is the current mechanism for exam, reports, flash cards and lists, live moderation                                                       |
+| Retire `@ResourceAccess`                                                             | Partly: removed from exam and flash cards; still on blogs, room delete/schedule (AGENTS.md: no new uses)                                            |
+| Retire gateway `@HasRoles`, per-context permission constants                         | **No**: `@HasRoles` everywhere, shared `Permission` enum in `@server/typing`                                                                        |
+| File uploader check on attach                                                        | Yes (not part of either spec)                                                                                                                       |
 
 ## 10. Risks visible in the current design
 

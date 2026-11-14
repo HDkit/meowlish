@@ -1,7 +1,11 @@
+import { RequesterReqDto } from './requester.req.dto';
 import { resource } from '@server/generated';
 import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
 
-export class UpdateFlashCardReqDto implements resource.UpdateFlashCardRequest {
+export class UpdateFlashCardReqDto
+	extends RequesterReqDto
+	implements resource.UpdateFlashCardRequest
+{
 	@IsString()
 	id!: string;
 

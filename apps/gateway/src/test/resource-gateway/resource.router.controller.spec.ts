@@ -1,3 +1,4 @@
+import { RESOURCE_ACCESS_KEY } from '../../auth/decorators/resource-access.decorator';
 import { RESOURCE_CLIENT } from '../../resource-gateway/constants/resource';
 import { ResourceGatewayController } from '../../resource-gateway/resource.router.controller';
 import { type INestApplication, ValidationPipe } from '@nestjs/common';
@@ -69,5 +70,78 @@ describe('ResourceGatewayController blog comments', () => {
 		await request(server()).get('/blogs/b1/comments?limit=51').expect(400);
 		await request(server()).patch('/blog-comments/c1').send({ content: '' }).expect(400);
 		expect(comments.updateBlogComment).not.toHaveBeenCalled();
+	});
+});
+
+describe('ResourceGatewayController flash cards (C32)', () => {
+	let app: INestApplication;
+	let roles: string[] = [];
+	const cards = {
+		updateFlashCard: jest.fn().mockReturnValue({ id: 'card1' }),
+		deleteFlashCard: jest.fn().mockReturnValue({}),
+	};
+
+	beforeAll(async () => {
+		const moduleRef = await Test.createTestingModule({
+			controllers: [ResourceGatewayController],
+			providers: [{ provide: RESOURCE_CLIENT, useValue: { getService: () => cards } }],
+		}).compile();
+		app = moduleRef.createNestApplication();
+		app.use((req: { user?: unknown }, _res: unknown, next: () => void) => {
+			req.user = { sub: 'jwt-user', roles: roles };
+			next();
+		});
+		app.useGlobalPipes(
+			new ValidationPipe({ transform: true, whitelist: true, forbidUnknownValues: true }),
+		);
+		await app.init();
+	});
+	afterAll(() => app.close());
+	const server = (): Server => app.getHttpServer() as Server;
+	beforeEach(() => {
+		jest.clearAllMocks();
+		roles = [];
+	});
+
+	it('no longer uses @ResourceAccess on card update/delete', () => {
+		const proto = ResourceGatewayController.prototype as unknown as Record<string, object>;
+		for (const route of ['updateFlashCard', 'deleteFlashCard']) {
+			expect(Reflect.getMetadata(RESOURCE_ACCESS_KEY, proto[route])).toBeUndefined();
+		}
+	});
+
+	it('forwards the JWT user on update, whatever the body claims', async () => {
+		await request(server())
+			.patch('/flash-cards/card1')
+			.send({ word: 'apple', requesterId: 'attacker', privileged: true })
+			.expect(200);
+		expect(cards.updateFlashCard).toHaveBeenCalledWith({
+			word: 'apple',
+			examples: [],
+			tags: [],
+			replaceExamples: false,
+			replaceTags: false,
+			id: 'card1',
+			requesterId: 'jwt-user',
+			privileged: false,
+		});
+	});
+
+	it('forwards only admins as privileged on delete', async () => {
+		roles = ['mod'];
+		await request(server()).delete('/flash-cards/card1').expect(200);
+		expect(cards.deleteFlashCard).toHaveBeenLastCalledWith({
+			id: 'card1',
+			requesterId: 'jwt-user',
+			privileged: false,
+		});
+
+		roles = ['admin'];
+		await request(server()).delete('/flash-cards/card1').expect(200);
+		expect(cards.deleteFlashCard).toHaveBeenLastCalledWith({
+			id: 'card1',
+			requesterId: 'jwt-user',
+			privileged: true,
+		});
 	});
 });

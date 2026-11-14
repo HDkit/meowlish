@@ -198,10 +198,20 @@ message UpdateFlashCardRequest {
 	// so an empty one clears it. False keeps the old behaviour (empty = unchanged).
 	bool                                 replace_examples = 10;
 	bool                                 replace_tags     = 11;
+	// Set by the gateway from the JWT; never from client input. Only the owner of the card's list
+	// (or a privileged requester) may update it; anyone else gets NOT_FOUND.
+	google.protobuf.StringValue          requester_id     = 12;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged       = 13;
 }
 
 message DeleteFlashCardRequest {
 	google.protobuf.StringValue id = 1;
+	// Set by the gateway from the JWT; never from client input. Only the owner of the card's list
+	// (or a privileged requester) may delete it; anyone else gets NOT_FOUND.
+	google.protobuf.StringValue          requester_id   = 2;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged     = 3;
 }
 
 message ListFlashCardsRequest {

@@ -26,8 +26,8 @@ Common to every route below:
 | [DELETE /blog-comments/:commentId](#delete-apiv1resourcesblog-commentscommentid)            | author or mod/admin (service)           | `BlogComment`                   | -                                                    |
 | [POST /flash-cards](#post-apiv1resourcesflash-cards)                                        | list owner (service)                    | `FlashCard`                     | `resource.resource.created`                          |
 | [GET /flash-cards/:id](#get-apiv1resourcesflash-cardsid)                                    | visible list (service)                  | -                               | -                                                    |
-| [PATCH /flash-cards/:id](#patch-apiv1resourcesflash-cardsid)                                | `@ResourceAccess` flashcard             | `FlashCard`                     | -                                                    |
-| [DELETE /flash-cards/:id](#delete-apiv1resourcesflash-cardsid)                              | `@ResourceAccess` flashcard             | `FlashCard`                     | `resource.resource.deleted`                          |
+| [PATCH /flash-cards/:id](#patch-apiv1resourcesflash-cardsid)                                | list owner or admin (service)           | `FlashCard`                     | -                                                    |
+| [DELETE /flash-cards/:id](#delete-apiv1resourcesflash-cardsid)                              | list owner or admin (service)           | `FlashCard`                     | `resource.resource.deleted`                          |
 | [GET /flash-cards](#get-apiv1resourcesflash-cards)                                          | visible lists (service)                 | -                               | -                                                    |
 | [POST /flash-card-lists](#post-apiv1resourcesflash-card-lists)                              | any user                                | `FlashCardList`                 | -                                                    |
 | [GET /flash-card-lists/:id](#get-apiv1resourcesflash-card-listsid)                          | visible (service)                       | -                               | -                                                    |
@@ -48,14 +48,14 @@ All paths in the table are relative to `/api/v1/resources`.
 
 ## How `@ResourceAccess` routes are checked
 
-Used only by `PATCH`/`DELETE /blogs/:id` (`resourceType: 'blog'`) and `PATCH`/`DELETE /flash-cards/:id` (`resourceType: 'flashcard'`). All four have the same rules: `{ roles: [Admin] }`, then `{ roles: [Mod, User, Student, Teacher], requireOwnership: true }`.
+Used only by `PATCH`/`DELETE /blogs/:id` (`resourceType: 'blog'`). Both have the same rules: `{ roles: [Admin] }`, then `{ roles: [Mod, User, Student, Teacher], requireOwnership: true }`. (`PATCH`/`DELETE /flash-cards/:id` used it too until they moved to the requester pattern; see [below](#patch-apiv1resourcesflash-cardsid).)
 
 1. `ResourceAccessGuard` (`apps/gateway/src/auth/guards/resource-access.guard.ts`) walks the rules in order. Admin matches rule 1 and is allowed without any call.
 2. For rule 2 it calls `authorization.AuthorizationService/CheckOwnership { userId: sub, resourceType, resourceId: req.params.id }`; the authorization service reads `resource_ownership` by `(resource_type, resource_id)` and returns `isOwner`.
 3. No rule allows → 403. This includes unknown ids (no ownership row), the creator before the `resource.resource.created` event has been consumed, and users whose only roles are outside the list (e.g. `parent`, `mentor`).
 4. The ownership rows come from `resource.resource.created/deleted` (see [Background work](#background-work)) and from the authorization seed backfill.
 
-The resource service does no ownership check of its own on these four routes. Full walkthrough: [authorization.md §5](../authorization.md#5-legacy-resourceaccess-and-the-authorization-service) and [§7(e)](../authorization.md#e-updating-a-flash-card-patch-apiv1resourcesflash-cardsid-via-resourceaccess).
+The resource service does no ownership check of its own on these two routes. Full walkthrough: [authorization.md §5](../authorization.md#5-legacy-resourceaccess-and-the-authorization-service).
 
 ## Blogs
 
@@ -167,7 +167,7 @@ Service: `FlashcardService` (`apps/resource/src/app/services/flashcard.service.t
   1. Gateway: `CreateFlashCardDto` (`word`, `definition`, `listId` required; `image`, `partOfSpeech`, `pronunciation`, `notes` optional; `examples`, `tags` default `[]`) + `authorId = sub` → `resource.FlashCardService/CreateFlashCard`.
   2. `FlashcardService.createFlashCard`, `@Transactional()`: load list (404 `FlashCardList not found`); 403 `Cards can only be added to your own lists` if `list.authorId !== authorId` (admins included); insert `FlashCard`; outbox `resource.resource.created` `{ resourceType: 'flashcard', resourceId, ownerId }`.
   3. Response `FlashCardDto`.
-- **Async**: authorization registers ownership (as for blogs).
+- **Async**: authorization registers ownership (as for blogs), but no route reads `flashcard` ownership any more: the author can update or delete the new card at once.
 - **Notes**: `image` is a plain string; no file-ownership check or `file.added` event.
 
 ### GET /api/v1/resources/flash-cards/:id
@@ -176,13 +176,14 @@ Service: `FlashcardService` (`apps/resource/src/app/services/flashcard.service.t
 
 ### PATCH /api/v1/resources/flash-cards/:id
 
-- **Access**: `@ResourceAccess` `flashcard` (see [above](#how-resourceaccess-routes-are-checked)).
-- **Flow**: `UpdateFlashCardDto` (all optional; `examples`, `tags` default `[]`; the gateway sets `replaceExamples`/`replaceTags` when the body has the list) → `resource.FlashCardService/UpdateFlashCard` → `FlashcardService.updateFlashCard`: `findUnique` (404) then `update`; undefined fields are left unchanged, `examples`/`tags` replaced when their `replace*` flag is set (so `[]` clears them) or non-empty. No service-side ownership or list check; not `@Transactional`. Response `FlashCardDto`.
+- **Access**: owner of the card's list, or admin, checked in the service (requester pattern). The gateway adds `requesterOf(user, [Admin])`; no `@ResourceAccess`.
+- **Flow**: `UpdateFlashCardDto` (all optional; `examples`, `tags` default `[]`; the gateway sets `replaceExamples`/`replaceTags` when the body has the list) → `resource.FlashCardService/UpdateFlashCard { ...body, id, requesterId, privileged }` → `FlashcardService.updateFlashCard`: `findOwnedCard` = `findFirst({ id, list: { authorId: requesterId } })` (no list filter when privileged), 404 `FlashCard not found` if nothing matches; then `update`; undefined fields are left unchanged, `examples`/`tags` replaced when their `replace*` flag is set (so `[]` clears them) or non-empty. Not `@Transactional`. Response `FlashCardDto`.
+- **Errors**: 404 for a missing card and for someone else's card (public list or not), so ids don't leak. Walkthrough: [authorization.md §7(e)](../authorization.md#e-updating-a-flash-card-patch-apiv1resourcesflash-cardsid-via-the-requester-pattern).
 
 ### DELETE /api/v1/resources/flash-cards/:id
 
-- **Access**: `@ResourceAccess` `flashcard`.
-- **Flow**: `resource.FlashCardService/DeleteFlashCard` → `FlashcardService.deleteFlashCard`, `@Transactional()`: `findUnique` (404) → delete → outbox `resource.resource.deleted` `{ resourceType: 'flashcard', resourceId }`.
+- **Access**: owner of the card's list, or admin (service), as for `PATCH`.
+- **Flow**: `resource.FlashCardService/DeleteFlashCard { id, requesterId, privileged }` → `FlashcardService.deleteFlashCard`, `@Transactional()`: `findOwnedCard` (404) → delete → outbox `resource.resource.deleted` `{ resourceType: 'flashcard', resourceId }`.
 - **Async**: authorization removes the ownership row.
 
 ### GET /api/v1/resources/flash-cards
@@ -311,5 +312,5 @@ None of these consumers emits further events.
 - ~~The `CheckFilesOwnedBy` gRPC call runs inside the open DB transaction~~: fixed (see fixed-issues.md; create and attach both ask before the transaction).
 - ~~Soft delete keeps `authorId` while the class comment says it is cleared~~: comment corrected (keeping `authorId` is intended: the column is required and responses blank it).
 - ~~`totalThreads` counts placeholders that `buildCommentTree` may prune~~: not a bug in consistent data (`deleteComment` keeps a placeholder only while it has replies, so a root is never pruned); two concurrent deletes could leave an empty placeholder: fixed (see fixed-issues.md; `deleteComment` row-locks the comment and its parent before counting replies).
-- ~~`updateFlashCard`/`deleteFlashCard` rely on `@ResourceAccess` alone~~: backlog X4 (moving cards to the requester pattern is an authorization change).
+- ~~`updateFlashCard`/`deleteFlashCard` rely on `@ResourceAccess` alone~~: fixed (see fixed-issues.md; requester pattern, owner check via the card's list).
 - ~~Doc drift~~: `messaging.md` §7 and `services-and-data.md` now list `resource.report.created` and `resource.blog-comment.created`.
