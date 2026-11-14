@@ -60,7 +60,7 @@ Create a mail/password account and start a session.
 
 - **Access**: `@IsPublic()`, `CookieIssuanceGuard`, `@StrictThrottleByMail()` (10/min per `<ip>:<lowercased body.mail>`, plus 100/min per IP).
 - **Flow**:
-  1. Gateway `registerMail` (`auth.router.controller.ts:114`), DTO `RegisterMailDto`: `mail` `@IsEmail`, `username` `@IsString`, not blank, max 50 (no charset rule), `password` `@IsStrongPassword`. Calls `auth.AuthService/RegisterMail`.
+  1. Gateway `registerMail` (`auth.router.controller.ts:114`), DTO `RegisterMailDto`: `mail` `@IsEmail`, `username` `USERNAME_PATTERN` `^[a-z0-9._-]{3,30}$` (`@server/utils`, same rule in auth's DTO), `password` `@IsStrongPassword`. Calls `auth.AuthService/RegisterMail`.
   2. `AuthController.registerMail` → `MailRegisterCommandHandler` (`apps/auth/src/app/commands/handlers/mail-register.handler.ts`).
   3. Builds `Identity` + `Credential` (`loginType MAIL`, password hashed with async `bcrypt.hash`, cost 10, by `Credential.hashSecret`); adds the `student` role if `RoleReadRepository.findByName` finds it.
   4. `identityRepository.save` (one transaction): insert `Identity`, `IdentityRole`, `Credential`. No `@Transactional()` on the handler, so the following `getClaimsOfId` read and token signing run after commit.
@@ -158,7 +158,7 @@ Google's redirect target. Always answers with a redirect to the frontend login c
      - **Linking** (`identityId` set): gRPC `GetCredentials`; already has a `GOOGLE` credential → `GOOGLE_ALREADY_LINKED` (409). Else gRPC `AddGoogleCredential({ identifier: googleId, identityId })` → `AddGoogleCredCommandHandler`: 404 missing identity; 409 if the Google id belongs to another identity (mapped to `GOOGLE_ACCOUNT_IN_USE`); `identity.addCredential` (403 demo, 409 duplicate type) → `save` inserts `Credential`. Result `true`.
      - **Login/sign-up**: gRPC `RegisterOrLoginGoogle({ identifier: googleId, username: randomUUID(), fullName, email })` → `GoogleRegisterOrLoginCommandHandler` (`google-register-or-login.handler.ts`, `@Transactional()`):
        - credential `(googleId, GOOGLE)` exists → **login**: load identity (401/403 locked); `fillMissingProfile` sets a missing `fullName` and replaces a UUID username with one derived from the e-mail local part (`save`, `Identity` version bump); outbox `auth.user.login`; tokens.
-       - no credential → **sign-up**: username = e-mail local part (`[a-z0-9._-]`, max 30), retried with a random 4-hex suffix up to 5 times, checked against active and soft-deleted identities, else the UUID fallback; new `Identity` + `Credential` (no secret) + `student` role in one `save`; tokens. No `auth.user.login` on sign-up. The Google e-mail is not stored as a credential.
+       - no credential → **sign-up**: username = e-mail local part (`[a-z0-9._-]`, max 30), with a random 4-hex suffix when it is shorter than 3 or taken (up to 5 tries), so it matches `USERNAME_PATTERN`; checked against active and soft-deleted identities, else the UUID fallback; new `Identity` + `Credential` (no secret) + `student` role in one `save`; tokens. No `auth.user.login` on sign-up. The Google e-mail is not stored as a credential.
   3. Gateway `googleCallback` (`auth.router.controller.ts:199`): `SETEX oauth2:google:loginToken:<uuid> 60 <tokens | true>`; redirect to `<frontend loginRedirectUrl>?loginToken=<uuid>[&flow=link]`.
   4. On any error the filter redirects to the same page with `?error=` (`ACCESS_DENIED`, `SESSION_EXPIRED` for 401, `FORBIDDEN` for 403, `GOOGLE_ALREADY_LINKED`, `GOOGLE_ACCOUNT_IN_USE`, else `GOOGLE_FAILED` and an error log).
 - **Async**: `auth.user.login` (existing-account login only) → achievement, as in [login](#post-apiv1authlogin).
@@ -214,12 +214,12 @@ Update the caller's profile.
 - **Access**: authenticated.
 - **Flow**:
   1. DTO `UpdateIdentityDto`: optional `username` (max 50, not whitespace-only; empty leaves it unchanged), `fullName`, `bio`, `avatarId`, `phoneNumber` (strings), and `set*Null` booleans; `identityId = sub` → `UpdateIdentity`.
-  2. `UpdateIdentityCommandPayload` turns `set*Null` into `null`. `UpdateIdentityCommandHandler` (`update-identity.handler.ts`, `@Transactional()`): load identity (404).
+  2. `UpdateIdentityCommandPayload` turns `set*Null` into `null`. `UpdateIdentityCommandHandler` (`update-identity.handler.ts`, `@Transactional()`): load identity (404). A username different from the current one must match `USERNAME_PATTERN` (`^[a-z0-9._-]{3,30}$`, 400 otherwise); re-sending the current one is accepted even if it predates the rule (the DTO stays at max 50 / not blank for that reason).
   3. If `avatarId` is new: `FileOwnershipService.assertOwnedBy` → file-service gRPC `CheckFilesOwnedBy` (403 listing foreign ids; no admin override; re-sending the current avatar skips it).
   4. `updateDetails` (403 if the demo account changes username/phone) → `save` updates `Identity` (version check). DB trigger `identities_after_update_avatar` (migration `20260418163535_add_deleted_file_trigger`) upserts the previous avatar id into `deleted_files` (`count + 1`) when `avatar_file_id` changes.
   5. `FileAddedPublisher`: for an `IdentityAvatarUpdatedEvent` with a non-null id, `outbox.add('auth.file.added', { fileId })`.
 - **Async**: `auth.file.added` → queue `file.events.file.added` → file-service `file-added.handler.ts` (inbox yes): `refCount + 1`. The old avatar is released later by the [BullMQ job](#bullmq-publish-deleted-files-every-60-s).
-- **Errors**: 409 username/phone taken; 403 foreign file or demo; 404.
+- **Errors**: 400 new username outside the charset; 409 username/phone taken; 403 foreign file or demo; 404.
 
 ### GET /api/v1/auth/hydrate
 
@@ -343,5 +343,5 @@ Same handler as `GET /google/calendar/token` (`GetGoogleCalendarTokenQuery`); it
 11. ~~Password change revoked the caller's own session without new cookies~~: fixed, fresh cookies, cleared if they can't be issued (see fixed-issues.md).
 12. ~~Throttler storage is per gateway replica~~: backlog X5, then S23 (Redis storage).
 13. ~~Passwords hashed with `bcrypt.hashSync`~~: fixed, async `bcrypt.hash` (see fixed-issues.md).
-14. ~~`username` was only `@IsString()`~~: fixed, not blank and max 50 (see fixed-issues.md); a charset rule is backlog X6.
+14. ~~`username` was only `@IsString()`~~: fixed, `^[a-z0-9._-]{3,30}$` on register and on a username change (C24, see fixed-issues.md).
 15. ~~`oauth2_state` cookie ignored production `Secure` and was never cleared~~: fixed (see fixed-issues.md).

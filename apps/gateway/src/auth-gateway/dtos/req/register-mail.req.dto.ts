@@ -1,8 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, IsStrongPassword, Matches, MaxLength } from 'class-validator';
-
-/** Google sign-up generates at most 36 characters (a UUID fallback). */
-const USERNAME_MAX_LENGTH = 50;
+import {
+	USERNAME_MAX_LENGTH,
+	USERNAME_MIN_LENGTH,
+	USERNAME_PATTERN,
+	USERNAME_RULE_MESSAGE,
+} from '@server/utils';
+import { IsEmail, IsString, IsStrongPassword, Matches } from 'class-validator';
 
 export class RegisterMailDto {
 	@IsEmail()
@@ -10,9 +13,14 @@ export class RegisterMailDto {
 	mail!: string;
 
 	@IsString()
-	@MaxLength(USERNAME_MAX_LENGTH)
-	@ApiProperty({ maxLength: USERNAME_MAX_LENGTH })
-	@Matches(/\S/, { message: 'username must not be blank' })
+	@ApiProperty({
+		minLength: USERNAME_MIN_LENGTH,
+		maxLength: USERNAME_MAX_LENGTH,
+		pattern: USERNAME_PATTERN.source,
+		example: 'minh.nguyen',
+		description: 'Lowercase letters, digits, ".", "_" and "-".',
+	})
+	@Matches(USERNAME_PATTERN, { message: USERNAME_RULE_MESSAGE })
 	username!: string;
 
 	@IsStrongPassword()

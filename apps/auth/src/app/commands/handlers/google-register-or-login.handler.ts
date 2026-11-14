@@ -21,11 +21,13 @@ import { Transactional } from '@nestjs-cls/transactional';
 import { ForbiddenException, Inject, UnauthorizedException } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Role } from '@server/typing';
+import { USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH } from '@server/utils';
 import { randomBytes } from 'node:crypto';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const USERNAME_MAX = 30;
 const USERNAME_ATTEMPTS = 5;
+/** Length of the `-<4 hex>` suffix added when the base is taken or too short. */
+const SUFFIX_LENGTH = 5;
 
 /** Usernames that Google sign-up generated before they were derived from the email. */
 export const isGeneratedUsername = (username: string): boolean => UUID_PATTERN.test(username);
@@ -36,7 +38,7 @@ export const usernameBaseFromEmail = (email: string | undefined): string =>
 		.toLowerCase()
 		.replace(/[^a-z0-9._-]/g, '')
 		.replace(/^[._-]+|[._-]+$/g, '')
-		.slice(0, USERNAME_MAX);
+		.slice(0, USERNAME_MAX_LENGTH);
 
 @CommandHandler(GoogleRegisterOrLoginCommand)
 export class GoogleRegisterOrLoginCommandHandler implements ICommandHandler<GoogleRegisterOrLoginCommand> {
@@ -127,15 +129,18 @@ export class GoogleRegisterOrLoginCommandHandler implements ICommandHandler<Goog
 		await this.identityRepository.save(identity);
 	}
 
-	/** The email's local part, with a random suffix if taken; `fallback` if none is free. */
+	/**
+	 * The email's local part, with a random suffix if taken or shorter than USERNAME_MIN_LENGTH (so
+	 * generated usernames follow USERNAME_PATTERN); `fallback` if none is free.
+	 */
 	private async pickUsername(email: string | undefined, fallback: string): Promise<string> {
 		const base = usernameBaseFromEmail(email);
 		if (!base) return fallback;
 		for (let attempt = 0; attempt < USERNAME_ATTEMPTS; attempt++) {
 			const candidate =
-				attempt === 0 ? base : (
-					`${base.slice(0, USERNAME_MAX - 5)}-${randomBytes(2).toString('hex')}`
-				);
+				attempt === 0 && base.length >= USERNAME_MIN_LENGTH ?
+					base
+				:	`${base.slice(0, USERNAME_MAX_LENGTH - SUFFIX_LENGTH)}-${randomBytes(2).toString('hex')}`;
 			if (!(await this.isUsernameTaken(candidate))) return candidate;
 		}
 		return fallback;

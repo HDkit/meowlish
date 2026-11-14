@@ -1,8 +1,11 @@
 import { auth } from '@server/generated';
 import { IsBoolean, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 
-/** Google sign-up generates at most 36 characters (a UUID fallback). */
-const USERNAME_MAX_LENGTH = 50;
+/**
+ * Loose on purpose: an existing username from before the charset rule must still be accepted when
+ * re-sent unchanged. UpdateIdentityCommandHandler applies USERNAME_PATTERN only to a change.
+ */
+const LEGACY_USERNAME_MAX_LENGTH = 50;
 
 export class UpdateIdentityDto implements auth.UpdateIdentityDto {
 	@IsString()
@@ -10,7 +13,7 @@ export class UpdateIdentityDto implements auth.UpdateIdentityDto {
 
 	@IsOptional()
 	@IsString()
-	@MaxLength(USERNAME_MAX_LENGTH)
+	@MaxLength(LEGACY_USERNAME_MAX_LENGTH)
 	@Matches(/^$|\S/, { message: 'username must not be blank' })
 	// empty leaves the username unchanged; whitespace-only is refused
 	username?: string;

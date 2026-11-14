@@ -4,7 +4,7 @@ import {
 } from '../../../../app/commands/auth.update-identity.command';
 import { UpdateIdentityCommandHandler } from '../../../../app/commands/handlers/update-identity.handler';
 import { NoOpTransactionalAdapter, TransactionHost } from '@nestjs-cls/transactional';
-import { ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 
 // execute() is @Transactional(); register the static host it looks up, backed by a no-op adapter.
 new TransactionHost<NoOpTransactionalAdapter>({
@@ -15,8 +15,9 @@ new TransactionHost<NoOpTransactionalAdapter>({
 	extraProviderTokens: [],
 });
 
-const setup = (currentAvatar: string | null = null) => {
+const setup = (currentAvatar: string | null = null, username = 'me.now') => {
 	const identity = {
+		username: username,
 		avatarFileId: currentAvatar,
 		updateDetails: jest.fn(),
 		getUncommittedEvents: () => [],
@@ -63,5 +64,34 @@ describe('UpdateIdentityCommandHandler avatar ownership', () => {
 		await handler.execute(cmd({ username: 'name' }));
 		expect(files.assertOwnedBy).not.toHaveBeenCalled();
 		expect(repo.save).toHaveBeenCalledTimes(3);
+	});
+});
+
+describe('UpdateIdentityCommandHandler username rule', () => {
+	it.each(['Van A', 'ADMIN', 'ab', 'x'.repeat(31), 'nguy\u1ec5n', 'tab\there'])(
+		'a new username %p outside [a-z0-9._-]{3,30} is 400',
+		async username => {
+			const { handler, repo } = setup();
+			await expect(handler.execute(cmd({ username: username }))).rejects.toBeInstanceOf(
+				BadRequestException,
+			);
+			expect(repo.save).not.toHaveBeenCalled();
+		},
+	);
+
+	it('a valid new username is saved', async () => {
+		const { handler, repo, identity } = setup();
+		await handler.execute(cmd({ username: 'minh.nguyen_2' }));
+		expect(identity.updateDetails).toHaveBeenCalledWith(
+			expect.objectContaining({ username: 'minh.nguyen_2' }),
+		);
+		expect(repo.save).toHaveBeenCalledTimes(1);
+	});
+
+	it('re-sending an existing nonconforming username unchanged is accepted', async () => {
+		const legacy = 'Nguyễn Văn A';
+		const { handler, repo } = setup(null, legacy);
+		await handler.execute(cmd({ username: legacy, bio: 'hi' }));
+		expect(repo.save).toHaveBeenCalledTimes(1);
 	});
 });

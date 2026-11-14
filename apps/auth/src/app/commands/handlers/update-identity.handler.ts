@@ -6,8 +6,9 @@ import { FileAddedPublisher } from '../../events/publisher/file-added.publisher'
 import { FileOwnershipService } from '../../services/file-ownership.service';
 import { UpdateIdentityCommand } from '../auth.update-identity.command';
 import { Transactional } from '@nestjs-cls/transactional';
-import { Inject, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, NotFoundException } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { USERNAME_RULE_MESSAGE, isValidUsername } from '@server/utils';
 
 @CommandHandler(UpdateIdentityCommand)
 export class UpdateIdentityCommandHandler implements ICommandHandler<UpdateIdentityCommand> {
@@ -22,6 +23,13 @@ export class UpdateIdentityCommandHandler implements ICommandHandler<UpdateIdent
 		const payload = command.payload;
 		const identity = await this.identityRepository.findOneById(payload.identityId);
 		if (!identity) throw new NotFoundException('Identity not found');
+		// Only a new username must follow the charset rule, so re-sending an existing (legacy) one works.
+		if (
+			payload.username &&
+			payload.username !== identity.username &&
+			!isValidUsername(payload.username)
+		)
+			throw new BadRequestException(USERNAME_RULE_MESSAGE);
 		// Only a newly chosen avatar is checked, so re-sending the current (possibly legacy) one works.
 		if (payload.avatarId && payload.avatarId !== identity.avatarFileId)
 			await this.fileOwnership.assertOwnedBy([payload.avatarId], payload.identityId);

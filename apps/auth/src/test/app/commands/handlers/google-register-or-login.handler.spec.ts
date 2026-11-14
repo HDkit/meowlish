@@ -5,6 +5,7 @@ import {
 	usernameBaseFromEmail,
 } from '../../../../app/commands/handlers/google-register-or-login.handler';
 import { Identity } from '../../../../domain/entities/identity.entity';
+import { isValidUsername } from '@server/utils';
 
 jest.mock('@nestjs-cls/transactional', () => ({ Transactional: () => () => undefined }));
 
@@ -68,6 +69,20 @@ describe('Google sign-up', () => {
 		const { repo, handler } = setup({ taken: ['van.a'] });
 		await handler.execute(cmd({ email: 'van.a@gmail.com' }));
 		expect(savedIdentity(repo).username).toMatch(/^van\.a-[0-9a-f]{4}$/);
+	});
+
+	it('pads a local part shorter than 3 characters with a suffix', async () => {
+		const { repo, handler } = setup();
+		await handler.execute(cmd({ email: 'ab@gmail.com' }));
+		expect(savedIdentity(repo).username).toMatch(/^ab-[0-9a-f]{4}$/);
+	});
+
+	it('generated usernames follow the username rule', async () => {
+		for (const email of ['van.a@gmail.com', 'x@a.b', `${'a'.repeat(40)}@a.b`]) {
+			const { repo, handler } = setup({ taken: [`${'a'.repeat(30)}`] });
+			await handler.execute(cmd({ email: email }));
+			expect(isValidUsername(savedIdentity(repo).username)).toBe(true);
+		}
 	});
 
 	it('falls back to the given username without a usable email', async () => {

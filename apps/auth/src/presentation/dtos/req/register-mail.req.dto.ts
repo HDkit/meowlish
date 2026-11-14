@@ -1,16 +1,13 @@
 import { auth } from '@server/generated';
-import { IsEmail, IsString, IsStrongPassword, Matches, MaxLength } from 'class-validator';
-
-/** Google sign-up generates at most 36 characters (a UUID fallback). */
-const USERNAME_MAX_LENGTH = 50;
+import { USERNAME_PATTERN, USERNAME_RULE_MESSAGE } from '@server/utils';
+import { IsEmail, IsString, IsStrongPassword, Matches } from 'class-validator';
 
 export class RegisterMailDto implements auth.RegisterMailDto {
 	@IsEmail()
 	mail!: string;
 
 	@IsString()
-	@MaxLength(USERNAME_MAX_LENGTH)
-	@Matches(/\S/, { message: 'username must not be blank' })
+	@Matches(USERNAME_PATTERN, { message: USERNAME_RULE_MESSAGE })
 	username!: string;
 
 	@IsStrongPassword()
