@@ -291,8 +291,8 @@ Ends the attempt and starts scoring. This is the start of the [writing round tri
      - it sets `ended_at = now()`.
   2. `save` runs the versioned `attempts` update.
   3. `AttemptSubmittedPublisher` (`app/events/publishers/attempt-submitted.publisher.ts`) writes outbox `exam.attempt.submitted` `{ attemptId, attemptedBy }` (envelope) in the same transaction.
-  4. After the commit, `eventBus.publishAll` hands `AttemptSubmittedEvent` to the in-process `AttemptSubmittedHandler` (`app/events/handlers/attempt-submitted.handler.ts`). It does not block the response:
-     - inside `retryAttemptConflicts`, a new `@Transactional()` `score()` runs `getScoreEvaluator` and `AttemptEvaluator.evaluateScore()` (`domain/entities/attempt-evaluator.entity.ts`);
+  4. Scoring is asynchronous and durable: the relay publishes `exam.attempt.submitted`, and exam's own consumer `AttemptSubmittedHandler` (`app/events/handlers/attempt-submitted.handler.ts`, queue `exam.events.attempt.submitted`, inbox) scores it. A failure is retried by the broker and dead-lettered, never lost:
+     - inside `retryAttemptConflicts`, a `@Transactional()` `score()` claims the event in the inbox, then runs `getScoreEvaluator` and `AttemptEvaluator.evaluateScore()` (`domain/entities/attempt-evaluator.entity.ts`);
      - objective questions: `FillAny` needs any correct key; the other types need the exact set of correct keys, compared case-insensitively;
      - `Writing` questions with no AI band score 0 and raise `WritingSubmittedEvent`;
      - it saves `attempts.score/total_points` (versioned) and `attempt_responses.is_correct`;
@@ -318,8 +318,10 @@ sequenceDiagram
   G->>E: EndAttempt
   E->>E: tx1: ended_at + outbox exam.attempt.submitted
   E-->>G: ok (data null)
-  E->>E: tx2 (AttemptSubmittedHandler): score, writing = 0,<br/>outbox exam.attempt.scored + exam.writing.submitted (bare)
-  E->>MQ: OutboxRelay publishes (1 s poll)
+  E->>MQ: OutboxRelay publishes exam.attempt.submitted (1 s poll)
+  MQ->>E: exam.events.attempt.submitted
+  E->>E: tx2 (AttemptSubmittedHandler): inbox claim, score, writing = 0,<br/>outbox exam.attempt.scored + exam.writing.submitted (bare)
+  E->>MQ: OutboxRelay publishes
   MQ->>S: exam.writing.submitted
   S->>L: POST http://ai-llm:8080/v1/chat/completions
   L-->>S: feedback text (band parsed by the worker)
@@ -367,7 +369,7 @@ sequenceDiagram
 3. **Result.** `WritingScoredHandler` (`apps/exam/src/app/events/handlers/writing-scored.handler.ts`) consumes `exam.writing.scored` from queue `exam.events.writing.scored` (`WRITING_SCORED_QUEUE`, `apps/exam/src/configs/rmq.sub.config.ts`). See [Background work](#writingscoredhandler).
 4. **What the client sees.** Nothing is pushed: there is no notification, SSE or socket for writing results. The frontend polls `GET /api/v1/exams/practice/attempt/:id/review`.
    - `responses[i].additionalData` stays absent until `scorer_data` exists for that response.
-   - `totalPoints` and `isCorrect` are absent until the in-process scoring transaction of step 4 has committed.
+   - `totalPoints` and `isCorrect` are absent until the scoring transaction of step 4 has committed (normally within a second or two of the submit).
    - The review does not carry the attempt `score`. The updated score shows up in `GET /exams/practice/my/history`.
    - If scoring fails (`status: 'error'`, or a success without `data`), exam stores the failure as the response's feedback (`{ status: 'error', error_code, error_message, failed_at }`), so `additionalData` appears and the client can stop polling and say the essay was not graded. A later successful result for the response replaces it; a failure never replaces a real band (C21, [fixed-issues.md](../../fixed-issues.md)).
 
@@ -475,12 +477,13 @@ Flow:
 2. Otherwise it runs `retryAttemptConflicts` around the `@Transactional()` `saveFeedbackAndRescore`:
    - `saveComment(response_id, …)` returns the attempt id; `attempt_id` from the payload is not used;
    - `getScoreEvaluator` → `AttemptEvaluator.recomputeScore()`. Writing points are `round(points × clamp(overall_score / 9, 0, 1))`, with the band read by `toWritingBand` (`infra/repositories/writing-band.ts`);
-   - versioned `save`.
+   - versioned `save`;
+   - if the score changed, outbox `exam.attempt.rescored { attemptId, attemptedBy, previousScore, score, totalPoints }` in the same transaction (`AttemptRescoredPublisher`); achievement moves the attempt between its good/perfect counters (`achievement.events.attempt.rescored`).
 3. Two essays of one attempt scored at once conflict on `attempts.version`, and the loser re-runs and sees both feedbacks.
 
-### `AttemptSubmittedHandler` (in process)
+### `AttemptSubmittedHandler`
 
-A CQRS `@EventsHandler(AttemptSubmittedEvent)`, not RabbitMQ. It is triggered by `EndAttemptHandler` after its commit. It scores the attempt and writes `exam.attempt.scored` and `exam.writing.submitted` to the outbox in one transaction. See [submit](#post-apiv1examspracticeattemptidsubmit). This handler is not durable (`docs/backlog.md`).
+RabbitMQ consumer of exam's own `exam.attempt.submitted` (queue `exam.events.attempt.submitted`, `defineConsumerQueue`, inbox yes). In one transaction it claims the event, scores the attempt and writes `exam.attempt.scored` and `exam.writing.submitted` to the outbox; errors propagate (retries, then DLQ). See [submit](#post-apiv1examspracticeattemptidsubmit).
 
 ### `publish-deleted-files` (BullMQ)
 

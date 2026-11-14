@@ -1,3 +1,4 @@
+import { ATTEMPT_RESCORED_QUEUE } from '../app/events/handlers/attempt-rescored.handler';
 import { ATTEMPT_SCORED_QUEUE } from '../app/events/handlers/attempt-scored.handler';
 import { ATTEMPT_SUBMITTED_QUEUE } from '../app/events/handlers/attempt-submitted.handler';
 import { LOGIN_QUEUE } from '../app/events/handlers/login.handler';
@@ -15,6 +16,7 @@ export const rmqSubConfig = (configService: ConfigService<IEnvVars>): RabbitMQCo
 			...LOGIN_QUEUE.queues,
 			...ATTEMPT_SUBMITTED_QUEUE.queues,
 			...ATTEMPT_SCORED_QUEUE.queues,
+			...ATTEMPT_RESCORED_QUEUE.queues,
 		],
 		// One unacked message per consumer (basic.qos is per consumer): an instance works through
 		// each queue serially, so the only version races left are across queues or instances, and

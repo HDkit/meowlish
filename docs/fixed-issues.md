@@ -4,6 +4,15 @@ What was fixed from [`backlog.md`](backlog.md), and how. Newest first. Each entr
 
 ## November 2026
 
+### Exam scoring was not durable; writing points never reached the score badges
+
+Two items from the backlog's Conventions list.
+
+- **Durable scoring.** Scoring ran in process right after the submit commit (`eventBus.publishAll` → a CQRS handler, errors only logged), so a crash or a failing `score()` in between lost `exam.attempt.scored` and the essays' `exam.writing.submitted` for good. Now `AttemptSubmittedHandler` (`apps/exam/src/app/events/handlers/attempt-submitted.handler.ts`) is a RabbitMQ consumer of exam's own `exam.attempt.submitted` (queue `exam.events.attempt.submitted`, written to the outbox in the submit transaction): in one transaction it claims the event in the inbox, scores the attempt and writes both events. Failures retry and dead-letter instead of disappearing.
+- **Writing points and score badges.** AI writing feedback raises the stored score later, but `exam.attempt.scored` is sent once at submit, so achievement's good/perfect badges ignored writing. `WritingScoredHandler` now writes `exam.attempt.rescored { attemptId, attemptedBy, previousScore, score, totalPoints }` in the rescore transaction when the score changed (`attempt-rescored.publisher.ts`). achievement's `AttemptRescoredHandler` (queue `achievement.events.attempt.rescored`, inbox) calls `AttemptScoreBadgeManager.rescore`, which moves the attempt from the tier of its previous score to the new one. It is a difference, so the counts are right whichever of `scored` and `rescored` arrives first; badges are only added.
+- **Running systems:** the new queues are declared on start-up. Attempts submitted before the deploy keep the counts they had.
+- **Tests:** `apps/exam/src/test/app/events/handlers/attempt-submitted.handler.spec.ts`, `writing-scored.handler.spec.ts` ("announces the new score"), `apps/achievement/src/test/domain/entities/attempt-score-badge-manager.entity.spec.ts`.
+
 ### Messaging: unroutable events were dropped; two services ran no relay; legacy bare payloads
 
 Three items from the backlog's Conventions list, fixed together in `@server/messaging`.

@@ -4,6 +4,7 @@ import {
 	IAttemptRepositoryToken,
 } from '../../../domain/repositories/attempt.repository';
 import { retryAttemptConflicts } from '../../services/attempt-conflict-retry';
+import { AttemptRescoredPublisher } from '../publishers/attempt-rescored.publisher';
 import { RabbitPayload, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import { Transactional } from '@nestjs-cls/transactional';
 import { Inject, Injectable, NotFoundException, UseFilters } from '@nestjs/common';
@@ -81,6 +82,7 @@ export class WritingScoredHandler {
 	constructor(
 		@Inject(IAttemptRepositoryToken) private readonly attemptRepository: IAttemptRepository,
 		private readonly logger: AppLoggerService,
+		private readonly rescoredPublisher: AttemptRescoredPublisher,
 	) {}
 
 	@UseFilters(GlobalRmqExceptionFilter)
@@ -136,7 +138,15 @@ export class WritingScoredHandler {
 		);
 		const evaluator = await this.attemptRepository.getScoreEvaluator(attemptId);
 		if (!evaluator) throw new NotFoundException('Attempt not found');
+		const previousScore = evaluator.score;
 		evaluator.recomputeScore();
 		await this.attemptRepository.save(evaluator);
+		// same transaction: achievement learns about the writing points (it only saw the submit score)
+		await this.rescoredPublisher.publish(
+			attemptId,
+			previousScore,
+			evaluator.score,
+			evaluator.totalPoints,
+		);
 	}
 }

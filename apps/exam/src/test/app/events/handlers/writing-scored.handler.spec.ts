@@ -41,10 +41,12 @@ const setup = () => {
 		saveScoringFailure: jest.fn().mockResolvedValue(true),
 	};
 	const logger = { warn: jest.fn() };
+	const rescored = { publish: jest.fn().mockResolvedValue(undefined) };
 	return {
 		repo: repo,
 		logger: logger,
-		handler: new WritingScoredHandler(repo as never, logger as never),
+		rescored: rescored,
+		handler: new WritingScoredHandler(repo as never, logger as never, rescored as never),
 	};
 };
 
@@ -103,5 +105,19 @@ describe('WritingScoredHandler (C9)', () => {
 		repo.saveScoringFailure.mockResolvedValue(false);
 		await handler.handle(Object.assign(payload(), { status: 'error', error_code: 'LLM_TIMEOUT' }));
 		expect(logger.warn).toHaveBeenCalled();
+	});
+
+	it('announces the new score with the score before it (exam.attempt.rescored)', async () => {
+		const { rescored, handler } = setup();
+		await handler.handle(payload());
+		const [attemptId, previousScore, score, totalPoints] = rescored.publish.mock.calls[0] as [
+			string,
+			number,
+			number,
+			number,
+		];
+		expect(attemptId).toBe('a1');
+		expect(score).toBeGreaterThan(previousScore);
+		expect(totalPoints).toBe(9);
 	});
 });

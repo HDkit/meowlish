@@ -23,5 +23,4 @@ More candidate issues, noticed while writing the per-operation flows (November 2
 
 ## Conventions (see AGENTS.md)
 
-- Exam scoring in-process after the `endAttempt` commit is not durable: process death or a `score()` failure loses `exam.attempt.scored` and `exam.writing.submitted`. Consider consuming `exam.attempt.submitted` via the inbox, or the Restate `AttemptScoring` workflow (W1 in `docs/superpowers/specs/2026-11-12-restate-adoption-design.md`), which also fixes the next item.
-- Writing points join the stored attempt score when `exam.writing.scored` arrives, but `exam.attempt.scored` is sent only once, at submit, before any writing feedback. Achievement score badges therefore ignore writing points. Re-sending `.scored` would count the attempt twice there; it needs a per-attempt upsert or a separate `exam.attempt.rescored` event.
+None open. New convention gaps go here.
