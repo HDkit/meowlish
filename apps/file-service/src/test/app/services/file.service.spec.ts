@@ -1,4 +1,5 @@
 import { FileService } from '../../../app/services/file.service';
+import { BadRequestException } from '@nestjs/common';
 
 const setup = (ownedByUser: string[] = []) => {
 	const repo = {
@@ -146,9 +147,14 @@ describe('FileService.getPresignedUrl validation', () => {
 			'disallowed type',
 			{ fileName: 'a.exe', fileSize: 10, contentType: 'application/x-msdownload' },
 		],
-	])('rejects a %s file before inserting a row', async (_name, metadata) => {
+		['zero-byte', { fileName: 'a.png', fileSize: 0, contentType: 'image/png' }],
+		['negative-size', { fileName: 'a.png', fileSize: -5, contentType: 'image/png' }],
+		['fractional-size', { fileName: 'a.png', fileSize: 1.5, contentType: 'image/png' }],
+	])('rejects a %s file with 400 before inserting a row', async (_name, metadata) => {
 		const { repo, service } = setup();
-		await expect(service.getPresignedUrl(metadata, true, 'user-1')).rejects.toThrow();
+		await expect(service.getPresignedUrl(metadata, true, 'user-1')).rejects.toBeInstanceOf(
+			BadRequestException,
+		);
 		expect(repo.create).not.toHaveBeenCalled();
 	});
 });

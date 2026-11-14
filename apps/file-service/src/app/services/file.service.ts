@@ -4,7 +4,7 @@ import {
 	IFileRepositoryToken,
 } from '../../domain/repositories/file.repository';
 import { FileMetadata } from '../../types/file-metadata.type';
-import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Client, PostPolicy } from 'minio';
 import { MINIO_CONNECTION } from 'nestjs-minio';
@@ -122,12 +122,18 @@ export class FileService implements OnModuleInit {
 		formData: Record<string, string>;
 		fileName: string;
 	}> {
+		if (!Number.isInteger(fileMetadata.fileSize) || fileMetadata.fileSize < 1) {
+			throw new BadRequestException('File size must be a positive whole number of bytes.');
+		}
+
 		if (fileMetadata.fileSize > this.MAX_FILE_SIZE) {
-			throw new Error(`File is too large. Maximum allowed size is 10MB.`);
+			throw new BadRequestException(`File is too large. Maximum allowed size is 10MB.`);
 		}
 
 		if (!this.ALLOWED_MIME_TYPES.includes(fileMetadata.contentType)) {
-			throw new Error(`Invalid file type. Allowed types: ${this.ALLOWED_MIME_TYPES.join(', ')}`);
+			throw new BadRequestException(
+				`Invalid file type. Allowed types: ${this.ALLOWED_MIME_TYPES.join(', ')}`,
+			);
 		}
 
 		// The object key is the id of a brand-new row (server-generated uuid), so a presign can
