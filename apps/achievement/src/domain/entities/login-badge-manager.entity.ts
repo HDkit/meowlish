@@ -54,16 +54,15 @@ export class LoginBadgeManager
 			if (diffDays >= 2) this.startedAt = loginTime;
 			this.lastLogin = loginTime;
 		}
-		if (this.total >= 7) this.addBadge(Badge.LoginSevenDays);
-		if (this.total >= 30) this.addBadge(Badge.LoginOneMonth);
-		if (this.total >= 365) this.addBadge(Badge.LoginOneYear);
-		const currentStreak = loginStreakDays(this.startedAt, this.lastLogin);
-		if (currentStreak >= this.longestStreak) {
-			this.longestStreak = currentStreak;
-			if (this.longestStreak >= 7) this.addBadge(Badge.LoginSevenDaysStreak);
-			if (this.longestStreak >= 30) this.addBadge(Badge.LoginOneMonthStreak);
-			if (this.longestStreak >= 365) this.addBadge(Badge.LoginOneYearStreak);
-		}
+		this.longestStreak = Math.max(
+			this.longestStreak,
+			loginStreakDays(this.startedAt, this.lastLogin),
+		);
+		// Every threshold on every login (addBadge ignores badges already held), so a badge whose
+		// target was reached earlier, e.g. before its threshold existed, is caught up on.
+		for (const [days, badge] of LOGIN_DAY_BADGES) if (this.total >= days) this.addBadge(badge);
+		for (const [days, badge] of LOGIN_STREAK_BADGES)
+			if (this.longestStreak >= days) this.addBadge(badge);
 	}
 
 	private addBadge(badge: Badge) {
@@ -73,6 +72,22 @@ export class LoginBadgeManager
 		}
 	}
 }
+
+/** Total login days → badge. The 14-day ones were missing, so nobody could ever earn them. */
+const LOGIN_DAY_BADGES: [number, Badge][] = [
+	[7, Badge.LoginSevenDays],
+	[14, Badge.LoginTwoWeeks],
+	[30, Badge.LoginOneMonth],
+	[365, Badge.LoginOneYear],
+];
+
+/** Longest streak → badge. */
+const LOGIN_STREAK_BADGES: [number, Badge][] = [
+	[7, Badge.LoginSevenDaysStreak],
+	[14, Badge.LoginTwoWeeksStreak],
+	[30, Badge.LoginOneMonthStreak],
+	[365, Badge.LoginOneYearStreak],
+];
 
 /** Length in UTC calendar days of the streak running from `startedAt` to `lastLogin`, both included. */
 export const loginStreakDays = (startedAt: Date, lastLogin: Date): number =>

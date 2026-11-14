@@ -90,6 +90,34 @@ describe('LoginBadgeManager.updateProgress (UTC calendar days)', () => {
 		expect(m.badges).toEqual(new Set([Badge.LoginSevenDays, Badge.LoginSevenDaysStreak]));
 	});
 
+	it('awards the 14-day badges (they were never awarded before)', () => {
+		const days = Array.from(
+			{ length: 14 },
+			(_, i) => `2026-11-${String(i + 1).padStart(2, '0')}T08:00:00Z`,
+		);
+		const m = loginAll(days);
+		expect(m.badges.has(Badge.LoginTwoWeeks)).toBe(true);
+		expect(m.badges.has(Badge.LoginTwoWeeksStreak)).toBe(true);
+	});
+
+	it('catches up on badges whose target was reached before, at the next login', () => {
+		// 27 login days, a best streak of 15, holding only the 7-day badges (as before the fix)
+		const m = new LoginBadgeManager({
+			id: 'u1',
+			version: 1,
+			total: 27,
+			longestStreak: 15,
+			startedAt: new Date('2026-11-10T08:00:00Z'),
+			lastLogin: new Date('2026-11-11T08:00:00Z'),
+			badges: [Badge.LoginSevenDays, Badge.LoginSevenDaysStreak],
+		});
+		m.updateProgress(new Date('2026-11-12T08:00:00Z'));
+		// the current streak (3) is below the best (15), but the 14-day streak badge is still due
+		expect(m.badges.has(Badge.LoginTwoWeeks)).toBe(true);
+		expect(m.badges.has(Badge.LoginTwoWeeksStreak)).toBe(true);
+		expect(m.badges.has(Badge.LoginOneMonth)).toBe(false);
+	});
+
 	describe('with a server time zone other than UTC', () => {
 		const originalTz = process.env.TZ;
 		afterEach(() => {
