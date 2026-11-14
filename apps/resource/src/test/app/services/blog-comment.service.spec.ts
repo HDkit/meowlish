@@ -32,6 +32,7 @@ new TransactionHost<NoOpTransactionalAdapter>({
 
 const setup = () => {
 	const tx = {
+		$queryRaw: jest.fn().mockResolvedValue([]),
 		blog: {
 			findUnique: jest.fn().mockResolvedValue({ id: 'b1', title: 'Post', authorId: 'writer' }),
 		},
@@ -305,5 +306,45 @@ describe('BlogCommentService edit and delete', () => {
 			[{ where: { id: 'leaf' } }],
 			[{ where: { id: 'ph' } }],
 		]);
+		// leaf, its placeholder parent, then the parent of that placeholder: deepest first
+		expect(lockedIds(tx)).toEqual(['leaf', 'ph', 'live']);
+	});
+});
+
+const lockedIds = (tx: ReturnType<typeof setup>['tx']): string[] =>
+	(tx.$queryRaw.mock.calls as [TemplateStringsArray, string][]).map(([sql, id]) => {
+		expect(sql.join('?')).toMatch(/FROM blog_comments WHERE id = \? FOR UPDATE/);
+		return id;
+	});
+
+describe('BlogCommentService delete locking', () => {
+	it('locks the comment and its parent before counting replies', async () => {
+		const { tx, service } = setup();
+		tx.blogComment.findUnique.mockResolvedValue(comment({ id: 'reply', parentId: 'top' }));
+		tx.blogComment.count.mockResolvedValue(0);
+		await service.deleteComment('reply', user('author'));
+		expect(lockedIds(tx)).toEqual(['reply', 'top']);
+		const [, parentLock] = tx.$queryRaw.mock.invocationCallOrder;
+		expect(parentLock).toBeLessThan(tx.blogComment.count.mock.invocationCallOrder[0]);
+	});
+
+	it('locks a comment before reading it, so a concurrent reply delete is seen', async () => {
+		const { tx, service } = setup();
+		tx.blogComment.findUnique.mockResolvedValue(comment());
+		await service.deleteComment('c1', moderator);
+		expect(lockedIds(tx)).toEqual(['c1']);
+		expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+			tx.blogComment.findUnique.mock.invocationCallOrder[0],
+		);
+	});
+
+	it('hard-deletes a parent whose last reply went while it waited for the lock', async () => {
+		const { tx, service } = setup();
+		// The reply's delete committed before this transaction got the parent's lock: no replies left.
+		tx.blogComment.findUnique.mockResolvedValue(comment({ id: 'top' }));
+		tx.blogComment.count.mockResolvedValue(0);
+		await service.deleteComment('top', user('author'));
+		expect(tx.blogComment.update).not.toHaveBeenCalled();
+		expect(tx.blogComment.delete).toHaveBeenCalledWith({ where: { id: 'top' } });
 	});
 });

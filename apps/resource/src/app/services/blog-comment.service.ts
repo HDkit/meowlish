@@ -189,12 +189,20 @@ export class BlogCommentService {
 		return this.single(updated);
 	}
 
+	/**
+	 * Row locks are taken deepest first (the comment, then each parent before its replies are
+	 * counted), so two deletes on one chain serialize instead of deadlocking. Without the parent
+	 * lock, deleting the last reply and its parent at once could leave a reply-less "[deleted]"
+	 * placeholder: each transaction still counted the other's row.
+	 */
 	@Transactional()
 	async deleteComment(id: string, requester: Requester): Promise<void> {
+		await this.lockComment(id);
 		const comment = await this.findLiveComment(id);
 		if (comment.authorId !== requester.id && !requester.privileged) {
 			throw new NotFoundException('Comment not found');
 		}
+		if (comment.parentId) await this.lockComment(comment.parentId);
 
 		if ((await this.countReplies(comment.id)) > 0) {
 			await this.txHost.tx.blogComment.update({
@@ -206,13 +214,20 @@ export class BlogCommentService {
 
 		await this.txHost.tx.blogComment.delete({ where: { id: comment.id } });
 		// Placeholders exist only to hold replies: drop the ones this was the last reply of.
+		// Each `parentId` is locked before it is read (above, or in the previous iteration).
 		let parentId = comment.parentId;
 		while (parentId) {
 			const parent = await this.txHost.tx.blogComment.findUnique({ where: { id: parentId } });
 			if (!parent?.deletedAt || (await this.countReplies(parent.id)) > 0) break;
+			if (parent.parentId) await this.lockComment(parent.parentId);
 			await this.txHost.tx.blogComment.delete({ where: { id: parent.id } });
 			parentId = parent.parentId;
 		}
+	}
+
+	/** `SELECT … FOR UPDATE` on one comment row, held until the transaction ends. */
+	private async lockComment(id: string): Promise<void> {
+		await this.txHost.tx.$queryRaw`SELECT id FROM blog_comments WHERE id = ${id} FOR UPDATE`;
 	}
 
 	private countReplies(id: string): Promise<number> {

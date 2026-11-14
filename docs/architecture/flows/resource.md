@@ -150,9 +150,10 @@ Delete a comment; kept as a placeholder if it has replies.
 
 - **Access**: author, or `privileged` (`Mod`/`Admin` via `requesterOf`), checked in the service.
 - **Flow**: `resource.BlogCommentService/DeleteBlogComment` → `BlogCommentService.deleteComment`, `@Transactional()`:
-  1. Load live comment (404); 404 if not author and not privileged.
+  1. `SELECT id FROM blog_comments WHERE id = $1 FOR UPDATE` (`lockComment`), then load live comment (404); 404 if not author and not privileged. If it is a reply, lock its parent row the same way.
   2. Has direct replies → soft delete: set `deletedAt = now`, `content = ''` (`authorId` is kept in the row, hidden in responses).
-  3. No replies → hard delete, then walk up the parents: delete each ancestor that is a placeholder and now has no replies; stop at the first live or still-populated one.
+  3. No replies → hard delete, then walk up the parents: delete each ancestor that is a placeholder and now has no replies (locking that ancestor's parent before deleting it); stop at the first live or still-populated one.
+  4. Locks are always taken deepest first, so concurrent deletes on one chain wait for each other rather than deadlock. That closes the race where deleting the last reply and its parent at the same time left a reply-less `[deleted]` placeholder (each transaction had counted the other's row): whichever runs second sees the first one's commit.
 - **Errors**: 404 for missing, already deleted, or not yours.
 
 ## Flash cards
@@ -303,6 +304,6 @@ None of these consumers emits further events.
 - ~~`createReport` checks file ownership for admins too~~: fixed (see fixed-issues.md; `CreateReportRequest.may_attach_any_file`).
 - ~~The `CheckFilesOwnedBy` gRPC call runs inside the open DB transaction~~: fixed (see fixed-issues.md; create and attach both ask before the transaction).
 - ~~Soft delete keeps `authorId` while the class comment says it is cleared~~: comment corrected (keeping `authorId` is intended: the column is required and responses blank it).
-- ~~`totalThreads` counts placeholders that `buildCommentTree` may prune~~: not a bug in consistent data (`deleteComment` keeps a placeholder only while it has replies, so a root is never pruned); only two concurrent deletes can leave an empty placeholder, backlog X3.
+- ~~`totalThreads` counts placeholders that `buildCommentTree` may prune~~: not a bug in consistent data (`deleteComment` keeps a placeholder only while it has replies, so a root is never pruned); two concurrent deletes could leave an empty placeholder: fixed (see fixed-issues.md; `deleteComment` row-locks the comment and its parent before counting replies).
 - ~~`updateFlashCard`/`deleteFlashCard` rely on `@ResourceAccess` alone~~: backlog X4 (moving cards to the requester pattern is an authorization change).
 - ~~Doc drift~~: `messaging.md` §7 and `services-and-data.md` now list `resource.report.created` and `resource.blog-comment.created`.
