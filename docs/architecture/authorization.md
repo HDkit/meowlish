@@ -161,7 +161,7 @@ The authorization service (`apps/authorization`) is only this ownership store:
 - table `resource_ownership` (`apps/authorization/prisma/schema/ownership.prisma`): `id`, `resource_type`, `resource_id`, `owner_id`, `created_at`; unique `(resource_type, resource_id)`.
 - gRPC `CheckOwnership`, `RegisterOwnership`, `RemoveOwnership` (`proto/authorization.proto`); only `CheckOwnership` is called (by the guard).
 - fed by events: `exam.exam.created/deleted`, `live.room.created/deleted`, `resource.resource.created/deleted` (handlers in `apps/authorization/src/app/events/handlers/`, each with `InboxService.claim`). `registerOwnership` is an upsert with `update: {}`: **first owner wins**, a replayed or forged "created" event can't transfer ownership.
-- backfilled by `apps/authorization/prisma/seed.ts` from the owning services' columns (`exams.created_by`, `blogs.author_id`, `flash_cards.author_id`, `flash_card_lists.author_id` as `flashcard-list`); it also copies room owners **back** into `live.rooms.created_by`.
+- backfilled by `apps/authorization/prisma/seed.ts` from the owning services' columns (`exams.created_by`, `blogs.author_id`, `flash_cards.author_id`, `live.rooms.created_by`); it deletes the stale `flashcard-list` rows (nothing reads them) and also copies room owners **back** into `live.rooms.created_by` where that column is empty.
 
 Exam ownership rows are still registered (`exam.exam.*` events) but no exam route uses `@ResourceAccess` anymore.
 

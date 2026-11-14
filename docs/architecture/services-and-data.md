@@ -75,11 +75,11 @@ Events: `auth.user.login` (mail login, Google login), `auth.user.locked` (live d
 
 Ownership copy for `@ResourceAccess` (legacy; see [authorization.md §5](authorization.md#5-legacy-resourceaccess-and-the-authorization-service)). Schema `apps/authorization/prisma/schema/ownership.prisma`.
 
-| Model               | Table                | Key columns                                                                                                                                                   | Purpose                                                                                                                      |
-| ------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `ResourceOwnership` | `resource_ownership` | `id` (cuid), `resource_type`, `resource_id`, `owner_id`, `created_at`; unique `(resource_type, resource_id)`; indexes `owner_id`, `(resource_type, owner_id)` | One owner per resource. Types written at runtime: `exam`, `room`, `blog`, `flashcard`; the seed also writes `flashcard-list` |
+| Model               | Table                | Key columns                                                                                                                                                   | Purpose                                                                                                                                                           |
+| ------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ResourceOwnership` | `resource_ownership` | `id` (cuid), `resource_type`, `resource_id`, `owner_id`, `created_at`; unique `(resource_type, resource_id)`; indexes `owner_id`, `(resource_type, owner_id)` | One owner per resource. Types written at runtime: `exam`, `room`, `blog`, `flashcard` (the seed backfills the same types and deletes stale `flashcard-list` rows) |
 
-gRPC `AuthorizationService` (`proto/authorization.proto`): `CheckOwnership`, `RegisterOwnership`, `RemoveOwnership` (only `CheckOwnership` is called, by `ResourceAccessGuard`).
+gRPC `AuthorizationService` (`proto/authorization.proto`): `CheckOwnership` (called by the gateway's `ResourceAccessGuard`). Ownership is only written by the event consumers and the seed.
 
 Consumes (queues `authorization.events.{exam,room,resource}.{created,deleted}`): `exam.exam.created/deleted`, `live.room.created/deleted`, `resource.resource.created/deleted`. Runs the relay on the `sub` connection but writes no outbox events.
 
