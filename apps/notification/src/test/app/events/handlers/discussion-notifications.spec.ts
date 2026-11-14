@@ -103,7 +103,7 @@ describe('ForumReplyCreatedHandler', () => {
 		excerpt: 'Đồng ý',
 		position: 41,
 	};
-	it('notifies the thread author, linking to the page of the reply', async () => {
+	it('notifies the thread author with a page-independent link and the reply position', async () => {
 		const d = deps();
 		await new ForumReplyCreatedHandler(
 			d.notifications as never,
@@ -113,7 +113,12 @@ describe('ForumReplyCreatedHandler', () => {
 		expect(sent(d)).toEqual(['starter:forum_reply']);
 		expect(d.preferences.isEnabled).toHaveBeenCalledWith('starter', 'forumReply');
 		const [[n]] = d.notifications.createNotification.mock.calls as [{ data: string }][];
-		expect(JSON.parse(n.data)).toMatchObject({ action: '/forum/thread/t1?page=3#reply-r1' });
+		expect(JSON.parse(n.data)).toEqual({
+			threadId: 't1',
+			replyId: 'r1',
+			position: 41,
+			action: '/forum/thread/t1?reply=r1',
+		});
 	});
 
 	it('notifies a quoted author with its own type and switch, separate from blog replies', async () => {
@@ -140,8 +145,8 @@ describe('ForumReplyCreatedHandler', () => {
 		expect(sent(d)).toEqual(['starter:forum_reply']);
 	});
 
-	it('builds first-page links without a page number', () => {
-		expect(forumReplyAction('t1', 'r1', 20)).toBe('/forum/thread/t1#reply-r1');
+	it('encodes the ids in the link', () => {
+		expect(forumReplyAction('t 1', 'r&1')).toBe('/forum/thread/t%201?reply=r%261');
 		expect(blogCommentAction('b 1', 'c1')).toBe('/blog/b%201#comment-c1');
 	});
 });

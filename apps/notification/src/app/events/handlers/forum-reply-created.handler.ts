@@ -14,9 +14,6 @@ export const FORUM_REPLY_CREATED_QUEUE = defineConsumerQueue(
 	'notification.events.forum-reply.created',
 );
 
-/** Replies per page of the frontend's thread view (`REPLIES_PER_PAGE` in its `lib/forum.ts`). */
-const REPLIES_PER_PAGE = 20;
-
 class ForumReplyCreatedEvent {
 	@IsString() replyId!: string;
 	@IsString() threadId!: string;
@@ -28,12 +25,12 @@ class ForumReplyCreatedEvent {
 	@IsInt() @Min(1) position!: number;
 }
 
-/** In-app path of a reply: the thread page it is on, scrolled to `#reply-<id>`. */
-export const forumReplyAction = (threadId: string, replyId: string, position: number): string => {
-	const page = Math.ceil(position / REPLIES_PER_PAGE);
-	const query = page > 1 ? `?page=${page}` : '';
-	return `/forum/thread/${encodeURIComponent(threadId)}${query}#reply-${encodeURIComponent(replyId)}`;
-};
+/**
+ * In-app path of a reply. It does not depend on the page size: the frontend finds the page from
+ * `data.position` (1-based, oldest first) and scrolls to the reply.
+ */
+export const forumReplyAction = (threadId: string, replyId: string): string =>
+	`/forum/thread/${encodeURIComponent(threadId)}?reply=${encodeURIComponent(replyId)}`;
 
 /** Tells the thread author about a new reply (`forum_reply`), and the quoted reply's author about the quote (`forum_quote`). */
 @Injectable()
@@ -81,7 +78,8 @@ export class ForumReplyCreatedHandler {
 					data: JSON.stringify({
 						threadId: event.threadId,
 						replyId: event.replyId,
-						action: forumReplyAction(event.threadId, event.replyId, event.position),
+						position: event.position,
+						action: forumReplyAction(event.threadId, event.replyId),
 					}),
 				}),
 			);

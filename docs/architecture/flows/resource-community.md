@@ -214,7 +214,7 @@ Notification consumers of the events above (all in `apps/notification/src/app/ev
 - Queue `notification.events.forum-reply.created`; `ForumReplyCreatedHandler` (`forum-reply-created.handler.ts`); inbox yes.
 - Recipients from `discussionRecipients(authorId, owner = { threadAuthorId, 'forumReply' }, replied = { quotedAuthorId, 'forumQuote' })` (`discussion-recipients.ts`): the quoted author first (kind `replied`) unless they wrote the reply; then the thread author (kind `owner`) unless they wrote the reply or are the quoted author. So nobody is notified about their own reply, and a thread author quoted in their own thread gets one `replied` notification.
 - Preference check per recipient: `NotificationPreferencesService.isEnabled(id, preference)` (`apps/notification/src/app/services/notification-preferences.service.ts:69`) reads `notification_preferences` by `identity_id`; no row = enabled. Thread author → `forumReplyEnabled`; quoted author → `forumQuoteEnabled` (its own switch, separate from blog comment replies).
-- Notification: `type` `forum_quote` (quoted) or `forum_reply` (owner); Vietnamese title; message `Trong chủ đề "<threadTitle>": <excerpt>`; `data { threadId, replyId, action }` where `action = /forum/thread/<threadId>[?page=N]#reply-<replyId>` with `N = ceil(position / 20)` (`REPLIES_PER_PAGE = 20`, copied from the frontend).
+- Notification: `type` `forum_quote` (quoted) or `forum_reply` (owner); Vietnamese title; message `Trong chủ đề "<threadTitle>": <excerpt>`; `data { threadId, replyId, position, action }` where `action = /forum/thread/<threadId>?reply=<replyId>` (page-independent; the frontend computes the page from `position`, 1-based oldest first, with its own page size, and may switch the address to the thread slug).
 
 ### resource.flashcard-proposal.created
 
@@ -233,7 +233,7 @@ Notification consumers of the events above (all in `apps/notification/src/app/ev
 - ~~A forum quote notification shared the `commentReply` switch and `comment_reply` type with blog comment replies~~: fixed (C37), own `forumQuoteEnabled` switch and `forum_quote` type.
 - ~~Flash card proposal notifications could not be turned off~~: fixed (C38), `flashcardEnabled` switch checked by both handlers.
 - ~~The SSE push happened inside the consumer's transaction, before the commit~~: fixed, pushed after the commit (see fixed-issues.md).
-- `apps/notification/src/app/events/handlers/forum-reply-created.handler.ts:17`: the notification link's page number assumes 20 replies per page (a constant copied from the frontend), while the gateway's default `limit` is 10; a frontend change silently breaks the deep links: backlog X6 (the frontend does use 20 today, so the links are right for now).
+- ~~The forum reply notification link's page number assumed the frontend's 20 replies per page~~: fixed (C39), the link is `/forum/thread/<id>?reply=<replyId>` and `data.position` lets the frontend find the page.
 - ~~A whitespace-only proposal title is stored as empty~~: fixed (see fixed-issues.md; 400).
 - ~~Withdrawing publishes no event~~: backlog X5 (needs a notification consumer before resource may publish it).
 - ~~"One open proposal per copy" is a read-then-insert check~~: fixed (see fixed-issues.md; the copy's row is locked first, no schema change).
