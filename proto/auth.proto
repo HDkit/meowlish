@@ -98,6 +98,11 @@ message RemoveCredDto {
 
 message RefreshDto {
 	google.protobuf.StringValue identity_id = 1;
+	// jti of the refresh token being exchanged (rotation and reuse detection). Absent: a new
+	// session for an identity the caller already verified (e.g. right after a password change).
+	google.protobuf.StringValue jti         = 2;
+	// Its `fam` claim; absent on refresh tokens issued before rotation.
+	google.protobuf.StringValue family      = 3;
 }
 
 message ValidateRefreshDto {

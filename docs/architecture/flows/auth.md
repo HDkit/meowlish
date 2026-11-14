@@ -17,7 +17,7 @@ Conventions used below:
 | -------------------------------------------------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------ |
 | [POST /auth/register](#post-apiv1authregister)                                         | public, CookieIssuanceGuard, strict by mail               | `Identity`, `Credential`, `IdentityRole`                                          | -                                    |
 | [POST /auth/login](#post-apiv1authlogin)                                               | public, CookieIssuanceGuard, strict by mail               | outbox                                                                            | `auth.user.login`                    |
-| [POST /auth/refresh](#post-apiv1authrefresh)                                           | refresh JWT, CookieIssuanceGuard, strict by refresh token | -                                                                                 | -                                    |
+| [POST /auth/refresh](#post-apiv1authrefresh)                                           | refresh JWT, CookieIssuanceGuard, strict by refresh token | Redis used-jti / revoked-family keys                                              | -                                    |
 | [POST /auth/logout](#post-apiv1authlogout)                                             | public, CookieIssuanceGuard                               | - (cookies only)                                                                  | -                                    |
 | [POST /auth/logout-all](#post-apiv1authlogout-all)                                     | authenticated                                             | Redis revocation key                                                              | -                                    |
 | [GET /auth/google](#get-apiv1authgoogle)                                               | public                                                    | Redis state, `oauth2_state` cookie                                                | -                                    |
@@ -64,7 +64,7 @@ Create a mail/password account and start a session.
   2. `AuthController.registerMail` → `MailRegisterCommandHandler` (`apps/auth/src/app/commands/handlers/mail-register.handler.ts`).
   3. Builds `Identity` + `Credential` (`loginType MAIL`, password hashed with async `bcrypt.hash`, cost 10, by `Credential.hashSecret`); adds the `student` role if `RoleReadRepository.findByName` finds it.
   4. `identityRepository.save` (one transaction): insert `Identity`, `IdentityRole`, `Credential`. No `@Transactional()` on the handler, so the following `getClaimsOfId` read and token signing run after commit.
-  5. `TokenService.generateTokens(claims, true)` signs access + refresh JWT (RS256, `jti`, `iatMs`).
+  5. `TokenService.generateTokens(claims, true)` signs access + refresh JWT (RS256, `jti`, `iatMs`; the refresh token also carries `fam`, a new rotation family per login).
   6. Gateway `issueCookies` sets both cookies; response `data: null`.
 - **Async**: none (register does not emit `auth.user.login`).
 - **Errors**: 409 duplicate mail (`credentials (identifier, login_type)` unique) or username; 400 validation; 403 cross-site / foreign `Origin`. No e-mail verification step exists.
@@ -87,12 +87,17 @@ Mint a new access + refresh token pair from a refresh token.
 
 - **Access**: `@IsPublic()` (skips the access guard), `CookieIssuanceGuard`, then `JwtRefreshAuthGuard` (`refresh-jwt`), `@StrictThrottleByRefreshToken()` (10/min per `<ip>:sub:<id>` taken from the `refresh_token` cookie or Bearer).
 - **Flow**:
-  1. `JwtRefreshStrategy` (`apps/gateway/src/auth-gateway/strategies/jwt-refresh.strategy.ts`): token from `refresh_token` cookie, else `Authorization: Bearer`; RS256 verify with the public key; the token must be a refresh token (`isRefreshTokenPayload`: `typ` REFRESH, or no `typ` and no roles/permissions for tokens issued before the claim) and match `refreshPayloadSchema`, else 401. Tokens are signed with `typ` ACCESS / REFRESH by `TokenService`; `JwtStrategy` and live's socket handshake accept only access tokens.
-  2. Calls [`ValidateRefresh`](#grpc-validaterefresh) → `req.user = { sub, roles, permissions }`.
-  3. Gateway `refresh` (`:145`) → `auth.AuthService/Refresh({ identityId: sub })` → `RefreshCommandHandler` (`refresh.handler.ts`): reloads `Identity` (401 missing, 403 locked) and claims, signs a new pair.
-  4. Gateway sets both cookies; `data: null`.
-- **Notes**: the presented refresh token is not invalidated (no rotation/one-time use); it stays valid until `exp` or a revocation. Fresh claims are read on every refresh, so role changes apply.
-- **Errors**: 401 missing/invalid/revoked token; 403 locked; 429.
+  1. `JwtRefreshStrategy` (`apps/gateway/src/auth-gateway/strategies/jwt-refresh.strategy.ts`): token from `refresh_token` cookie, else `Authorization: Bearer`; RS256 verify with the public key; the token must be a refresh token (`isRefreshTokenPayload`: `typ` REFRESH, or no `typ` and no roles/permissions for tokens issued before the claim) and match `refreshPayloadSchema` (`jti` required, `fam` optional), else 401. Tokens are signed with `typ` ACCESS / REFRESH by `TokenService`; `JwtStrategy` and live's socket handshake accept only access tokens.
+  2. Calls [`ValidateRefresh`](#grpc-validaterefresh) → `req.user = { sub, roles, permissions, refreshToken: { jti, family } }`.
+  3. Gateway `refresh` → `auth.AuthService/Refresh({ identityId: sub, jti, family })` → `RefreshCommandHandler` (`refresh.handler.ts`): reloads `Identity` (401 missing, 403 locked) and claims, then `TokenService.rotateTokens` (rotation with reuse detection):
+     - `EXISTS auth:refresh:family:<fam>:revoked` → 401 `Token has been revoked`.
+     - `SET auth:refresh:used:<jti> {family, successor, usedAtMs} EX <refresh lifetime> NX`. Set → first exchange: sign a new pair whose refresh token has `jti = successor` and the same `fam`.
+     - Not set (the token was exchanged before): within `REFRESH_REUSE_GRACE_MS` (30 s) of that exchange → sign a new pair whose refresh token is the successor again (same `jti`/`fam`, re-signed), for tabs that refreshed at once with the shared cookie. Later → `SETEX auth:refresh:family:<fam>:revoked <refresh lifetime>` and 401 `Refresh token reused`: the thief's and the victim's tokens of that family both stop working (other sessions of the user are untouched).
+     - A token from before rotation has no `fam`: its first exchange starts a new family (recorded in the used-jti key), so it works exactly once like any other token.
+  4. `Refresh` without `jti` (only the gateway's password-change re-login, which has no refresh token to rotate) signs a new pair in a new family.
+  5. Gateway sets both cookies; `data: null`.
+- **Notes**: every refresh token works once (plus the 30 s grace); the gateway sets the new `refresh_token` cookie from the response. Fresh claims are read on every refresh, so role changes apply. `logout-all` and password change still revoke by `iatMs` (ValidateRefresh), across all families.
+- **Errors**: 401 missing/invalid/revoked token, reused token, revoked family; 403 locked; 429.
 
 ### POST /api/v1/auth/logout
 
@@ -188,7 +193,7 @@ Add a mail/password sign-in method.
 Change the password of a mail credential.
 
 - **Access**: authenticated, `CookieIssuanceGuard`, `@StrictThrottleBySession()`.
-- **Flow**: DTO `UpdateMailPasswordDto` (`id` = credential id, `currentPassword` min 1, `password` `@IsStrongPassword`) → `UpdateMailPassword` → `UpdatePasswordCommandHandler` (`update-password.handler.ts`): load identity (404); `assertNotDemo` (403, checked before the password); find the credential among the caller's (404); `bcrypt.compare` current password (401 `Wrong password`); `updateCredential` with the new hash (`Credential.hashSecret`, async bcrypt) → `save` updates `Credential`; then `revokeUser` (Redis revocation key, outside the transaction). The gateway then calls `Refresh({ identityId })` and sets fresh cookies (issued after the revoke), so this browser stays signed in; if that fails it clears the cookies instead. `data: null`.
+- **Flow**: DTO `UpdateMailPasswordDto` (`id` = credential id, `currentPassword` min 1, `password` `@IsStrongPassword`) → `UpdateMailPassword` → `UpdatePasswordCommandHandler` (`update-password.handler.ts`): load identity (404); `assertNotDemo` (403, checked before the password); find the credential among the caller's (404); `bcrypt.compare` current password (401 `Wrong password`); `updateCredential` with the new hash (`Credential.hashSecret`, async bcrypt) → `save` updates `Credential`; then `revokeUser` (Redis revocation key, outside the transaction). The gateway then calls `Refresh({ identityId })` (no `jti`: a new family) and sets fresh cookies (issued after the revoke), so this browser stays signed in; if that fails it clears the cookies instead. `data: null`.
 - **Notes**: every other session of the account ends.
 - **Errors**: 401, 403, 404, 409.
 
@@ -314,7 +319,7 @@ Same handler as `GET /google/calendar/token` (`GetGoogleCalendarTokenQuery`); it
 
 - **RabbitMQ consumers**: none. auth registers a `sub` connection (`configs/rmq.sub.config.ts`) but has no `@RabbitSubscribe` handler.
 - **Outbox relay**: `MessagingModule.forRoot({ serviceName: 'auth', relay: true })` (`apps/auth/src/auth.module.ts:64`) polls `outbox_events` every second and publishes to `eventbus`; see [messaging.md, the relay](../messaging.md#4-the-relay-outboxrelay). Events written by auth: `auth.user.login`, `auth.user.locked`, `auth.file.added`, `auth.files.removed` (all envelope).
-- **Redis (auth service)**: only `jwt:blacklist:user:<id>` (ms timestamp, TTL = refresh token lifetime), plus BullMQ's own keys on the same Redis (`configs/bullmq.config.ts`).
+- **Redis (auth service)**: `jwt:blacklist:user:<id>` (ms timestamp, TTL = refresh token lifetime), `auth:refresh:used:<jti>` (`{ family, successor, usedAtMs }`, TTL = refresh token lifetime) and `auth:refresh:family:<fam>:revoked` (ms timestamp, same TTL), plus BullMQ's own keys on the same Redis (`configs/bullmq.config.ts`).
 
 ### BullMQ publish-deleted-files (every 60 s)
 
@@ -328,7 +333,7 @@ Same handler as `GET /google/calendar/token` (`GetGoogleCalendarTokenQuery`); it
 1. ~~An access token was accepted by `POST /auth/refresh`~~: fixed (S18, `typ` claim; see [fixed-issues.md](../../fixed-issues.md)).
 2. ~~Default-frontend Google login sends no `state` (login CSRF)~~: fixed (S21), every flow has a browser-bound state (see fixed-issues.md).
 3. ~~Google `loginToken` exchange was GET then DEL~~: fixed, `GETDEL` (see fixed-issues.md).
-4. ~~Refresh tokens are not rotated or invalidated on use~~: backlog X2.
+4. ~~Refresh tokens are not rotated or invalidated on use~~: fixed (S22), rotation with reuse detection per family (see fixed-issues.md).
 5. ~~"Cannot remove your last credential" was 405 (HTTP 499)~~: fixed, 409 (see fixed-issues.md).
 6. ~~P2025 version miss and the unknown-`roleId` FK failure reached clients as 502~~: fixed, 409 and 404 (see fixed-issues.md); the malformed-cursor plain `Error` comes from the shared `CursorPaginationHelper` (libs/utils): backlog X3.
 7. ~~Doc drift~~: `messaging.md` §7 said Google sign-up emits `auth.user.login`; corrected (only logins to an existing account do).

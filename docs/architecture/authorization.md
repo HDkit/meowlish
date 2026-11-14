@@ -49,13 +49,17 @@ All of this is in `apps/gateway/src/auth-gateway/auth-cookies.ts` and `auth.rout
 
 Cookie-issuing routes return `data: null`; tokens never appear in a response body.
 
-| Route                          | Guards                                                                                      | Effect                                                                                                                             |
-| ------------------------------ | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `POST /api/v1/auth/register`   | `@IsPublic`, `CookieIssuanceGuard`, strict throttle by mail                                 | `auth.RegisterMail` → set both cookies                                                                                             |
-| `POST /api/v1/auth/login`      | same                                                                                        | `auth.LoginMail` → set both cookies (also writes `auth.user.login` to the outbox)                                                  |
-| `POST /api/v1/auth/refresh`    | `@IsPublic`, `CookieIssuanceGuard`, `JwtRefreshAuthGuard`, strict throttle by refresh token | `JwtRefreshStrategy` reads `refresh_token` cookie, else Bearer; `auth.ValidateRefresh` (revocation) → `auth.Refresh` → new cookies |
-| `POST /api/v1/auth/logout`     | `@IsPublic`, `CookieIssuanceGuard`                                                          | Clears both cookies. **No server-side revocation**: a copied refresh token stays valid until it expires                            |
-| `POST /api/v1/auth/logout-all` | authenticated                                                                               | `auth.LogOutAll` (revokes every token of the identity) → clears cookies                                                            |
+| Route                          | Guards                                                                                      | Effect                                                                                                                                        |
+| ------------------------------ | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /api/v1/auth/register`   | `@IsPublic`, `CookieIssuanceGuard`, strict throttle by mail                                 | `auth.RegisterMail` → set both cookies                                                                                                        |
+| `POST /api/v1/auth/login`      | same                                                                                        | `auth.LoginMail` → set both cookies (also writes `auth.user.login` to the outbox)                                                             |
+| `POST /api/v1/auth/refresh`    | `@IsPublic`, `CookieIssuanceGuard`, `JwtRefreshAuthGuard`, strict throttle by refresh token | `JwtRefreshStrategy` reads `refresh_token` cookie, else Bearer; `auth.ValidateRefresh` (revocation) → `auth.Refresh` (rotation) → new cookies |
+| `POST /api/v1/auth/logout`     | `@IsPublic`, `CookieIssuanceGuard`                                                          | Clears both cookies. **No server-side revocation**: a copied refresh token stays valid until it expires                                       |
+| `POST /api/v1/auth/logout-all` | authenticated                                                                               | `auth.LogOutAll` (revokes every token of the identity) → clears cookies                                                                       |
+
+### Refresh token rotation
+
+Every refresh token is single-use. Each carries a `jti` and a family id `fam` (one family per login); `POST /auth/refresh` records the exchange in auth's Redis (`auth:refresh:used:<jti>`, `SET NX`) and returns the next member of the family. The same token presented again within 30 s (several tabs refreshing with the shared cookie) gets the current member back; later it counts as stolen and revokes the whole family (`auth:refresh:family:<fam>:revoked`), so both the thief and the victim must sign in again. Refresh tokens from before rotation (no `fam`) start a family on their first exchange. Details: [flows/auth.md](flows/auth.md#post-apiv1authrefresh).
 
 ### `CookieIssuanceGuard`
 

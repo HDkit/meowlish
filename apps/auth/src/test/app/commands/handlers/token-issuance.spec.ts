@@ -96,6 +96,36 @@ describe('refresh / validate-refresh', () => {
 		expect(s.tokenService.generateTokens).not.toHaveBeenCalled();
 	});
 
+	it('refresh rotates the presented refresh token', async () => {
+		const s = setup();
+		const rotateTokens = jest.fn().mockResolvedValue(tokens);
+		const handler = new RefreshCommandHandler(
+			s.repo as never,
+			{
+				...s.tokenService,
+				rotateTokens: rotateTokens,
+			} as never,
+		);
+		await expect(
+			handler.execute(new RefreshCommand({ identityId: 'i1', jti: 'j1', family: 'f1' })),
+		).resolves.toBe(tokens);
+		expect(rotateTokens).toHaveBeenCalledWith(
+			{ sub: 'i1', roles: [], permissions: [] },
+			{ jti: 'j1', family: 'f1' },
+		);
+		expect(s.tokenService.generateTokens).not.toHaveBeenCalled();
+	});
+
+	it('refresh without a jti starts a new session (after a password change)', async () => {
+		const s = setup();
+		const handler = new RefreshCommandHandler(s.repo as never, s.tokenService as never);
+		await expect(handler.execute(new RefreshCommand({ identityId: 'i1' }))).resolves.toBe(tokens);
+		expect(s.tokenService.generateTokens).toHaveBeenCalledWith(
+			{ sub: 'i1', roles: [], permissions: [] },
+			true,
+		);
+	});
+
 	it('validate-refresh refuses a locked identity', async () => {
 		const s = setup({ locked: true });
 		const ts = { isTokenRevoked: jest.fn().mockResolvedValue(false) };

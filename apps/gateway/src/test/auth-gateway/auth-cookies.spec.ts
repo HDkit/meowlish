@@ -44,11 +44,13 @@ describe('auth cookies', () => {
 	let app: INestApplication;
 	let base: string;
 	const accessToken = sign('user-1', 900);
-	// shaped like auth's refresh tokens: no roles/permissions, typ REFRESH
-	const refreshToken = jwt.sign({ sub: 'user-1', typ: 'REFRESH', iatMs: Date.now() }, privateKey, {
-		algorithm: 'RS256',
-		expiresIn: 7 * 24 * 3600,
-	});
+	// shaped like auth's refresh tokens: no roles/permissions, typ REFRESH, jti and family
+	const signRefresh = (claims: object) =>
+		jwt.sign({ sub: 'user-1', typ: 'REFRESH', iatMs: Date.now(), ...claims }, privateKey, {
+			algorithm: 'RS256',
+			expiresIn: 7 * 24 * 3600,
+		});
+	const refreshToken = signRefresh({ jti: 'jti-1', fam: 'fam-1' });
 	const authService = {
 		loginMail: jest.fn(() => of({ accessToken: accessToken, refreshToken: refreshToken })),
 		registerMail: jest.fn(() => of({ accessToken: accessToken, refreshToken: refreshToken })),
@@ -160,6 +162,30 @@ describe('auth cookies', () => {
 		expect(res.status).toBe(201);
 		expect(((await res.json()) as { data: unknown }).data).toBeNull();
 		expect(Object.keys(setCookies(res)).sort()).toEqual(['access_token', 'refresh_token']);
+		// auth rotates exactly the presented token
+		expect(authService.refresh).toHaveBeenLastCalledWith({
+			identityId: 'user-1',
+			jti: 'jti-1',
+			family: 'fam-1',
+		});
+	});
+
+	it('refresh passes a pre-rotation token (no family) on, and refuses one without a jti', async () => {
+		const legacy = await fetch(`${base}/refresh`, {
+			method: 'POST',
+			headers: { Cookie: `refresh_token=${signRefresh({ jti: 'jti-old' })}` },
+		});
+		expect(legacy.status).toBe(201);
+		expect(authService.refresh).toHaveBeenLastCalledWith({
+			identityId: 'user-1',
+			jti: 'jti-old',
+			family: undefined,
+		});
+		const noJti = await fetch(`${base}/refresh`, {
+			method: 'POST',
+			headers: { Cookie: `refresh_token=${signRefresh({})}` },
+		});
+		expect(noJti.status).toBe(401);
 	});
 
 	it('accepts a bearer header when no cookie is present', async () => {

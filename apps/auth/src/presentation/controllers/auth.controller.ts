@@ -119,7 +119,9 @@ export class AuthController implements auth.AuthServiceController {
 	@SerializeOptions({ type: TokensDto })
 	async refresh(@Payload() request: RefreshDto): Promise<TokensDto> {
 		const res = await this.commandBus.execute(
-			new RefreshCommand(new RefreshCommandPayload(request.identityId)),
+			new RefreshCommand(
+				new RefreshCommandPayload(request.identityId, request.jti, request.family),
+			),
 		);
 		return res;
 	}

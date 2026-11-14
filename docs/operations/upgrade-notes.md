@@ -16,6 +16,8 @@ The HTTP contract changed in ways an old frontend can't handle, and an old backe
 - **Exam tags** are added and removed by tag **ID**, not name.
 - **Google Calendar**: `GET .../google/calendar/token` returns `{ accessToken, expiresAt }`; connect/exchange return `{ connected, expiresAt }`. Refresh tokens no longer leave the server.
 
+**Refresh tokens rotate**: every `POST /auth/refresh` returns a new `refresh_token` cookie and the old one stops working (30 s grace for concurrent tabs; a later reuse revokes that session). Clients must keep the cookie the response sets, which browsers do on their own; API clients using `Authorization: Bearer` must store the new token. Existing refresh tokens keep working once. Gateway and auth may be deployed in either order for this change (a mixed pair simply doesn't rotate).
+
 Also deploy **gateway and auth together**: the three Google Calendar RPCs changed their return types, so a mixed-version pair fails those routes.
 
 ### 2. The browser talks only to the frontend origin (proxy `/api` and `/socket.io`)

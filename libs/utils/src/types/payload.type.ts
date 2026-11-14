@@ -12,10 +12,17 @@ export const payloadSchema = z.object({
 	typ: z.enum(TokenType).optional(),
 });
 
-export const refreshPayloadSchema = payloadSchema.omit({
-	roles: true,
-	permissions: true,
-});
+export const refreshPayloadSchema = payloadSchema
+	.omit({
+		roles: true,
+		permissions: true,
+	})
+	.extend({
+		/** Single-use id: each exchange at /auth/refresh rotates it. */
+		jti: z.string(),
+		/** Rotation family; absent on refresh tokens issued before rotation. */
+		fam: z.string().optional(),
+	});
 
 /**
  * Access and refresh tokens share the signing key, so a check of the signature alone accepts

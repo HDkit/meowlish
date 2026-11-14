@@ -63,7 +63,10 @@ describe('gateway throttling and CORS', () => {
 			.overrideGuard(JwtRefreshAuthGuard)
 			.useValue({
 				canActivate: (ctx: ExecutionContext) => {
-					ctx.switchToHttp().getRequest<{ user: unknown }>().user = { sub: 'identity' };
+					ctx.switchToHttp().getRequest<{ user: unknown }>().user = {
+						sub: 'identity',
+						refreshToken: { jti: 'jti' },
+					};
 					return true;
 				},
 			})

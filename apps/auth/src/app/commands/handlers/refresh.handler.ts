@@ -22,13 +22,15 @@ export class RefreshCommandHandler implements ICommandHandler<RefreshCommand> {
 		if (identity.isLocked) throw new ForbiddenException('Account locked');
 		const claims = await this.identityRepository.getClaimsOfId(payload.identityId);
 		if (!claims) throw new UnauthorizedException();
-		return this.tokenService.generateTokens(
-			{
-				sub: payload.identityId,
-				permissions: claims.permissions,
-				roles: claims.roles,
-			},
-			true,
-		);
+		const tokenClaims = {
+			sub: payload.identityId,
+			permissions: claims.permissions,
+			roles: claims.roles,
+		};
+		if (payload.jti === undefined) return this.tokenService.generateTokens(tokenClaims, true);
+		return this.tokenService.rotateTokens(tokenClaims, {
+			jti: payload.jti,
+			family: payload.family,
+		});
 	}
 }

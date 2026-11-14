@@ -14,7 +14,7 @@ import {
 	StrictThrottleByRefreshToken,
 	StrictThrottleBySession,
 } from '../throttle';
-import { type AuthenticatedRequest } from '../types/authenticated-request';
+import { type AuthenticatedRequest, type RefreshRequest } from '../types/authenticated-request';
 import { clearAuthCookies, setAuthCookies } from './auth-cookies';
 import { AUTH_CLIENT } from './constants/auth';
 import { AddMailCredDto } from './dtos/req/add-mail-cred.req.dto';
@@ -149,11 +149,16 @@ export class AuthGatewayController implements OnModuleInit {
 	@ApiEmptyResponseEntity()
 	@ApiOperation({
 		summary: 'Refresh access tokens using a refresh token',
-		description: `Reads the refresh token from the \`refresh_token\` cookie, else \`Authorization: Bearer\`. ${SETS_COOKIES}`,
+		description: `Reads the refresh token from the \`refresh_token\` cookie, else \`Authorization: Bearer\`. Each refresh token works once: the response carries a new one (rotation). Sending a used one again within 30 s returns the current session (concurrent tabs); later it revokes that session's whole token family (401). ${SETS_COOKIES}`,
 	})
 	@StrictThrottleByRefreshToken()
-	refresh(@Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
-		return this.issueCookies(req, res, this.authService.refresh({ identityId: req.user.sub }));
+	refresh(@Req() req: RefreshRequest, @Res({ passthrough: true }) res: Response) {
+		const { jti, family } = req.user.refreshToken;
+		return this.issueCookies(
+			req,
+			res,
+			this.authService.refresh({ identityId: req.user.sub, jti: jti, family: family }),
+		);
 	}
 
 	@Post('logout')
@@ -392,7 +397,10 @@ export class AuthGatewayController implements OnModuleInit {
 			setAuthCookies(
 				request,
 				res,
-				await lastValueFrom(this.authService.refresh({ identityId: identityId })),
+				// no jti: a new session (new refresh token family), not a rotation
+				await lastValueFrom(
+					this.authService.refresh({ identityId: identityId, jti: undefined, family: undefined }),
+				),
 				this.env,
 			);
 		} catch {

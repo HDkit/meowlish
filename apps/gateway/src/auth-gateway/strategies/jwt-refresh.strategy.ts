@@ -1,4 +1,5 @@
 import { IEnvVars } from '../../configs/config';
+import { type RefreshClaims } from '../../types/authenticated-request';
 import { REFRESH_TOKEN_COOKIE, cookieExtractor } from '../auth-cookies';
 import { AUTH_CLIENT } from '../constants/auth';
 import { Inject, Injectable, OnModuleInit, UnauthorizedException } from '@nestjs/common';
@@ -37,12 +38,14 @@ export class JwtRefreshStrategy
 		this.authService = this.authClient.getService<auth.AuthServiceClient>(auth.AUTH_SERVICE_NAME);
 	}
 
-	async validate(payload: AuthRefreshPayload): Promise<Claims> {
+	async validate(raw: unknown): Promise<RefreshClaims> {
 		// safeParse: a malformed (but validly signed) payload is a 401, not a 500.
 		// an access token (same signing key, zod strips its extra claims) must not mint sessions
-		if (!isRefreshTokenPayload(payload) || !refreshPayloadSchema.safeParse(payload).success) {
+		const parsed = refreshPayloadSchema.safeParse(raw);
+		if (!isRefreshTokenPayload(raw) || !parsed.success) {
 			throw new UnauthorizedException('Invalid token');
 		}
+		const payload: AuthRefreshPayload = parsed.data;
 
 		const claims = await lastValueFrom(
 			this.authService.validateRefresh({
@@ -51,6 +54,9 @@ export class JwtRefreshStrategy
 				iatMs: payload.iatMs,
 			}),
 		);
-		return claims as Claims;
+		return {
+			...(claims as Claims),
+			refreshToken: { jti: payload.jti, family: payload.fam },
+		};
 	}
 }

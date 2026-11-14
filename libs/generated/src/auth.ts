@@ -68,7 +68,18 @@ export interface RemoveCredDto {
 }
 
 export interface RefreshDto {
-  identityId: string | undefined;
+  identityId:
+    | string
+    | undefined;
+  /**
+   * jti of the refresh token being exchanged (rotation and reuse detection). Absent: a new
+   * session for an identity the caller already verified (e.g. right after a password change).
+   */
+  jti:
+    | string
+    | undefined;
+  /** Its `fam` claim; absent on refresh tokens issued before rotation. */
+  family: string | undefined;
 }
 
 export interface ValidateRefreshDto {
@@ -802,13 +813,19 @@ export const RemoveCredDto: MessageFns<RemoveCredDto> = {
 };
 
 function createBaseRefreshDto(): RefreshDto {
-  return { identityId: undefined };
+  return { identityId: undefined, jti: undefined, family: undefined };
 }
 
 export const RefreshDto: MessageFns<RefreshDto> = {
   encode(message: RefreshDto, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.identityId !== undefined) {
       StringValue.encode({ value: message.identityId! }, writer.uint32(10).fork()).join();
+    }
+    if (message.jti !== undefined) {
+      StringValue.encode({ value: message.jti! }, writer.uint32(18).fork()).join();
+    }
+    if (message.family !== undefined) {
+      StringValue.encode({ value: message.family! }, writer.uint32(26).fork()).join();
     }
     return writer;
   },
@@ -832,6 +849,22 @@ export const RefreshDto: MessageFns<RefreshDto> = {
             }
 
             message.identityId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.jti = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.family = StringValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }
