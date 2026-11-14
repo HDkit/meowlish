@@ -14,7 +14,10 @@ jest.mock('nestjs-cls', () => ({ UseCls: () => () => undefined }));
 const event = (payload: object) => ({ id: 'evt-1', type: 'x', payload: payload });
 
 const deps = (opts: { disabled?: string[]; claimed?: boolean } = {}) => ({
-	notifications: { createNotification: jest.fn() },
+	notifications: {
+		createNotification: jest.fn((n: object) => Promise.resolve(n)),
+		push: jest.fn(),
+	},
 	preferences: {
 		isEnabled: jest.fn((id: string) => Promise.resolve(!(opts.disabled ?? []).includes(id))),
 	},

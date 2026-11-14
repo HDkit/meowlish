@@ -29,7 +29,10 @@ const setup = (
 			:	of({ ids: opts.admins ?? ['admin-1', 'admin-2'] }),
 		),
 	};
-	const notifications = { createNotification: jest.fn() };
+	const notifications = {
+		createNotification: jest.fn((n: object) => Promise.resolve(n)),
+		push: jest.fn(),
+	};
 	const preferences = {
 		isEnabled: jest.fn((id: string) => Promise.resolve(!(opts.disabled ?? []).includes(id))),
 	};
@@ -75,6 +78,27 @@ describe('ReportCreatedHandler', () => {
 		const { handler, notifications } = setup({ claimed: false });
 		await handler.handle(event(report));
 		expect(notifications.createNotification).not.toHaveBeenCalled();
+		expect(notifications.push).toHaveBeenCalledWith([]);
+	});
+
+	it('pushes every stored notification once, after storing all of them', async () => {
+		const { handler, notifications } = setup();
+		await handler.handle(event(report));
+		expect(notifications.push).toHaveBeenCalledTimes(1);
+		const [pushed] = notifications.push.mock.calls[0] as [{ recipientId: string }[]];
+		expect(pushed.map(n => n.recipientId)).toEqual(['admin-1', 'admin-2']);
+		expect(notifications.push.mock.invocationCallOrder[0]).toBeGreaterThan(
+			Math.max(...notifications.createNotification.mock.invocationCallOrder),
+		);
+	});
+
+	it('pushes nothing when a later insert fails (the transaction rolls back)', async () => {
+		const { handler, notifications } = setup();
+		notifications.createNotification
+			.mockImplementationOnce((n: object) => Promise.resolve(n))
+			.mockImplementationOnce(() => Promise.reject(new Error('insert failed')));
+		await expect(handler.handle(event(report))).rejects.toThrow('insert failed');
+		expect(notifications.push).not.toHaveBeenCalled();
 	});
 
 	it('fails (so the message is retried) when auth is unreachable', async () => {

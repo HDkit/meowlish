@@ -42,6 +42,31 @@ describe('NotificationService', () => {
 		expect(tx.notification.update).not.toHaveBeenCalled();
 	});
 
+	it('stores without pushing; push emits each notification to its recipient', async () => {
+		const { tx, sse, service } = setup();
+		const now = new Date('2026-11-14T00:00:00Z');
+		tx.notification.create.mockResolvedValue({
+			id: 'n1',
+			recipientId: 'u1',
+			type: 'system',
+			title: 't',
+			message: 'm',
+			data: null,
+			isRead: false,
+			readAt: null,
+			createdAt: now,
+		});
+		const created = await service.createNotification({
+			recipientId: 'u1',
+			type: 'system',
+			title: 't',
+			message: 'm',
+		});
+		expect(sse.emit).not.toHaveBeenCalled();
+		service.push([created]);
+		expect(sse.emit).toHaveBeenCalledWith('u1', created);
+	});
+
 	it('rejects a non-JSON data payload with 400 instead of crashing', async () => {
 		const { tx, service } = setup();
 		await expect(

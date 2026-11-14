@@ -1,4 +1,5 @@
 import { AUTH_CLIENT } from '../../../constants/auth';
+import { type NotificationReadModel } from '../../../domain/read-models/notification.read-model';
 import { NotificationPreferencesService } from '../../services/notification-preferences.service';
 import { NotificationService } from '../../services/notification.service';
 import { RabbitPayload, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
@@ -47,10 +48,17 @@ export class ReportCreatedHandler implements OnModuleInit {
 		routingKey: 'resource.report.created',
 		...REPORT_CREATED_QUEUE.subscribe,
 	})
-	@Transactional()
 	async handle(@RabbitPayload() message: unknown): Promise<void> {
+		// pushed over SSE only after the commit: a rolled-back delivery must push nothing
+		this.notificationService.push(await this.store(message));
+	}
+
+	/** Claims the event and stores its notifications, in one transaction. */
+	@Transactional()
+	private async store(message: unknown): Promise<NotificationReadModel[]> {
+		const created: NotificationReadModel[] = [];
 		const { id, payload } = unwrapEvent<unknown>(message);
-		if (!(await this.inbox.claim(id, REPORT_CREATED_QUEUE.name))) return;
+		if (!(await this.inbox.claim(id, REPORT_CREATED_QUEUE.name))) return created;
 		const event = await validatePayload(ReportCreatedEvent, payload);
 		// An auth outage throws, so the message is retried instead of silently notifying nobody.
 		const { ids } = await lastValueFrom(
@@ -59,18 +67,21 @@ export class ReportCreatedHandler implements OnModuleInit {
 		for (const adminId of ids) {
 			if (adminId === event.reportedBy) continue;
 			if (!(await this.preferencesService.isEnabled(adminId, 'report'))) continue;
-			await this.notificationService.createNotification({
-				recipientId: adminId,
-				type: 'report',
-				title: 'Có báo cáo mới cần xử lý',
-				message: `Báo cáo "${event.title}" vừa được gửi và đang chờ xem xét.`,
-				data: JSON.stringify({
-					reportId: event.reportId,
-					targetType: event.targetType ?? null,
-					targetId: event.targetId ?? null,
-					action: '/report-management',
+			created.push(
+				await this.notificationService.createNotification({
+					recipientId: adminId,
+					type: 'report',
+					title: 'Có báo cáo mới cần xử lý',
+					message: `Báo cáo "${event.title}" vừa được gửi và đang chờ xem xét.`,
+					data: JSON.stringify({
+						reportId: event.reportId,
+						targetType: event.targetType ?? null,
+						targetId: event.targetId ?? null,
+						action: '/report-management',
+					}),
 				}),
-			});
+			);
 		}
+		return created;
 	}
 }

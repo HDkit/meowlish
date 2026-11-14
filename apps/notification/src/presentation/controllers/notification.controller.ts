@@ -19,7 +19,10 @@ export class NotificationController implements notification.NotificationServiceC
 
 	@SerializeOptions({ type: NotificationDto, strategy: 'exposeAll' })
 	async createNotification(@Payload() data: CreateNotificationReqDto): Promise<NotificationDto> {
-		return this.notificationService.createNotification(data);
+		// no surrounding transaction: the row is committed once createNotification returns
+		const created = await this.notificationService.createNotification(data);
+		this.notificationService.push([created]);
+		return created;
 	}
 
 	@SerializeOptions({ type: NotificationDto, strategy: 'exposeAll' })

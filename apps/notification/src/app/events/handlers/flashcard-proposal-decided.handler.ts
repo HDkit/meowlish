@@ -1,3 +1,4 @@
+import { type NotificationReadModel } from '../../../domain/read-models/notification.read-model';
 import { NotificationService } from '../../services/notification.service';
 import { proposalAction } from './flashcard-proposal-created.handler';
 import { RabbitPayload, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
@@ -64,24 +65,34 @@ export class FlashCardProposalDecidedHandler {
 		routingKey: 'resource.flashcard-proposal.decided',
 		...FLASHCARD_PROPOSAL_DECIDED_QUEUE.subscribe,
 	})
-	@Transactional()
 	async handle(@RabbitPayload() message: unknown): Promise<void> {
+		// pushed over SSE only after the commit: a rolled-back delivery must push nothing
+		this.notificationService.push(await this.store(message));
+	}
+
+	/** Claims the event and stores its notifications, in one transaction. */
+	@Transactional()
+	private async store(message: unknown): Promise<NotificationReadModel[]> {
+		const created: NotificationReadModel[] = [];
 		const { id, payload } = unwrapEvent<unknown>(message);
-		if (!(await this.inbox.claim(id, FLASHCARD_PROPOSAL_DECIDED_QUEUE.name))) return;
+		if (!(await this.inbox.claim(id, FLASHCARD_PROPOSAL_DECIDED_QUEUE.name))) return created;
 		const event = await validatePayload(FlashCardProposalDecidedEvent, payload);
 		const text = proposalDecisionText(event);
-		if (!text || event.decidedBy === event.authorId) return;
-		await this.notificationService.createNotification({
-			recipientId: event.authorId,
-			type: 'flashcard',
-			title: text.title,
-			message: text.message,
-			data: JSON.stringify({
-				proposalId: event.proposalId,
-				listId: event.targetListId,
-				status: event.status,
-				action: proposalAction(event.targetListId, event.proposalId),
+		if (!text || event.decidedBy === event.authorId) return created;
+		created.push(
+			await this.notificationService.createNotification({
+				recipientId: event.authorId,
+				type: 'flashcard',
+				title: text.title,
+				message: text.message,
+				data: JSON.stringify({
+					proposalId: event.proposalId,
+					listId: event.targetListId,
+					status: event.status,
+					action: proposalAction(event.targetListId, event.proposalId),
+				}),
 			}),
-		});
+		);
+		return created;
 	}
 }

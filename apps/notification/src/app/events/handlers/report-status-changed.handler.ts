@@ -1,3 +1,4 @@
+import { type NotificationReadModel } from '../../../domain/read-models/notification.read-model';
 import { NotificationPreferencesService } from '../../services/notification-preferences.service';
 import { NotificationService } from '../../services/notification.service';
 import { RabbitPayload, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
@@ -48,21 +49,31 @@ export class ReportStatusChangedHandler {
 		routingKey: 'resource.report.status-changed',
 		...REPORT_STATUS_CHANGED_QUEUE.subscribe,
 	})
-	@Transactional()
 	async handle(@RabbitPayload() message: unknown): Promise<void> {
+		// pushed over SSE only after the commit: a rolled-back delivery must push nothing
+		this.notificationService.push(await this.store(message));
+	}
+
+	/** Claims the event and stores its notifications, in one transaction. */
+	@Transactional()
+	private async store(message: unknown): Promise<NotificationReadModel[]> {
+		const created: NotificationReadModel[] = [];
 		const { id, payload } = unwrapEvent<unknown>(message);
-		if (!(await this.inbox.claim(id, REPORT_STATUS_CHANGED_QUEUE.name))) return;
+		if (!(await this.inbox.claim(id, REPORT_STATUS_CHANGED_QUEUE.name))) return created;
 		const event = await validatePayload(ReportStatusChangedEvent, payload);
-		if (!(await this.preferencesService.isEnabled(event.reportedBy, 'report'))) return;
-		await this.notificationService.createNotification({
-			recipientId: event.reportedBy,
-			type: 'report',
-			title: 'Báo cáo của bạn đã được cập nhật',
-			message: `Báo cáo "${event.title}" ${reportStatusText(event.status)}.`,
-			data: JSON.stringify({
-				reportId: event.reportId,
-				status: event.status,
+		if (!(await this.preferencesService.isEnabled(event.reportedBy, 'report'))) return created;
+		created.push(
+			await this.notificationService.createNotification({
+				recipientId: event.reportedBy,
+				type: 'report',
+				title: 'Báo cáo của bạn đã được cập nhật',
+				message: `Báo cáo "${event.title}" ${reportStatusText(event.status)}.`,
+				data: JSON.stringify({
+					reportId: event.reportId,
+					status: event.status,
+				}),
 			}),
-		});
+		);
+		return created;
 	}
 }

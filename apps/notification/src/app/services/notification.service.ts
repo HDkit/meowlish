@@ -51,6 +51,10 @@ export class NotificationService {
 		return entity;
 	}
 
+	/**
+	 * Stores a notification. It is not pushed over SSE: the caller calls `push` once the surrounding
+	 * transaction has committed, so a rolled-back (and later redelivered) event pushes nothing.
+	 */
 	async createNotification(data: CreateNotificationInput): Promise<NotificationReadModel> {
 		const entity = await this.txHost.tx.notification.create({
 			data: {
@@ -61,9 +65,14 @@ export class NotificationService {
 				data: this.parseData(data.data),
 			},
 		});
-		const notification = this.toReadModel(entity);
-		this.sseService.emit(notification.recipientId, notification);
-		return notification;
+		return this.toReadModel(entity);
+	}
+
+	/** Pushes stored notifications to their recipients' SSE streams; call it after the commit. */
+	push(notifications: NotificationReadModel[]): void {
+		for (const notification of notifications) {
+			this.sseService.emit(notification.recipientId, notification);
+		}
 	}
 
 	async getNotification(id: string, recipientId: string): Promise<NotificationReadModel> {

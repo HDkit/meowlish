@@ -11,7 +11,10 @@ jest.mock('nestjs-cls', () => ({ UseCls: () => () => undefined }));
 const event = (type: string, payload: object) => ({ id: 'evt-1', type: type, payload: payload });
 
 const setup = (claimed = true) => {
-	const notifications = { createNotification: jest.fn() };
+	const notifications = {
+		createNotification: jest.fn((n: object) => Promise.resolve(n)),
+		push: jest.fn(),
+	};
 	const inbox = { claim: jest.fn().mockResolvedValue(claimed) };
 	return {
 		notifications: notifications,
