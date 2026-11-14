@@ -4,12 +4,12 @@ describe('FilePrismaRepositoryImpl.decrementRef', () => {
 	const setup = (known: string[]) => {
 		let inFlight = 0;
 		let maxInFlight = 0;
-		const updateMany = jest.fn(async ({ where }: { where: { id: string } }) => {
+		const updateMany = jest.fn(async ({ where }: { where: { id: unknown } }) => {
 			inFlight++;
 			maxInFlight = Math.max(maxInFlight, inFlight);
 			await Promise.resolve();
 			inFlight--;
-			return { count: known.includes(where.id) ? 1 : 0 };
+			return { count: typeof where.id === 'string' && known.includes(where.id) ? 1 : 0 };
 		});
 		const repo = new FilePrismaRepositoryImpl({
 			tx: { file: { updateMany: updateMany } },
@@ -28,7 +28,26 @@ describe('FilePrismaRepositoryImpl.decrementRef', () => {
 			{ where: { id: 'a' }, data: { refCount: { decrement: 2 } } },
 			{ where: { id: 'missing' }, data: { refCount: { decrement: 1 } } },
 			{ where: { id: 'c' }, data: { refCount: { decrement: 1 } } },
+			{
+				where: { id: { in: ['a', 'missing', 'c'] }, refCount: { lt: 0 } },
+				data: { refCount: 0 },
+			},
 		]);
+	});
+
+	it('clamps the counts at 0 after decrementing, in the same transaction', async () => {
+		const { repo, updateMany } = setup(['a']);
+		await repo.decrementRef([{ id: 'a', count: 3 }]);
+		expect(updateMany).toHaveBeenLastCalledWith({
+			where: { id: { in: ['a'] }, refCount: { lt: 0 } },
+			data: { refCount: 0 },
+		});
+	});
+
+	it('does nothing for an empty list', async () => {
+		const { repo, updateMany } = setup([]);
+		await repo.decrementRef([]);
+		expect(updateMany).not.toHaveBeenCalled();
 	});
 
 	it('runs the updates sequentially in the shared transaction', async () => {

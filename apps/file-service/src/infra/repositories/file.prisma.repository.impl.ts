@@ -38,6 +38,13 @@ export class FilePrismaRepositoryImpl implements IFileRepository {
 				data: { refCount: { decrement: count } },
 			});
 		}
+		// Never below 0: a duplicate removal (e.g. a legacy event with no inbox id) must not leave
+		// a debt that swallows the next reference. Same transaction, so the rows are still locked.
+		if (files.length === 0) return;
+		await this.txHost.tx.file.updateMany({
+			where: { id: { in: files.map(f => f.id) }, refCount: { lt: 0 } },
+			data: { refCount: 0 },
+		});
 	}
 
 	async lockOrphanedFiles(
