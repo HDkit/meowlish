@@ -23,6 +23,9 @@ export interface UpdateFlashCardInput {
 	examples: string[];
 	notes?: string;
 	tags: string[];
+	/** `examples` / `tags` were sent: replace the list, even with an empty one. */
+	replaceExamples?: boolean;
+	replaceTags?: boolean;
 }
 
 export interface ListFlashCardsInput extends PageInput {

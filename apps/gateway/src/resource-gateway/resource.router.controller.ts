@@ -260,6 +260,9 @@ export class ResourceGatewayController implements OnModuleInit {
 			...body,
 			examples: body.examples ?? [],
 			tags: body.tags ?? [],
+			// a list in the body replaces the card's, so [] clears it
+			replaceExamples: body.examples !== undefined,
+			replaceTags: body.tags !== undefined,
 			id: id,
 		});
 	}

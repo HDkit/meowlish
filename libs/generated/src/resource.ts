@@ -115,6 +115,12 @@ export interface UpdateFlashCardRequest {
   examples: string[];
   notes?: string | undefined;
   tags: string[];
+  /**
+   * A repeated field can't tell "not sent" from "empty": these say the request sets the list,
+   * so an empty one clears it. False keeps the old behaviour (empty = unchanged).
+   */
+  replaceExamples: boolean;
+  replaceTags: boolean;
 }
 
 export interface DeleteFlashCardRequest {
@@ -1897,7 +1903,7 @@ export const GetFlashCardRequest: MessageFns<GetFlashCardRequest> = {
 };
 
 function createBaseUpdateFlashCardRequest(): UpdateFlashCardRequest {
-  return { id: undefined, examples: [], tags: [] };
+  return { id: undefined, examples: [], tags: [], replaceExamples: false, replaceTags: false };
 }
 
 export const UpdateFlashCardRequest: MessageFns<UpdateFlashCardRequest> = {
@@ -1928,6 +1934,12 @@ export const UpdateFlashCardRequest: MessageFns<UpdateFlashCardRequest> = {
     }
     for (const v of message.tags) {
       StringValue.encode({ value: v!! }, writer.uint32(74).fork()).join();
+    }
+    if (message.replaceExamples !== false) {
+      writer.uint32(80).bool(message.replaceExamples);
+    }
+    if (message.replaceTags !== false) {
+      writer.uint32(88).bool(message.replaceTags);
     }
     return writer;
   },
@@ -2015,6 +2027,22 @@ export const UpdateFlashCardRequest: MessageFns<UpdateFlashCardRequest> = {
             }
 
             message.tags.push(StringValue.decode(reader, reader.uint32()).value);
+            continue;
+          }
+          case 10: {
+            if (tag !== 80) {
+              break;
+            }
+
+            message.replaceExamples = reader.bool();
+            continue;
+          }
+          case 11: {
+            if (tag !== 88) {
+              break;
+            }
+
+            message.replaceTags = reader.bool();
             continue;
           }
         }

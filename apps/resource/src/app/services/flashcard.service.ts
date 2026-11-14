@@ -69,9 +69,9 @@ export class FlashcardService {
 				image: data.image,
 				partOfSpeech: data.partOfSpeech,
 				pronunciation: data.pronunciation,
-				examples: data.examples.length > 0 ? data.examples : undefined,
+				examples: data.replaceExamples || data.examples.length > 0 ? data.examples : undefined,
 				notes: data.notes,
-				tags: data.tags.length > 0 ? data.tags : undefined,
+				tags: data.replaceTags || data.tags.length > 0 ? data.tags : undefined,
 			},
 		});
 		return toFlashCardReadModel(updated);

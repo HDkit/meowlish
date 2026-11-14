@@ -185,6 +185,10 @@ message UpdateFlashCardRequest {
 	repeated google.protobuf.StringValue examples       = 7;
 	optional google.protobuf.StringValue notes          = 8;
 	repeated google.protobuf.StringValue tags           = 9;
+	// A repeated field can't tell "not sent" from "empty": these say the request sets the list,
+	// so an empty one clears it. False keeps the old behaviour (empty = unchanged).
+	bool                                 replace_examples = 10;
+	bool                                 replace_tags     = 11;
 }
 
 message DeleteFlashCardRequest {
