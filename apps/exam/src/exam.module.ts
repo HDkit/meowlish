@@ -10,7 +10,7 @@ import { FileOwnershipService } from './app/services/file-ownership.service';
 import { GoalService } from './app/services/goal.service';
 import { TagService } from './app/services/tag.service';
 import { bullConfig } from './configs/bullmq.config';
-import { config } from './configs/config';
+import { type IEnvVars, config } from './configs/config';
 import { rmqPubConfig } from './configs/rmq.pub.config';
 import { rmqSubConfig } from './configs/rmq.sub.config';
 import { FILE_CLIENT } from './constants/file';
@@ -127,16 +127,17 @@ const rmqPubModule = RabbitMQModule.forRootAsync({
 		FileOwnershipService,
 		{
 			provide: FILE_CLIENT,
-			useFactory: () =>
-				new ErrorHandlingGrpcProxy({
-					url:
-						process.env.FILE_SERVICE_URL ??
-						`${process.env.FILE_SERVICE_HOST}:${process.env.FILE_SERVICE_PORT}`,
+			inject: [ConfigService],
+			useFactory: (configService: ConfigService<IEnvVars>) => {
+				const conn = configService.getOrThrow('microservicesConnection.file', { infer: true });
+				return new ErrorHandlingGrpcProxy({
+					url: conn.url ?? `${conn.host}:${conn.port}`,
 					package: 'file',
 					packageDefinition: {
 						[`file.${file.FILE_SERVICE_NAME}`]: file.FileServiceService,
 					} satisfies PackageDefinition,
-				}),
+				});
+			},
 		},
 		{
 			provide: IExamRepositoryToken,

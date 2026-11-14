@@ -129,16 +129,17 @@ const rmqPubModule = RabbitMQModule.forRootAsync({
 		},
 		{
 			provide: FILE_CLIENT,
-			useFactory: () =>
-				new ErrorHandlingGrpcProxy({
-					url:
-						process.env.FILE_SERVICE_URL ??
-						`${process.env.FILE_SERVICE_HOST}:${process.env.FILE_SERVICE_PORT}`,
+			inject: [ConfigService],
+			useFactory: (configService: ConfigService<IEnvVars>) => {
+				const conn = configService.getOrThrow('microservicesConnection.file', { infer: true });
+				return new ErrorHandlingGrpcProxy({
+					url: conn.url ?? `${conn.host}:${conn.port}`,
 					package: 'file',
 					packageDefinition: {
 						[`file.${file.FILE_SERVICE_NAME}`]: file.FileServiceService,
 					} satisfies PackageDefinition,
-				}),
+				});
+			},
 		},
 		{
 			provide: IIdentityRepositoryToken,

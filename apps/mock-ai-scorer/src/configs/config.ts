@@ -18,8 +18,15 @@ const scorerSchema = z
 		path: ['minDelayMs'],
 	});
 
+/** Health HTTP listener on HOST:HEALTH_PORT. */
+const serverSchema = z.object({
+	host: z.string().default('127.0.0.1'),
+	healthPort: z.preprocess(v => (v === '' ? undefined : v), z.coerce.number().int().default(9110)),
+});
+
 export const envFileSchema = z.object({
 	env: z.union([z.literal('development'), z.literal('production')]),
+	server: serverSchema,
 	messageQueue: mqSchema,
 	scorer: scorerSchema,
 });
@@ -29,6 +36,10 @@ export type IEnvVars = z.infer<typeof envFileSchema>;
 // Unset or empty delay vars fall back to the schema defaults.
 const loadEnv = (): DeepStringify<IEnvVars> => ({
 	env: process.env.NODE_ENV,
+	server: {
+		host: process.env.HOST,
+		healthPort: process.env.HEALTH_PORT,
+	},
 	messageQueue: {
 		host: process.env.RMQ_HOST,
 		port: process.env.RMQ_PORT,

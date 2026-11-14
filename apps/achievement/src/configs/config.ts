@@ -16,8 +16,16 @@ const mqSchema = z.object({
 	port: z.coerce.number(),
 });
 
+/** Listeners: gRPC on HOST:PORT, health HTTP on HOST:HEALTH_PORT. */
+const serverSchema = z.object({
+	host: z.string().default('127.0.0.1'),
+	port: z.preprocess(v => (v === '' ? undefined : v), z.coerce.number().int().default(50050)),
+	healthPort: z.preprocess(v => (v === '' ? undefined : v), z.coerce.number().int().default(9103)),
+});
+
 export const envFileSchema = z.object({
 	env: z.union([z.literal('development'), z.literal('production')]),
+	server: serverSchema,
 	/** Signs pagination cursors (see CursorPaginationFactory). */
 	cursorSecret: z.string().min(32).optional(),
 	database: dbVarsSchema,
@@ -29,6 +37,11 @@ export type IEnvVars = z.infer<typeof envFileSchema>;
 // map your env vars to ConfigService's properties
 const loadEnv = (): DeepStringify<IEnvVars> => ({
 	env: process.env.NODE_ENV,
+	server: {
+		host: process.env.HOST,
+		port: process.env.PORT,
+		healthPort: process.env.HEALTH_PORT,
+	},
 	cursorSecret: process.env.CURSOR_SECRET || undefined,
 	database: {
 		host: process.env.POSTGRES_HOST,

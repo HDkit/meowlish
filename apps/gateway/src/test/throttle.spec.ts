@@ -32,7 +32,6 @@ describe('gateway throttling and CORS', () => {
 	let base: string;
 
 	beforeAll(async () => {
-		process.env.LIVE_SERVICE_WS_URL = 'http://127.0.0.1:1'; // nothing listens: proxy errors fast
 		const tokens = { accessToken: 'not-a-jwt' };
 		const authService = {
 			loginMail: () => of(tokens),
@@ -48,7 +47,15 @@ describe('gateway throttling and CORS', () => {
 					provide: AUTH_CLIENT,
 					useValue: { getService: () => authService },
 				},
-				{ provide: ConfigService, useValue: { getOrThrow: () => 'development' } },
+				{
+					provide: ConfigService,
+					useValue: {
+						getOrThrow: (key: string) =>
+							key === 'microservicesConnection.live' ?
+								{ wsUrl: 'http://127.0.0.1:1' } // nothing listens: proxy errors fast
+							:	'development',
+					},
+				},
 				{ provide: RedisService, useValue: { getOrThrow: () => ({}) } },
 			],
 		})

@@ -1,6 +1,8 @@
 import { AchievementModule } from './achievement.module';
+import { type IEnvVars } from './configs/config';
 import { PackageDefinition } from '@grpc/grpc-js/build/src/make-client';
 import { INestApplicationContext } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { NestExpressApplication } from '@nestjs/platform-express';
@@ -17,11 +19,14 @@ async function bootstrap() {
 	const achievementModule = await NestFactory.create<NestExpressApplication>(AchievementModule, {
 		bufferLogs: true,
 	});
+	const server = achievementModule
+		.get<ConfigService<IEnvVars>>(ConfigService)
+		.getOrThrow('server', { infer: true });
 	achievementModule.connectMicroservice<MicroserviceOptions>(
 		{
 			transport: Transport.GRPC,
 			options: {
-				url: `${process.env.HOST ?? '127.0.0.1'}:${process.env.PORT ?? 50050}`,
+				url: `${server.host}:${server.port}`,
 				package: 'achievement',
 				packageDefinition: {
 					[`achievement.${achievement.ACHIEVEMENT_SERVICE_NAME}`]:
@@ -33,7 +38,7 @@ async function bootstrap() {
 	);
 	useLogger(achievementModule);
 	await achievementModule.startAllMicroservices();
-	await achievementModule.listen(process.env.HEALTH_PORT ?? 9103, process.env.HOST ?? '127.0.0.1');
+	await achievementModule.listen(server.healthPort, server.host);
 }
 
 bootstrap().catch(console.error);

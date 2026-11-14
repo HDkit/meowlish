@@ -1,4 +1,5 @@
 import { HasRoles } from '../auth/decorators/roles.decorator';
+import { type IEnvVars } from '../configs/config';
 import { SkipAllThrottlers } from '../throttle';
 import { type AuthenticatedRequest } from '../types/authenticated-request';
 import { NOTIFICATION_CLIENT } from './constants/notification';
@@ -25,13 +26,14 @@ import {
 	Res,
 	SerializeOptions,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { type ClientGrpc } from '@nestjs/microservices';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { notification } from '@server/generated';
 import { Role } from '@server/typing';
 import { ApiEmptyResponseEntity, ApiResponseEntity } from '@server/utils';
 import { NextFunction, Response } from 'express';
-import { createProxyMiddleware } from 'http-proxy-middleware';
+import { type RequestHandler, createProxyMiddleware } from 'http-proxy-middleware';
 
 @ApiBearerAuth()
 @ApiTags('Notifications')
@@ -40,17 +42,21 @@ export class NotificationGatewayController implements OnModuleInit {
 	private notificationService!: notification.NotificationServiceClient;
 	private notificationPreferencesService!: notification.NotificationPreferencesServiceClient;
 
-	private sseProxy = createProxyMiddleware({
-		target:
-			process.env.NOTIFICATION_SERVICE_SSE_URL ??
-			`http://${process.env.NOTIFICATION_SERVICE_HOST}:${process.env.NOTIFICATION_SERVICE_HTTP_PORT ?? 50061}`,
-		changeOrigin: true,
-		pathRewrite: {
-			'^/api/v1/notifications/stream': '/notifications/stream',
-		},
-	});
+	private readonly sseProxy: RequestHandler;
 
-	constructor(@Inject(NOTIFICATION_CLIENT) private readonly notificationClient: ClientGrpc) {}
+	constructor(
+		@Inject(NOTIFICATION_CLIENT) private readonly notificationClient: ClientGrpc,
+		configService: ConfigService<IEnvVars>,
+	) {
+		const conn = configService.getOrThrow('microservicesConnection.notification', { infer: true });
+		this.sseProxy = createProxyMiddleware({
+			target: conn.sseUrl ?? `http://${conn.host}:${conn.httpPort}`,
+			changeOrigin: true,
+			pathRewrite: {
+				'^/api/v1/notifications/stream': '/notifications/stream',
+			},
+		});
+	}
 
 	onModuleInit() {
 		this.notificationService =

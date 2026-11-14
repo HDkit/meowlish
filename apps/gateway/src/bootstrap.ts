@@ -26,6 +26,7 @@ async function bootstrap() {
 		type: VersioningType.URI,
 	});
 	const configService = gatewayModule.get<ConfigService<IEnvVars>>(ConfigService);
+	const server = configService.getOrThrow('server', { infer: true });
 	// only honour X-Forwarded-For (rate-limit client IP) when explicitly behind a trusted proxy
 	gatewayModule.set('trust proxy', configService.getOrThrow('trustProxy', { infer: true }));
 	gatewayModule.enableCors(corsOptions(configService.getOrThrow('corsOrigins', { infer: true })));
@@ -41,7 +42,7 @@ async function bootstrap() {
 		}),
 	);
 
-	await gatewayModule.listen(process.env.PORT ?? 3000, process.env.HOST ?? '127.0.0.1');
+	await gatewayModule.listen(server.port, server.host);
 }
 
 bootstrap().catch(console.error);

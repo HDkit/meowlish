@@ -161,7 +161,7 @@ Runtime config pattern (`apps/<svc>/src/configs/config.ts`):
 4. The module registers `ConfigModule.forRoot({ load: [config], envFilePath: ['apps/<svc>/.env', '.env'] })`.
 5. Consumers inject `ConfigService<IEnvVars>`. In new code, read config only through it, so every variable is validated by the schema.
 
-Existing code also reads `process.env` directly in a few places: `PORT`/`HOST` in `bootstrap.ts`, gRPC/RMQ client registration in `*.module.ts` / `*.router.module.ts`, and some query handlers. Don't add more. If you touch one of these spots, move it to `ConfigService` (for client modules, use `registerAsync` with `inject: [ConfigService]`).
+Listener addresses (`HOST`/`PORT`/`HEALTH_PORT`, live and notification's `GRPC_*`/`HTTP_*`) are part of the schema too: `bootstrap.ts` reads them with `app.get(ConfigService)`. gRPC client providers use `inject: [ConfigService]` in their `useFactory`. Outside `loadEnv`, `process.env` is read only by code that runs before Nest or outside an app's config (`startTelemetry` in `main.ts`, `resolveDatabaseUrl` in `@server/database`). Don't add more.
 
 To add a variable, update the schema, `loadEnv`, and `.env.example`, plus `docker/.env.services.example` if Docker needs it.
 

@@ -24,9 +24,9 @@ const useRedisWsAdapter = async (module: INestApplication) => {
 
 async function bootstrap() {
 	const liveModule = await NestFactory.create<NestExpressApplication>(LiveModule);
-	const corsOrigins = liveModule
-		.get<ConfigService<IEnvVars>>(ConfigService)
-		.getOrThrow('corsOrigins', { infer: true });
+	const configService = liveModule.get<ConfigService<IEnvVars>>(ConfigService);
+	const server = configService.getOrThrow('server', { infer: true });
+	const corsOrigins = configService.getOrThrow('corsOrigins', { infer: true });
 	liveModule.enableCors({
 		origin: corsOrigins.length > 0 ? corsOrigins : false,
 		credentials: true,
@@ -36,7 +36,7 @@ async function bootstrap() {
 		{
 			transport: Transport.GRPC,
 			options: {
-				url: `${process.env.GRPC_HOST ?? '127.0.0.1'}:${process.env.GRPC_PORT ?? 50050}`,
+				url: `${server.grpcHost}:${server.grpcPort}`,
 				package: 'live',
 				packageDefinition: {
 					[`live.${live.CHAT_SERVICE_NAME}`]: live.ChatServiceService,
@@ -48,7 +48,7 @@ async function bootstrap() {
 	await liveModule.startAllMicroservices();
 	useLogger(liveModule);
 	await useRedisWsAdapter(liveModule);
-	await liveModule.listen(process.env.HTTP_PORT ?? 1511, process.env.HTTP_HOST ?? '127.0.0.1');
+	await liveModule.listen(server.httpPort, server.httpHost);
 }
 
 bootstrap().catch(console.error);

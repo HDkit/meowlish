@@ -1,6 +1,8 @@
+import { type IEnvVars } from './configs/config';
 import { NotificationModule } from './notification.module';
 import { PackageDefinition } from '@grpc/grpc-js/build/src/make-client';
 import { INestApplicationContext } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { NestExpressApplication } from '@nestjs/platform-express';
@@ -15,13 +17,16 @@ const useLogger = (module: INestApplicationContext) => {
 
 async function bootstrap() {
 	const notificationModule = await NestFactory.create<NestExpressApplication>(NotificationModule);
+	const server = notificationModule
+		.get<ConfigService<IEnvVars>>(ConfigService)
+		.getOrThrow('server', { infer: true });
 	notificationModule.enableCors();
 
 	notificationModule.connectMicroservice<MicroserviceOptions>(
 		{
 			transport: Transport.GRPC,
 			options: {
-				url: `${process.env.GRPC_HOST ?? '127.0.0.1'}:${process.env.GRPC_PORT ?? 50050}`,
+				url: `${server.grpcHost}:${server.grpcPort}`,
 				package: 'notification',
 				packageDefinition: {
 					[`notification.${notification.NOTIFICATION_SERVICE_NAME}`]:
@@ -35,10 +40,7 @@ async function bootstrap() {
 	);
 	await notificationModule.startAllMicroservices();
 	useLogger(notificationModule);
-	await notificationModule.listen(
-		process.env.HTTP_PORT ?? 1520,
-		process.env.HTTP_HOST ?? '127.0.0.1',
-	);
+	await notificationModule.listen(server.httpPort, server.httpHost);
 }
 
 bootstrap().catch(console.error);

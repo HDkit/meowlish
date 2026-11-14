@@ -39,8 +39,17 @@ const corsOriginsSchema = z.preprocess(
 const loadCorsOrigins = () =>
 	process.env.CORS_ORIGINS ?? (process.env.NODE_ENV === 'production' ? '' : DEV_CORS_ORIGINS);
 
+/** Listeners: gRPC on GRPC_HOST:GRPC_PORT, HTTP on HTTP_HOST:HTTP_PORT. */
+const serverSchema = z.object({
+	grpcHost: z.string().default('127.0.0.1'),
+	grpcPort: z.preprocess(v => (v === '' ? undefined : v), z.coerce.number().int().default(50050)),
+	httpHost: z.string().default('127.0.0.1'),
+	httpPort: z.preprocess(v => (v === '' ? undefined : v), z.coerce.number().int().default(1511)),
+});
+
 export const envFileSchema = z.object({
 	env: z.union([z.literal('development'), z.literal('production')]),
+	server: serverSchema,
 	/** Origins allowed by CORS (HTTP and socket.io); empty means no cross-origin access. */
 	corsOrigins: corsOriginsSchema,
 	/** Signs pagination cursors (see CursorPaginationFactory). */
@@ -57,6 +66,12 @@ export type IEnvVars = z.infer<typeof envFileSchema>;
 // map your env vars to ConfigService's properties
 const loadEnv = (): DeepStringify<IEnvVars> => ({
 	env: process.env.NODE_ENV,
+	server: {
+		grpcHost: process.env.GRPC_HOST,
+		grpcPort: process.env.GRPC_PORT,
+		httpHost: process.env.HTTP_HOST,
+		httpPort: process.env.HTTP_PORT,
+	},
 	corsOrigins: loadCorsOrigins(),
 	cursorSecret: process.env.CURSOR_SECRET || undefined,
 	jwtPublicKey: process.env.JWT_PUBLIC_KEY || undefined,

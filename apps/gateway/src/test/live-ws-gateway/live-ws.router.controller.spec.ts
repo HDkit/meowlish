@@ -1,5 +1,6 @@
 import { LiveWsGatewayModule } from '../../live-ws-gateway/live-ws.router.module';
-import { type INestApplication, Module, VersioningType } from '@nestjs/common';
+import { Global, type INestApplication, Module, VersioningType } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { RouterModule } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { type Server as HttpServer, createServer } from 'node:http';
@@ -8,8 +9,24 @@ import { Server } from 'socket.io';
 
 const ALLOWED_ORIGIN = 'https://app.example.com';
 
+let liveWsUrl = '';
+
+// stands in for the global ConfigModule: the proxy reads its target from config
+@Global()
+@Module({
+	providers: [
+		{
+			provide: ConfigService,
+			useValue: { getOrThrow: () => ({ wsUrl: liveWsUrl }) },
+		},
+	],
+	exports: [ConfigService],
+})
+class FakeConfigModule {}
+
 @Module({
 	imports: [
+		FakeConfigModule,
 		LiveWsGatewayModule,
 		RouterModule.register([{ path: '/chat/ws', module: LiveWsGatewayModule }]),
 	],
@@ -39,7 +56,7 @@ describe('live socket.io proxy', () => {
 		live.prependListener('request', req => seenByLive.push(req.url ?? ''));
 		live.prependListener('upgrade', req => seenByLive.push(req.url ?? ''));
 		await new Promise<void>(resolve => live.listen(0, '127.0.0.1', resolve));
-		process.env.LIVE_SERVICE_WS_URL = `http://127.0.0.1:${portOf(live)}`;
+		liveWsUrl = `http://127.0.0.1:${portOf(live)}`;
 
 		const moduleRef = await Test.createTestingModule({ imports: [TestGatewayModule] }).compile();
 		app = moduleRef.createNestApplication();

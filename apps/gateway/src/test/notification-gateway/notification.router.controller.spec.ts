@@ -1,6 +1,7 @@
 import { NOTIFICATION_CLIENT } from '../../notification-gateway/constants/notification';
 import { NotificationGatewayController } from '../../notification-gateway/notification.router.controller';
 import { type INestApplication, ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { type Server } from 'node:http';
 import request from 'supertest';
@@ -22,6 +23,12 @@ describe('NotificationGatewayController preferences', () => {
 							name.includes('Preferences') ?
 								{ getPreferences: getPreferences, updatePreferences: updatePreferences }
 							:	{ getNotification: getNotification },
+					},
+				},
+				{
+					provide: ConfigService,
+					useValue: {
+						getOrThrow: () => ({ host: 'localhost', httpPort: 50061 }),
 					},
 				},
 			],

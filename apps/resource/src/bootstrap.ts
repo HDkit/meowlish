@@ -1,6 +1,8 @@
+import { type IEnvVars } from './configs/config';
 import { ResourceModule } from './resource.module';
 import { PackageDefinition } from '@grpc/grpc-js/build/src/make-client';
 import { INestApplicationContext } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { NestExpressApplication } from '@nestjs/platform-express';
@@ -17,11 +19,14 @@ async function bootstrap() {
 	const resourceModule = await NestFactory.create<NestExpressApplication>(ResourceModule, {
 		bufferLogs: true,
 	});
+	const server = resourceModule
+		.get<ConfigService<IEnvVars>>(ConfigService)
+		.getOrThrow('server', { infer: true });
 	resourceModule.connectMicroservice<MicroserviceOptions>(
 		{
 			transport: Transport.GRPC,
 			options: {
-				url: `${process.env.HOST ?? '127.0.0.1'}:${process.env.PORT ?? 50050}`,
+				url: `${server.host}:${server.port}`,
 				package: 'resource',
 				packageDefinition: {
 					[`resource.${resource.BLOG_SERVICE_NAME}`]: resource.BlogServiceService,
@@ -40,7 +45,7 @@ async function bootstrap() {
 	);
 	useLogger(resourceModule);
 	await resourceModule.startAllMicroservices();
-	await resourceModule.listen(process.env.HEALTH_PORT ?? 9104, process.env.HOST ?? '127.0.0.1');
+	await resourceModule.listen(server.healthPort, server.host);
 }
 
 bootstrap().catch(console.error);

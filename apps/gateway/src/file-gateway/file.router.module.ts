@@ -1,7 +1,9 @@
+import { type IEnvVars } from '../configs/config';
 import { FILE_CLIENT } from './constants/file';
 import { FileGatewayController } from './file.router.controller';
 import { PackageDefinition } from '@grpc/grpc-js/build/src/make-client';
 import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { file } from '@server/generated';
 import { ErrorHandlingGrpcProxy } from '@server/utils';
 
@@ -10,16 +12,17 @@ import { ErrorHandlingGrpcProxy } from '@server/utils';
 	providers: [
 		{
 			provide: FILE_CLIENT,
-			useFactory: () =>
-				new ErrorHandlingGrpcProxy({
-					url:
-						process.env.FILE_SERVICE_URL ??
-						`${process.env.FILE_SERVICE_HOST}:${process.env.FILE_SERVICE_PORT}`,
+			inject: [ConfigService],
+			useFactory: (configService: ConfigService<IEnvVars>) => {
+				const conn = configService.getOrThrow('microservicesConnection.file', { infer: true });
+				return new ErrorHandlingGrpcProxy({
+					url: conn.url ?? `${conn.host}:${conn.port}`,
 					package: 'file',
 					packageDefinition: {
 						[`file.${file.FILE_SERVICE_NAME}`]: file.FileServiceService,
 					} satisfies PackageDefinition,
-				}),
+				});
+			},
 		},
 	],
 	exports: [],

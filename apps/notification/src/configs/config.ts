@@ -23,8 +23,17 @@ const authServiceSchema = z.object({
 	port: z.coerce.number(),
 });
 
+/** Listeners: gRPC on GRPC_HOST:GRPC_PORT, HTTP on HTTP_HOST:HTTP_PORT. */
+const serverSchema = z.object({
+	grpcHost: z.string().default('127.0.0.1'),
+	grpcPort: z.preprocess(v => (v === '' ? undefined : v), z.coerce.number().int().default(50050)),
+	httpHost: z.string().default('127.0.0.1'),
+	httpPort: z.preprocess(v => (v === '' ? undefined : v), z.coerce.number().int().default(1520)),
+});
+
 export const envFileSchema = z.object({
 	env: z.union([z.literal('development'), z.literal('production')]),
+	server: serverSchema,
 	database: dbVarsSchema,
 	messageQueue: mqSchema,
 	authService: authServiceSchema,
@@ -34,6 +43,12 @@ export type IEnvVars = z.infer<typeof envFileSchema>;
 
 const loadEnv = (): DeepStringify<IEnvVars> => ({
 	env: process.env.NODE_ENV,
+	server: {
+		grpcHost: process.env.GRPC_HOST,
+		grpcPort: process.env.GRPC_PORT,
+		httpHost: process.env.HTTP_HOST,
+		httpPort: process.env.HTTP_PORT,
+	},
 	database: {
 		host: process.env.POSTGRES_HOST,
 		port: process.env.POSTGRES_PORT,
