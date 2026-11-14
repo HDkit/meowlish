@@ -24,6 +24,6 @@ Each page ends with **Background work** (RabbitMQ consumers, BullMQ jobs, socket
 
 ## Shared mechanics (described once elsewhere)
 
-- Gateway guards and throttling: [`../authorization.md`](../authorization.md) §1 and `apps/gateway/src/throttle.ts` (throttler `default`: 100/min per route per IP+account, per IP when signed out; strict auth routes 10/min per IP+account plus a 100/min per-IP ceiling; answer autosave 300/min).
+- Gateway guards and throttling: [`../authorization.md`](../authorization.md) §1 and `apps/gateway/src/throttle.ts` (throttler `default`: 100/min per route per IP+account, per IP when signed out; strict auth routes 10/min per IP+account plus a 100/min per-IP ceiling; answer autosave 300/min; counters shared in Redis).
 - Outbox, relay, inbox, retry queues and DLQs, and the full event table: [`../messaging.md`](../messaging.md).
 - Tables per service and gRPC surfaces: [`../services-and-data.md`](../services-and-data.md).

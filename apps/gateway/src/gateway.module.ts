@@ -14,6 +14,7 @@ import { NotificationGatewayModule } from './notification-gateway/notification.r
 import { ResourceGatewayModule } from './resource-gateway/resource.router.module';
 import { RouteModule } from './router.module';
 import { throttlerOptions } from './throttle';
+import { RedisThrottlerStorage, ThrottlerStorageModule } from './throttle-storage';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
@@ -42,7 +43,12 @@ import { GlobalValidationPipe } from '@server/utils';
 		}),
 		CqrsModule.forRoot(),
 		LoggerModule.forRoot({ appName: 'GatewayModule' }),
-		ThrottlerModule.forRoot(throttlerOptions),
+		// counters in Redis, shared by every gateway replica (in memory while Redis is down)
+		ThrottlerModule.forRootAsync({
+			imports: [ThrottlerStorageModule],
+			inject: [RedisThrottlerStorage],
+			useFactory: (storage: RedisThrottlerStorage) => ({ ...throttlerOptions, storage: storage }),
+		}),
 		RouteModule,
 		AuthGatewayModule,
 		ExamGatewayModule,

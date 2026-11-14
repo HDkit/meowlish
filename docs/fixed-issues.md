@@ -6,6 +6,13 @@ What was fixed from [`backlog.md`](backlog.md), and how. Newest first. Each entr
 
 The items in the backlog that needed a decision (S21–S25, C23–C40), after the product owner decided each one. Kept as they are, by decision: **S24** (question explanations stay public), **C23** (deleted users' identities are still returned by hydration), **C27** (approved exams can be deleted, and the delete cascades to every attempt), **C34** (every thread view counts), **C36** (the unused email/push/system switches stay).
 
+### S23: rate limits were counted per gateway process
+
+- **Problem:** the throttler had no `storage`, so its counters were in memory: with N gateway replicas every limit (including 10 logins/min) was N times higher, and every restart or deploy reset them.
+- **Fix:** `RedisThrottlerStorage` (`apps/gateway/src/throttle-storage.ts`, registered through `ThrottlerModule.forRootAsync` in `gateway.module.ts`) keeps the counters in Redis with one Lua script per hit (fixed window `throttle:<key>:hits`, block marker `throttle:<key>:block`; going over the limit blocks for the block duration, then counting starts afresh). No new dependency: it uses `ioredis`, already installed, on its own connection with no offline queue and a 500 ms command timeout. **Fails open:** while Redis is unreachable it counts in memory (the throttler's own `ThrottlerStorageService`, so limits apply per process as before) and logs one warning, and one info line when Redis is back.
+- **Deploy:** nothing; it uses the gateway's existing `REDIS_HOST`/`REDIS_PORT`.
+- **Tests:** `apps/gateway/src/test/throttle-storage.spec.ts` (Redis result mapping, blocks, fallback while Redis is down, recovery). The Lua script was also run against the real Redis (limit 3: hits 1–3 pass, the 4th blocks, counting restarts after the block).
+
 ### C40: a late `file.added` could find its file deleted
 
 - **Problem:** the orphan cleanup deleted files with `ref_count 0` untouched for 1 h. A file uploaded more than an hour before the form that uses it was saved (or whose `file.added` was retried for a while) could be gone when the reference arrived; `incrementRef` then updated 0 rows silently and auth/exam kept a dangling id.
