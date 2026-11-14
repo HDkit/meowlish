@@ -72,7 +72,7 @@ Query `ListForumThreadsQueryDto`: `page`, `limit`, `search` (max 200, case-insen
 
 ### GET /api/v1/resources/forum/threads/:threadId
 
-`getThread` (`forum.service.ts:286`): `findThread` (404), then `update { viewCount: increment 1 }` and return the thread. Every GET counts, including the author's and repeated reads; no per-user dedupe. The two statements are not in one transaction. Response `ForumThreadDto`.
+`getThread` (`forum.service.ts:286`): `updateMany { where: { id }, viewCount: increment 1 }` (count 0 → 404), then reload the thread with its category (gone by then → 404). Every GET counts, including the author's and repeated reads; no per-user dedupe. Response `ForumThreadDto`.
 
 ### PATCH /api/v1/resources/forum/threads/:threadId
 
@@ -85,7 +85,7 @@ Query `ListForumThreadsQueryDto`: `page`, `limit`, `search` (max 200, case-insen
 ### PATCH /api/v1/resources/forum/threads/:threadId/moderation
 
 - **Access**: `@HasRoles(Mod, Admin)` in the gateway (403 before any gRPC call), and the service re-checks `privileged` (403 `Only moderators can do this`).
-- **Flow**: `ModerateForumThreadDto { isPinned?, isLocked? }` (booleans). `moderateThread` (`forum.service.ts:318`): `findThread` (404), update the two flags (an absent field is left unchanged; both absent is accepted and only touches `updatedAt`).
+- **Flow**: `ModerateForumThreadDto { isPinned?, isLocked? }` (booleans). `moderateThread` (`forum.service.ts:318`): `findThread` (404), update the two flags (an absent field is left unchanged; both absent is 400 `Nothing to update`, checked before the lookup).
 - Response `ForumThreadDto`. No event, no notification to the thread author.
 
 ### DELETE /api/v1/resources/forum/threads/:threadId
@@ -161,8 +161,8 @@ Visibility (`visibleProposalsWhere`, `flashcard-proposal.service.ts:56`): the pr
   1. Gateway `CreateFlashCardProposalDto`: `title` (non-empty, max 200), optional `message` (max 5000). `sourceListId = :id`. gRPC `FlashCardProposalService/CreateFlashCardProposal`.
   2. `createFlashCardProposal` (`flashcard-proposal.service.ts:147`), `@Transactional()`:
      1. `forks.findForkWithOriginal` (404 / 400 as in the diff route).
-     2. 400 if the original is the caller's own list.
-     3. 409 `An open proposal already exists for this list` if an `OPEN` proposal with the same source and target exists (read check, no unique index).
+     2. 400 if the original is the caller's own list; 400 `title must not be empty` if the trimmed title is empty.
+     3. `SELECT … FROM flash_card_lists WHERE id = <copy> FOR UPDATE` locks the copy's row until commit, so concurrent creates for one copy run one after the other; then 409 `An open proposal already exists for this list` if an `OPEN` proposal with the same source and target exists.
      4. `diffOf` the pair; 400 `There are no changes to propose` if empty.
      5. Insert the proposal with `status OPEN`, trimmed title/message, `changes = toChangesJson(diff)` (modified/removed entries carry the original's `base` values for later conflict detection).
      6. `outbox.add('resource.flashcard-proposal.created', { proposalId, targetListId, targetListName, targetOwnerId, authorId, title })`, enveloped.
@@ -232,9 +232,9 @@ Notification consumers of the events above (all in `apps/notification/src/app/ev
 - `apps/notification/src/app/events/handlers/flashcard-proposal-created.handler.ts` and `flashcard-proposal-decided.handler.ts`: proposal notifications skip the preference check entirely; `OptionalNotificationType` (`apps/notification/src/app/types/notification.input.ts`) has no flash card entry, so they cannot be turned off: backlog X5 (needs a column, proto field and a frontend switch).
 - ~~The SSE push happened inside the consumer's transaction, before the commit~~: fixed, pushed after the commit (see fixed-issues.md).
 - `apps/notification/src/app/events/handlers/forum-reply-created.handler.ts:17`: the notification link's page number assumes 20 replies per page (a constant copied from the frontend), while the gateway's default `limit` is 10; a frontend change silently breaks the deep links: backlog X6 (the frontend does use 20 today, so the links are right for now).
-- `apps/resource/src/app/services/flashcard-proposal.service.ts:175`: `data.title.trim()` can store an empty title, because `@IsNotEmpty()` accepts a whitespace-only string; the forum uses `requireText` to reject this but proposals do not.
-- `apps/resource/src/app/services/flashcard-proposal.service.ts:350`: withdrawing publishes no event, so the list owner keeps an unread "proposal waiting for review" notification for a proposal they can no longer act on.
-- `apps/resource/src/app/services/flashcard-proposal.service.ts:155`: "one open proposal per copy and original" is a read-then-insert check with no unique index, so two concurrent creates can both pass it.
-- `apps/resource/src/app/services/flashcard-proposal.service.ts:281`: accepted added cards copy the proposer's `image` value into the owner's card. Unclear whether `image` is a file-service id that needs ownership checks or reference counting; nothing here calls file-service.
-- `apps/resource/src/app/services/forum.service.ts:286`: `getThread` (a GET) writes `viewCount` on every call with no dedupe, and its `findThread` + `update` are not atomic; a thread deleted in between makes the `update` throw Prisma `P2025` rather than the service's 404.
-- `apps/resource/src/app/services/forum.service.ts:318`: moderation accepts a body with neither `isPinned` nor `isLocked` and performs a no-op update instead of a 400 (the author edit route does reject an empty update).
+- ~~A whitespace-only proposal title is stored as empty~~: fixed (see fixed-issues.md; 400).
+- ~~Withdrawing publishes no event~~: backlog X5 (needs a notification consumer before resource may publish it).
+- ~~"One open proposal per copy" is a read-then-insert check~~: fixed (see fixed-issues.md; the copy's row is locked first, no schema change).
+- ~~Accepted added cards copy the proposer's `image`~~: not a bug (`image` is a free URL string the frontend shows only when it starts with `http(s)://`, not a file-service id; cards never reference-count it).
+- ~~`getThread` throws P2025 when the thread is deleted mid-read~~: fixed (see fixed-issues.md; 404). The missing per-user view dedupe is backlog X6.
+- ~~Moderation accepts an empty body~~: fixed (see fixed-issues.md; 400 `Nothing to update`).

@@ -85,8 +85,8 @@ Update a blog post.
 
 - **Access**: `@ResourceAccess` `blog` (see [above](#how-resourceaccess-routes-are-checked)).
 - **Flow**:
-  1. Gateway: `UpdateBlogDto` (all optional; `tags` defaulted to `[]`) → `resource.BlogService/UpdateBlog { ...body, id }`.
-  2. `BlogService.updateBlog`: `findUnique` (404), then `update` with `title ?? old`, `content ?? old`, `tags` only if non-empty. Not `@Transactional`; no version check.
+  1. Gateway: `UpdateBlogDto` (all optional; `tags` defaulted to `[]`) → `resource.BlogService/UpdateBlog { ...body, id, replaceTags: tags was in the body }`.
+  2. `BlogService.updateBlog`: `findUnique` (404), then `update` with `title ?? old`, `content ?? old`, `tags` replaced when `replaceTags` (so `[]` clears them) or non-empty, else kept. Not `@Transactional`; no version check.
   3. Response `BlogDto`.
 - **Errors**: 403 from the guard; 404 if the row is gone.
 
@@ -169,7 +169,7 @@ Service: `FlashcardService` (`apps/resource/src/app/services/flashcard.service.t
 ### PATCH /api/v1/resources/flash-cards/:id
 
 - **Access**: `@ResourceAccess` `flashcard` (see [above](#how-resourceaccess-routes-are-checked)).
-- **Flow**: `UpdateFlashCardDto` (all optional; `examples`, `tags` default `[]`) → `resource.FlashCardService/UpdateFlashCard` → `FlashcardService.updateFlashCard`: `findUnique` (404) then `update`; undefined fields are left unchanged, `examples`/`tags` only replaced when non-empty. No service-side ownership or list check; not `@Transactional`. Response `FlashCardDto`.
+- **Flow**: `UpdateFlashCardDto` (all optional; `examples`, `tags` default `[]`; the gateway sets `replaceExamples`/`replaceTags` when the body has the list) → `resource.FlashCardService/UpdateFlashCard` → `FlashcardService.updateFlashCard`: `findUnique` (404) then `update`; undefined fields are left unchanged, `examples`/`tags` replaced when their `replace*` flag is set (so `[]` clears them) or non-empty. No service-side ownership or list check; not `@Transactional`. Response `FlashCardDto`.
 
 ### DELETE /api/v1/resources/flash-cards/:id
 
@@ -198,7 +198,7 @@ Service: `FlashcardListService` (`apps/resource/src/app/services/flashcard-list.
 
 ### PATCH /api/v1/resources/flash-card-lists/:id
 
-`UpdateFlashCardListDto` (all optional; `tags` default `[]`) + `requesterOf(user, [Admin])` → `resource.FlashCardListService/UpdateFlashCardList` → `findOwnedList` (404/403) → `update` (`tags` only if non-empty). Not `@Transactional`. Response `FlashCardListDto`.
+`UpdateFlashCardListDto` (all optional; `tags` default `[]`, `replaceTags` set when the body has them) + `requesterOf(user, [Admin])` → `resource.FlashCardListService/UpdateFlashCardList` → `findOwnedList` (404/403) → `update` (`tags` replaced when `replaceTags`, so `[]` clears them, or non-empty). Not `@Transactional`. Response `FlashCardListDto`.
 
 ### DELETE /api/v1/resources/flash-card-lists/:id
 
@@ -227,13 +227,13 @@ Service: `ReportService` (`apps/resource/src/app/services/report.service.ts`). P
 
 ### POST /api/v1/resources/reports
 
-- **Access**: any user; `reportedBy = sub`.
+- **Access**: any user; `reportedBy = sub`; uploader check skipped only when `mayAttachAnyFile = hasAnyRole(user, [Admin])`.
 - **Flow**:
   1. Gateway: `CreateReportDto` (`type`, `title`, `description`; optional `targetType`, `targetId`, `fileIds` default `[]`; all free strings) → `resource.ReportService/CreateReport`.
-  2. `ReportService.createReport`, `@Transactional()`: dedupe `fileIds`; if any, `CheckFilesOwnedBy(fileIds, reportedBy)` (403; no admin bypass on create); insert `Report` (status default `pending`) with nested `ReportFile` rows; outbox `resource.file.added { fileId }` per attachment (file-service raises `ref_count`, so the orphan cleanup keeps it); outbox `resource.report.created` `{ reportId, reportedBy, type, title, targetType, targetId }`.
+  2. `ReportService.createReport`: dedupe `fileIds`; if any and not admin, `CheckFilesOwnedBy(fileIds, reportedBy)` (403), before any transaction opens. Then `@Transactional()` `insertReport`: insert `Report` (status default `pending`) with nested `ReportFile` rows; outbox `resource.file.added { fileId }` per attachment (file-service raises `ref_count`, so the orphan cleanup keeps it); outbox `resource.report.created` `{ reportId, reportedBy, type, title, targetType, targetId }`.
   3. Response `ReportDto` (with `fileIds`).
 - **Async**: `notification.events.report.created` → `ReportCreatedHandler` (`apps/notification/src/app/events/handlers/report-created.handler.ts`, inbox yes): calls `auth.AuthService/FindIdentityIdsByRole { role: Admin }` (an auth outage throws, so the message is retried), notifies every admin except the reporter whose `report` preference is on (`action: '/report-management'`). Mods are not notified.
-- **Errors**: 403 foreign files; the gRPC call to file-service runs inside the open DB transaction.
+- **Errors**: 403 foreign files (non-admins).
 
 ### GET /api/v1/resources/reports/:id
 
@@ -245,8 +245,8 @@ Triage a report.
 
 - **Access**: `@HasRoles(Mod, Admin)` (403 in the gateway otherwise); `resolvedBy = sub`.
 - **Flow**:
-  1. Gateway: `UpdateReportDto` (`status?`, `adminResponse?`, free strings) → `resource.ReportService/UpdateReport { ...body, id, resolvedBy }`.
-  2. `ReportService.updateReport`, `@Transactional()`: `findUnique` (404) → update `status ?? old`, `resolvedBy` (always the caller), `adminResponse ?? old`.
+  1. Gateway: `UpdateReportDto` (`status?`: one of `pending`, `reviewing`, `in_progress`, `resolved`, `rejected`, `dismissed`, `closed`, the `ReportStatus` enum, else 400, checked again by resource's DTO; `adminResponse?` free string) → `resource.ReportService/UpdateReport { ...body, id, resolvedBy }`.
+  2. `ReportService.updateReport`, `@Transactional()`: `findUnique` (404) → update `status ?? old`, `adminResponse ?? old`, and `resolvedBy` = the caller only if the status or the response actually changes (else kept; the frontend shows it as the response's author).
   3. If the status changed: outbox `resource.report.status-changed` `{ reportId, reportedBy, status, title }`.
   4. Response `ReportDto`.
 - **Async**: `notification.events.report.status-changed` → `ReportStatusChangedHandler` (inbox yes): notifies the reporter if their `report` preference is on, with a Vietnamese phrase for known statuses (`pending`, `reviewing`, `in_progress`, `resolved`, `rejected`, `dismissed`, `closed`) or the raw value.
@@ -262,7 +262,7 @@ Triage a report.
 ### POST /api/v1/resources/reports/:id/files
 
 - **Access**: reporter or mod/admin (`findVisibleReport`); uploader check skipped only when `mayAttachAnyFile = hasAnyRole(user, [Admin])`.
-- **Flow**: `AddFileToReportDto` (`fileId`) → `resource.ReportService/AddFileToReport` → `ReportService.addFileToReport`: `findVisibleReport` (404) → unless admin, `CheckFilesOwnedBy([fileId], requesterId)` (403) → in one transaction, `ReportFile.createMany(skipDuplicates)`; only a new row writes outbox `resource.file.added { fileId }` (re-attaching is a no-op). Not `@Transactional`. Response empty. Worked example: [authorization.md §7(c)](../authorization.md#c-attaching-a-file-someone-else-uploaded).
+- **Flow**: `AddFileToReportDto` (`fileId`) → `resource.ReportService/AddFileToReport` → `ReportService.addFileToReport`: `findVisibleReport` (404) → unless admin, `CheckFilesOwnedBy([fileId], requesterId)` (403), both outside any transaction → `@Transactional()` `attachFile`: `findVisibleReport` again, `ReportFile.createMany(skipDuplicates)`; only a new row writes outbox `resource.file.added { fileId }` (re-attaching is a no-op). Response empty. Worked example: [authorization.md §7(c)](../authorization.md#c-attaching-a-file-someone-else-uploaded).
 
 ### DELETE /api/v1/resources/reports/:reportId/files/:fileId
 
@@ -289,13 +289,13 @@ None of these consumers emits further events.
 
 ## Findings
 
-- `apps/resource/src/app/services/flashcard-list.service.ts:154`: `addCardToList` ignores `position` from `AddCardToListDto`, although the gateway validates and forwards it.
-- `apps/resource/src/app/services/blog.service.ts:66` (and `flashcard.service.ts:72-74`, `flashcard-list.service.ts:104`): an empty `tags`/`examples` array means "keep the old value", and the gateway turns a missing field into `[]`, so a client cannot clear the tags or examples of a blog, card or list.
-- `apps/resource/src/app/services/report.service.ts:101`: `status` is any string (no enum check in either `UpdateReportDto`), so typos create new statuses; the notification falls back to the raw value.
-- `apps/resource/src/app/services/report.service.ts:102`: `resolvedBy` is overwritten with whoever made any update, including a status change back to `pending` or an edit of `adminResponse` only.
-- `apps/resource/src/app/services/report.service.ts:64`: `createReport` checks file ownership for admins too, while `addFileToReport` lets admins attach any file; AGENTS.md says admins skip the check "on exam and report attaches".
-- `apps/resource/src/app/services/report.service.ts:64`: the `CheckFilesOwnedBy` gRPC call runs inside the open `@Transactional()` DB transaction, holding it open for a network round trip.
-- `apps/resource/src/app/services/blog-comment.service.ts:205-208`: soft delete clears `content` but keeps `authorId` in the row, while the class comment (line 33) says "content and author cleared"; the author is only hidden in responses.
-- `apps/resource/src/app/services/blog-comment.service.ts:92`: `totalThreads` counts top-level placeholders that `buildCommentTree` may prune from the page, so a page can hold fewer roots than `limit` while the total still counts them.
-- `apps/resource/src/app/services/flashcard.service.ts:60`: `updateFlashCard` and `deleteFlashCard` rely on `@ResourceAccess` alone (no service-side owner check), so a new card is 403 for its author until the ownership event is consumed (already noted in authorization.md §7(e)).
+- ~~`addCardToList` ignores `position` from `AddCardToListDto`~~: backlog X1 (cards have no order column).
+- ~~An empty `tags`/`examples` array meant "keep the old value", so a client could not clear them~~: fixed (see fixed-issues.md; `replaceTags`/`replaceExamples` on blogs, cards and lists).
+- ~~Report `status` is any string~~: fixed (see fixed-issues.md; `ReportStatus` checked in both DTOs, existing rows untouched).
+- ~~`resolvedBy` is overwritten by any update~~: fixed (see fixed-issues.md; kept unless the status or response changes). Whether a move back to `pending` should clear it: backlog X2.
+- ~~`createReport` checks file ownership for admins too~~: fixed (see fixed-issues.md; `CreateReportRequest.may_attach_any_file`).
+- ~~The `CheckFilesOwnedBy` gRPC call runs inside the open DB transaction~~: fixed (see fixed-issues.md; create and attach both ask before the transaction).
+- ~~Soft delete keeps `authorId` while the class comment says it is cleared~~: comment corrected (keeping `authorId` is intended: the column is required and responses blank it).
+- ~~`totalThreads` counts placeholders that `buildCommentTree` may prune~~: not a bug in consistent data (`deleteComment` keeps a placeholder only while it has replies, so a root is never pruned); only two concurrent deletes can leave an empty placeholder, backlog X3.
+- ~~`updateFlashCard`/`deleteFlashCard` rely on `@ResourceAccess` alone~~: backlog X4 (moving cards to the requester pattern is an authorization change).
 - ~~Doc drift~~: `messaging.md` §7 and `services-and-data.md` now list `resource.report.created` and `resource.blog-comment.created`.

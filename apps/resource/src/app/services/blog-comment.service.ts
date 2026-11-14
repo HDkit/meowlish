@@ -31,8 +31,8 @@ const requireContent = (value: string): string => {
  * Nested comments under blog posts, stored as materialized paths (see `comment-path.ts` for the
  * choice). Only the author edits a comment; the author or a moderator (`privileged`) deletes it.
  * Anyone else gets 404. A deleted comment that still has replies stays as a "[deleted]"
- * placeholder (content and author cleared); otherwise the row goes, along with any placeholder
- * ancestors it was the last reply of.
+ * placeholder (content cleared; the row keeps `authorId`, which responses blank out); otherwise
+ * the row goes, along with any placeholder ancestors it was the last reply of.
  */
 @Injectable()
 export class BlogCommentService {
