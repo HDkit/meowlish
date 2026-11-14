@@ -19,6 +19,8 @@ service ChatService {
 message GetRoomListDto {
 	optional google.protobuf.StringValue cursor = 1;
 	optional google.protobuf.Int32Value  limit  = 2;
+	// rooms whose name contains this text (case-insensitive); kept inside the cursor
+	optional google.protobuf.StringValue name   = 3;
 }
 
 message Rooms {

@@ -16,7 +16,11 @@ import { BoolValue, Int32Value, StringValue } from "./google/protobuf/wrappers";
 
 export interface GetRoomListDto {
   cursor?: string | undefined;
-  limit?: number | undefined;
+  limit?:
+    | number
+    | undefined;
+  /** rooms whose name contains this text (case-insensitive); kept inside the cursor */
+  name?: string | undefined;
 }
 
 export interface Rooms {
@@ -129,6 +133,9 @@ export const GetRoomListDto: MessageFns<GetRoomListDto> = {
     if (message.limit !== undefined) {
       Int32Value.encode({ value: message.limit! }, writer.uint32(18).fork()).join();
     }
+    if (message.name !== undefined) {
+      StringValue.encode({ value: message.name! }, writer.uint32(26).fork()).join();
+    }
     return writer;
   },
 
@@ -159,6 +166,14 @@ export const GetRoomListDto: MessageFns<GetRoomListDto> = {
             }
 
             message.limit = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.name = StringValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }

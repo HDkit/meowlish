@@ -28,13 +28,19 @@ export class RoomReadPrismaRepositoryImpl implements IRoomReadRepository {
 		id?: string;
 		direction?: number;
 		limit?: number;
+		name?: string;
 	}): Promise<Room[]> {
 		if (options?.limit && options.limit < 0)
 			throw new BadRequestException('Limit must be positive');
 		const limit = options?.limit ?? 20;
 		const direction = Math.sign(options?.direction || 1);
 		const rooms = await this.txHost.tx.room.findMany({
-			where: { isDeleted: false },
+			where: {
+				isDeleted: false,
+				...(options?.name?.trim() && {
+					name: { contains: options.name.trim(), mode: 'insensitive' },
+				}),
+			},
 			orderBy: { id: 'asc' },
 			...(options?.id && {
 				cursor: { id: options.id },

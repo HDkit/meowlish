@@ -25,6 +25,7 @@ export class ChatController implements live.ChatServiceController {
 		return this.chatService.getRoomList({
 			cursor: request.cursor,
 			limit: request.limit,
+			name: request.name,
 		});
 	}
 

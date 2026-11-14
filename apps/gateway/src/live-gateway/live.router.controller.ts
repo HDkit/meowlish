@@ -5,6 +5,7 @@ import { type AuthenticatedRequest } from '../types/authenticated-request';
 import { LIVE_CLIENT } from './constants/live';
 import { BanUserFromRoomDto } from './dtos/req/ban-user-from-room.req.dto';
 import { CreateRoomDto } from './dtos/req/create-room.req.dto';
+import { GetRoomListQueryDto } from './dtos/req/get-room-list.query.dto';
 import { UpdateRoomScheduleDto } from './dtos/req/update-room-schedule.req.dto';
 import { ChatLogDto } from './dtos/res/chat-log.dto';
 import { CreatedRoomDto } from './dtos/res/created-room.dto';
@@ -48,8 +49,12 @@ export class LiveGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'List chat rooms' })
 	@ApiResponseEntity(RoomListDto)
 	@SerializeOptions({ type: RoomListDto, strategy: 'exposeAll' })
-	getRoomList(@Query('cursor') cursor?: string, @Query('limit') limit?: number) {
-		return this.chatService.getRoomList({ cursor: cursor, limit: limit });
+	getRoomList(@Query() query: GetRoomListQueryDto) {
+		return this.chatService.getRoomList({
+			cursor: query.cursor,
+			limit: query.limit,
+			name: query.name,
+		});
 	}
 
 	@Get(':roomId/logs')

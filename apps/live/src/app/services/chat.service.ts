@@ -45,41 +45,45 @@ export class ChatService {
 	async getRoomList(options?: {
 		cursor?: string;
 		limit?: number;
+		name?: string;
 	}): Promise<{ rooms: Room[]; nextCursor: string; prevCursor: string }> {
-		type DecodedCursor = { id?: string; direction: number; limit: number };
+		type DecodedCursor = { id?: string; direction: number; limit: number; name?: string };
+		const helper = this.cursorPaginationHelpers['getRoomList'];
 		const decodedCursor =
-			options?.cursor ?
-				this.cursorPaginationHelpers['getRoomList'].decodeCursor<DecodedCursor>(options.cursor)
-			:	undefined;
+			options?.cursor ? helper.decodeCursor<DecodedCursor>(options.cursor) : undefined;
 
 		const inUseId = decodedCursor?.id;
 		const inUseLimit = options?.limit ?? decodedCursor?.limit ?? 10;
 		const direction = decodedCursor?.direction ?? 1;
+		// the cursor's filter has precedence, so paging can never drift to another filter
+		const inUseName = decodedCursor ? decodedCursor.name : options?.name?.trim() || undefined;
 
-		const rooms = await this.roomReadRepository.getRoomList({
+		// one extra row tells whether there is a page beyond this one
+		const fetched = await this.roomReadRepository.getRoomList({
 			id: inUseId,
 			direction: direction,
-			limit: inUseLimit,
+			limit: inUseLimit + 1,
+			name: inUseName,
 		});
-		const encodedNextCursor = this.cursorPaginationHelpers[
-			'getRoomList'
-		].encodeCursor<DecodedCursor>({
-			id: rooms.at(-1)?.id,
-			direction: 1,
-			limit: inUseLimit,
-		});
-		const encodedPrevCursor = this.cursorPaginationHelpers[
-			'getRoomList'
-		].encodeCursor<DecodedCursor>({
-			id: rooms.at(0)?.id,
-			direction: -1,
-			limit: inUseLimit,
-		});
+		const more = fetched.length > inUseLimit;
+		// a backward page comes back in ascending order ending just before the cursor: the extra row is first
+		const rooms = direction === -1 ? fetched.slice(-inUseLimit) : fetched.slice(0, inUseLimit);
+		const hasNext = direction === -1 ? true : more;
+		const hasPrev = direction === -1 ? more : !!inUseId;
+
+		const encode = (id: string | undefined, dir: number) =>
+			helper.encodeCursor<DecodedCursor>({
+				id: id,
+				direction: dir,
+				limit: inUseLimit,
+				name: inUseName,
+			});
 
 		return {
 			rooms: rooms,
-			nextCursor: encodedNextCursor,
-			prevCursor: encodedPrevCursor,
+			// empty when there is no such page, so clients can disable the button
+			nextCursor: hasNext && rooms.length > 0 ? encode(rooms.at(-1)?.id, 1) : '',
+			prevCursor: hasPrev && rooms.length > 0 ? encode(rooms.at(0)?.id, -1) : '',
 		};
 	}
 
