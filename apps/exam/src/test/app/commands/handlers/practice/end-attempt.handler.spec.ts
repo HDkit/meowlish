@@ -66,8 +66,7 @@ class VersionedAttemptStore {
 const setup = () => {
 	const store = new VersionedAttemptStore();
 	const publisher = { publish: jest.fn().mockResolvedValue(undefined) };
-	const eventBus = { publishAll: jest.fn() };
-	const handler = new EndAttemptHandler(store as never, publisher as never, eventBus as never);
+	const handler = new EndAttemptHandler(store as never, publisher as never);
 	const submit = () => handler.execute(new EndAttemptCommand(new EndAttemptCommandPayload('a1')));
 	const submittedEvents = () =>
 		publisher.publish.mock.calls
@@ -76,7 +75,6 @@ const setup = () => {
 	return {
 		store: store,
 		publisher: publisher,
-		eventBus: eventBus,
 		submit: submit,
 		submittedEvents: submittedEvents,
 	};
@@ -84,13 +82,11 @@ const setup = () => {
 
 describe('EndAttemptHandler idempotency (C4)', () => {
 	it('a second submit of an ended attempt is a no-op: no save, one attempt.submitted', async () => {
-		const { store, submit, submittedEvents, eventBus } = setup();
+		const { store, submit, submittedEvents } = setup();
 		await submit();
 		await submit();
 		expect(store.saves).toBe(1);
 		expect(submittedEvents()).toHaveLength(1);
-		const scoringEvents = eventBus.publishAll.mock.calls.flatMap(([events]: [unknown[]]) => events);
-		expect(scoringEvents.filter(e => e instanceof AttemptSubmittedEvent)).toHaveLength(1);
 	});
 
 	it('two concurrent submits publish attempt.submitted once; the loser becomes a no-op', async () => {

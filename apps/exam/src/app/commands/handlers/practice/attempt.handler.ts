@@ -8,14 +8,13 @@ import {
 } from '../../../../domain/repositories/exam.repository';
 import { AttemptCommand, AttemptCommandResult } from '../../practice/exam.attempt.command';
 import { Inject, NotFoundException } from '@nestjs/common';
-import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 
 @CommandHandler(AttemptCommand)
 export class AttemptHandler implements ICommandHandler<AttemptCommand> {
 	constructor(
 		@Inject(IExamRepositoryToken) private readonly examRepository: IExamRepository,
 		@Inject(IAttemptRepositoryToken) private readonly attemptRepository: IAttemptRepository,
-		private readonly eventBus: EventBus,
 	) {}
 
 	public async execute(command: AttemptCommand): Promise<AttemptCommandResult> {
@@ -27,7 +26,6 @@ export class AttemptHandler implements ICommandHandler<AttemptCommand> {
 			sectionIds: payload.options?.sectionIds,
 		});
 		await this.attemptRepository.save(attemptConfig);
-		this.eventBus.publishAll(attemptConfig.getUncommittedEvents());
 		return { id: attemptConfig.id };
 	}
 }

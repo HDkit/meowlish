@@ -4,14 +4,11 @@ import {
 } from '../../../../domain/repositories/exam.repository';
 import { UpdateExamCommand } from '../../staff/exam.update-exam.command';
 import { Inject, NotFoundException } from '@nestjs/common';
-import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 
 @CommandHandler(UpdateExamCommand)
 export class UpdateExamHandler implements ICommandHandler<UpdateExamCommand> {
-	constructor(
-		@Inject(IExamRepositoryToken) private readonly examRepository: IExamRepository,
-		private readonly eventBus: EventBus,
-	) {}
+	constructor(@Inject(IExamRepositoryToken) private readonly examRepository: IExamRepository) {}
 
 	public async execute(command: UpdateExamCommand): Promise<void> {
 		const payload = command.payload;
@@ -21,6 +18,5 @@ export class UpdateExamHandler implements ICommandHandler<UpdateExamCommand> {
 		if (payload.addTags) payload.addTags.forEach(t => exam.addTag(t));
 		if (payload.removeTags) payload.removeTags.forEach(t => exam.removeTag(t));
 		await this.examRepository.save(exam);
-		this.eventBus.publishAll(exam.getUncommittedEvents());
 	}
 }

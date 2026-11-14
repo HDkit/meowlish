@@ -8,23 +8,20 @@ import { retryAttemptConflicts } from '../../../services/attempt-conflict-retry'
 import { EndAttemptCommand } from '../../practice/exam.end-attempt.command';
 import { Transactional } from '@nestjs-cls/transactional';
 import { Inject, NotFoundException } from '@nestjs/common';
-import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 
 @CommandHandler(EndAttemptCommand)
 export class EndAttemptHandler implements ICommandHandler<EndAttemptCommand> {
 	constructor(
 		@Inject(IAttemptRepositoryToken) private readonly attemptRepository: IAttemptRepository,
 		private readonly attemptSubmittedPublisher: AttemptSubmittedPublisher,
-		private readonly eventBus: EventBus,
 	) {}
 
 	public async execute(command: EndAttemptCommand): Promise<void> {
 		// A version conflict means a concurrent save (another submit, an answer) won the race: reload
 		// and retry. If that save was a submit, the retry finds the attempt ended and is a no-op.
-		const attempt = await retryAttemptConflicts(() => this.endAttempt(command.payload.attemptId));
-		// In-process handlers (scoring) run after the commit: started inside the transaction they
-		// would inherit its CLS context and keep using the closed transaction client.
-		this.eventBus.publishAll(attempt.getUncommittedEvents());
+		// Scoring runs from exam.attempt.submitted, written to the outbox in the same transaction.
+		await retryAttemptConflicts(() => this.endAttempt(command.payload.attemptId));
 	}
 
 	@Transactional()
