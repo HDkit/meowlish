@@ -4,6 +4,12 @@ import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-pr
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma-client/live';
 
+/** Prisma's "record to update not found" (P2025) as a 404; anything else unchanged. */
+const notFoundIfMissing = (e: unknown): unknown =>
+	e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025' ?
+		new NotFoundException('Room not found')
+	:	e;
+
 @Injectable()
 export class RoomPrismaRepositoryImpl implements IRoomRepository {
 	constructor(private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>) {}
@@ -12,13 +18,17 @@ export class RoomPrismaRepositoryImpl implements IRoomRepository {
 		roomId: string,
 		options: { url?: string | null; time?: Date | null },
 	): Promise<void> {
-		await this.txHost.tx.room.update({
-			where: { id: roomId, isDeleted: false },
-			data: {
-				scheduledLiveUrl: options.url,
-				scheduledTime: options.time,
-			},
-		});
+		try {
+			await this.txHost.tx.room.update({
+				where: { id: roomId, isDeleted: false },
+				data: {
+					scheduledLiveUrl: options.url,
+					scheduledTime: options.time,
+				},
+			});
+		} catch (e) {
+			throw notFoundIfMissing(e);
+		}
 	}
 
 	/** A user may join only an existing, non-deleted room they are not banned from. */
@@ -55,11 +65,16 @@ export class RoomPrismaRepositoryImpl implements IRoomRepository {
 	}
 
 	async removeRoom(roomId: string): Promise<void> {
-		// Free the unique name so it can be reused by a brand-new room.
-		await this.txHost.tx.room.update({
-			where: { id: roomId },
-			data: { isDeleted: true, name: `${roomId}:deleted` },
-		});
+		// Free the unique name so it can be reused by a brand-new room. An already deleted room is
+		// 404 too, so deleting twice does not announce live.room.deleted twice.
+		try {
+			await this.txHost.tx.room.update({
+				where: { id: roomId, isDeleted: false },
+				data: { isDeleted: true, name: `${roomId}:deleted` },
+			});
+		} catch (e) {
+			throw notFoundIfMissing(e);
+		}
 	}
 
 	async banUserFrom(roomId: string, uid: string, reason: string): Promise<void> {

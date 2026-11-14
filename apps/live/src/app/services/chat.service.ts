@@ -171,10 +171,15 @@ export class ChatService {
 		return roomId;
 	}
 
-	@Transactional()
 	async removeRoom(roomId: string): Promise<void> {
-		await this.roomRepository.removeRoom(roomId);
+		await this.deleteRoom(roomId);
+		// only after the commit: a failed delete must not empty a room that still exists
 		this.chatGateway.closeRoom(roomId);
+	}
+
+	@Transactional()
+	private async deleteRoom(roomId: string): Promise<void> {
+		await this.roomRepository.removeRoom(roomId);
 		await this.outbox.add('live.room.deleted', { resourceId: roomId });
 	}
 
