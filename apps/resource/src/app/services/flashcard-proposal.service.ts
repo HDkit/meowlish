@@ -368,6 +368,12 @@ export class FlashcardProposalService {
 			requester,
 			undefined,
 		);
+		await this.events.flashCardProposalWithdrawn({
+			proposalId: closed.id,
+			targetListId: closed.target.id,
+			targetOwnerId: closed.target.authorId,
+			authorId: closed.authorId,
+		});
 		return this.toReadModel(closed);
 	}
 

@@ -43,6 +43,14 @@ export interface FlashCardProposalDecidedEvent {
 	decisionNote: string | null;
 }
 
+/** The proposer withdrew an open proposal (notification removes the owner's review notification). */
+export interface FlashCardProposalWithdrawnEvent {
+	proposalId: string;
+	targetListId: string;
+	targetOwnerId: string;
+	authorId: string;
+}
+
 /** A new comment on a blog post (notification tells the post author and the replied-to author). */
 export interface BlogCommentCreatedEvent {
 	commentId: string;
@@ -110,6 +118,10 @@ export class ResourceEventsPublisher {
 
 	async flashCardProposalDecided(event: FlashCardProposalDecidedEvent): Promise<void> {
 		await this.outbox.add('resource.flashcard-proposal.decided', event);
+	}
+
+	async flashCardProposalWithdrawn(event: FlashCardProposalWithdrawnEvent): Promise<void> {
+		await this.outbox.add('resource.flashcard-proposal.withdrawn', event);
 	}
 
 	async reportStatusChanged(event: ReportStatusChangedEvent): Promise<void> {

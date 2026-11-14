@@ -112,6 +112,7 @@ const setup = (opts: { current?: ReturnType<typeof row>[] } = {}) => {
 		resourcesDeleted: jest.fn(),
 		flashCardProposalCreated: jest.fn(),
 		flashCardProposalDecided: jest.fn(),
+		flashCardProposalWithdrawn: jest.fn(),
 	};
 	const forks = {
 		findForkWithOriginal: jest.fn().mockResolvedValue({
@@ -348,10 +349,24 @@ describe('FlashcardProposalService reject and withdraw', () => {
 		);
 	});
 
-	it('lets the author withdraw without notifying anyone', async () => {
+	it('lets the author withdraw and announces it so the owner’s review notification goes', async () => {
 		const { events, service, stored } = setup();
 		await service.withdrawFlashCardProposal('p1', proposer);
 		expect(stored().status).toBe('WITHDRAWN');
 		expect(events.flashCardProposalDecided).not.toHaveBeenCalled();
+		expect(events.flashCardProposalWithdrawn).toHaveBeenCalledWith({
+			proposalId: 'p1',
+			targetListId: 'orig',
+			targetOwnerId: 'owner',
+			authorId: 'proposer',
+		});
+	});
+
+	it('announces nothing when the withdraw fails', async () => {
+		const { events, service } = setup();
+		await expect(service.withdrawFlashCardProposal('p1', owner)).rejects.toBeInstanceOf(
+			ForbiddenException,
+		);
+		expect(events.flashCardProposalWithdrawn).not.toHaveBeenCalled();
 	});
 });

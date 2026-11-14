@@ -35,7 +35,7 @@ Common to every route below:
 | [GET /flash-card-proposals/:proposalId](#get-apiv1resourcesflash-card-proposalsproposalid)                    | requester; proposer, target owner, admin            | -                                                         | -                                                                               |
 | [POST /flash-card-proposals/:proposalId/accept](#post-apiv1resourcesflash-card-proposalsproposalidaccept)     | requester; target owner or admin                    | `FlashCardListProposal`, `FlashCard` (both lists), outbox | `resource.flashcard-proposal.decided`, `resource.resource.created` / `.deleted` |
 | [POST /flash-card-proposals/:proposalId/reject](#post-apiv1resourcesflash-card-proposalsproposalidreject)     | requester; target owner or admin                    | `FlashCardListProposal`, outbox                           | `resource.flashcard-proposal.decided`                                           |
-| [POST /flash-card-proposals/:proposalId/withdraw](#post-apiv1resourcesflash-card-proposalsproposalidwithdraw) | requester; proposer only                            | `FlashCardListProposal`                                   | -                                                                               |
+| [POST /flash-card-proposals/:proposalId/withdraw](#post-apiv1resourcesflash-card-proposalsproposalidwithdraw) | requester; proposer only                            | `FlashCardListProposal`, outbox                           | `resource.flashcard-proposal.withdrawn`                                         |
 
 All paths in the table are relative to `/api/v1/resources`.
 
@@ -201,7 +201,7 @@ Query `ListFlashCardProposalsQueryDto`: `page`, `limit`, `targetListId`, `source
 
 ### POST /api/v1/resources/flash-card-proposals/:proposalId/withdraw
 
-No body, HTTP 200. `withdrawFlashCardProposal` (`flashcard-proposal.service.ts:350`), `@Transactional()`: `findVisible` (404), 403 `Only the proposer can withdraw this proposal` (even for admins), `close(WITHDRAWN)` with no note (409 if not open; `decidedBy` = the proposer). **No event**: the owner's "proposal waiting for review" notification is not withdrawn or updated. Response `FlashCardProposalDto`.
+No body, HTTP 200. `withdrawFlashCardProposal` (`flashcard-proposal.service.ts:350`), `@Transactional()`: `findVisible` (404), 403 `Only the proposer can withdraw this proposal` (even for admins), `close(WITHDRAWN)` with no note (409 if not open; `decidedBy` = the proposer), then `outbox.add('resource.flashcard-proposal.withdrawn', { proposalId, targetListId, targetOwnerId, authorId })` in the same transaction. Async: → queue `notification.events.flashcard-proposal.withdrawn` → [FlashCardProposalWithdrawnHandler](#resourceflashcard-proposalwithdrawn) (inbox yes): deletes the owner's "proposal waiting for review" notification. Response `FlashCardProposalDto`.
 
 ## Background work
 
