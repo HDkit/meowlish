@@ -39,6 +39,13 @@ const corsOriginsSchema = z.preprocess(
 const loadCorsOrigins = () =>
 	process.env.CORS_ORIGINS ?? (process.env.NODE_ENV === 'production' ? '' : DEV_CORS_ORIGINS);
 
+/** auth gRPC address (revocation check at socket connect); `url` overrides host:port. */
+const authServiceSchema = z.object({
+	url: z.string().optional(),
+	host: z.string(),
+	port: z.coerce.number(),
+});
+
 /** Listeners: gRPC on GRPC_HOST:GRPC_PORT, HTTP on HTTP_HOST:HTTP_PORT. */
 const serverSchema = z.object({
 	grpcHost: z.string().default('127.0.0.1'),
@@ -59,6 +66,7 @@ export const envFileSchema = z.object({
 	database: dbVarsSchema,
 	redis: redisVarsSchema,
 	messageQueue: mqSchema,
+	authService: authServiceSchema,
 });
 
 export type IEnvVars = z.infer<typeof envFileSchema>;
@@ -91,6 +99,11 @@ const loadEnv = (): DeepStringify<IEnvVars> => ({
 		port: process.env.RMQ_PORT,
 		user: process.env.RMQ_USER,
 		password: process.env.RMQ_PASS,
+	},
+	authService: {
+		url: process.env.AUTH_SERVICE_URL || undefined,
+		host: process.env.AUTH_SERVICE_HOST,
+		port: process.env.AUTH_SERVICE_PORT,
 	},
 });
 

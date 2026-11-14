@@ -320,6 +320,8 @@ services:
       - HTTP_PORT=1511
       - GRPC_HOST=0.0.0.0
       - GRPC_PORT=50050
+      - AUTH_SERVICE_HOST=auth
+      - AUTH_SERVICE_PORT=50050
     env_file: .env.services
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:1511/health/ready"]

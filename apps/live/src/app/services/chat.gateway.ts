@@ -1,9 +1,11 @@
 import { type IEnvVars } from '../../configs/config';
+import { AUTH_CLIENT } from '../../constants/auth';
 import {
 	type IRoomRepository,
 	IRoomRepositoryToken,
 } from '../../domain/repositories/room.repository';
 import { ChatDto } from '../presentation/dtos/req/chat.req.dto';
+import { type OnModuleInit } from '@nestjs/common';
 import {
 	ForbiddenException,
 	Inject,
@@ -13,6 +15,7 @@ import {
 	UsePipes,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { type ClientGrpc } from '@nestjs/microservices';
 import {
 	ConnectedSocket,
 	MessageBody,
@@ -22,6 +25,7 @@ import {
 	WebSocketGateway,
 	WebSocketServer,
 } from '@nestjs/websockets';
+import { auth } from '@server/generated';
 import { AppLoggerService } from '@server/logger';
 import {
 	GlobalValidationPipe,
@@ -32,6 +36,7 @@ import {
 import { isUUID } from 'class-validator';
 import jwt from 'jsonwebtoken';
 import { ClsGuard } from 'nestjs-cls';
+import { lastValueFrom } from 'rxjs';
 import { Server, Socket } from 'socket.io';
 
 type ModifiedSocket = Omit<Socket, 'data'> & { data: { uid: string } };
@@ -42,13 +47,15 @@ type ModifiedSocket = Omit<Socket, 'data'> & { data: { uid: string } };
 @UseFilters(GlobalWsExceptionFilter)
 // CORS is set from CORS_ORIGINS in RedisIoAdapter (gateway options are static)
 @WebSocketGateway()
-export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect, OnModuleInit {
 	private readonly jwtPublicKey?: string;
+	private authService!: auth.AuthServiceClient;
 
 	constructor(
 		private logger: AppLoggerService,
 		@Inject(IRoomRepositoryToken) private readonly roomRepository: IRoomRepository,
 		configService: ConfigService<IEnvVars>,
+		@Inject(AUTH_CLIENT) private readonly authClient: ClientGrpc,
 	) {
 		this.jwtPublicKey = configService.get('jwtPublicKey', { infer: true });
 		if (!this.jwtPublicKey) {
@@ -75,6 +82,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 	@WebSocketServer()
 	server!: Server;
 
+	onModuleInit() {
+		this.authService = this.authClient.getService<auth.AuthServiceClient>(auth.AUTH_SERVICE_NAME);
+	}
+
 	/**
 	 * The user id must come from a verified access token. This service is reachable directly (Envoy),
 	 * so it can't trust anything the gateway or client puts in headers.
@@ -92,6 +103,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 			) {
 				throw new Error('Invalid token payload');
 			}
+			// A valid signature is not enough: the token may have been revoked (logout-all, password
+			// change) or the account locked. Same check as the gateway; any failure refuses the socket.
+			await lastValueFrom(
+				this.authService.validateAccess({
+					identityId: payload.sub,
+					iat: typeof payload.iat === 'number' ? payload.iat : 0,
+					iatMs: typeof payload.iatMs === 'number' ? payload.iatMs : undefined,
+				}),
+			);
 			socket.data.uid = payload.sub;
 			await socket.join(socket.data.uid);
 		} catch {
@@ -166,6 +186,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 			const data: unknown = socket.data;
 			if (typeof data === 'object' && data !== null && 'uid' in data && data.uid === uid) {
 				socket.leave(roomId);
+			}
+		}
+	}
+
+	/** Disconnects every socket of `uid` on every node (account locked). */
+	async disconnectAllOf(uid: string): Promise<void> {
+		this.server.in(uid).disconnectSockets(true);
+		// also sockets that somehow left their uid room
+		for (const socket of await this.server.fetchSockets()) {
+			const data: unknown = socket.data;
+			if (typeof data === 'object' && data !== null && 'uid' in data && data.uid === uid) {
+				socket.disconnect(true);
 			}
 		}
 	}

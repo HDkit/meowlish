@@ -3,6 +3,7 @@ import { type ConfigService } from '@nestjs/config';
 import { type AppLoggerService } from '@server/logger';
 import jwt from 'jsonwebtoken';
 import { generateKeyPairSync } from 'node:crypto';
+import { of, throwError } from 'rxjs';
 
 const { privateKey, publicKey } = generateKeyPairSync('rsa', {
 	modulusLength: 2048,
@@ -16,14 +17,28 @@ const logger = { warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 const accessToken = (sub: string, extra: object = { typ: 'ACCESS', roles: [], permissions: [] }) =>
 	jwt.sign({ sub: sub, ...extra }, privateKey, { algorithm: 'RS256' });
 
+/** auth's ValidateAccess: resolves, or errors for a revoked token / locked account. */
+let validateAccess = jest.fn(() => of({}));
+
 const makeGateway = (canJoin: () => Promise<boolean> = () => Promise.resolve(true)) => {
 	const config = { get: () => publicKey } as unknown as ConfigService;
-	return new ChatGateway(
+	const gateway = new ChatGateway(
 		logger as unknown as AppLoggerService,
 		{ canJoinRoom: jest.fn(canJoin) } as never,
 		config,
+		{
+			getService: () => ({
+				validateAccess: (...args: unknown[]) => validateAccess(...(args as [])),
+			}),
+		} as never,
 	);
+	gateway.onModuleInit();
+	return gateway;
 };
+
+beforeEach(() => {
+	validateAccess = jest.fn(() => of({}));
+});
 
 const makeSocket = (handshake: {
 	auth?: object;
@@ -84,6 +99,29 @@ describe('ChatGateway authentication', () => {
 			expect(socket.disconnect).toHaveBeenCalledWith(true);
 			expect(socket.data.uid).toBeUndefined();
 		}
+	});
+
+	it('refuses a revoked token or locked account (auth ValidateAccess fails)', async () => {
+		validateAccess = jest.fn(() => throwError(() => new Error('Token has been revoked')));
+		const socket = makeSocket({ auth: { token: accessToken('user-1') } });
+		await makeGateway().handleConnection(socket as never);
+		expect(socket.disconnect).toHaveBeenCalledWith(true);
+		expect(socket.data.uid).toBeUndefined();
+	});
+
+	it('disconnects every socket of a locked user', async () => {
+		const gateway = makeGateway();
+		const disconnectSockets = jest.fn();
+		const mine = { data: { uid: 'locked' }, disconnect: jest.fn() };
+		const other = { data: { uid: 'someone' }, disconnect: jest.fn() };
+		gateway.server = {
+			in: jest.fn(() => ({ disconnectSockets: disconnectSockets })),
+			fetchSockets: () => Promise.resolve([mine, other]),
+		} as never;
+		await gateway.disconnectAllOf('locked');
+		expect(disconnectSockets).toHaveBeenCalledWith(true);
+		expect(mine.disconnect).toHaveBeenCalledWith(true);
+		expect(other.disconnect).not.toHaveBeenCalled();
 	});
 
 	it('accepts a pre-typ access token (roles, no typ)', async () => {
