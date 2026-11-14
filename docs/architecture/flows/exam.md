@@ -4,8 +4,8 @@ Every HTTP route the gateway serves under `/api/v1/exams`, traced into `apps/exa
 
 Conventions used below:
 
-- **Status mapping.** Exceptions thrown in exam pass through `GlobalRpcExceptionFilter` (`libs/utils/src/filters/global.rpc.filter.ts`) and come back to HTTP through `rpc-to-http.http.filter.ts`. Two mappings matter here. `MethodNotAllowedException` (405) becomes gRPC `CANCELLED`, which the gateway returns as **499**. Any error that is not a Nest `HttpException` becomes `UNKNOWN`, which the gateway returns as **502**. Examples are Prisma `P2025`/`P2002`/validation errors and raw PostgreSQL exceptions.
-- **Exam version lock.** `exams.version` is the optimistic lock for the whole exam tree. Exam, section and question saves update `where { id, version }` and increment it (`apps/exam/src/infra/repositories/{exam,section,question}.prisma.repository.impl.ts`). A stale save fails with Prisma `P2025`, which the gateway returns as **502**, not 409. Exam-tree saves are not retried.
+- **Status mapping.** Exceptions thrown in exam pass through `GlobalRpcExceptionFilter` (`libs/utils/src/filters/global.rpc.filter.ts`) and come back to HTTP through `rpc-to-http.http.filter.ts`. Two mappings matter here. `MethodNotAllowedException` (405) becomes gRPC `CANCELLED`, which the gateway returns as **499**, so exam no longer throws it. Any error that is not a Nest `HttpException` becomes `UNKNOWN`, which the gateway returns as **502**. Expected Prisma errors are therefore translated at the source: `translatePrismaErrors` / `guardExamVersion` (`apps/exam/src/infra/repositories/prisma-errors.ts`) turn P2002/P2025 into 409/404 where they mean a duplicate, a missing row or a stale version.
+- **Exam version lock.** `exams.version` is the optimistic lock for the whole exam tree. Exam, section and question saves update `where { id, version }` and increment it (`apps/exam/src/infra/repositories/{exam,section,question}.prisma.repository.impl.ts`). A stale save fails with Prisma `P2025`, which `guardExamVersion` turns into **409** `ExamVersionConflictException` (reload and retry). Exam-tree saves are not retried.
 - **Approved is frozen.** `assertModifiable()` in `domain/entities/{exam,section,question}.entity.ts` throws **409** `Exam is already approved and can no longer be updated.` for any content change, and for `updateStatus`, once `status = APPROVED`.
 - **Attempt version lock.** `attempts.version` is checked by `updateAtVersion` in `attempt.prisma.repository.impl.ts`, which throws `AttemptVersionConflictException` (409). Practice writes are wrapped in `retryAttemptConflicts` (`apps/exam/src/app/services/attempt-conflict-retry.ts`): up to 6 tries with a 10-60 ms jitter, and each try runs in a fresh `@Transactional()`.
 - **Throttling.** The default throttler allows 100/min per IP and signed-in account (`apps/gateway/src/throttle.ts`). `@AnswerThrottle()` raises this to 300/min per IP and account.
@@ -77,8 +77,7 @@ Updates title, duration, description and exam tags.
   1. Gateway validates `UpdateExamDto`: `addTags`/`removeTags` are unique arrays of tag **ids**; `setDescriptionNull` clears the description.
   2. `UpdateExamHandler` (`update-exam.handler.ts`, no `@Transactional`; `save` opens its own `withTransaction`) loads the exam and calls `exam.updateDetails` (409 if approved; 400 for a non-positive or non-integer duration), then `addTag`/`removeTag` for each id. A duplicate tag gives 409 and a missing link 404.
   3. `ExamPrismaRepositoryImpl.save` runs a versioned update of `exams` and creates or deletes `exam_tags`. An unknown tag id hits FK `P2003`, which `insertTagLink` (`infra/repositories/tag-link.ts`) turns into 404 `Tag not found`.
-  4. The handler then publishes the domain events on the in-process `EventBus`. No handler is registered for them, so they have no effect.
-- **Errors**: 404, 403, 409 (approved, or duplicate tag), 502 on a stale version.
+- **Errors**: 404, 403, 409 (approved, duplicate tag, or a stale version).
 
 ### DELETE /api/v1/exams/management/:id
 
@@ -185,7 +184,7 @@ Body `MoveSectionDto { parentId?, toRoot?, index? }`.
   - **`parentId` set.** `findOneInTheSameExamAsSection(parentId, id)` returns 404 unless the destination is in the same exam. Then `addSection` emits `ChildSectionMovedEvent` and the `sections.parent_id/order` update is saved.
   - **`toRoot`.** `getParentExamOfSection` → `exam.addSection`.
   - **Otherwise** the section is reordered within its current parent, which is a section or the exam.
-  - In every case, `trg_section_closure_update.sql` rewrites `section_closures` when `parent_id` changes. It also refuses a move under the section's own descendant with `RAISE EXCEPTION`, which reaches the client as **502**, not 409.
+  - In every case, `trg_section_closure_update.sql` rewrites `section_closures` when `parent_id` changes. It also refuses a move under the section's own descendant with `RAISE EXCEPTION`; `MoveSectionHandler` checks that first (`isInSubtreeOf`, over `section_closures`) and answers **400**, so the trigger is only a backstop.
 
 ### PATCH /api/v1/exams/management/questions/:id/move
 
@@ -206,7 +205,7 @@ Management list with filters `createdBy`, `status`, `title` and created/updated 
   1. `FindExamsForManagementHandler` decodes the opaque cursor (`CursorPaginationFactory`, name `FindExamsManagement`). Cursor filter and sort take precedence over the query; `limit` defaults to 10.
   2. It calls `ManagementPrismaRepositoryImpl.findExams`, which reads `exams` with `take: dir * limit`.
   3. Response: `ExamsManagementInfoDto { exams, nextCursor, prevCursor }`.
-- **Errors**: `limit` has no upper bound at either the gateway or the service.
+- **Errors**: 400 when `limit` is not 1-100 (gateway and service).
 
 ### Other management reads
 
@@ -229,18 +228,17 @@ Starts an attempt on exam `:id`.
 - **Access**: signed in.
 - **Flow**:
   1. Gateway `AttemptDto.options` can carry `duration` (positive number, in seconds, no upper bound) and `sectionIds` (top-level section ids).
-  2. `AttemptHandler` (`apps/exam/src/app/commands/handlers/practice/attempt.handler.ts`, no `@Transactional`) loads the exam and calls `exam.createAttempt`:
-     - **499** if the exam is not `APPROVED` (`MethodNotAllowedException`);
+  2. `AttemptHandler` (`apps/exam/src/app/commands/handlers/practice/attempt.handler.ts`) loads the exam and calls `exam.createAttempt`:
+     - **409** if the exam is not `APPROVED`;
      - **403** if a section id is not a top-level section of this exam;
      - **400** if the duration is ≤ 0;
      - selecting all sections is stored as "no selection";
      - `isStrict` is true only for the full exam at its own duration.
-  3. `AttemptPrismaRepositoryImpl.save(AttemptConfig)`:
-     - reads the last **finished** attempt's `order` and inserts `attempts` with `order = last + 1`;
-     - the unique `(exam_id, attempted_by, order)` turns a second unfinished attempt into `P2002` → `MethodNotAllowedException('Please submit the previous attempt')` → **499**;
+  3. `AttemptPrismaRepositoryImpl.save(AttemptConfig)`, in one transaction:
+     - reads the last **finished** attempt's `order` and inserts `attempts` with `order = last + 1`, skipping a duplicate (`createMany … skipDuplicates`, i.e. `ON CONFLICT DO NOTHING`, so the transaction stays usable);
+     - the unique `(exam_id, attempted_by, order)` makes a second unfinished attempt (or the loser of two concurrent starts) insert nothing; the order is read again once, in case the attempt holding it was submitted meanwhile, and otherwise the start fails with **409** `Please submit the previous attempt`;
      - inserts `attempt_sections` for a partial selection.
-  4. `AttemptCreatedEvent` is published on the in-process bus. No handler listens.
-  5. Response: `CreatedAttemptDto { id }`.
+  4. Response: `CreatedAttemptDto { id }`.
 
 ### POST /api/v1/exams/practice/attempt/:id/answers/:questionId
 
@@ -270,13 +268,13 @@ Removes one option (`RemoveAnswerDto.answer`, sent in a DELETE body) or clears t
 
 - **Access**: owner, 300/min.
 - **Flow**: `ToggleFlagHandler` with retry runs `Attempt.toggleFlag`. It creates a response with `is_flagged = true` or flips the existing one. Response: `FlagStateDto { state }`.
-- **Errors**: there is no submitted, expiry or question-in-attempt check. Flags can change after submit. An unknown question id fails on the `attempt_responses.question_id` FK, which returns **502**.
+- **Errors**: the same checks as answering: **409** once submitted, **403** after the time limit, **409** for a question outside the attempt (so an unknown question id never reaches the FK).
 
 ### PATCH /api/v1/exams/practice/attempt/:id/answers/:questionId/note
 
 - **Access**: owner, 300/min.
 - **Flow**: gateway `AddNoteDto.note` (0-500 chars). `AddNoteHandler` with retry runs `Attempt.addNote`, which upserts `attempt_responses.note`.
-- **Errors**: same gaps as flag: no submitted, expiry or question-in-attempt check.
+- **Errors**: same as flag.
 
 ### POST /api/v1/exams/practice/attempt/:id/submit
 
@@ -335,15 +333,15 @@ sequenceDiagram
 
 1. **Request message.** `WritingSubmittedPublisher` (`apps/exam/src/app/events/publishers/writing-submitted.ts`) builds the snake_case payload with `outbox.add('exam.writing.submitted', message, { bare: true })`:
 
-   | Field          | Source                                                                                                              |
-   | -------------- | ------------------------------------------------------------------------------------------------------------------- |
-   | `attempt_id`   | the attempt id                                                                                                      |
-   | `response_id`  | the response id                                                                                                     |
-   | `question`     | the question `content`                                                                                              |
-   | `content`      | the answer, read from the DB by `getWritingResponse`                                                                |
-   | `exam_type`    | the exam's tag **names** joined with `,`                                                                            |
-   | `task_type`    | the question's tag names joined with `,`                                                                            |
-   | `target_score` | `goals.target` of the attempt's user, else 0. The goal `type` is ignored (a TOEIC goal is sent as an IELTS target). |
+   | Field          | Source                                                                                                                                                                   |
+   | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+   | `attempt_id`   | the attempt id                                                                                                                                                           |
+   | `response_id`  | the response id                                                                                                                                                          |
+   | `question`     | the question `content`                                                                                                                                                   |
+   | `content`      | the answer, read from the DB by `getWritingResponse`                                                                                                                     |
+   | `exam_type`    | the exam's tag **names** joined with `,`                                                                                                                                 |
+   | `task_type`    | the question's tag names joined with `,`                                                                                                                                 |
+   | `target_score` | `goals.target` of the attempt's user when the goal's `type` matches the exam (an exam tag is the type or starts with it, e.g. `IELTS Writing T1-T2` for `IELTS`), else 0 |
 
    The AMQP `messageId` is the outbox row id.
 
@@ -402,7 +400,7 @@ All four are `@IsPublic()` and read approved exams only.
 - `GET /api/v1/exams/practice`:
   - `FindExamsHandler` (`app/queries/handlers/practice/find-exams.handler.ts`) supports two modes. With `page` (≤ 10 000) it uses offset pages plus `countExams`, returning `totalCount`. Otherwise it uses a cursor (`FindExams`) sorted by `attemptsCount` or `updatedAt`.
   - Filters: `name`, `tags` (any of, descendants match), `requiredTags` (each of).
-  - It reads raw SQL over `exams` / `exam_tags` / `tags` with `status = 'APPROVED'`. `limit` has no upper bound.
+  - It reads raw SQL over `exams` / `exam_tags` / `tags` with `status = 'APPROVED'`. `limit` is 1-100.
   - Response: `ExamsInfoDto`.
 - `GET /api/v1/exams/practice/info/:id/details`: `getExamDetail` (raw SQL, approved only, 404 otherwise). Returns `ExamDetailDto`.
 - `GET /api/v1/exams/practice/info/:id/stats`: `getExamStats`. Average duration and average score percentage over the exam's attempts; approved only. Returns `ExamStatsDto`.
@@ -419,7 +417,7 @@ All require a signed-in user. `uid` is `req.user.sub`.
 - `GET /api/v1/exams/practice/my/calendar?range[from]&range[to]`: `GetUserCalendarQueryHandler` → `getUsersAttemptSummary` over `attempts`. Returns `UserCalendarDto { history }`.
 - `GET /api/v1/exams/practice/my/history`:
   - `GetUsersAttemptHistoryHandler` uses cursor pagination. The cursor stores `uid` and is discarded when it differs from the caller.
-  - Filters: `examId`. Sort by `endedAt`, `startedAt`, `examId` or `score`. `limit` defaults to 10, with no maximum.
+  - Filters: `examId`. Sort by `endedAt`, `startedAt`, `examId` or `score`. `limit` defaults to 10, at most 100.
   - Returns `AttemptsHistoryDto`, which includes each attempt's `score`.
 - `GET /api/v1/exams/practice/my/stats`: `getUserStats`. Raw SQL over `attempts` (count, average percentage) plus per-tag accuracy over `attempt_responses` ⋈ `questions` ⋈ `question_tags` ⋈ `tags`. Returns `UserStatsDto`.
 - `GET /api/v1/exams/practice/my/activity?days`: `GetUserActivityQueryHandler`. `days` is 1-371 (default 182) and is clamped again in the handler. Daily counts and streaks over UTC days from `attempts.ended_at`. Returns `UserActivityDto`.
@@ -436,13 +434,13 @@ Tags form a nested set (`tags.lft/rgt`). Every structural change runs in one `wi
   - with a parent: shift `rgt ≥ parent.rgt` and `lft > parent.rgt` by 2, then insert at `parent.rgt` (404 `Parent tag not found` if the parent is missing);
   - without a parent: append as a root after the highest `rgt`;
   - response: `AddedTagDto { id }`;
-  - a duplicate `name` (unique) gives Prisma `P2002` → **502**.
+  - a duplicate `name` (unique) gives **409**.
 - `DELETE /api/v1/exams/tags/:id`: deletes the whole subtree (`lft..rgt`) and closes the gap. 404 if missing. The `exam_tags` / `section_tags` / `question_tags` links cascade.
 - `POST /api/v1/exams/tags/:id/move`:
   - `MoveTagDto { parentId? }`: moves the subtree as the last child of `parentId`, or to a new root;
   - uses the three-step nested-set move documented in the code;
-  - moving a tag into its own subtree gives `MethodNotAllowedException` → **499**; a missing tag or destination gives 404.
-- `PATCH /api/v1/exams/tags/:id`: `UpdateTagDto { name }` renames the tag without the table lock. An unknown id (`P2025`) or a duplicate name (`P2002`) gives **502**.
+  - moving a tag into its own subtree gives **400**; a missing tag or destination gives 404.
+- `PATCH /api/v1/exams/tags/:id`: `UpdateTagDto { name }` renames the tag without the table lock. An unknown id gives **404**, a duplicate name **409**.
 - `GET /api/v1/exams/tags/tree` and `GET /api/v1/exams/tags/list` (public): `TagReadPrismaRepositoryImpl` reads all tags. Returns `TagTreesDto { trees }` and `TagListDto { list }`.
 
 No events are published for tag changes.
@@ -451,9 +449,9 @@ No events are published for tag changes.
 
 `@Controller('goals')`, so routes live under `/api/v1/exams/goals`. Signed in only. `uid` is always `req.user.sub`. Service: `GoalController` → `GoalService` → `GoalPrismaRepositoryImpl` (`goals`, PK `uid`, `target Int`).
 
-- `POST /api/v1/exams/goals/my`: `SetGoalDto { date, target: number, type: IELTS|TOEIC|VSTEP|TOEFL }` → `goals.create`. Returns `GoalResDto`. A second call (`P2002`) gives **502**, not 409.
-- `PATCH /api/v1/exams/goals/my`: same DTO (all fields required) → `goals.update`. When there is no goal (`P2025`), the result is **502**, not 404.
-- `DELETE /api/v1/exams/goals/my`: `goals.delete`. **502** when there is no goal.
+- `POST /api/v1/exams/goals/my`: `SetGoalDto { date, target: integer 0-990, type: IELTS|TOEIC|VSTEP|TOEFL }` → `goals.create`. Returns `GoalResDto`. A second call gives **409**. A fractional target (IELTS 6.5) is a **400**: the column and the proto field are integers.
+- `PATCH /api/v1/exams/goals/my`: same DTO (all fields required) → `goals.update`. When there is no goal, **404**.
+- `DELETE /api/v1/exams/goals/my`: `goals.delete`. **404** when there is no goal.
 - `GET /api/v1/exams/goals/my`: `findUnique`, 404 `Goal not found`.
 
 `goals.target` is the `target_score` sent to the AI scorer (see [round trip](#writing-scoring-round-trip)).
@@ -505,18 +503,16 @@ There are no socket.io or SSE endpoints in exam.
 
 ## Findings
 
-1. **Status codes.**
-   - `MethodNotAllowedException` reaches clients as **499**: starting an attempt on an unapproved exam, starting a second attempt while one is unfinished (`apps/exam/src/infra/repositories/attempt.prisma.repository.impl.ts:258`), and moving a tag into its own subtree (`apps/exam/src/infra/repositories/tag.prisma.repository.impl.ts`). The cause is `GlobalRpcExceptionFilter` mapping 405 to `CANCELLED`.
-   - Several expected conflicts reach clients as **502**: a stale `exams.version` (P2025), a duplicate tag name, an unknown tag id on rename, a second `POST goals/my`, `PATCH`/`DELETE goals/my` with no goal, a section cycle (trigger `RAISE EXCEPTION`), and flagging or noting an unknown question id (FK). The cause is that Prisma/PG errors are not `HttpException`s.
-2. **Fractional goal targets fail.** `goals.target` is `Int` (`apps/exam/prisma/schema/goal.prisma`), but `SetGoalDto`/`UpdateGoalDto.target` accept any number (`apps/exam/src/presentation/dtos/req/goal/set-goal.req.dto.ts`). An IELTS target such as 6.5 fails in Prisma with 502.
-3. **Flag and note skip checks.** `Attempt.toggleFlag` and `Attempt.addNote` (`apps/exam/src/domain/entities/attempt.entity.ts`) skip the submitted, expiry and question-in-attempt checks that `answer` applies. Notes and flags can change after submit or after the time limit, and on questions outside the selected sections.
-4. **Double-encoded feedback.** `additionalData` in the review is double-encoded JSON. `WritingScoredHandler` stores `JSON.stringify(payload.data)` (`apps/exam/src/app/events/handlers/writing-scored.handler.ts:107`), and `getAttemptReview` stringifies it again (`apps/exam/src/infra/repositories/practice.read.prisma.repository.impl.ts:1118`).
-5. **Missing `data` on success.** A successful `exam.writing.scored` without `data` stores `comment: undefined`. Prisma rejects this, so the message is retried and then dead-lettered (`writing-scored.handler.ts:107`, `data` is `@IsOptional()`).
-6. **Goal type ignored.** `WritingSubmittedPublisher` sends `target_score` from the user's goal whatever its `type`, and sends `exam_type`/`task_type` as comma-joined tag names (`apps/exam/src/app/events/publishers/writing-submitted.ts`).
-7. **Deleting approved exams.** `DeleteExamHandler` has no `assertModifiable`/status check (`apps/exam/src/app/commands/handlers/management/delete-exam.handler.ts`). Deleting an approved exam cascades to every user's attempts, responses and AI feedback.
-8. **Approval is one-way.** `Exam.updateStatus` calls `assertModifiable()` (`apps/exam/src/domain/entities/exam.entity.ts:104`), so an approved exam cannot be rejected or set back to pending through `PATCH …/:id/review`.
-9. **Unbounded `limit`.** `limit` has no `@Max` on `GET /exams/management/exams`, `GET /exams/practice` (cursor mode) or `GET /exams/practice/my/history`, at either the gateway or the service DTOs. AGENTS.md asks for bounded `page`/`limit`.
-10. **Public explanations.** `GET /exams/practice/questions/:id/details` is public and returns `explanation` for any question of an approved exam (`practice.read.prisma.repository.impl.ts:1124`). Anyone can read answer explanations without starting an attempt.
-11. **No-op event publishing.** `UpdateExamHandler` and `AttemptHandler` publish domain events (`ExamDetailsUpdatedEvent`, `AttemptCreatedEvent`, …) on the in-process `EventBus` with no registered handler. This does nothing; only `AttemptSubmittedHandler` is registered (`apps/exam/src/app/events/handlers/index.ts`).
+1. ~~Status codes~~: fixed (see fixed-issues.md). exam no longer throws `MethodNotAllowedException` (an unapproved exam or an open attempt is 409, a tag cycle 400), and the expected Prisma/PG errors are 409/404/400 at the source: stale `exams.version` 409, duplicate tag name 409, unknown tag on rename 404, second goal 409, missing goal 404, section cycle 400 (checked before the trigger), unknown question on flag/note 409 (finding 3).
+2. ~~Fractional goal targets fail~~: fixed by validation (see fixed-issues.md): `target` must be an integer 0-990 at the gateway and in exam (400). Supporting IELTS half bands needs a proto and schema change: backlog X1.
+3. ~~Flag and note skip checks~~: fixed (see fixed-issues.md); they apply the same submitted, expiry and question-in-attempt checks as `answer`.
+4. ~~Double-encoded feedback~~: backlog X2 (the frontend decodes both layers; changing the shape needs a coordinated frontend change).
+5. ~~Missing `data` on success~~: already fixed by C21: a success without `data` is stored as a failure (`INVALID_RESULT`) and acked.
+6. ~~Goal type ignored~~: fixed (see fixed-issues.md): `target_score` is sent only when the goal's type matches the exam's tags, else 0. `exam_type`/`task_type` keep their comma-joined format, which the AI worker parses.
+7. ~~Deleting approved exams~~: backlog X3 (Decision).
+8. ~~Approval is one-way~~: backlog X4 (Decision).
+9. ~~Unbounded `limit`~~: fixed (see fixed-issues.md): `limit` is 1-100 on the three routes, at the gateway and in exam.
+10. ~~Public explanations~~: backlog X5 (Decision).
+11. ~~No-op event publishing~~: fixed (see fixed-issues.md): the `EventBus.publishAll` calls in `UpdateExamHandler`, `AttemptHandler` and `EndAttemptHandler` (nothing listened; scoring runs from the outbox) are removed.
 12. ~~Stale doc~~: `messaging.md` §5 had the old retry settings; corrected to 6 attempts, `jitter(10, 60)`.
-13. **Racy attempt start.** `AttemptPrismaRepositoryImpl.save(AttemptConfig)` reads the last finished `order` outside its transaction, and `AttemptHandler` is not `@Transactional`. Two concurrent starts collide on the unique key, and the loser gets 499 even when no earlier attempt was open.
+13. ~~Racy attempt start~~: fixed (see fixed-issues.md): the order is read and the attempt inserted in one transaction with `ON CONFLICT DO NOTHING`; the loser of two concurrent starts gets 409, and a start racing the submit of the previous attempt retries once.
