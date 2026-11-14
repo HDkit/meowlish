@@ -14,6 +14,26 @@
 
 A microservices-based backend for an English-learning application, built with **NestJS**, **gRPC** (protobuf), **RabbitMQ**, **Redis**, **PostgreSQL**, and **MinIO**. The system is composed of a single HTTP **gateway** that fans out to multiple **gRPC microservices**, each handling its own domain.
 
+It powers **Lingriser**, an IELTS & TOEIC practice app: web frontend [HDkit/meowlish-fe](https://github.com/HDkit/meowlish-fe), live at [meowlish-fe.vercel.app](https://meowlish-fe.vercel.app) (demo account below).
+
+## Features
+
+What the API offers, and which service owns it:
+
+| Feature                   | What the backend does                                                                                                                                                                | Service                             |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------- |
+| **Mock tests**            | IELTS and TOEIC exams as a tree of sections and questions with media and tags; staff create them and moderators review/approve them                                                  | `exam`, `file-service`              |
+| **Taking a test**         | Timed attempts (one unfinished attempt per user and exam), per-question answers saved as you go, **notes** and **flags** per question, saved data to resume, review after submitting | `exam`                              |
+| **Writing scoring**       | Essays go to an AI writing scorer over RabbitMQ and the band and feedback come back asynchronously (`mock-ai-scorer` in dev, the real scorer under the Docker `ai` profile)          | `exam`, `mock-ai-scorer`            |
+| **Progress**              | Score history, per-day practice activity (for streaks and the heatmap), per-skill and per-question-type stats, and a target-score goal                                               | `exam`                              |
+| **Gamification**          | 17 badges in five families (tests completed, good scores, perfect scores, days studied, day streaks) at bronze/silver/gold, awarded from attempt and login events                    | `achievement`                       |
+| **Flashcards**            | Cards and lists, public lists to discover, **forks** of someone else's list that can pull upstream changes, and **change proposals** the owner accepts or rejects                    | `resource`                          |
+| **Forum**                 | Categories, threads and replies with quotes; moderators pin, lock and delete threads                                                                                                 | `resource`                          |
+| **Blog**                  | Posts with tags and two-level comments                                                                                                                                               | `resource`                          |
+| **Chat**                  | Chat rooms over Socket.IO with history, scheduled live sessions and bans                                                                                                             | `live`                              |
+| **Notifications**         | Badges earned, blog comments and replies, forum replies, flashcard proposals and their decisions, reports; streamed over SSE, with per-type preferences                              | `notification`                      |
+| **Moderation & accounts** | Reports on content with attachments, roles and permissions, account locking, mail and Google sign-in, Google Calendar linking                                                        | `resource`, `auth`, `authorization` |
+
 ## Architectural diagram
 
 <img width="1113" height="824" alt="Architecture" src="https://github.com/user-attachments/assets/2bc5ce0b-ff57-4d9f-9e7b-776b89cb0644" />
@@ -99,18 +119,18 @@ This means the private key must only exist in the auth service environment, whil
 
 ### Services (apps)
 
-| App              | gRPC services                                                               | Responsibility                                                                                                                |
-| ---------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `gateway`        | — (HTTP)                                                                    | API routing, JWT verification, role/permission guards, docs                                                                   |
-| `auth`           | `AuthService`                                                               | Registration/login (mail & Google), token issuance & refresh, roles/permissions, identity management, Google Calendar linking |
-| `authorization`  | `AuthorizationService`                                                      | Ownership registration/checking (`is owner?`) for resources                                                                   |
-| `exam`           | `ExamManagementService`, `ExamPracticeService`, `TagService`, `GoalService` | Create/manage exams, sections & questions; answer attempts, stats, tags, user goals                                           |
-| `achievement`    | `AchievementService`                                                        | Badges catalog, user badges, login/submission progress                                                                        |
-| `resource`       | `BlogService`, `FlashCardService`, `FlashCardListService`, `ReportService`  | Blogs, flash cards (and lists), moderation reports                                                                            |
-| `file-service`   | `FileService`                                                               | Presigned upload/download URLs, file metadata (MinIO)                                                                         |
-| `live`           | `ChatService`                                                               | Chat rooms, chat logs, room scheduling, bans; Socket.IO real-time                                                             |
-| `notification`   | `NotificationService`, `NotificationPreferencesService`                     | Create/list notifications, mark read, preferences; SSE streaming                                                              |
-| `mock-ai-scorer` | — (RabbitMQ only)                                                           | Dev stand-in for the external AI writing scorer: random scores after a random delay (see below)                               |
+| App              | gRPC services                                                                                                                                | Responsibility                                                                                                                |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `gateway`        | — (HTTP)                                                                                                                                     | API routing, JWT verification, role/permission guards, docs                                                                   |
+| `auth`           | `AuthService`                                                                                                                                | Registration/login (mail & Google), token issuance & refresh, roles/permissions, identity management, Google Calendar linking |
+| `authorization`  | `AuthorizationService`                                                                                                                       | Ownership registration/checking (`is owner?`) for resources                                                                   |
+| `exam`           | `ExamManagementService`, `ExamPracticeService`, `TagService`, `GoalService`                                                                  | Create/manage/review exams, sections & questions; attempts, answers, notes & flags; stats, activity, skill stats; tags; goals |
+| `achievement`    | `AchievementService`                                                                                                                         | Badges catalog (17), user badges, login/attempt/score progress fed by RabbitMQ events                                         |
+| `resource`       | `BlogService`, `BlogCommentService`, `FlashCardService`, `FlashCardListService`, `FlashCardProposalService`, `ForumService`, `ReportService` | Blogs and comments, flash cards and lists (forks, upstream pulls, proposals), forum, moderation reports                       |
+| `file-service`   | `FileService`                                                                                                                                | Presigned upload/download URLs, file metadata (MinIO)                                                                         |
+| `live`           | `ChatService`                                                                                                                                | Chat rooms, chat logs, room scheduling, bans; Socket.IO real-time                                                             |
+| `notification`   | `NotificationService`, `NotificationPreferencesService`                                                                                      | Notifications built from other services' events, mark read, preferences; SSE streaming                                        |
+| `mock-ai-scorer` | — (RabbitMQ only)                                                                                                                            | Dev stand-in for the external AI writing scorer: random scores after a random delay (see below)                               |
 
 ### Libraries (libs)
 
@@ -124,7 +144,7 @@ This means the private key must only exist in the auth service environment, whil
 
 ## Prerequisites
 
-- **Node.js** 20+ (see `.nvmrc`)
+- **Node.js** 24 (see `.nvmrc`)
 - **pnpm** (the workspace is pnpm-only — `corepack` is recommended)
 - **Docker** (optional — required to run the dev infrastructure: Postgres, Redis, RabbitMQ, MinIO) and `docker compose`
 - **protoc** (only if regenerating gRPC code)
