@@ -269,7 +269,18 @@ Dev stand-in for the external AI writing scorer. It consumes `exam.writing.submi
 - `MOCK_SCORER_MIN_DELAY_MS` / `MOCK_SCORER_MAX_DELAY_MS` — uniform random delay per submission (defaults `60000` / `180000`, i.e. 1-3 minutes; min must be <= max)
 - `HOST`, `HEALTH_PORT` — bind address and port for `/health/live` and `/health/ready`
 
-Run it with `nx serve mock-ai-scorer` (also started by `nx run-many -t serve`), or in Docker with `docker compose --profile mock-ai up`. **Do not run it next to the real AI scorer**: both would consume `exam.writing.submitted` and race to score each submission.
+Run it with `nx serve mock-ai-scorer` (also started by `nx run-many -t serve`), or in Docker with `docker compose --profile mock-ai up`. **Do not run it next to the real AI scorer** (profile `ai`, below): both would consume `exam.writing.submitted` and race to score each submission.
+
+### Real AI scorer (Docker profile `ai`)
+
+Two containers in `docker/docker-compose.app.yaml`, started with `docker compose --profile ai up -d`:
+
+- `ai-llm`: [llama.cpp server](https://github.com/ggml-org/llama.cpp) running the fine-tuned model [`linhma139/Phi-3-IELTS-Scorer`](https://huggingface.co/linhma139/Phi-3-IELTS-Scorer) (Phi-3-mini, Q4_K_M GGUF, 2.2 GB, downloaded into the `ai-models` volume on first start). CPU only, one essay at a time: about 1-2 minutes per essay on 8 threads. `AI_LLM_THREADS` and `AI_LLM_CPUS` (default 8) tune it. Answers are capped at 512 tokens with a mild repetition penalty, because the model otherwise repeats its feedback until the scorer's 1024-token limit.
+- `ai-scorer`: the Python worker from [`linhma139/ai-language-evaluator`](https://github.com/linhma139/ai-language-evaluator), built from a pinned commit (`docker/ai-scorer/Dockerfile`, build arg `EVALUATOR_REF`). It consumes `exam.writing.submitted` from its own queue `writing.evaluate` (dead letters: `writing.evaluate.dlq`), sends the essay to `ai-llm` and publishes `exam.writing.scored`. Essays under the IELTS minimum word counts are scored by its word-count rules without the model.
+
+Switching from the mock: stop `mock-ai-scorer` **and delete its queues** (`mock-ai-scorer.writing.submitted`, `.retry.1-5`, `.dlq`). The queue is durable and stays bound to `exam.writing.submitted`, so it keeps collecting submissions, and a restarted mock would overwrite the real feedback with random scores.
+
+Known limits of the worker (upstream): if the model doesn't write the `Overall Band Score: x` lines it expects, it reports **success with every score 0.0**; it always sends `Authorization: Bearer <HF_TOKEN>` and fails on an empty token (compose sets a placeholder); its retries republish to `exam.writing.submitted` on `eventbus`, so every queue bound to that key gets them.
 
 ### Gateway (`apps/gateway/.env.example`)
 

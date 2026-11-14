@@ -86,6 +86,7 @@ networks:
 
 volumes:
   postgresql-data:
+  ai-models:
   redis-data:
   minio-data:
   rabbitmq_data:

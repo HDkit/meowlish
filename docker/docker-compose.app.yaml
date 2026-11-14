@@ -139,6 +139,75 @@ services:
     networks:
       - api-network
 
+  # Real AI writing scorer (profile "ai"). Replaces mock-ai-scorer: never run both, each would
+  # score every submission. CPU only: an essay takes about a minute or two.
+  ai-llm:
+    init: true
+    profiles: ["ai"]
+    image: ghcr.io/ggml-org/llama.cpp:server-b12004
+    # Downloads the fine-tuned Phi-3 GGUF (2.2 GB) into the ai-models volume on first start.
+    command:
+      - --hf-repo
+      - linhma139/Phi-3-IELTS-Scorer
+      - --hf-file
+      - phi-3-mini-4k-instruct.Q4_K_M.gguf
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+      - --ctx-size
+      - "4096"
+      - --parallel
+      - "1"
+      - --threads
+      - ${AI_LLM_THREADS:-8}
+      # The scorer asks for up to 1024 tokens and the model tends to repeat its feedback until it
+      # reaches them (~2.5 min on CPU). Cap the answer and discourage repetition.
+      - --n-predict
+      - "512"
+      - --repeat-penalty
+      - "1.1"
+      - --jinja
+    environment:
+      - LLAMA_CACHE=/models
+    volumes:
+      - ai-models:/models
+    # leave room for the rest of the stack
+    cpus: ${AI_LLM_CPUS:-8}
+    mem_limit: 4g
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://127.0.0.1:8080/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 4
+      start_period: 15m
+    networks:
+      - api-network
+
+  ai-scorer:
+    init: true
+    profiles: ["ai"]
+    build:
+      context: ai-scorer
+    environment:
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-user}:${RABBITMQ_PASSWORD:-password}@rabbit-mq:5672/
+      - LLM_API_URL=http://ai-llm:8080/v1
+      # not a secret: llama-server runs without an API key; the scorer sends an invalid
+      # `Authorization: Bearer ` header (and fails) when this is empty
+      - HF_TOKEN=local-llama-server
+      - LLM_TIMEOUT=600
+      # one essay at a time on CPU: queued essays must not expire while they wait (1 h)
+      - MQ_PREFETCH_COUNT=1
+      - MQ_MESSAGE_TTL=3600000
+      - MQ_MAX_RETRIES=2
+    depends_on:
+      rabbit-mq:
+        condition: service_started
+      ai-llm:
+        condition: service_healthy
+    networks:
+      - api-network
+
   achievement:
     init: true
     build:
