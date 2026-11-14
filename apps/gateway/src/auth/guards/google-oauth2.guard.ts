@@ -23,15 +23,14 @@ export const OAUTH_STATE_TTL_SECONDS = 300;
 export const oauthStateKey = (nonce: string) => `gateway:oauth2:state:${nonce}`;
 
 /**
- * Transition for flows started before every flow carried a browser-bound state: for this long
- * after the gateway starts, a callback without a state (old default-frontend login) or with a
- * state that predates the cookie (old listed-frontend login) is still accepted. A Google flow
- * lasts minutes (the state itself expires after OAUTH_STATE_TTL_SECONDS), so 15 minutes covers
- * any flow that was in progress at the deploy. Remove LEGACY_STATE_ACCEPTED_UNTIL and its two
- * uses in the release after this one.
+ * Transition for flows started before every flow carried a browser-bound state: until this
+ * moment, a callback without a state (old default-frontend login) or with a state that predates
+ * the cookie (old listed-frontend login) is still accepted. A Google flow lasts minutes (the state
+ * itself expires after OAUTH_STATE_TTL_SECONDS), so a few hours past the deploy (2026-11-14
+ * evening UTC) cover any flow in progress at it. A fixed date, not "since start", so a later
+ * restart doesn't reopen it. Remove this and its two uses in the next release.
  */
-export const LEGACY_STATE_GRACE_MS = 15 * 60 * 1000;
-const LEGACY_STATE_ACCEPTED_UNTIL = Date.now() + LEGACY_STATE_GRACE_MS;
+export const LEGACY_STATE_ACCEPTED_UNTIL = Date.parse('2026-11-15T06:00:00Z');
 const acceptsLegacyState = () => Date.now() < LEGACY_STATE_ACCEPTED_UNTIL;
 
 /** What the OAuth state nonce points to in Redis. */

@@ -4,7 +4,7 @@ import { GOOGLE_CALLBACK_PATH } from '../../auth-gateway/google-oauth-frontends'
 import { GoogleOAuth2Strategy } from '../../auth-gateway/strategies/google-oauth2.strategy';
 import { JwtStrategy } from '../../auth-gateway/strategies/jwt.strategy';
 import {
-	LEGACY_STATE_GRACE_MS,
+	LEGACY_STATE_ACCEPTED_UNTIL,
 	OAUTH_STATE_COOKIE,
 	oauthStateKey,
 } from '../../auth/guards/google-oauth2.guard';
@@ -106,16 +106,17 @@ describe('Google OAuth across frontends', () => {
 	};
 	const stateCookie = (res: Response) =>
 		res.headers.getSetCookie().find(c => c.startsWith(`${OAUTH_STATE_COOKIE}=`));
-	/** Runs the rest of a test after the transition window for pre-deploy flows has closed. */
-	const afterTransition = async (run: () => Promise<void>) => {
-		const closed = Date.now() + LEGACY_STATE_GRACE_MS + 1;
-		const now = jest.spyOn(Date, 'now').mockReturnValue(closed);
+	/** Runs a test at a moment before or after the transition window for pre-deploy flows. */
+	const at = async (moment: number, run: () => Promise<void>) => {
+		const now = jest.spyOn(Date, 'now').mockReturnValue(moment);
 		try {
 			await run();
 		} finally {
 			now.mockRestore();
 		}
 	};
+	const duringTransition = (run: () => Promise<void>) => at(LEGACY_STATE_ACCEPTED_UNTIL - 1, run);
+	const afterTransition = (run: () => Promise<void>) => at(LEGACY_STATE_ACCEPTED_UNTIL + 1, run);
 
 	beforeAll(async () => {
 		const moduleRef = await Test.createTestingModule({
@@ -267,16 +268,20 @@ describe('Google OAuth across frontends', () => {
 		});
 
 		it('transition: a pre-deploy login without a state is still accepted', async () => {
-			const res = await get('/google/callback?code=c');
-			expect(res.status).toBe(302);
-			expect(location(res).searchParams.get('loginToken')).toBeTruthy();
+			await duringTransition(async () => {
+				const res = await get('/google/callback?code=c');
+				expect(res.status).toBe(302);
+				expect(location(res).searchParams.get('loginToken')).toBeTruthy();
+			});
 		});
 
 		it('transition: a pre-deploy unbound listed-frontend state needs no cookie', async () => {
-			putState('n9', { frontend: SHARE });
-			const res = await get('/google/callback?code=c&state=n9');
-			expect(res.status).toBe(302);
-			expect(location(res).searchParams.get('loginToken')).toBeTruthy();
+			await duringTransition(async () => {
+				putState('n9', { frontend: SHARE });
+				const res = await get('/google/callback?code=c&state=n9');
+				expect(res.status).toBe(302);
+				expect(location(res).searchParams.get('loginToken')).toBeTruthy();
+			});
 		});
 
 		it('after the transition a missing or unbound state is refused', async () => {
