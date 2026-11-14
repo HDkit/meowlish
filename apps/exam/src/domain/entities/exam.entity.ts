@@ -15,7 +15,6 @@ import {
 	BadRequestException,
 	ConflictException,
 	ForbiddenException,
-	MethodNotAllowedException,
 	NotFoundException,
 } from '@nestjs/common';
 import { AggregateRoot } from '@nestjs/cqrs';
@@ -214,7 +213,7 @@ export class Exam extends AggregateRoot<Event<any>> implements IAggregate<Exam, 
 
 	public createAttempt(attemptedBy: string, options?: NewAttemptInfo): AttemptConfig {
 		if (this.status !== ExamStatus.Approved)
-			throw new MethodNotAllowedException('Exam must be approved before attempting');
+			throw new ConflictException('Exam must be approved before attempting');
 		const durationLimit = options?.durationLimit ?? this.duration;
 		let sectionIds = options?.sectionIds ?? null;
 		if (sectionIds?.length) {

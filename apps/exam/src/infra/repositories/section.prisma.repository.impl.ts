@@ -15,6 +15,7 @@ import {
 import { ISectionRepository } from '../../domain/repositories/section.repository';
 import { ExamStatus } from '../../enums/exam-status.enum';
 import { SectionType } from '../../enums/section-type.enum';
+import { guardExamVersion } from './prisma-errors';
 import { insertTagLink } from './tag-link';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
@@ -159,6 +160,15 @@ export class SectionPrismaRepositoryImpl implements ISectionRepository {
 		return foundSection ? SectionPrismaMapper.toSectionAggregate(foundSection) : null;
 	}
 
+	async isInSubtreeOf(id: string, ancestorId: string): Promise<boolean> {
+		if (id === ancestorId) return true;
+		const path = await this.txHost.tx.sectionClosure.findUnique({
+			where: { ancestorId_descendantId: { ancestorId: ancestorId, descendantId: id } },
+			select: { depth: true },
+		});
+		return path !== null;
+	}
+
 	async save(section: Section): Promise<void> {
 		const data = SectionPrismaMapper.toParentSectionOrm(section);
 		await this.txHost.withTransaction(async () => {
@@ -168,15 +178,19 @@ export class SectionPrismaRepositoryImpl implements ISectionRepository {
 			}
 
 			// update the main section with lock
-			await this.txHost.tx.section.update({
-				where: { id: data.id, exam: { id: section.examId.id, version: section.examId.version } },
-				data: data,
-			});
+			await guardExamVersion(() =>
+				this.txHost.tx.section.update({
+					where: { id: data.id, exam: { id: section.examId.id, version: section.examId.version } },
+					data: data,
+				}),
+			);
 
-			await this.txHost.tx.exam.update({
-				where: { id: section.examId.id, version: section.examId.version },
-				data: { version: { increment: 1 } },
-			});
+			await guardExamVersion(() =>
+				this.txHost.tx.exam.update({
+					where: { id: section.examId.id, version: section.examId.version },
+					data: { version: { increment: 1 } },
+				}),
+			);
 		});
 	}
 

@@ -8,6 +8,7 @@ import {
 } from '../../domain/events/exam-management.event';
 import { IExamRepository } from '../../domain/repositories/exam.repository';
 import { ExamStatus } from '../../enums/exam-status.enum';
+import { guardExamVersion } from './prisma-errors';
 import { insertTagLink } from './tag-link';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
@@ -89,10 +90,12 @@ export class ExamPrismaRepositoryImpl implements IExamRepository {
 			if (data.version === 0) await this.txHost.tx.exam.create({ data: { ...data, version: 1 } });
 			// else update
 			else
-				await this.txHost.tx.exam.update({
-					where: { id: data.id, version: data.version },
-					data: { ...data, version: { increment: 1 } },
-				});
+				await guardExamVersion(() =>
+					this.txHost.tx.exam.update({
+						where: { id: data.id, version: data.version },
+						data: { ...data, version: { increment: 1 } },
+					}),
+				);
 
 			// handle events
 			for (const event of exam.getUncommittedEvents()) {
@@ -103,7 +106,9 @@ export class ExamPrismaRepositoryImpl implements IExamRepository {
 
 	async delete(exam: Exam): Promise<void> {
 		const data = ExamPrismaMapper.toExamOrm(exam);
-		await this.txHost.tx.exam.delete({ where: { id: data.id, version: data.version } });
+		await guardExamVersion(() =>
+			this.txHost.tx.exam.delete({ where: { id: data.id, version: data.version } }),
+		);
 	}
 
 	private async handle(event: Event<any>): Promise<void> {

@@ -9,6 +9,8 @@ export interface ISectionRepository {
 	getParentSectionOfSection(id: string): Promise<Section | null>;
 	// throw error if question doesn't exist
 	getParentSectionOfQuestion(id: string): Promise<Section>;
+	/** Whether `id` is `ancestorId` itself or one of its descendants. */
+	isInSubtreeOf(id: string, ancestorId: string): Promise<boolean>;
 	save(section: Section): Promise<void>;
 }
 

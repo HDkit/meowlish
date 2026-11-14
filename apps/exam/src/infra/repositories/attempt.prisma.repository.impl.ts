@@ -17,7 +17,7 @@ import { QuestionType } from '../../enums/question-type.enum';
 import { toWritingBand } from './writing-band';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import { Injectable, MethodNotAllowedException } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import {
 	Prisma,
 	Attempt as PrismaAttempt,
@@ -25,6 +25,12 @@ import {
 	PrismaClient,
 } from '@prisma-client/exam';
 import { Event, parseEnum } from '@server/utils';
+
+export class UnfinishedAttemptExistsException extends ConflictException {
+	constructor() {
+		super('Please submit the previous attempt');
+	}
+}
 
 class AttemptPrismaMapper {
 	static mapQuestionType(from: string): QuestionType {
@@ -237,36 +243,37 @@ export class AttemptPrismaRepositoryImpl implements IAttemptRepository {
 		}
 		if (attempt instanceof AttemptConfig) {
 			const data = AttemptPrismaMapper.toConfigAttemptOrm(attempt);
-			const lastFinishedAttempt = await this.txHost.tx.attempt.findFirst({
-				where: { examId: data.examId, attemptedBy: data.attemptedBy, endedAt: { not: null } },
-				orderBy: {
-					order: 'desc',
-				},
-			});
-			const finishedAttemptsCount = (lastFinishedAttempt?.order || 0) + 1;
 			await this.txHost.withTransaction(async () => {
-				try {
-					await this.txHost.tx.attempt.create({
-						data: {
-							...data,
-							order: finishedAttemptsCount,
-						},
-					});
-				} catch (e) {
-					if (e instanceof Prisma.PrismaClientKnownRequestError) {
-						if (e.code === 'P2002') {
-							throw new MethodNotAllowedException('Please submit the previous attempt');
-						}
-					}
-					throw e;
-				}
-
+				await this.createAttemptRow(data);
 				if (attempt.sectionIds)
 					await this.txHost.tx.attemptSection.createMany({
 						data: attempt.sectionIds.map(s => ({ sectionId: s, attemptId: attempt.id })),
 					});
 			});
 		}
+	}
+
+	/**
+	 * An attempt takes `order` = (last finished order) + 1, and (exam, user, order) is unique, so a
+	 * second unfinished attempt collides with the first. The insert skips the duplicate instead of
+	 * failing (a unique violation would abort the transaction), so a collision can be told apart:
+	 * if the attempt holding the order was submitted in between, the order moved on and one more try
+	 * succeeds; otherwise an unfinished attempt really is open (also when a concurrent start won).
+	 */
+	private async createAttemptRow(data: RepoAttemptConfig): Promise<void> {
+		for (let tries = 0; tries < 2; tries++) {
+			const lastFinishedAttempt = await this.txHost.tx.attempt.findFirst({
+				where: { examId: data.examId, attemptedBy: data.attemptedBy, endedAt: { not: null } },
+				orderBy: { order: 'desc' },
+				select: { order: true },
+			});
+			const { count } = await this.txHost.tx.attempt.createMany({
+				data: [{ ...data, order: (lastFinishedAttempt?.order ?? 0) + 1 }],
+				skipDuplicates: true,
+			});
+			if (count === 1) return;
+		}
+		throw new UnfinishedAttemptExistsException();
 	}
 
 	async getWritingResponse(

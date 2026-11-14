@@ -12,6 +12,7 @@ import {
 import { IQuestionRepository } from '../../domain/repositories/question.repository';
 import { ExamStatus } from '../../enums/exam-status.enum';
 import { QuestionType } from '../../enums/question-type.enum';
+import { guardExamVersion } from './prisma-errors';
 import { insertTagLink } from './tag-link';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
@@ -97,23 +98,27 @@ export class QuestionPrismaRepositoryImpl implements IQuestionRepository {
 
 		await this.txHost.withTransaction(async () => {
 			// optimistic lock
-			await this.txHost.tx.question.update({
-				where: {
-					id: data.id,
-					section: { exam: { id: question.examId.id, version: question.examId.version } },
-				},
-				data: data,
-			});
+			await guardExamVersion(() =>
+				this.txHost.tx.question.update({
+					where: {
+						id: data.id,
+						section: { exam: { id: question.examId.id, version: question.examId.version } },
+					},
+					data: data,
+				}),
+			);
 
 			// handle events
 			for (const event of question.getUncommittedEvents()) {
 				await this.handle(event);
 			}
 
-			await this.txHost.tx.exam.update({
-				where: { id: question.examId.id, version: question.examId.version },
-				data: { version: { increment: 1 } },
-			});
+			await guardExamVersion(() =>
+				this.txHost.tx.exam.update({
+					where: { id: question.examId.id, version: question.examId.version },
+					data: { version: { increment: 1 } },
+				}),
+			);
 		});
 	}
 
