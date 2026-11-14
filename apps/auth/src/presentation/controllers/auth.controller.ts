@@ -36,6 +36,7 @@ import {
 } from '../../app/commands/auth.validate-refresh.command';
 import { FindIdentitiesByPhoneQuery } from '../../app/queries/auth.find-identities-by-phone.query';
 import { FindIdentitiesQuery } from '../../app/queries/auth.find-identities.query';
+import { FindIdentityIdsByRoleQuery } from '../../app/queries/auth.find-identity-ids-by-role.query';
 import { FindIdentityIdsQuery } from '../../app/queries/auth.find-identity-ids.query';
 import { GetCredentialsQuery } from '../../app/queries/auth.get-credentials.query';
 import { GetGoogleCalendarTokenQuery } from '../../app/queries/auth.get-google-calendar-token.query';
@@ -50,6 +51,7 @@ import { ConnectGoogleCalendarDto } from '../dtos/req/connect-google-calendar.re
 import { DisconnectGoogleCalendarDto } from '../dtos/req/disconnect-google-calendar.req.dto';
 import { FindIdentitiesByPhoneDto } from '../dtos/req/find-identities-by-phone.req.dto';
 import { FindIdentitiesDto } from '../dtos/req/find-identities.req.dto';
+import { FindIdentityIdsByRoleDto } from '../dtos/req/find-identity-ids-by-role.req.dto';
 import { FindIdentityIdsDto } from '../dtos/req/find-identity-ids.req.dto';
 import { GetCredsDto } from '../dtos/req/get-creds.req.dto';
 import { GetGoogleCalendarTokenDto } from '../dtos/req/get-google-calendar-token.req.dto';
@@ -70,11 +72,15 @@ import { ValidateAccessDto } from '../dtos/req/validate-access.req.dto';
 import { ValidateRefreshDto } from '../dtos/req/validate-refresh.req.dto';
 import { ClaimsDto } from '../dtos/res/claims.res.dto';
 import { CredentialsDto } from '../dtos/res/credentials.res.dto';
-import { GoogleCalendarTokenResponseDto } from '../dtos/res/google-calendar-token.res.dto';
+import {
+	GoogleCalendarAccessTokenDto,
+	GoogleCalendarConnectionDto,
+} from '../dtos/res/google-calendar-token.res.dto';
 import { HydratedIdentitiesDto, HydratedIdentityDto } from '../dtos/res/hydrated-identities.dto';
 import { IdentitiesDto } from '../dtos/res/identities.res.dto';
 import { IdentityIdsDto } from '../dtos/res/identity-ids.res.dto';
 import { PermissionsDto } from '../dtos/res/permissions.res.dto';
+import { RoleMemberIdsDto } from '../dtos/res/role-member-ids.res.dto';
 import { RolesDto } from '../dtos/res/roles.res.dto';
 import { TokensDto } from '../dtos/res/tokens.res.dto';
 import { Controller, SerializeOptions, UseFilters } from '@nestjs/common';
@@ -122,7 +128,7 @@ export class AuthController implements auth.AuthServiceController {
 	async validateRefresh(@Payload() request: ValidateRefreshDto): Promise<ClaimsDto> {
 		const res = await this.commandBus.execute(
 			new ValidateRefreshCommand(
-				new ValidateRefreshCommandPayload(request.identityId, request.iat),
+				new ValidateRefreshCommandPayload(request.identityId, request.iat, request.iatMs),
 			),
 		);
 		return res;
@@ -130,7 +136,9 @@ export class AuthController implements auth.AuthServiceController {
 
 	async validateAccess(@Payload() request: ValidateAccessDto): Promise<void> {
 		await this.commandBus.execute(
-			new ValidateAccessCommand(new ValidateAccessCommandPayload(request.identityId, request.iat)),
+			new ValidateAccessCommand(
+				new ValidateAccessCommandPayload(request.identityId, request.iat, request.iatMs),
+			),
 		);
 	}
 
@@ -174,12 +182,37 @@ export class AuthController implements auth.AuthServiceController {
 
 	@SerializeOptions({ type: IdentitiesDto })
 	async findIdentities(@Payload() request: FindIdentitiesDto): Promise<IdentitiesDto> {
-		return await this.queryBus.execute(new FindIdentitiesQuery(request));
+		return await this.queryBus.execute(
+			new FindIdentitiesQuery({
+				usernameOrCredentialOrId: request.usernameOrCredIdentifierOrId,
+				usernameOnly: request.usernameOnly,
+				hasRoles: request.hasRoles,
+				hasPerms: request.hasPerms,
+				cursor: request.cursor,
+				limit: request.limit,
+			}),
+		);
+	}
+
+	@SerializeOptions({ type: RoleMemberIdsDto })
+	async findIdentityIdsByRole(
+		@Payload() request: FindIdentityIdsByRoleDto,
+	): Promise<RoleMemberIdsDto> {
+		return {
+			ids: await this.queryBus.execute(new FindIdentityIdsByRoleQuery({ role: request.role })),
+		};
 	}
 
 	@SerializeOptions({ type: IdentityIdsDto })
 	async findIdentityIds(@Payload() request: FindIdentityIdsDto): Promise<IdentityIdsDto> {
-		return await this.queryBus.execute(new FindIdentityIdsQuery(request));
+		return await this.queryBus.execute(
+			new FindIdentityIdsQuery({
+				usernameOrCredential: request.usernameOrCredIdentifier,
+				usernameOnly: request.usernameOnly,
+				cursor: request.cursor,
+				limit: request.limit,
+			}),
+		);
 	}
 
 	@SerializeOptions({ type: RolesDto })
@@ -240,33 +273,31 @@ export class AuthController implements auth.AuthServiceController {
 		);
 	}
 
-	@SerializeOptions({ type: GoogleCalendarTokenResponseDto })
+	@SerializeOptions({ type: GoogleCalendarConnectionDto })
 	async connectGoogleCalendar(
 		@Payload() request: ConnectGoogleCalendarDto,
-	): Promise<GoogleCalendarTokenResponseDto> {
-		await this.commandBus.execute(new ConnectGoogleCalendarCommand(request));
-		return await this.queryBus.execute(
-			new GetGoogleCalendarTokenQuery({ identityId: request.identityId }),
-		);
+	): Promise<GoogleCalendarConnectionDto> {
+		const { expiresAt } = await this.commandBus.execute(new ConnectGoogleCalendarCommand(request));
+		return { connected: true, expiresAt: expiresAt };
 	}
 
 	async disconnectGoogleCalendar(@Payload() request: DisconnectGoogleCalendarDto): Promise<void> {
 		await this.commandBus.execute(new DisconnectGoogleCalendarCommand(request));
 	}
 
-	@SerializeOptions({ type: GoogleCalendarTokenResponseDto })
+	@SerializeOptions({ type: GoogleCalendarAccessTokenDto })
 	async getGoogleCalendarToken(
 		@Payload() request: GetGoogleCalendarTokenDto,
-	): Promise<GoogleCalendarTokenResponseDto> {
+	): Promise<GoogleCalendarAccessTokenDto> {
 		return await this.queryBus.execute(
 			new GetGoogleCalendarTokenQuery({ identityId: request.identityId }),
 		);
 	}
 
-	@SerializeOptions({ type: GoogleCalendarTokenResponseDto })
+	@SerializeOptions({ type: GoogleCalendarAccessTokenDto })
 	async refreshGoogleCalendarToken(
 		@Payload() request: GetGoogleCalendarTokenDto,
-	): Promise<GoogleCalendarTokenResponseDto> {
+	): Promise<GoogleCalendarAccessTokenDto> {
 		return await this.queryBus.execute(
 			new GetGoogleCalendarTokenQuery({ identityId: request.identityId }),
 		);

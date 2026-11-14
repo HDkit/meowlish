@@ -3,8 +3,6 @@ import {
 	IOwnershipRepositoryToken,
 } from '../../domain/repositories/ownership.repository';
 import { CheckOwnershipReqDto } from '../../presentation/dtos/req/check-ownership.req.dto';
-import { RegisterOwnershipReqDto } from '../../presentation/dtos/req/register-ownership.req.dto';
-import { RemoveOwnershipReqDto } from '../../presentation/dtos/req/remove-ownership.req.dto';
 import { CheckOwnershipResponseDto } from '../../presentation/dtos/res/check-ownership.res.dto';
 import { Controller, Inject, SerializeOptions, UseFilters } from '@nestjs/common';
 import { Payload } from '@nestjs/microservices';
@@ -29,17 +27,5 @@ export class AuthorizationGrpcController implements authorization.AuthorizationS
 			request.userId,
 		);
 		return { isOwner: isOwner };
-	}
-
-	async registerOwnership(@Payload() request: RegisterOwnershipReqDto): Promise<void> {
-		await this.ownershipRepository.registerOwnership(
-			request.resourceType,
-			request.resourceId,
-			request.ownerId,
-		);
-	}
-
-	async removeOwnership(@Payload() request: RemoveOwnershipReqDto): Promise<void> {
-		await this.ownershipRepository.removeOwnership(request.resourceType, request.resourceId);
 	}
 }

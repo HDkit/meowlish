@@ -8,6 +8,7 @@ import {
 	IsOptional,
 	IsPositive,
 	IsString,
+	Max,
 	ValidateNested,
 } from 'class-validator';
 
@@ -18,6 +19,8 @@ class SortOptionsDto implements exam.GetUsersAttemptHistoryDto_SortOption {
 	@IsEnum(SortDirection)
 	direction!: SortDirection;
 }
+
+const MAX_PAGE_LIMIT = 100;
 
 export class GetUsersAttemptHistoryDto implements exam.GetUsersAttemptHistoryDto {
 	@IsString()
@@ -34,6 +37,7 @@ export class GetUsersAttemptHistoryDto implements exam.GetUsersAttemptHistoryDto
 	@IsInt()
 	@IsOptional()
 	@IsPositive()
+	@Max(MAX_PAGE_LIMIT)
 	limit?: number;
 
 	@Type(() => SortOptionsDto)

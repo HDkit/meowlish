@@ -18,6 +18,8 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { PrismaClient } from '@prisma-client/file';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { LoggerModule } from '@server/logger';
+import { MessagingModule } from '@server/messaging';
+import { HealthModule } from '@server/telemetry';
 import {
 	GlobalClassSerializerInterceptor,
 	GlobalRmqExceptionFilter,
@@ -27,10 +29,32 @@ import {
 import { ClsGuard, ClsModule } from 'nestjs-cls';
 import { NestMinioModule } from 'nestjs-minio';
 
+const databaseModule = DatabaseModule.forRoot(PrismaClient);
+// shared with MessagingModule so OutboxRelay can resolve AmqpConnectionManager
+const rmqSubModule = RabbitMQModule.forRootAsync({
+	inject: [ConfigService],
+	useFactory: rmqSubConfig,
+});
+
 @Module({
 	controllers: [FileController],
 	imports: [
+		MessagingModule.forRoot({
+			serviceName: 'file-service',
+			prismaToken: DATABASE_SERVICE,
+			// file-service publishes nothing yet; the relay runs anyway (on its only connection) so
+			// outbox metrics and alerts cover it like every other service, and an outbox.add just works
+			connectionName: 'sub',
+			imports: [databaseModule, rmqSubModule],
+		}),
+		HealthModule.forRoot({
+			serviceName: 'file-service',
+			prismaToken: DATABASE_SERVICE,
+			rabbitmq: true,
+			imports: [databaseModule],
+		}),
 		ConfigModule.forRoot({
+			envFilePath: ['apps/file-service/.env', '.env'], // nx serve runs from the workspace root
 			expandVariables: true,
 			cache: true,
 			isGlobal: true,
@@ -41,7 +65,7 @@ import { NestMinioModule } from 'nestjs-minio';
 			guard: { mount: false },
 			plugins: [
 				new ClsPluginTransactional({
-					imports: [DatabaseModule.forRoot(PrismaClient)],
+					imports: [databaseModule],
 					adapter: new TransactionalAdapterPrisma({
 						prismaInjectionToken: DATABASE_SERVICE,
 						sqlFlavor: 'postgresql',
@@ -51,7 +75,7 @@ import { NestMinioModule } from 'nestjs-minio';
 		}),
 		BullModule.forRootAsync({ inject: [ConfigService], useFactory: bullConfig }),
 		BullModule.registerQueue({ name: 'file' }),
-		RabbitMQModule.forRootAsync({ inject: [ConfigService], useFactory: rmqSubConfig }),
+		rmqSubModule,
 		NestMinioModule.registerAsync({ inject: [ConfigService], useFactory: minioConfig }),
 		LoggerModule.forRoot({ appName: 'FileModule' }),
 	],

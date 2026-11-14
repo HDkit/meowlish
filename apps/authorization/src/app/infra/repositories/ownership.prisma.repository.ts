@@ -21,16 +21,12 @@ export class OwnershipPrismaRepositoryImpl implements IOwnershipRepository {
 		resourceId: string,
 		ownerId: string,
 	): Promise<void> {
-		try {
-			await this.txHost.tx.resourceOwnership.upsert({
-				where: { resourceType_resourceId: { resourceType: resourceType, resourceId: resourceId } },
-				update: { ownerId: ownerId },
-				create: { resourceType: resourceType, resourceId: resourceId, ownerId: ownerId },
-			});
-		} catch (e) {
-			if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') return;
-			throw e;
-		}
+		// First owner wins: a replayed or forged "created" event must never transfer ownership.
+		// ON CONFLICT DO NOTHING instead of catching P2002, which would abort the transaction.
+		await this.txHost.tx.resourceOwnership.createMany({
+			data: [{ resourceType: resourceType, resourceId: resourceId, ownerId: ownerId }],
+			skipDuplicates: true,
+		});
 	}
 
 	async removeOwnership(resourceType: string, resourceId: string): Promise<void> {

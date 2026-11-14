@@ -34,4 +34,7 @@ export class ExamsInfoDto implements exam.Exams {
 
 	@Expose()
 	prevCursor!: string;
+
+	@Expose()
+	totalCount?: number;
 }

@@ -1,14 +1,27 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ArrayUnique, IsArray, IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
+import { exam } from '@server/generated';
+import {
+	ArrayUnique,
+	IsArray,
+	IsBoolean,
+	IsInt,
+	IsOptional,
+	IsPositive,
+	IsString,
+} from 'class-validator';
 
-export class UpdateExamDto {
+export class UpdateExamDto implements Omit<
+	exam.UpdateExamDto,
+	'id' | 'requesterId' | 'privileged'
+> {
 	@IsOptional()
 	@IsString()
 	@ApiPropertyOptional()
 	description?: string;
 
-	@IsNumber()
+	@IsInt()
 	@IsOptional()
+	@IsPositive()
 	@ApiPropertyOptional({ type: Number })
 	duration?: number;
 
@@ -24,13 +37,19 @@ export class UpdateExamDto {
 
 	@IsArray()
 	@IsString({ each: true })
-	@ApiProperty({ type: [String] })
+	@ApiProperty({
+		description: 'Ids of tags (not names) to add to the exam',
+		type: [String],
+	})
 	@ArrayUnique()
 	addTags: string[] = [];
 
 	@IsArray()
 	@IsString({ each: true })
-	@ApiProperty({ type: [String] })
+	@ApiProperty({
+		description: 'Ids of tags (not names) to remove from the exam',
+		type: [String],
+	})
 	@ArrayUnique()
 	removeTags: string[] = [];
 }

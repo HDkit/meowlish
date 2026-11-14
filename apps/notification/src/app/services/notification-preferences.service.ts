@@ -1,16 +1,18 @@
+import { type NotificationPreferencesReadModel } from '../../domain/read-models/notification-preferences.read-model';
+import {
+	type OptionalNotificationType,
+	type UpdatePreferencesInput,
+} from '../types/notification.input';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { Injectable } from '@nestjs/common';
 import { NotificationPreference, PrismaClient } from '@prisma-client/notification';
-import { notification } from '@server/generated';
 
 @Injectable()
 export class NotificationPreferencesService {
 	constructor(private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>) {}
 
-	private mapToResponse(
-		entity: NotificationPreference,
-	): notification.NotificationPreferencesResponse {
+	private toReadModel(entity: NotificationPreference): NotificationPreferencesReadModel {
 		return {
 			id: entity.id,
 			identityId: entity.identityId,
@@ -19,40 +21,64 @@ export class NotificationPreferencesService {
 			achievementEnabled: entity.achievementEnabled,
 			reportEnabled: entity.reportEnabled,
 			systemEnabled: entity.systemEnabled,
+			blogCommentEnabled: entity.blogCommentEnabled,
+			commentReplyEnabled: entity.commentReplyEnabled,
+			forumReplyEnabled: entity.forumReplyEnabled,
 			updatedAt: entity.updatedAt.toISOString(),
 		};
 	}
 
-	async getPreferences(identityId: string): Promise<notification.NotificationPreferencesResponse> {
+	async getPreferences(identityId: string): Promise<NotificationPreferencesReadModel> {
 		const entity = await this.txHost.tx.notificationPreference.upsert({
 			where: { identityId: identityId },
 			update: {},
 			create: { identityId: identityId },
 		});
-		return this.mapToResponse(entity);
+		return this.toReadModel(entity);
 	}
 
-	async updatePreferences(
-		data: notification.UpdatePreferencesRequest,
-	): Promise<notification.NotificationPreferencesResponse> {
+	async updatePreferences(data: UpdatePreferencesInput): Promise<NotificationPreferencesReadModel> {
 		const entity = await this.txHost.tx.notificationPreference.upsert({
-			where: { identityId: data.identityId as string },
+			where: { identityId: data.identityId },
 			update: {
-				emailEnabled: data.emailEnabled ?? undefined,
-				pushEnabled: data.pushEnabled ?? undefined,
-				achievementEnabled: data.achievementEnabled ?? undefined,
-				reportEnabled: data.reportEnabled ?? undefined,
-				systemEnabled: data.systemEnabled ?? undefined,
+				emailEnabled: data.emailEnabled,
+				pushEnabled: data.pushEnabled,
+				achievementEnabled: data.achievementEnabled,
+				reportEnabled: data.reportEnabled,
+				systemEnabled: data.systemEnabled,
+				blogCommentEnabled: data.blogCommentEnabled,
+				commentReplyEnabled: data.commentReplyEnabled,
+				forumReplyEnabled: data.forumReplyEnabled,
 			},
 			create: {
-				identityId: data.identityId as string,
-				emailEnabled: data.emailEnabled ?? true,
-				pushEnabled: data.pushEnabled ?? true,
-				achievementEnabled: data.achievementEnabled ?? true,
-				reportEnabled: data.reportEnabled ?? true,
-				systemEnabled: data.systemEnabled ?? true,
+				identityId: data.identityId,
+				emailEnabled: data.emailEnabled,
+				pushEnabled: data.pushEnabled,
+				achievementEnabled: data.achievementEnabled,
+				reportEnabled: data.reportEnabled,
+				systemEnabled: data.systemEnabled,
+				blogCommentEnabled: data.blogCommentEnabled,
+				commentReplyEnabled: data.commentReplyEnabled,
+				forumReplyEnabled: data.forumReplyEnabled,
 			},
 		});
-		return this.mapToResponse(entity);
+		return this.toReadModel(entity);
+	}
+
+	/** Whether the user wants notifications of this type. Users without saved preferences get everything. */
+	async isEnabled(identityId: string, type: OptionalNotificationType): Promise<boolean> {
+		const prefs = await this.txHost.tx.notificationPreference.findUnique({
+			where: { identityId: identityId },
+		});
+		if (!prefs) return true;
+		const enabledByType: Record<OptionalNotificationType, boolean> = {
+			achievement: prefs.achievementEnabled,
+			report: prefs.reportEnabled,
+			system: prefs.systemEnabled,
+			blogComment: prefs.blogCommentEnabled,
+			commentReply: prefs.commentReplyEnabled,
+			forumReply: prefs.forumReplyEnabled,
+		};
+		return enabledByType[type];
 	}
 }

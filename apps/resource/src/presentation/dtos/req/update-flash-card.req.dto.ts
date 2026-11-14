@@ -1,5 +1,5 @@
 import { resource } from '@server/generated';
-import { IsArray, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class UpdateFlashCardReqDto implements resource.UpdateFlashCardRequest {
 	@IsString()
@@ -36,4 +36,12 @@ export class UpdateFlashCardReqDto implements resource.UpdateFlashCardRequest {
 	@IsArray()
 	@IsString({ each: true })
 	tags!: string[];
+
+	@IsBoolean()
+	@IsOptional()
+	replaceExamples!: boolean;
+
+	@IsBoolean()
+	@IsOptional()
+	replaceTags!: boolean;
 }

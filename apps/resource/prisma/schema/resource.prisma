@@ -7,23 +7,29 @@ model Blog {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  comments BlogComment[]
+
   @@map("blogs")
 }
 
 model FlashCard {
-  id            String   @id @default(uuid())
-  word          String
-  definition    String
-  image         String?
-  partOfSpeech  String?  @map("part_of_speech")
-  pronunciation String?
-  examples      String[]
-  notes         String?
-  authorId      String   @map("author_id")
-  tags          String[]
-  listId        String   @map("list_id")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(uuid())
+  word           String
+  definition     String
+  image          String?
+  partOfSpeech   String?  @map("part_of_speech")
+  pronunciation  String?
+  examples       String[]
+  notes          String?
+  authorId       String   @map("author_id")
+  tags           String[]
+  listId         String   @map("list_id")
+  /// On a copied card: the card of the original list it was copied from (not a FK, the original may be gone).
+  originCardId   String?  @map("origin_card_id")
+  /// The original card's content when it was last copied or synced (word, definition, …), the merge base.
+  originSnapshot Json?    @map("origin_snapshot")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   list FlashCardList @relation(fields: [listId], references: [id], onDelete: Cascade)
 
@@ -32,33 +38,73 @@ model FlashCard {
 }
 
 model FlashCardList {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  authorId    String   @map("author_id")
-  isPublic    Boolean  @default(false) @map("is_public")
-  tags        String[]
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id                 String    @id @default(uuid())
+  name               String
+  description        String?
+  authorId           String    @map("author_id")
+  isPublic           Boolean   @default(false) @map("is_public")
+  tags               String[]
+  /// Set on a copy ("fork"): the list it was copied from. Nulled when the original is deleted.
+  forkedFromId       String?   @map("forked_from_id")
+  /// Snapshot of the original's name and author, kept after the original is gone.
+  forkedFromName     String?   @map("forked_from_name")
+  forkedFromAuthorId String?   @map("forked_from_author_id")
+  /// When the copy was made or last pulled from the original. Original cards created later are new upstream cards.
+  forkSyncedAt       DateTime? @map("fork_synced_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  cards FlashCard[]
+  cards             FlashCard[]
+  forkedFrom        FlashCardList?          @relation("FlashCardListForks", fields: [forkedFromId], references: [id], onDelete: SetNull)
+  forks             FlashCardList[]         @relation("FlashCardListForks")
+  incomingProposals FlashCardListProposal[] @relation("FlashCardProposalTarget")
+  outgoingProposals FlashCardListProposal[] @relation("FlashCardProposalSource")
 
+  @@index([forkedFromId])
   @@map("flash_card_lists")
 }
 
+/// A request to apply a copy's card changes to its original list (like a pull request).
+model FlashCardListProposal {
+  id           String    @id @default(uuid())
+  /// The copy the changes come from; nulled if the copy is deleted (the changes stay in `changes`).
+  sourceListId String?   @map("source_list_id")
+  targetListId String    @map("target_list_id")
+  authorId     String    @map("author_id")
+  title        String
+  message      String    @default("")
+  /// OPEN | ACCEPTED | REJECTED | WITHDRAWN
+  status       String    @default("OPEN")
+  /// Snapshot of the diff: added cards, modified cards (with the target's base values), removed cards.
+  changes      Json
+  decidedAt    DateTime? @map("decided_at")
+  decidedBy    String?   @map("decided_by")
+  decisionNote String?   @map("decision_note")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  source FlashCardList? @relation("FlashCardProposalSource", fields: [sourceListId], references: [id], onDelete: SetNull)
+  target FlashCardList  @relation("FlashCardProposalTarget", fields: [targetListId], references: [id], onDelete: Cascade)
+
+  @@index([targetListId, status])
+  @@index([sourceListId])
+  @@index([authorId])
+  @@map("flash_card_list_proposals")
+}
+
 model Report {
-  id            String    @id @default(uuid())
-  reportedBy    String    @map("reported_by")
+  id            String   @id @default(uuid())
+  reportedBy    String   @map("reported_by")
   type          String
-  status        String    @default("pending")
+  status        String   @default("pending")
   title         String
   description   String
-  targetType    String?   @map("target_type")
-  targetId      String?   @map("target_id")
-  resolvedBy    String?   @map("resolved_by")
-  adminResponse String?   @map("admin_response")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  targetType    String?  @map("target_type")
+  targetId      String?  @map("target_id")
+  resolvedBy    String?  @map("resolved_by")
+  adminResponse String?  @map("admin_response")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   files ReportFile[]
 

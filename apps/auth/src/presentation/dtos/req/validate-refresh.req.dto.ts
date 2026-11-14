@@ -1,5 +1,5 @@
 import { auth } from '@server/generated';
-import { IsNumber, IsString } from 'class-validator';
+import { IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class ValidateRefreshDto implements auth.ValidateRefreshDto {
 	@IsString()
@@ -7,4 +7,8 @@ export class ValidateRefreshDto implements auth.ValidateRefreshDto {
 
 	@IsNumber()
 	iat!: number;
+
+	@IsNumber()
+	@IsOptional()
+	iatMs!: number | undefined;
 }

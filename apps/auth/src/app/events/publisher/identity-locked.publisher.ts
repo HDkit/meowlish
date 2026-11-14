@@ -1,35 +1,20 @@
 import { IdentityLockedEvent } from '../../../domain/events/identity-update.events';
-import { AmqpConnectionManager } from '@golevelup/nestjs-rabbitmq';
-import { InternalServerErrorException } from '@nestjs/common';
-import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
-import { AppLoggerService } from '@server/logger';
+import { Injectable } from '@nestjs/common';
+import { OutboxPublisher } from '@server/messaging';
+import { type Event } from '@server/utils';
 
-@EventsHandler(IdentityLockedEvent)
-export class IdentityLockedPublisher implements IEventHandler<IdentityLockedEvent> {
-	constructor(
-		private readonly amqpConnectionManager: AmqpConnectionManager,
-		private readonly logger: AppLoggerService,
-	) {}
+/** Writes `auth.user.locked` to the outbox; call it inside the transaction that saved the identity. */
+@Injectable()
+export class IdentityLockedPublisher {
+	constructor(private readonly outbox: OutboxPublisher) {}
 
-	get amqpConnection() {
-		const connection = this.amqpConnectionManager.getConnection('pub');
-		if (!connection) throw new InternalServerErrorException('AMQP "pub" connection not available');
-		return connection;
-	}
-
-	async handle(event: IdentityLockedEvent) {
-		try {
-			await this.amqpConnection.publish(
-				'eventbus',
-				'auth.user.locked',
-				{
-					identityId: event.payload.identityId,
-					lockedBy: event.payload.lockedBy,
-				},
-				{ persistent: true },
-			);
-		} catch (e) {
-			this.logger.error(e as string);
+	async publish(events: readonly Event<unknown>[]): Promise<void> {
+		for (const event of events) {
+			if (!(event instanceof IdentityLockedEvent)) continue;
+			await this.outbox.add('auth.user.locked', {
+				identityId: event.payload.identityId,
+				lockedBy: event.payload.lockedBy,
+			});
 		}
 	}
 }

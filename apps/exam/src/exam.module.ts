@@ -2,18 +2,18 @@ import {
 	ExamManagementCommandHandlers,
 	ExamPracticeCommandHandlers,
 } from './app/commands/handlers';
-import { IntegrationEventHandlers } from './app/events/handlers';
+import { ExamEventHandlers, IntegrationEventHandlers } from './app/events/handlers';
 import { IntegrationEventPublishers } from './app/events/publishers';
 import { ExamManagementQueryHandlers } from './app/queries/handlers/management';
 import { ExamPracticeQueryHandler } from './app/queries/handlers/practice';
+import { FileOwnershipService } from './app/services/file-ownership.service';
 import { GoalService } from './app/services/goal.service';
 import { TagService } from './app/services/tag.service';
 import { bullConfig } from './configs/bullmq.config';
-import { config } from './configs/config';
+import { type IEnvVars, config } from './configs/config';
 import { rmqPubConfig } from './configs/rmq.pub.config';
 import { rmqSubConfig } from './configs/rmq.sub.config';
 import { FILE_CLIENT } from './constants/file';
-import { ExamEventHandlers } from './domain/events/handlers';
 import { IAttemptRepositoryToken } from './domain/repositories/attempt.repository';
 import { IExamRepositoryToken } from './domain/repositories/exam.repository';
 import { IFileRepositoryToken } from './domain/repositories/file.repository';
@@ -51,7 +51,10 @@ import { PrismaClient } from '@prisma-client/exam';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { file } from '@server/generated';
 import { LoggerModule } from '@server/logger';
+import { MessagingModule } from '@server/messaging';
+import { HealthModule } from '@server/telemetry';
 import {
+	CursorPaginationFactory,
 	ErrorHandlingGrpcProxy,
 	GlobalClassSerializerInterceptor,
 	GlobalRmqExceptionFilter,
@@ -61,10 +64,30 @@ import '@server/utils';
 import { GlobalValidationPipe } from '@server/utils';
 import { ClsGuard, ClsModule } from 'nestjs-cls';
 
+const databaseModule = DatabaseModule.forRoot(PrismaClient);
+// shared with MessagingModule so OutboxRelay can resolve AmqpConnectionManager
+const rmqPubModule = RabbitMQModule.forRootAsync({
+	inject: [ConfigService],
+	useFactory: rmqPubConfig,
+});
+
 @Module({
 	controllers: [ExamManagementController, ExamPracticeController, TagController, GoalController],
 	imports: [
+		MessagingModule.forRoot({
+			serviceName: 'exam',
+			prismaToken: DATABASE_SERVICE,
+			relay: true,
+			imports: [databaseModule, rmqPubModule],
+		}),
+		HealthModule.forRoot({
+			serviceName: 'exam',
+			prismaToken: DATABASE_SERVICE,
+			rabbitmq: true,
+			imports: [databaseModule],
+		}),
 		ConfigModule.forRoot({
+			envFilePath: ['apps/exam/.env', '.env'], // nx serve runs from the workspace root
 			expandVariables: true,
 			cache: true,
 			isGlobal: true,
@@ -76,7 +99,7 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 			guard: { mount: false },
 			plugins: [
 				new ClsPluginTransactional({
-					imports: [DatabaseModule.forRoot(PrismaClient)],
+					imports: [databaseModule],
 					adapter: new TransactionalAdapterPrisma({
 						prismaInjectionToken: DATABASE_SERVICE,
 						sqlFlavor: 'postgresql',
@@ -86,11 +109,12 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 		}),
 		BullModule.forRootAsync({ inject: [ConfigService], useFactory: bullConfig }),
 		BullModule.registerQueue({ name: 'exam' }),
-		RabbitMQModule.forRootAsync({ inject: [ConfigService], useFactory: rmqPubConfig }),
+		rmqPubModule,
 		RabbitMQModule.forRootAsync({ inject: [ConfigService], useFactory: rmqSubConfig }),
 		LoggerModule.forRoot({ appName: 'ExamModule' }),
 	],
 	providers: [
+		CursorPaginationFactory,
 		...ExamManagementCommandHandlers,
 		...ExamManagementQueryHandlers,
 		...ExamPracticeCommandHandlers,
@@ -100,18 +124,20 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 		...IntegrationEventHandlers,
 		TagService,
 		GoalService,
+		FileOwnershipService,
 		{
 			provide: FILE_CLIENT,
-			useFactory: () =>
-				new ErrorHandlingGrpcProxy({
-					url:
-						process.env.FILE_SERVICE_URL ??
-						`${process.env.FILE_SERVICE_HOST}:${process.env.FILE_SERVICE_PORT}`,
+			inject: [ConfigService],
+			useFactory: (configService: ConfigService<IEnvVars>) => {
+				const conn = configService.getOrThrow('microservicesConnection.file', { infer: true });
+				return new ErrorHandlingGrpcProxy({
+					url: conn.url ?? `${conn.host}:${conn.port}`,
 					package: 'file',
 					packageDefinition: {
 						[`file.${file.FILE_SERVICE_NAME}`]: file.FileServiceService,
 					} satisfies PackageDefinition,
-				}),
+				});
+			},
 		},
 		{
 			provide: IExamRepositoryToken,

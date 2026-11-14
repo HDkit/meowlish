@@ -13,6 +13,8 @@ import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { PrismaClient } from '@prisma-client/authorization';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { LoggerModule } from '@server/logger';
+import { MessagingModule } from '@server/messaging';
+import { HealthModule } from '@server/telemetry';
 import {
 	GlobalRmqExceptionFilter,
 	GlobalRpcExceptionFilter,
@@ -20,16 +22,42 @@ import {
 } from '@server/utils';
 import { ClsGuard, ClsModule } from 'nestjs-cls';
 
+const databaseModule = DatabaseModule.forRoot(PrismaClient);
+// shared with MessagingModule so OutboxRelay can resolve AmqpConnectionManager
+const rmqSubModule = RabbitMQModule.forRootAsync({
+	inject: [ConfigService],
+	useFactory: rmqSubConfig,
+});
+
 @Module({
 	controllers: [AuthorizationGrpcController],
 	imports: [
-		ConfigModule.forRoot({ expandVariables: true, cache: true, isGlobal: true, load: [config] }),
+		MessagingModule.forRoot({
+			serviceName: 'authorization',
+			prismaToken: DATABASE_SERVICE,
+			relay: true,
+			connectionName: 'sub',
+			imports: [databaseModule, rmqSubModule],
+		}),
+		HealthModule.forRoot({
+			serviceName: 'authorization',
+			prismaToken: DATABASE_SERVICE,
+			rabbitmq: true,
+			imports: [databaseModule],
+		}),
+		ConfigModule.forRoot({
+			envFilePath: ['apps/authorization/.env', '.env'], // nx serve runs from the workspace root
+			expandVariables: true,
+			cache: true,
+			isGlobal: true,
+			load: [config],
+		}),
 		ClsModule.forRoot({
 			global: true,
 			guard: { mount: false },
 			plugins: [
 				new ClsPluginTransactional({
-					imports: [DatabaseModule.forRoot(PrismaClient)],
+					imports: [databaseModule],
 					adapter: new TransactionalAdapterPrisma({
 						prismaInjectionToken: DATABASE_SERVICE,
 						sqlFlavor: 'postgresql',
@@ -37,7 +65,7 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 				}),
 			],
 		}),
-		RabbitMQModule.forRootAsync({ inject: [ConfigService], useFactory: rmqSubConfig }),
+		rmqSubModule,
 		LoggerModule.forRoot({ appName: 'AuthorizationModule' }),
 	],
 	providers: [

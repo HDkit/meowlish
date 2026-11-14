@@ -5,25 +5,19 @@ import {
 } from '../../../../domain/repositories/exam.repository';
 import { ExamStatus } from '../../../../enums/exam-status.enum';
 import { CreateExamCommand, CreateExamCommandResult } from '../../staff/exam.create-exam.command';
-import { AmqpConnectionManager } from '@golevelup/nestjs-rabbitmq';
-import { Inject, InternalServerErrorException } from '@nestjs/common';
+import { Transactional } from '@nestjs-cls/transactional';
+import { Inject } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { AppLoggerService } from '@server/logger';
+import { OutboxPublisher } from '@server/messaging';
 
 @CommandHandler(CreateExamCommand)
 export class CreateExamHandler implements ICommandHandler<CreateExamCommand> {
 	constructor(
 		@Inject(IExamRepositoryToken) private readonly examRepository: IExamRepository,
-		private readonly amqpConnectionManager: AmqpConnectionManager,
-		private readonly logger: AppLoggerService,
+		private readonly outbox: OutboxPublisher,
 	) {}
 
-	private get amqpConnection() {
-		const connection = this.amqpConnectionManager.getConnection('pub');
-		if (!connection) throw new InternalServerErrorException('AMQP "pub" connection not available');
-		return connection;
-	}
-
+	@Transactional()
 	public async execute(command: CreateExamCommand): Promise<CreateExamCommandResult> {
 		const payload = command.payload;
 		const exam = new Exam({
@@ -34,16 +28,11 @@ export class CreateExamHandler implements ICommandHandler<CreateExamCommand> {
 		});
 		await this.examRepository.save(exam);
 
-		try {
-			await this.amqpConnection.publish(
-				'eventbus',
-				'exam.exam.created',
-				{ resourceType: 'exam', resourceId: exam.id.id, ownerId: payload.createdBy },
-				{ persistent: true },
-			);
-		} catch (e) {
-			this.logger.error(`Failed to publish exam.exam.created event: ${e as string}`);
-		}
+		await this.outbox.add('exam.exam.created', {
+			resourceType: 'exam',
+			resourceId: exam.id.id,
+			ownerId: payload.createdBy,
+		});
 
 		return { id: exam.id.id };
 	}

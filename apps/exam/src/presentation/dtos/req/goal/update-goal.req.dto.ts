@@ -1,6 +1,6 @@
 import { exam } from '@server/generated';
 import { Type } from 'class-transformer';
-import { IsDate, IsIn, IsNumber, IsString } from 'class-validator';
+import { IsDate, IsIn, IsInt, IsString, Max, Min } from 'class-validator';
 
 export class UpdateGoalDto implements exam.UpdateGoalDto {
 	@IsString()
@@ -10,7 +10,10 @@ export class UpdateGoalDto implements exam.UpdateGoalDto {
 	@IsDate()
 	date!: Date;
 
-	@IsNumber()
+	// the column is an integer: half bands such as IELTS 6.5 aren't supported yet
+	@IsInt()
+	@Max(990)
+	@Min(0)
 	target!: number;
 
 	@IsIn(['IELTS', 'TOEIC', 'VSTEP', 'TOEFL'])

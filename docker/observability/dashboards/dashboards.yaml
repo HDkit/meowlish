@@ -1,0 +1,9 @@
+apiVersion: 1
+
+providers:
+  - name: Meowlish
+    type: file
+    allowUiUpdates: false
+    options:
+      path: /otel-lgtm/meowlish-dashboards
+      foldersFromFilesStructure: false

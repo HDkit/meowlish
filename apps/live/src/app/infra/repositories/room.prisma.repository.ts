@@ -1,8 +1,14 @@
 import { IRoomRepository } from '../../../domain/repositories/room.repository';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma-client/live';
+
+/** Prisma's "record to update not found" (P2025) as a 404; anything else unchanged. */
+const notFoundIfMissing = (e: unknown): unknown =>
+	e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025' ?
+		new NotFoundException('Room not found')
+	:	e;
 
 @Injectable()
 export class RoomPrismaRepositoryImpl implements IRoomRepository {
@@ -12,40 +18,63 @@ export class RoomPrismaRepositoryImpl implements IRoomRepository {
 		roomId: string,
 		options: { url?: string | null; time?: Date | null },
 	): Promise<void> {
-		await this.txHost.tx.room.update({
-			where: { id: roomId, isDeleted: false },
-			data: {
-				scheduledLiveUrl: options.url,
-				scheduledTime: options.time,
-			},
-		});
+		try {
+			await this.txHost.tx.room.update({
+				where: { id: roomId, isDeleted: false },
+				data: {
+					scheduledLiveUrl: options.url,
+					scheduledTime: options.time,
+				},
+			});
+		} catch (e) {
+			throw notFoundIfMissing(e);
+		}
 	}
 
+	/** A user may join only an existing, non-deleted room they are not banned from. */
 	async canJoinRoom(roomId: string, uid: string): Promise<boolean> {
-		const isBanned = await this.txHost.tx.banned.findUnique({
-			where: { roomId_uid: { roomId: roomId, uid: uid }, room: { isDeleted: false } },
-			select: {},
+		const room = await this.txHost.tx.room.findFirst({
+			where: { id: roomId, isDeleted: false },
+			select: { banneds: { where: { uid: uid }, select: { uid: true } } },
 		});
-
-		if (!isBanned) return true;
-		return false;
+		return !!room && room.banneds.length === 0;
 	}
 
-	async createRoom(name: string): Promise<string> {
-		const room = await this.txHost.tx.room.upsert({
-			where: { name: name },
-			update: { isDeleted: false },
-			create: { name: name },
-			select: { id: true },
+	async createRoom(name: string, createdBy?: string): Promise<string> {
+		try {
+			const room = await this.txHost.tx.room.create({
+				data: { name: name, createdBy: createdBy },
+				select: { id: true },
+			});
+			return room.id;
+		} catch (e) {
+			// An upsert here used to revive someone else's room (and hand it to the new creator).
+			if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+				throw new ConflictException('A room with this name already exists');
+			}
+			throw e;
+		}
+	}
+
+	async getRoomOwner(roomId: string): Promise<string | null | undefined> {
+		const room = await this.txHost.tx.room.findFirst({
+			where: { id: roomId, isDeleted: false },
+			select: { createdBy: true },
 		});
-		return room.id;
+		return room?.createdBy;
 	}
 
 	async removeRoom(roomId: string): Promise<void> {
-		await this.txHost.tx.room.update({
-			where: { id: roomId },
-			data: { isDeleted: true },
-		});
+		// Free the unique name so it can be reused by a brand-new room. An already deleted room is
+		// 404 too, so deleting twice does not announce live.room.deleted twice.
+		try {
+			await this.txHost.tx.room.update({
+				where: { id: roomId, isDeleted: false },
+				data: { isDeleted: true, name: `${roomId}:deleted` },
+			});
+		} catch (e) {
+			throw notFoundIfMissing(e);
+		}
 	}
 
 	async banUserFrom(roomId: string, uid: string, reason: string): Promise<void> {
@@ -84,6 +113,11 @@ export class RoomPrismaRepositoryImpl implements IRoomRepository {
 		fromId: string,
 		message: string,
 	): Promise<{ id: string; createdAt: Date }> {
+		const room = await this.txHost.tx.room.findFirst({
+			where: { id: roomId, isDeleted: false },
+			select: { id: true },
+		});
+		if (!room) throw new NotFoundException('Room not found');
 		const log = await this.txHost.tx.log.create({
 			data: { roomId: roomId, fromId: fromId, message: message },
 			select: { id: true, createdAt: true },

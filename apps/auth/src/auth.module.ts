@@ -1,6 +1,7 @@
 import { AuthCommandHandlers } from './app/commands/handlers';
 import { IntegrationEventPublishers } from './app/events/publisher';
 import { AuthQueryHandlers } from './app/queries/handlers';
+import { FileOwnershipService } from './app/services/file-ownership.service';
 import { TokenService } from './app/services/token.service';
 import { bullConfig } from './configs/bullmq.config';
 import { IEnvVars, config } from './configs/config';
@@ -38,7 +39,10 @@ import { PrismaClient } from '@prisma-client/auth';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { file } from '@server/generated';
 import { LoggerModule } from '@server/logger';
+import { MessagingModule } from '@server/messaging';
+import { HealthModule } from '@server/telemetry';
 import {
+	CursorPaginationFactory,
 	ErrorHandlingGrpcProxy,
 	GlobalClassSerializerInterceptor,
 	GlobalRmqExceptionFilter,
@@ -47,10 +51,30 @@ import {
 } from '@server/utils';
 import { ClsGuard, ClsModule } from 'nestjs-cls';
 
+const databaseModule = DatabaseModule.forRoot(PrismaClient);
+// shared with MessagingModule so OutboxRelay can resolve AmqpConnectionManager
+const rmqPubModule = RabbitMQModule.forRootAsync({
+	inject: [ConfigService],
+	useFactory: rmqPubConfig,
+});
+
 @Module({
 	controllers: [AuthController],
 	imports: [
+		MessagingModule.forRoot({
+			serviceName: 'auth',
+			prismaToken: DATABASE_SERVICE,
+			relay: true,
+			imports: [databaseModule, rmqPubModule],
+		}),
+		HealthModule.forRoot({
+			serviceName: 'auth',
+			prismaToken: DATABASE_SERVICE,
+			rabbitmq: true,
+			imports: [databaseModule],
+		}),
 		ConfigModule.forRoot({
+			envFilePath: ['apps/auth/.env', '.env'], // nx serve runs from the workspace root
 			expandVariables: true,
 			cache: true,
 			isGlobal: true,
@@ -62,7 +86,7 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 			guard: { mount: false },
 			plugins: [
 				new ClsPluginTransactional({
-					imports: [DatabaseModule.forRoot(PrismaClient)],
+					imports: [databaseModule],
 					adapter: new TransactionalAdapterPrisma({
 						prismaInjectionToken: DATABASE_SERVICE,
 						sqlFlavor: 'postgresql',
@@ -70,7 +94,7 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 				}),
 			],
 		}),
-		RabbitMQModule.forRootAsync({ inject: [ConfigService], useFactory: rmqPubConfig }),
+		rmqPubModule,
 		RabbitMQModule.forRootAsync({ inject: [ConfigService], useFactory: rmqSubConfig }),
 		BullModule.forRootAsync({ inject: [ConfigService], useFactory: bullConfig }),
 		BullModule.registerQueue({ name: 'auth' }),
@@ -81,7 +105,9 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 		}),
 	],
 	providers: [
+		CursorPaginationFactory,
 		TokenService,
+		FileOwnershipService,
 		...AuthCommandHandlers,
 		...AuthQueryHandlers,
 		...IntegrationEventPublishers,
@@ -103,16 +129,17 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 		},
 		{
 			provide: FILE_CLIENT,
-			useFactory: () =>
-				new ErrorHandlingGrpcProxy({
-					url:
-						process.env.FILE_SERVICE_URL ??
-						`${process.env.FILE_SERVICE_HOST}:${process.env.FILE_SERVICE_PORT}`,
+			inject: [ConfigService],
+			useFactory: (configService: ConfigService<IEnvVars>) => {
+				const conn = configService.getOrThrow('microservicesConnection.file', { infer: true });
+				return new ErrorHandlingGrpcProxy({
+					url: conn.url ?? `${conn.host}:${conn.port}`,
 					package: 'file',
 					packageDefinition: {
 						[`file.${file.FILE_SERVICE_NAME}`]: file.FileServiceService,
 					} satisfies PackageDefinition,
-				}),
+				});
+			},
 		},
 		{
 			provide: IIdentityRepositoryToken,

@@ -1,5 +1,5 @@
 import { ResponseEntity } from '../data';
-import { Type, applyDecorators } from '@nestjs/common';
+import { applyDecorators } from '@nestjs/common';
 import { ApiExtraModels, ApiOkResponse, getSchemaPath } from '@nestjs/swagger';
 
 export const ApiEmptyResponseEntity = () => {
@@ -8,7 +8,7 @@ export const ApiEmptyResponseEntity = () => {
 		ApiOkResponse({
 			schema: {
 				allOf: [
-					{ $ref: getSchemaPath(ResponseEntity as Type<ResponseEntity<null>>) },
+					{ $ref: getSchemaPath(ResponseEntity) },
 					{
 						properties: {
 							data: {

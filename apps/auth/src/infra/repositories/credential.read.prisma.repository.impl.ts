@@ -1,5 +1,6 @@
 import { CredentialReadModel } from '../../domain/read-models/credential.read-model';
 import { type ICredentialReadRepository } from '../../domain/repositories/credential.read.repository';
+import { LoginType } from '../../enums/login-type.enum';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { Injectable } from '@nestjs/common';
@@ -13,8 +14,12 @@ export class CredentialReadPrismaRepositoryImpl implements ICredentialReadReposi
 		return (
 			await this.txHost.tx.credential.findMany({
 				where: { identityId: identityId },
-				select: { id: true, loginType: true },
+				select: { id: true, loginType: true, identifier: true },
 			})
-		).map(c => ({ id: c.id, type: c.loginType }));
+		).map(c => ({
+			id: c.id,
+			type: c.loginType,
+			mail: c.loginType === String(LoginType.Mail) ? c.identifier : undefined,
+		}));
 	}
 }

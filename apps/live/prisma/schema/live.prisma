@@ -4,6 +4,7 @@ model Room {
   scheduledLiveUrl String?   @map("scheduled_live_url")
   scheduledTime    DateTime? @map("scheduled_time")
   isDeleted        Boolean   @default(false) @map("is_deleted")
+  createdBy        String?   @map("created_by")
 
   logs    Log[]
   banneds Banned[]

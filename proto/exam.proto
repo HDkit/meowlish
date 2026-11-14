@@ -38,6 +38,8 @@ service ExamPracticeService {
 	rpc GetUserStats(GetUserStatsDto) returns(UserStats) {}
 	rpc GetUsersAttemptSummary(GetUsersAttemptSummaryDto) returns(AttemptHistorySummary) {}
 	rpc GetUsersAttemptHistory(GetUsersAttemptHistoryDto) returns(UsersAttemptHistory) {}
+	rpc GetUserActivity(GetUserActivityDto) returns(UserActivity) {}
+	rpc GetUserSkillStats(GetUserSkillStatsDto) returns(UserSkillStats) {}
 	rpc FindExams(FindExamsDto) returns (Exams) {}
 	rpc GetExamDetails(GetExamDetailsDto) returns (DetailedExamInfo) {}
 	rpc GetExamStats(GetExamStatsDto) returns (ExamStatistics) {}
@@ -79,6 +81,9 @@ message CreateSectionDto {
 	optional google.protobuf.StringValue section_id = 1;
 	optional google.protobuf.StringValue exam_id    = 2;
 	optional google.protobuf.Int32Value  index      = 3;
+	// Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it.
+	google.protobuf.StringValue requester_id = 4;
+	google.protobuf.BoolValue   privileged   = 5;
 }
 
 message CreatedSectionDto {
@@ -88,6 +93,9 @@ message CreatedSectionDto {
 message CreateQuestionDto {
 	google.protobuf.StringValue         section_id = 1;
 	optional google.protobuf.Int32Value index      = 2;
+	// Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it.
+	google.protobuf.StringValue requester_id = 3;
+	google.protobuf.BoolValue   privileged   = 4;
 }
 
 message CreatedQuestionDto {
@@ -102,6 +110,9 @@ message UpdateExamDto {
 	optional google.protobuf.Int32Value  duration             = 5;
 	repeated google.protobuf.StringValue add_tags             = 6;
 	repeated google.protobuf.StringValue remove_tags          = 7;
+	// Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it.
+	google.protobuf.StringValue requester_id = 8;
+	google.protobuf.BoolValue   privileged   = 9;
 }
 
 message UpdateSectionDto {
@@ -114,6 +125,9 @@ message UpdateSectionDto {
 	repeated google.protobuf.StringValue remove_tags   = 7;
 	repeated google.protobuf.StringValue add_files     = 8;
 	repeated google.protobuf.StringValue remove_files  = 9;
+	// Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it.
+	google.protobuf.StringValue requester_id = 10;
+	google.protobuf.BoolValue   privileged   = 11;
 }
 
 message UpdateQuestionDto {
@@ -133,6 +147,10 @@ message UpdateQuestionDto {
 	repeated google.protobuf.StringValue add_files    = 11;
 	repeated google.protobuf.StringValue remove_files = 12;
 
+	// Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it.
+	google.protobuf.StringValue requester_id = 13;
+	google.protobuf.BoolValue   privileged   = 14;
+
 	message AddChoice {
 		google.protobuf.StringValue          key        = 1;
 		optional google.protobuf.StringValue content    = 2;
@@ -150,14 +168,23 @@ message UpdateQuestionDto {
 
 message DeleteExamDto {
 	google.protobuf.StringValue id = 1;
+	// Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it.
+	google.protobuf.StringValue requester_id = 2;
+	google.protobuf.BoolValue   privileged   = 3;
 }
 
 message DeleteSectionDto {
 	google.protobuf.StringValue id = 1;
+	// Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it.
+	google.protobuf.StringValue requester_id = 2;
+	google.protobuf.BoolValue   privileged   = 3;
 }
 
 message DeleteQuestionDto {
 	google.protobuf.StringValue id = 1;
+	// Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it.
+	google.protobuf.StringValue requester_id = 2;
+	google.protobuf.BoolValue   privileged   = 3;
 }
 
 message MoveSectionDto {
@@ -165,12 +192,18 @@ message MoveSectionDto {
 	optional google.protobuf.Int32Value  index     = 2;
 	optional google.protobuf.StringValue parent_id = 3;
 	optional google.protobuf.BoolValue   to_root   = 4;
+	// Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it.
+	google.protobuf.StringValue requester_id = 5;
+	google.protobuf.BoolValue   privileged   = 6;
 }
 
 message MoveQuestionDto {
 	google.protobuf.StringValue          id         = 1;
 	optional google.protobuf.Int32Value  index      = 2;
 	optional google.protobuf.StringValue section_id = 3;
+	// Set by the gateway from the JWT; only the exam's creator or a privileged requester may mutate it.
+	google.protobuf.StringValue requester_id = 4;
+	google.protobuf.BoolValue   privileged   = 5;
 }
 
 message ReviewExamDto {
@@ -195,29 +228,39 @@ message CreatedAttemptDto {
 
 message EndAttemptDto {
 	google.protobuf.StringValue attempt_id = 1;
+	// Set by the gateway from the JWT; the attempt must belong to this user.
+	google.protobuf.StringValue user_id = 2;
 }
 
 message AnswerDto {
 	google.protobuf.StringValue attempt_id  = 1;
 	google.protobuf.StringValue question_id = 2;
 	google.protobuf.StringValue answer      = 3;
+	// Set by the gateway from the JWT; the attempt must belong to this user.
+	google.protobuf.StringValue user_id = 4;
 }
 
 message RemoveAnswerDto {
 	google.protobuf.StringValue          attempt_id  = 1;
 	google.protobuf.StringValue          question_id = 2;
 	optional google.protobuf.StringValue answer      = 3;
+	// Set by the gateway from the JWT; the attempt must belong to this user.
+	google.protobuf.StringValue user_id = 4;
 }
 
 message AddNoteDto {
 	google.protobuf.StringValue attempt_id  = 1;
 	google.protobuf.StringValue question_id = 2;
 	google.protobuf.StringValue note        = 3;
+	// Set by the gateway from the JWT; the attempt must belong to this user.
+	google.protobuf.StringValue user_id = 4;
 }
 
 message ToggleFlagDto {
 	google.protobuf.StringValue attempt_id  = 1;
 	google.protobuf.StringValue question_id = 2;
+	// Set by the gateway from the JWT; the attempt must belong to this user.
+	google.protobuf.StringValue user_id = 3;
 }
 
 message FlagStateDto {
@@ -263,6 +306,8 @@ message AttemptHistorySummary {
 
 message GetAttemptReviewDto {
 	google.protobuf.StringValue attempt_id = 1;
+	// Set by the gateway from the JWT; the attempt must belong to this user.
+	google.protobuf.StringValue user_id = 2;
 }
 
 message DetailedAttemptReviewData {
@@ -313,6 +358,8 @@ message DetailedAttemptReviewData {
 
 message GetAttemptSavedDataDto {
 	google.protobuf.StringValue attempt_id = 1;
+	// Set by the gateway from the JWT; the attempt must belong to this user.
+	google.protobuf.StringValue user_id = 2;
 }
 
 message AttemptSavedData {
@@ -381,10 +428,15 @@ message FindExamsDto {
 	optional SortOption                  sort_by = 2;
 	optional google.protobuf.StringValue cursor  = 3;
 	optional google.protobuf.Int32Value  limit   = 4;
+	// page number (1-based): offset pagination with a total count; the cursor is ignored
+	optional google.protobuf.Int32Value  page    = 5;
 
 	message FilterOption {
 		optional google.protobuf.StringValue name = 1;
+		// exams carrying ANY of these tags (or a descendant tag)
 		repeated google.protobuf.StringValue tags = 2;
+		// exams carrying EVERY one of these tags (or a descendant of each), e.g. the exam type
+		repeated google.protobuf.StringValue required_tags = 3;
 	}
 
 	message SortOption {
@@ -397,6 +449,8 @@ message Exams {
 	repeated MinimalExamInfo exams       = 1;
 	string                   next_cursor = 2;
 	string                   prev_cursor = 3;
+	// set in page mode (FindExamsDto.page): every matching exam
+	optional int32           total_count = 4;
 
 	message MinimalExamInfo {
 		string                    id             = 1;
@@ -487,6 +541,66 @@ message UserStats {
 	message TagInfo {
 		string name               = 1;
 		double correct_percentage = 2;
+	}
+}
+
+message GetUserActivityDto {
+	google.protobuf.StringValue          uid  = 1;
+	// how many UTC days back from today to return (default 182)
+	optional google.protobuf.Int32Value days = 2;
+}
+
+// Finished attempts per UTC day. Streaks count consecutive UTC days with at least one finished
+// attempt, over the user's whole history.
+message UserActivity {
+	string       from           = 1; // first day of the range, YYYY-MM-DD (UTC)
+	string       to             = 2; // today, YYYY-MM-DD (UTC)
+	repeated Day days           = 3; // only days with activity, ascending
+	int32        current_streak = 4;
+	int32        longest_streak = 5;
+	int32        active_days    = 6; // all-time
+	int32        total_attempts = 7; // all-time
+
+	message Day {
+		string date     = 1;
+		int32  attempts = 2;
+		int32  minutes  = 3;
+	}
+}
+
+message GetUserSkillStatsDto {
+	google.protobuf.StringValue uid = 1;
+}
+
+// Per-skill scores and per-tag accuracy over the user's most recent finished attempts.
+message UserSkillStats {
+	repeated SkillStats  skills              = 1;
+	repeated TagAccuracy tags                = 2;
+	int32                attempts_considered = 3;
+
+	message SkillStats {
+		string              skill           = 1; // LISTENING | READING | WRITING | SPEAKING
+		int32               attempts        = 2;
+		optional double     average_percent = 3;
+		optional double     last_percent    = 4;
+		optional double     best_percent    = 5;
+		optional double     average_band    = 6;
+		repeated ScorePoint recent          = 7; // oldest first
+	}
+
+	message ScorePoint {
+		string                    attempt_id = 1;
+		string                    exam_title = 2;
+		google.protobuf.Timestamp ended_at   = 3;
+		double                    percent    = 4;
+		optional double           band       = 5;
+	}
+
+	message TagAccuracy {
+		string name      = 1;
+		int32  correct   = 2;
+		int32  incorrect = 3;
+		int32  skipped   = 4;
 	}
 }
 

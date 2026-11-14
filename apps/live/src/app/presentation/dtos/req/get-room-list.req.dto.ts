@@ -1,5 +1,5 @@
 import { live } from '@server/generated';
-import { IsInt, IsOptional, IsPositive, IsString } from 'class-validator';
+import { IsInt, IsOptional, IsPositive, IsString, MaxLength } from 'class-validator';
 
 export class GetRoomListDto implements live.GetRoomListDto {
 	@IsInt()
@@ -10,4 +10,9 @@ export class GetRoomListDto implements live.GetRoomListDto {
 	@IsOptional()
 	@IsString()
 	cursor?: string;
+
+	@IsOptional()
+	@IsString()
+	@MaxLength(100)
+	name?: string;
 }

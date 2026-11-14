@@ -1,34 +1,18 @@
-import { UserLoggedInEvent } from '../../../domain/events/user-activities.event';
+import { type UserLoggedInEvent } from '../../../domain/events/user-activities.event';
 import { UserLoggedInIntegrationEvent } from '../logged-in.event';
-import { AmqpConnectionManager } from '@golevelup/nestjs-rabbitmq';
-import { InternalServerErrorException } from '@nestjs/common';
-import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
-import { AppLoggerService } from '@server/logger';
+import { Injectable } from '@nestjs/common';
+import { OutboxPublisher } from '@server/messaging';
 
-@EventsHandler(UserLoggedInEvent)
-export class UserLoggedInPublisher implements IEventHandler<UserLoggedInEvent> {
-	constructor(
-		private readonly amqpConnectionManager: AmqpConnectionManager,
-		private readonly logger: AppLoggerService,
-	) {}
+/** Writes `auth.user.login` to the outbox; call it inside the login's transaction. */
+@Injectable()
+export class UserLoggedInPublisher {
+	constructor(private readonly outbox: OutboxPublisher) {}
 
-	get amqpConnection() {
-		const connection = this.amqpConnectionManager.getConnection('pub');
-		if (!connection) throw new InternalServerErrorException('AMQP "pub" connection not available');
-		return connection;
-	}
-
-	async handle(event: UserLoggedInEvent) {
-		try {
-			const message: UserLoggedInIntegrationEvent = {
-				uid: event.payload.uid,
-				date: event.payload.date,
-			};
-			await this.amqpConnection.publish('eventbus', 'auth.user.login', message, {
-				persistent: true,
-			});
-		} catch (e) {
-			this.logger.error(e as string);
-		}
+	async publish(event: UserLoggedInEvent): Promise<void> {
+		const message: UserLoggedInIntegrationEvent = {
+			uid: event.payload.uid,
+			date: event.payload.date.toISOString(),
+		};
+		await this.outbox.add('auth.user.login', message);
 	}
 }

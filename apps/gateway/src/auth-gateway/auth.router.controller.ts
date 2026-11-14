@@ -1,31 +1,53 @@
 import { HasPermissions } from '../auth/decorators/permissions.decorator';
 import { IsPublic } from '../auth/decorators/public.decorator';
 import { HasRoles } from '../auth/decorators/roles.decorator';
-import { GoogleOAuth2Guard } from '../auth/guards/google-oauth2.guard';
+import { CookieIssuanceGuard } from '../auth/guards/cookie-issuance.guard';
+import {
+	GoogleOAuth2CallbackGuard,
+	GoogleOAuth2Guard,
+	type GoogleOAuthFlow,
+} from '../auth/guards/google-oauth2.guard';
 import { JwtRefreshAuthGuard } from '../auth/guards/jwt-refresh-auth.guard';
 import { IEnvVars } from '../configs/config';
+import {
+	StrictThrottleByMail,
+	StrictThrottleByRefreshToken,
+	StrictThrottleBySession,
+} from '../throttle';
 import { type AuthenticatedRequest } from '../types/authenticated-request';
+import { clearAuthCookies, setAuthCookies } from './auth-cookies';
 import { AUTH_CLIENT } from './constants/auth';
 import { AddMailCredDto } from './dtos/req/add-mail-cred.req.dto';
 import { AssignRoleToDto } from './dtos/req/assign-role-to.req.dto';
 import { ConnectGoogleCalendarDto } from './dtos/req/connect-google-calendar.req.dto';
 import { ExchangeGoogleCalendarCodeDto } from './dtos/req/exchange-google-calendar-code.req.dto';
+import { ExchangeGoogleLoginTokenDto } from './dtos/req/exchange-google-login-token.req.dto';
+import { FindIdentitiesByPhoneDto } from './dtos/req/find-identities-by-phone.req.dto';
 import { FindIdentitiesLimitedDto } from './dtos/req/find-identities-limited.req.dto';
 import { FindIdentitiesDto } from './dtos/req/find-identities.req.dto';
 import { FindIdentityIdsDto } from './dtos/req/find-identity-ids.req.dto';
+import { HydrateIdentitiesQueryDto } from './dtos/req/hydrate-identities.query.dto';
 import { LoginMailDto } from './dtos/req/login-mail.req.dto';
 import { RegisterMailDto } from './dtos/req/register-mail.req.dto';
 import { RemoveRoleFromDto } from './dtos/req/remove-role-from.req.dto';
 import { UpdateIdentityDto } from './dtos/req/update-identity.req.dto';
 import { UpdateMailPasswordDto } from './dtos/req/update-password.req.dto';
-import { ResponseTokensDto } from './dtos/res/auth.res.dto';
 import { CredentialsDto } from './dtos/res/credentials.res.dto';
-import { HydratedIdentitiesDto, HydratedIdentityDto } from './dtos/res/hydrated-identities.dto';
+import {
+	GoogleCalendarAccessTokenDto,
+	GoogleCalendarConnectionDto,
+} from './dtos/res/google-calendar.res.dto';
+import {
+	HydratedIdentityDto,
+	PublicIdentitiesDto,
+	PublicIdentityDto,
+} from './dtos/res/hydrated-identities.dto';
 import { IdentitiesDto } from './dtos/res/identities.res.dto';
 import { IdentityIdsDto } from './dtos/res/identity-ids.res.dto';
 import { LimitedIdentitiesDto } from './dtos/res/limited-identities.res.dto';
 import { PermissionsDto } from './dtos/res/permissions.res.dto';
 import { RolesDto } from './dtos/res/roles.res.dto';
+import { GoogleOAuthCallbackFilter } from './google-oauth-callback.filter';
 import { RedisService } from '@liaoliaots/nestjs-redis';
 import {
 	Body,
@@ -41,17 +63,25 @@ import {
 	Res,
 	SerializeOptions,
 	UnauthorizedException,
+	UnsupportedMediaTypeException,
+	UseFilters,
 	UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { type ClientGrpc } from '@nestjs/microservices';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { auth } from '@server/generated';
 import { Permission, Role } from '@server/typing';
 import { ApiEmptyResponseEntity, ApiResponseEntity } from '@server/utils';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import Redis from 'ioredis';
-import { lastValueFrom } from 'rxjs';
+import { Observable, lastValueFrom } from 'rxjs';
+
+const SETS_COOKIES =
+	'Sets the `access_token` (Path=/) and `refresh_token` (Path=/api/v1/auth) HttpOnly cookies; `data` is null.';
+
+const FRONTEND_QUERY_DESCRIPTION =
+	'Origin of the frontend starting the flow (`location.origin`). Google calls back through that frontend and the user lands on its login callback page. Must be the default frontend or listed in GOOGLE_OAUTH_FRONTENDS (400 otherwise); omit it for the default.';
 
 @ApiBearerAuth()
 @ApiTags('Auth')
@@ -72,42 +102,85 @@ export class AuthGatewayController implements OnModuleInit {
 		this.authService = this.authClient.getService<auth.AuthServiceClient>(auth.AUTH_SERVICE_NAME);
 	}
 
+	private get env(): string {
+		return this.configService.getOrThrow('env', { infer: true });
+	}
+
+	/** Puts the tokens in HttpOnly cookies; the JSON body never carries them. */
+	private async issueCookies(req: Request, res: Response, tokens$: Observable<auth.Tokens>) {
+		setAuthCookies(req, res, await lastValueFrom(tokens$), this.env);
+		return null;
+	}
+
 	@Post('register')
+	@UseGuards(CookieIssuanceGuard)
 	@IsPublic()
-	@ApiOperation({ summary: 'Register with email and password' })
-	@ApiResponseEntity(ResponseTokensDto)
-	@SerializeOptions({ type: ResponseTokensDto })
-	registerMail(@Body() body: RegisterMailDto) {
-		const res = this.authService.registerMail(body);
-		return res;
+	@ApiEmptyResponseEntity()
+	@ApiOperation({
+		summary: 'Register with email and password',
+		description: SETS_COOKIES,
+	})
+	@StrictThrottleByMail()
+	registerMail(
+		@Body() body: RegisterMailDto,
+		@Req() req: Request,
+		@Res({ passthrough: true }) res: Response,
+	) {
+		return this.issueCookies(req, res, this.authService.registerMail(body));
 	}
 
 	@Post('login')
+	@UseGuards(CookieIssuanceGuard)
 	@IsPublic()
-	@ApiOperation({ summary: 'Log in with email and password' })
-	@ApiResponseEntity(ResponseTokensDto)
-	@SerializeOptions({ type: ResponseTokensDto })
-	loginMail(@Body() body: LoginMailDto) {
-		const res = this.authService.loginMail(body);
-		return res;
+	@ApiEmptyResponseEntity()
+	@ApiOperation({ summary: 'Log in with email and password', description: SETS_COOKIES })
+	@StrictThrottleByMail()
+	loginMail(
+		@Body() body: LoginMailDto,
+		@Req() req: Request,
+		@Res({ passthrough: true }) res: Response,
+	) {
+		return this.issueCookies(req, res, this.authService.loginMail(body));
 	}
 
 	@Post('refresh')
-	@UseGuards(JwtRefreshAuthGuard)
+	@UseGuards(CookieIssuanceGuard, JwtRefreshAuthGuard)
 	@IsPublic()
-	@ApiOperation({ summary: 'Refresh access tokens using a refresh token' })
-	@ApiResponseEntity(ResponseTokensDto)
-	@SerializeOptions({ type: ResponseTokensDto })
-	refresh(@Req() req: AuthenticatedRequest) {
-		const res = this.authService.refresh({ identityId: req.user.sub });
-		return res;
+	@ApiEmptyResponseEntity()
+	@ApiOperation({
+		summary: 'Refresh access tokens using a refresh token',
+		description: `Reads the refresh token from the \`refresh_token\` cookie, else \`Authorization: Bearer\`. ${SETS_COOKIES}`,
+	})
+	@StrictThrottleByRefreshToken()
+	refresh(@Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
+		return this.issueCookies(req, res, this.authService.refresh({ identityId: req.user.sub }));
+	}
+
+	@Post('logout')
+	@UseGuards(CookieIssuanceGuard)
+	@IsPublic()
+	@ApiEmptyResponseEntity()
+	@ApiOperation({
+		summary: 'Log out of this browser',
+		description:
+			'Clears the `access_token` and `refresh_token` cookies. Tokens are not revoked server-side; use /logout-all for that.',
+	})
+	logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+		clearAuthCookies(req, res, this.env);
+		return null;
 	}
 
 	@Post('logout-all')
+	@UseGuards(CookieIssuanceGuard)
 	@ApiEmptyResponseEntity()
-	@ApiOperation({ summary: 'Log out from all active sessions' })
-	logoutAll(@Req() req: AuthenticatedRequest) {
-		return this.authService.logOutAll({ identityId: req.user.sub });
+	@ApiOperation({
+		summary: 'Log out from all active sessions',
+		description: 'Revokes every token of this identity and clears the auth cookies.',
+	})
+	async logoutAll(@Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
+		await lastValueFrom(this.authService.logOutAll({ identityId: req.user.sub }));
+		clearAuthCookies(req, res, this.env);
+		return null;
 	}
 
 	@Get('google')
@@ -115,50 +188,88 @@ export class AuthGatewayController implements OnModuleInit {
 	@IsPublic()
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Get Google redirect to login/register with OAuth2' })
+	@ApiQuery({
+		name: 'frontend',
+		required: false,
+		description: FRONTEND_QUERY_DESCRIPTION,
+		example: 'https://meowlish-fe-share.vercel.app',
+	})
 	loginOrRegisterGoogle() {
 		return;
 	}
 
 	@Get('google/callback')
-	@UseGuards(GoogleOAuth2Guard)
+	@UseGuards(GoogleOAuth2CallbackGuard)
+	@UseFilters(GoogleOAuthCallbackFilter)
 	@IsPublic()
 	@ApiEmptyResponseEntity()
-	@ApiOperation({ summary: 'Callback url for OAuth2' })
-	async googleCallback(@Req() request: { user: auth.Tokens | boolean }, @Res() res: Response) {
+	@ApiOperation({
+		summary: 'Callback url for OAuth2',
+		description:
+			'Redirects to the frontend login callback page with `?loginToken=` on success or `?error=<code>` on failure (ACCESS_DENIED, SESSION_EXPIRED, GOOGLE_ALREADY_LINKED, GOOGLE_ACCOUNT_IN_USE, FORBIDDEN, GOOGLE_FAILED), plus `flow=link` for the linking flow. Never answers with JSON.',
+	})
+	async googleCallback(
+		@Req() request: { user: auth.Tokens | boolean; googleOAuth: GoogleOAuthFlow },
+		@Res() res: Response,
+	) {
 		const loginToken = crypto.randomUUID();
 		await this.redis.setex(
 			`oauth2:google:loginToken:${loginToken}`,
 			60,
 			JSON.stringify(request.user),
 		);
-		const url = new URL(this.configService.getOrThrow('vps', { infer: true }).feLoginRedirectUrl);
+		// GoogleOAuth2CallbackGuard resolved which frontend this flow started on
+		const url = new URL(request.googleOAuth.frontend.loginRedirectUrl);
 		url.searchParams.set('loginToken', loginToken);
+		if (request.googleOAuth.identityId) url.searchParams.set('flow', 'link');
 		return res.redirect(url.toString());
 	}
 
-	@Get('google/tokens')
+	@Post('google/tokens')
+	@UseGuards(CookieIssuanceGuard)
 	@IsPublic()
+	@ApiEmptyResponseEntity()
 	@ApiOperation({
-		summary: 'Get access and refresh tokens from login token',
-		description:
-			"Get access and refresh tokens from login token after /google/callback redirected to Frontend's redirection URL",
+		summary: 'Exchange the one-time login token for session cookies',
+		description: `Send the \`loginToken\` that /google/callback put on the frontend redirect URL as a JSON body. ${SETS_COOKIES}`,
 	})
-	@ApiResponseEntity(ResponseTokensDto)
-	@SerializeOptions({ type: ResponseTokensDto })
-	async getGoogleTokens(@Query('loginToken') loginToken: string) {
-		const data = await this.redis.get(`oauth2:google:loginToken:${loginToken}`);
-		if (!data) {
-			throw new Error('Invalid or expired login token');
+	async getGoogleTokens(
+		@Body() body: ExchangeGoogleLoginTokenDto,
+		@Req() req: Request,
+		@Res({ passthrough: true }) res: Response,
+	) {
+		// JSON only: a cross-site <form> can't send it, so even a browser that sends neither
+		// Sec-Fetch-Site nor Origin can't be made to log in as someone else (login CSRF).
+		if (!req.is('application/json')) {
+			throw new UnsupportedMediaTypeException('Send the login token as application/json');
 		}
-		await this.redis.del(`oauth2:google:loginToken:${loginToken}`);
-		const tokens = JSON.parse(data) as auth.Tokens;
-		return tokens;
+		// GETDEL is the single-use gate: of two concurrent exchanges only one gets the tokens.
+		const data = await this.redis.getdel(`oauth2:google:loginToken:${body.loginToken}`);
+		if (!data) {
+			throw new UnauthorizedException('Invalid or expired login token');
+		}
+		const result = JSON.parse(data) as auth.Tokens | boolean;
+		// linking flow stores `true`: the browser already has its session, nothing to set
+		if (typeof result === 'object' && result.accessToken) {
+			setAuthCookies(req, res, result, this.env);
+		}
+		return null;
 	}
 
 	@Get('credentials/google')
 	@UseGuards(GoogleOAuth2Guard)
 	@ApiEmptyResponseEntity()
-	@ApiOperation({ summary: 'Add Google credential to existing account' })
+	@ApiOperation({
+		summary: 'Add Google credential to existing account',
+		description:
+			'Open with a top-level navigation (not fetch/XHR): the `access_token` cookie authenticates it and the `oauth2_state` cookie set here must come back on /google/callback.',
+	})
+	@ApiQuery({
+		name: 'frontend',
+		required: false,
+		description: FRONTEND_QUERY_DESCRIPTION,
+		example: 'https://meowlish-fe-share.vercel.app',
+	})
 	addGoogleCred() {
 		return;
 	}
@@ -166,6 +277,7 @@ export class AuthGatewayController implements OnModuleInit {
 	@Post('credentials/mail')
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Add mail credential to existing account' })
+	@StrictThrottleBySession()
 	addMailCredential(@Body() body: AddMailCredDto, @Req() request: AuthenticatedRequest) {
 		return this.authService.addMailCredential({ ...body, identityId: request.user.sub });
 	}
@@ -193,7 +305,15 @@ export class AuthGatewayController implements OnModuleInit {
 	@ApiResponseEntity(LimitedIdentitiesDto)
 	@SerializeOptions({ type: LimitedIdentitiesDto })
 	findIdentitiesLimited(@Query() query: FindIdentitiesLimitedDto) {
-		const res = this.authService.findIdentities({ ...query, hasPerms: [], hasRoles: [] });
+		const res = this.authService.findIdentities({
+			usernameOrCredIdentifierOrId: query.usernameOrCredIdentifier,
+			// Public search: never match emails/ids, or anyone could probe who is registered.
+			usernameOnly: true,
+			cursor: query.cursor,
+			limit: query.limit,
+			hasPerms: [],
+			hasRoles: [],
+		});
 		return res;
 	}
 
@@ -203,7 +323,7 @@ export class AuthGatewayController implements OnModuleInit {
 	@ApiResponseEntity(IdentityIdsDto)
 	@SerializeOptions({ type: IdentityIdsDto })
 	findIdentityIds(@Query() query: FindIdentityIdsDto) {
-		const res = this.authService.findIdentityIds(query);
+		const res = this.authService.findIdentityIds({ ...query, usernameOnly: true });
 		return res;
 	}
 
@@ -252,26 +372,50 @@ export class AuthGatewayController implements OnModuleInit {
 	}
 
 	@Post('credentials/mail/password')
+	@UseGuards(CookieIssuanceGuard)
 	@ApiEmptyResponseEntity()
-	@ApiOperation({ summary: 'Change password' })
-	updateMailPassword(@Body() body: UpdateMailPasswordDto, @Req() request: AuthenticatedRequest) {
-		return this.authService.updateMailPassword({ ...body, identityId: request.user.sub });
+	@ApiOperation({
+		summary: 'Change password',
+		description: `Ends every session of this account, then signs this browser in again. ${SETS_COOKIES} If the new session can't be issued, the cookies are cleared instead (sign in with the new password).`,
+	})
+	@StrictThrottleBySession()
+	async updateMailPassword(
+		@Body() body: UpdateMailPasswordDto,
+		@Req() request: AuthenticatedRequest,
+		@Res({ passthrough: true }) res: Response,
+	) {
+		const identityId = request.user.sub;
+		await lastValueFrom(this.authService.updateMailPassword({ ...body, identityId: identityId }));
+		// The change revoked every token, this browser's too: keep it signed in with fresh ones
+		// (issued after the revocation). The caller just proved the current password.
+		try {
+			setAuthCookies(
+				request,
+				res,
+				await lastValueFrom(this.authService.refresh({ identityId: identityId })),
+				this.env,
+			);
+		} catch {
+			// The password did change; clear the dead cookies so the client knows to sign in again.
+			clearAuthCookies(request, res, this.env);
+		}
+		return null;
 	}
 
 	@Get('hydrate-many')
 	@IsPublic()
 	@ApiOperation({ summary: 'Hydrate ids to identities' })
-	@ApiResponseEntity(HydratedIdentitiesDto)
-	@SerializeOptions({ type: HydratedIdentitiesDto })
-	hydrateIdentities(@Query('ids') ids: string[]) {
-		return this.authService.hydrateIdentities({ identityIds: ids ?? [] });
+	@ApiResponseEntity(PublicIdentitiesDto)
+	@SerializeOptions({ type: PublicIdentitiesDto })
+	hydrateIdentities(@Query() query: HydrateIdentitiesQueryDto) {
+		return this.authService.hydrateIdentities({ identityIds: query.ids });
 	}
 
 	@Get('hydrate')
 	@IsPublic()
 	@ApiOperation({ summary: 'Hydrate an id to an identity' })
-	@ApiResponseEntity(HydratedIdentityDto)
-	@SerializeOptions({ type: HydratedIdentityDto })
+	@ApiResponseEntity(PublicIdentityDto)
+	@SerializeOptions({ type: PublicIdentityDto })
 	hydrateIdentity(@Query('id') id: string) {
 		return this.authService.hydrateIdentity({ identityId: id });
 	}
@@ -293,23 +437,18 @@ export class AuthGatewayController implements OnModuleInit {
 	}
 
 	@Get('identity/search/phone')
-	@ApiOperation({ summary: 'Search identities by phone number' })
+	@HasRoles(Role.Admin)
+	@ApiOperation({ summary: 'Search identities by phone number (admins)' })
 	@ApiResponseEntity(IdentitiesDto)
 	@SerializeOptions({ type: IdentitiesDto })
-	findIdentitiesByPhone(
-		@Query('phoneNumber') phoneNumber: string,
-		@Query('cursor') cursor?: string,
-		@Query('limit') limit?: number,
-	) {
-		return this.authService.findIdentitiesByPhone({
-			phoneNumber: phoneNumber,
-			cursor: cursor,
-			limit: limit,
-		});
+	findIdentitiesByPhone(@Query() query: FindIdentitiesByPhoneDto) {
+		return this.authService.findIdentitiesByPhone(query);
 	}
 
 	@Post('google/calendar/exchange-code')
 	@ApiOperation({ summary: 'Exchange Google auth code for Calendar tokens and connect' })
+	@ApiResponseEntity(GoogleCalendarConnectionDto)
+	@SerializeOptions({ type: GoogleCalendarConnectionDto })
 	async exchangeGoogleCalendarCode(
 		@Body() body: ExchangeGoogleCalendarCodeDto,
 		@Req() request: AuthenticatedRequest,
@@ -352,6 +491,8 @@ export class AuthGatewayController implements OnModuleInit {
 
 	@Post('google/calendar/connect')
 	@ApiOperation({ summary: 'Connect Google Calendar account' })
+	@ApiResponseEntity(GoogleCalendarConnectionDto)
+	@SerializeOptions({ type: GoogleCalendarConnectionDto })
 	connectGoogleCalendar(
 		@Body() body: ConnectGoogleCalendarDto,
 		@Req() request: AuthenticatedRequest,
@@ -373,7 +514,11 @@ export class AuthGatewayController implements OnModuleInit {
 	}
 
 	@Get('google/calendar/token')
-	@ApiOperation({ summary: 'Get Google Calendar token' })
+	@ApiOperation({
+		summary: 'Get a short-lived Google Calendar access token (refreshed server-side)',
+	})
+	@ApiResponseEntity(GoogleCalendarAccessTokenDto)
+	@SerializeOptions({ type: GoogleCalendarAccessTokenDto })
 	getGoogleCalendarToken(@Req() request: AuthenticatedRequest) {
 		return this.authService.getGoogleCalendarToken({ identityId: request.user.sub });
 	}

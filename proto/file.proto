@@ -7,6 +7,8 @@ package file;
 service FileService {
 	rpc GetPresignedUrl(GetPresignedUrlDto) returns(PresignedUrlResponse) {}
 	rpc GetUrls(GetUrlsDto) returns(UrlsDto) {}
+	// Which of the given files were NOT uploaded by user_id (unknown and legacy/system files count as foreign).
+	rpc CheckFilesOwnedBy(CheckFilesOwnedByDto) returns(CheckFilesOwnedByResponse) {}
 }
 
 message GetPresignedUrlDto {
@@ -14,6 +16,8 @@ message GetPresignedUrlDto {
 	google.protobuf.Int32Value  file_size      = 2;
 	google.protobuf.StringValue content_type   = 3;
 	google.protobuf.BoolValue   is_public_file = 4;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue uploaded_by    = 5;
 }
 
 message PresignedUrlResponse {
@@ -29,4 +33,14 @@ message GetUrlsDto {
 
 message UrlsDto {
 	map<string, string> urls = 1;
+}
+
+message CheckFilesOwnedByDto {
+	repeated google.protobuf.StringValue file_ids = 1;
+	google.protobuf.StringValue          user_id  = 2;
+}
+
+message CheckFilesOwnedByResponse {
+	bool            ok          = 1;
+	repeated string foreign_ids = 2;
 }

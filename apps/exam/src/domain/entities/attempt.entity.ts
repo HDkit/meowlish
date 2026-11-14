@@ -68,6 +68,8 @@ export class Attempt extends AggregateRoot<Event<any>> implements IEntity<Attemp
 	private static maximumNetworkDelayInSeconds = 30; //seconds
 
 	public readonly id: string;
+	/** Optimistic-lock version as loaded; the repository saves only if it is still current. */
+	public readonly version: number;
 	public attemptedBy: string;
 	public examId: string;
 	public startedAt: Date;
@@ -79,6 +81,7 @@ export class Attempt extends AggregateRoot<Event<any>> implements IEntity<Attemp
 
 	public constructor(constructorOptions: {
 		id?: string;
+		version?: number;
 		attemptedBy: string;
 		examId: string;
 		startedAt: Date;
@@ -90,6 +93,7 @@ export class Attempt extends AggregateRoot<Event<any>> implements IEntity<Attemp
 	}) {
 		super();
 		this.id = constructorOptions.id ?? Attempt.newId();
+		this.version = constructorOptions.version ?? 0;
 		this.attemptedBy = constructorOptions.attemptedBy;
 		this.examId = constructorOptions.examId;
 		this.questions = new Map(constructorOptions.questions?.map(q => [q.id, q.type]));
@@ -113,11 +117,15 @@ export class Attempt extends AggregateRoot<Event<any>> implements IEntity<Attemp
 			throw new ForbiddenException('Exam submission time has expired');
 	}
 
+	private assertQuestionIncluded(questionId: string): void {
+		if (!this.questions.has(questionId))
+			throw new ConflictException("Question isn't included in this attempt");
+	}
+
 	// check if the question exists in the section in the domain service layer
 	public answer(questionId: string, answer: string): void {
 		this.assertModifiable(new Date());
-		if (!this.questions.has(questionId))
-			throw new ConflictException("Question isn't included in this attempt");
+		this.assertQuestionIncluded(questionId);
 		const existingResponse = this.responses.find(r => r.questionId === questionId);
 		if (existingResponse) {
 			this.answerBasedOnQuestionType(existingResponse, answer);
@@ -165,6 +173,8 @@ export class Attempt extends AggregateRoot<Event<any>> implements IEntity<Attemp
 	}
 
 	public addNote(questionId: string, note: string): void {
+		this.assertModifiable(new Date());
+		this.assertQuestionIncluded(questionId);
 		const existingResponse = this.responses.find(r => r.questionId === questionId);
 		if (existingResponse) {
 			existingResponse.setNote(note);
@@ -184,6 +194,8 @@ export class Attempt extends AggregateRoot<Event<any>> implements IEntity<Attemp
 	}
 
 	public toggleFlag(questionId: string): boolean {
+		this.assertModifiable(new Date());
+		this.assertQuestionIncluded(questionId);
 		const existingResponse = this.responses.find(r => r.questionId === questionId);
 		if (existingResponse) {
 			const flagState = existingResponse.toggleFlag();
@@ -208,14 +220,19 @@ export class Attempt extends AggregateRoot<Event<any>> implements IEntity<Attemp
 		}
 	}
 
-	public endAttempt(): void {
+	/**
+	 * Idempotent: ending an attempt that has already ended is a no-op (no event, nothing to save).
+	 * @returns whether this call ended the attempt
+	 */
+	public endAttempt(): boolean {
 		const timeStamp = new Date();
-		if (this.endedAt) throw new ConflictException('Exam result has already been submitted');
+		if (this.endedAt) return false;
 		if (!this.responses.length && this.questions.size) {
 			if (this.isWithinAllowedTime(timeStamp))
 				throw new ForbiddenException('Must at least answer one question before submitting');
 		}
 		this.endedAt = timeStamp;
 		this.apply(new AttemptSubmittedEvent({ attemptId: this.id }));
+		return true;
 	}
 }

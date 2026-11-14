@@ -33,12 +33,14 @@ service AuthService {
 	rpc LockIdentity(LockIdentityDto) returns (google.protobuf.Empty) {}
 	rpc UnlockIdentity(UnlockIdentityDto) returns (google.protobuf.Empty) {}
     // google calendar
-	rpc ConnectGoogleCalendar(ConnectGoogleCalendarDto) returns (GoogleCalendarTokenResponse) {}
+	rpc ConnectGoogleCalendar(ConnectGoogleCalendarDto) returns (GoogleCalendarConnection) {}
 	rpc DisconnectGoogleCalendar(DisconnectGoogleCalendarDto) returns (google.protobuf.Empty) {}
-	rpc GetGoogleCalendarToken(GetGoogleCalendarTokenDto) returns (GoogleCalendarTokenResponse) {}
-	rpc RefreshGoogleCalendarToken(RefreshGoogleCalendarTokenDto) returns (GoogleCalendarTokenResponse) {}
+	rpc GetGoogleCalendarToken(GetGoogleCalendarTokenDto) returns (GoogleCalendarAccessToken) {}
+	rpc RefreshGoogleCalendarToken(RefreshGoogleCalendarTokenDto) returns (GoogleCalendarAccessToken) {}
     // qol
 	rpc FindIdentityIds(FindIdentityIdsDto) returns (IdentityIds){}
+	// Active identities holding a role (e.g. every admin, to notify them). Service-to-service only.
+	rpc FindIdentityIdsByRole(FindIdentityIdsByRoleDto) returns (RoleMemberIds) {}
 	rpc FindIdentities(FindIdentitiesDto) returns (Identities) {}
 	rpc FindIdentitiesByPhone(FindIdentitiesByPhoneDto) returns (Identities) {}
 	rpc HydrateIdentities(HydrateIdentitiesDto) returns (HydratedIdentities) {}
@@ -67,11 +69,17 @@ message UpdateMailPasswordDto {
 	google.protobuf.StringValue identity_id = 1;
 	google.protobuf.StringValue id          = 2;
 	google.protobuf.StringValue password    = 3;
+	google.protobuf.StringValue current_password = 4;
 }
 
 message RegisterOrLoginGoogleDto {
 	google.protobuf.StringValue identifier = 1;
+	// fallback username when no usable one can be derived from the email
 	google.protobuf.StringValue username   = 2;
+	// Google profile display name; becomes the full name of a new account
+	optional google.protobuf.StringValue full_name  = 3;
+	// Google account email; a new account's username is derived from its local part
+	optional google.protobuf.StringValue email      = 4;
 }
 
 message AddGoogleCredDto {
@@ -95,11 +103,13 @@ message RefreshDto {
 message ValidateRefreshDto {
 	google.protobuf.StringValue identity_id = 1;
 	google.protobuf.Int32Value  iat         = 2;
+	google.protobuf.DoubleValue iat_ms      = 3;
 }
 
 message ValidateAccessDto {
 	google.protobuf.StringValue identity_id = 1;
 	google.protobuf.Int32Value  iat         = 2;
+	google.protobuf.DoubleValue iat_ms      = 3;
 }
 
 message LogOutAllDto {
@@ -133,6 +143,8 @@ message FindIdentityIdsDto {
 	optional google.protobuf.StringValue username_or_cred_identifier = 1;
 	optional google.protobuf.StringValue cursor                      = 2;
 	optional google.protobuf.Int32Value  limit                       = 3;
+	// Match usernames only (no credential identifiers such as emails); set for public searches.
+	optional google.protobuf.BoolValue   username_only               = 4;
 }
 
 message FindIdentitiesDto {
@@ -141,6 +153,8 @@ message FindIdentitiesDto {
 	repeated google.protobuf.StringValue has_perms                         = 3;
 	optional google.protobuf.StringValue cursor                            = 4;
 	optional google.protobuf.Int32Value  limit                             = 5;
+	// Match usernames only (no credential identifiers/ids); set for public searches.
+	optional google.protobuf.BoolValue   username_only                     = 6;
 }
 
 message HydrateIdentitiesDto {
@@ -185,6 +199,15 @@ message PermList {
 	repeated string perms = 1;
 }
 
+message FindIdentityIdsByRoleDto {
+	google.protobuf.StringValue role = 1;
+}
+
+// Ids of the active (not locked, not deleted) identities that hold the role.
+message RoleMemberIds {
+	repeated string ids = 1;
+}
+
 message IdentityIds {
 	repeated string ids          = 1;
 	string          next_cursor  = 2;
@@ -220,6 +243,7 @@ message HydratedIdentities {
 		optional string avatar_url = 5;
 		optional string phone_number = 6;
 		repeated string roles      = 7;
+		bool            is_demo    = 8;
 	}
 }
 
@@ -229,6 +253,8 @@ message Credentials {
 	message Credential {
 		string id   = 1;
 		string type = 2;
+		// the email address of a MAIL credential; unset for other types
+		optional google.protobuf.StringValue mail = 3;
 	}
 }
 
@@ -270,6 +296,18 @@ message RefreshGoogleCalendarTokenDto {
 	google.protobuf.StringValue identity_id = 1;
 }
 
+// Never carries the refresh token: auth keeps it server-side.
+message GoogleCalendarAccessToken {
+	string access_token = 1;
+	int64  expires_at   = 2;
+}
+
+message GoogleCalendarConnection {
+	bool  connected  = 1;
+	int64 expires_at = 2;
+}
+
+// Deprecated: no RPC returns this any more (it exposed the refresh token).
 message GoogleCalendarTokenResponse {
 	string access_token  = 1;
 	string refresh_token = 2;

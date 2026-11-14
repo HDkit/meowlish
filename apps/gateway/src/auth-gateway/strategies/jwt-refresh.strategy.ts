@@ -1,11 +1,12 @@
 import { IEnvVars } from '../../configs/config';
+import { REFRESH_TOKEN_COOKIE, cookieExtractor } from '../auth-cookies';
 import { AUTH_CLIENT } from '../constants/auth';
 import { Inject, Injectable, OnModuleInit, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { type ClientGrpc } from '@nestjs/microservices';
 import { PassportStrategy } from '@nestjs/passport';
 import { auth } from '@server/generated';
-import { Claims, refreshPayloadSchema } from '@server/utils';
+import { Claims, isRefreshTokenPayload, refreshPayloadSchema } from '@server/utils';
 import { AuthRefreshPayload } from '@server/utils';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { lastValueFrom } from 'rxjs';
@@ -22,7 +23,11 @@ export class JwtRefreshStrategy
 		private readonly configService: ConfigService<IEnvVars>,
 	) {
 		super({
-			jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+			// cookie first (browser session), then the Bearer header (API clients, Swagger)
+			jwtFromRequest: ExtractJwt.fromExtractors([
+				cookieExtractor(REFRESH_TOKEN_COOKIE),
+				ExtractJwt.fromAuthHeaderAsBearerToken(),
+			]),
 			secretOrKey: configService.getOrThrow('jwt', { infer: true }).publicKey,
 			algorithms: ['RS256'],
 		});
@@ -33,13 +38,18 @@ export class JwtRefreshStrategy
 	}
 
 	async validate(payload: AuthRefreshPayload): Promise<Claims> {
-		const isCorrectSchema = refreshPayloadSchema.parse(payload);
-		if (!isCorrectSchema) {
+		// safeParse: a malformed (but validly signed) payload is a 401, not a 500.
+		// an access token (same signing key, zod strips its extra claims) must not mint sessions
+		if (!isRefreshTokenPayload(payload) || !refreshPayloadSchema.safeParse(payload).success) {
 			throw new UnauthorizedException('Invalid token');
 		}
 
 		const claims = await lastValueFrom(
-			this.authService.validateRefresh({ identityId: payload.sub, iat: payload.iat }),
+			this.authService.validateRefresh({
+				identityId: payload.sub,
+				iat: payload.iat,
+				iatMs: payload.iatMs,
+			}),
 		);
 		return claims as Claims;
 	}

@@ -1,14 +1,28 @@
 import { ResourceAccess } from '../auth/decorators/resource-access.decorator';
+import { HasRoles } from '../auth/decorators/roles.decorator';
+import { hasAnyRole, requesterOf } from '../auth/functions/requester';
 import { type AuthenticatedRequest } from '../types/authenticated-request';
 import { RESOURCE_CLIENT } from './constants/resource';
+import { AddCardToListDto } from './dtos/req/add-card-to-list.req.dto';
+import { AddFileToReportDto } from './dtos/req/add-file-to-report.req.dto';
+import { CreateBlogCommentDto } from './dtos/req/blog-comment/create-blog-comment.req.dto';
+import { ListBlogCommentsQueryDto } from './dtos/req/blog-comment/list-blog-comments.query.dto';
+import { UpdateBlogCommentDto } from './dtos/req/blog-comment/update-blog-comment.req.dto';
 import { CreateBlogDto } from './dtos/req/create-blog.req.dto';
 import { CreateFlashCardListDto } from './dtos/req/create-flash-card-list.req.dto';
 import { CreateFlashCardDto } from './dtos/req/create-flash-card.req.dto';
 import { CreateReportDto } from './dtos/req/create-report.req.dto';
+import { ListBlogsQueryDto } from './dtos/req/list-blogs.query.dto';
+import { ListFlashCardListsQueryDto } from './dtos/req/list-flash-card-lists.query.dto';
+import { ListFlashCardsQueryDto } from './dtos/req/list-flash-cards.query.dto';
+import { ListReportsQueryDto } from './dtos/req/list-reports.query.dto';
+import { PageQueryDto } from './dtos/req/page.query.dto';
 import { UpdateBlogDto } from './dtos/req/update-blog.req.dto';
 import { UpdateFlashCardListDto } from './dtos/req/update-flash-card-list.req.dto';
 import { UpdateFlashCardDto } from './dtos/req/update-flash-card.req.dto';
-import { BlogDto, ListBlogsDto } from './dtos/res/blog.dto';
+import { UpdateReportDto } from './dtos/req/update-report.req.dto';
+import { BlogCommentDto, ListBlogCommentsDto } from './dtos/res/blog-comment.dto';
+import { BlogDto, ListBlogTagsDto, ListBlogsDto } from './dtos/res/blog.dto';
 import {
 	FlashCardListDetailDto,
 	FlashCardListDto,
@@ -25,7 +39,6 @@ import {
 	OnModuleInit,
 	Param,
 	Patch,
-	PipeTransform,
 	Post,
 	Query,
 	Req,
@@ -37,11 +50,19 @@ import { resource } from '@server/generated';
 import { Role } from '@server/typing';
 import { ApiEmptyResponseEntity, ApiResponseEntity } from '@server/utils';
 
+/** Admins may read and manage every flash card list, including private ones. */
+const FLASH_CARD_ADMIN_ROLES = [Role.Admin] as const;
+/** Staff who triage reports: they see every report, everyone else only their own. */
+const REPORT_STAFF_ROLES = [Role.Mod, Role.Admin] as const;
+/** Moderators may delete anyone's blog comment (authors delete their own). */
+const COMMENT_MODERATOR_ROLES = [Role.Mod, Role.Admin] as const;
+
 @ApiBearerAuth()
 @ApiTags('Resources')
 @Controller()
 export class ResourceGatewayController implements OnModuleInit {
 	private blogService!: resource.BlogServiceClient;
+	private blogCommentService!: resource.BlogCommentServiceClient;
 	private flashCardService!: resource.FlashCardServiceClient;
 	private flashCardListService!: resource.FlashCardListServiceClient;
 	private reportService!: resource.ReportServiceClient;
@@ -51,6 +72,9 @@ export class ResourceGatewayController implements OnModuleInit {
 	onModuleInit() {
 		this.blogService = this.resourceClient.getService<resource.BlogServiceClient>(
 			resource.BLOG_SERVICE_NAME,
+		);
+		this.blogCommentService = this.resourceClient.getService<resource.BlogCommentServiceClient>(
+			resource.BLOG_COMMENT_SERVICE_NAME,
 		);
 		this.flashCardService = this.resourceClient.getService<resource.FlashCardServiceClient>(
 			resource.FLASH_CARD_SERVICE_NAME,
@@ -74,7 +98,16 @@ export class ResourceGatewayController implements OnModuleInit {
 			...body,
 			tags: body.tags ?? [],
 			authorId: req.user.sub,
-		} as resource.CreateBlogRequest);
+		});
+	}
+
+	// before 'blogs/:id', so "tags" isn't taken for an id
+	@Get('blogs/tags')
+	@ApiOperation({ summary: 'List every tag used by blog posts, most used first' })
+	@ApiResponseEntity(ListBlogTagsDto)
+	@SerializeOptions({ type: ListBlogTagsDto, strategy: 'exposeAll' })
+	listBlogTags() {
+		return this.blogService.listBlogTags({});
 	}
 
 	@Get('blogs/:id')
@@ -101,8 +134,10 @@ export class ResourceGatewayController implements OnModuleInit {
 		return this.blogService.updateBlog({
 			...body,
 			tags: body.tags ?? [],
+			// tags in the body replace the post's, so [] clears them
+			replaceTags: body.tags !== undefined,
 			id: id,
-		} as resource.UpdateBlogRequest);
+		});
 	}
 
 	@Delete('blogs/:id')
@@ -124,29 +159,62 @@ export class ResourceGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'List blog posts' })
 	@ApiResponseEntity(ListBlogsDto)
 	@SerializeOptions({ type: ListBlogsDto, strategy: 'exposeAll' })
-	listBlogs(
-		@Query(
-			'tags',
-			new (class implements PipeTransform {
-				transform(value: string) {
-					return (
-						Array.isArray(value) ? value
-						: value ? [value]
-						: []
-					);
-				}
-			})(),
-		)
-		tags: string[],
-		@Query('authorId') authorId?: string,
-		@Query('page') page?: number,
-		@Query('limit') limit?: number,
+	listBlogs(@Query() query: ListBlogsQueryDto) {
+		return this.blogService.listBlogs(query);
+	}
+
+	// ── Blog comments ────────────────────────────────────────────────────────
+
+	@Get('blogs/:id/comments')
+	@ApiOperation({ summary: 'List comments of a blog post (top-level paged, with nested replies)' })
+	@ApiResponseEntity(ListBlogCommentsDto)
+	@SerializeOptions({ type: ListBlogCommentsDto, strategy: 'exposeAll' })
+	listBlogComments(@Param('id') id: string, @Query() query: ListBlogCommentsQueryDto) {
+		return this.blogCommentService.listBlogComments({ ...query, blogId: id });
+	}
+
+	@Post('blogs/:id/comments')
+	@ApiOperation({ summary: 'Comment on a blog post, or reply to a comment' })
+	@ApiResponseEntity(BlogCommentDto)
+	@SerializeOptions({ type: BlogCommentDto, strategy: 'exposeAll' })
+	createBlogComment(
+		@Req() req: AuthenticatedRequest,
+		@Param('id') id: string,
+		@Body() body: CreateBlogCommentDto,
 	) {
-		return this.blogService.listBlogs({
-			authorId: authorId,
-			tags: tags ?? [],
-			page: page,
-			limit: limit,
+		return this.blogCommentService.createBlogComment({
+			...body,
+			blogId: id,
+			...requesterOf(req.user, COMMENT_MODERATOR_ROLES),
+		});
+	}
+
+	@Patch('blog-comments/:commentId')
+	@ApiOperation({ summary: 'Edit your own blog comment' })
+	@ApiResponseEntity(BlogCommentDto)
+	@SerializeOptions({ type: BlogCommentDto, strategy: 'exposeAll' })
+	updateBlogComment(
+		@Req() req: AuthenticatedRequest,
+		@Param('commentId') commentId: string,
+		@Body() body: UpdateBlogCommentDto,
+	) {
+		return this.blogCommentService.updateBlogComment({
+			...body,
+			id: commentId,
+			...requesterOf(req.user, COMMENT_MODERATOR_ROLES),
+		});
+	}
+
+	@Delete('blog-comments/:commentId')
+	@ApiEmptyResponseEntity()
+	@ApiOperation({
+		summary:
+			'Delete a blog comment (author or moderators); kept as a placeholder if it has replies',
+	})
+	deleteBlogComment(@Req() req: AuthenticatedRequest, @Param('commentId') commentId: string) {
+		return this.blogCommentService.deleteBlogComment({
+			id: commentId,
+			...requesterOf(req.user, COMMENT_MODERATOR_ROLES),
 		});
 	}
 
@@ -161,16 +229,20 @@ export class ResourceGatewayController implements OnModuleInit {
 			...body,
 			examples: body.examples ?? [],
 			tags: body.tags ?? [],
+			listId: body.listId,
 			authorId: req.user.sub,
-		} as resource.CreateFlashCardRequest);
+		});
 	}
 
 	@Get('flash-cards/:id')
 	@ApiOperation({ summary: 'Get a flash card by ID' })
 	@ApiResponseEntity(FlashCardDto)
 	@SerializeOptions({ type: FlashCardDto, strategy: 'exposeAll' })
-	getFlashCard(@Param('id') id: string) {
-		return this.flashCardService.getFlashCard({ id: id });
+	getFlashCard(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
+		return this.flashCardService.getFlashCard({
+			id: id,
+			...requesterOf(req.user, FLASH_CARD_ADMIN_ROLES),
+		});
 	}
 
 	@Patch('flash-cards/:id')
@@ -190,8 +262,11 @@ export class ResourceGatewayController implements OnModuleInit {
 			...body,
 			examples: body.examples ?? [],
 			tags: body.tags ?? [],
+			// a list in the body replaces the card's, so [] clears it
+			replaceExamples: body.examples !== undefined,
+			replaceTags: body.tags !== undefined,
 			id: id,
-		} as resource.UpdateFlashCardRequest);
+		});
 	}
 
 	@Delete('flash-cards/:id')
@@ -213,17 +288,10 @@ export class ResourceGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'List flash cards' })
 	@ApiResponseEntity(ListFlashCardsDto)
 	@SerializeOptions({ type: ListFlashCardsDto, strategy: 'exposeAll' })
-	listFlashCards(
-		@Query('tags') tags: string[],
-		@Query('authorId') authorId?: string,
-		@Query('page') page?: number,
-		@Query('limit') limit?: number,
-	) {
+	listFlashCards(@Req() req: AuthenticatedRequest, @Query() query: ListFlashCardsQueryDto) {
 		return this.flashCardService.listFlashCards({
-			authorId: authorId,
-			tags: tags ?? [],
-			page: page,
-			limit: limit,
+			...query,
+			...requesterOf(req.user, FLASH_CARD_ADMIN_ROLES),
 		});
 	}
 
@@ -238,53 +306,57 @@ export class ResourceGatewayController implements OnModuleInit {
 			...body,
 			tags: body.tags ?? [],
 			authorId: req.user.sub,
-		} as resource.CreateFlashCardListRequest);
+		});
 	}
 
 	@Get('flash-card-lists/:id')
 	@ApiOperation({ summary: 'Get a flash card list detail' })
 	@ApiResponseEntity(FlashCardListDetailDto)
 	@SerializeOptions({ type: FlashCardListDetailDto, strategy: 'exposeAll' })
-	getFlashCardList(@Param('id') id: string) {
-		return this.flashCardListService.getFlashCardList({ id: id });
+	getFlashCardList(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
+		return this.flashCardListService.getFlashCardList({
+			id: id,
+			...requesterOf(req.user, FLASH_CARD_ADMIN_ROLES),
+		});
 	}
 
 	@Patch('flash-card-lists/:id')
 	@ApiOperation({ summary: 'Update a flash card list' })
 	@ApiResponseEntity(FlashCardListDto)
 	@SerializeOptions({ type: FlashCardListDto, strategy: 'exposeAll' })
-	updateFlashCardList(@Param('id') id: string, @Body() body: UpdateFlashCardListDto) {
+	updateFlashCardList(
+		@Req() req: AuthenticatedRequest,
+		@Param('id') id: string,
+		@Body() body: UpdateFlashCardListDto,
+	) {
 		return this.flashCardListService.updateFlashCardList({
 			...body,
 			tags: body.tags ?? [],
+			// tags in the body replace the list's, so [] clears them
+			replaceTags: body.tags !== undefined,
 			id: id,
-		} as resource.UpdateFlashCardListRequest);
+			...requesterOf(req.user, FLASH_CARD_ADMIN_ROLES),
+		});
 	}
 
 	@Delete('flash-card-lists/:id')
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Delete a flash card list' })
-	deleteFlashCardList(@Param('id') id: string) {
-		return this.flashCardListService.deleteFlashCardList({ id: id });
+	deleteFlashCardList(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
+		return this.flashCardListService.deleteFlashCardList({
+			id: id,
+			...requesterOf(req.user, FLASH_CARD_ADMIN_ROLES),
+		});
 	}
 
 	@Get('flash-card-lists')
 	@ApiOperation({ summary: 'List flash card lists' })
 	@ApiResponseEntity(ListFlashCardListsDto)
 	@SerializeOptions({ type: ListFlashCardListsDto, strategy: 'exposeAll' })
-	listFlashCardLists(
-		@Query('tags') tags: string[],
-		@Query('authorId') authorId?: string,
-		@Query('isPublic') isPublic?: boolean,
-		@Query('page') page?: number,
-		@Query('limit') limit?: number,
-	) {
+	listFlashCardLists(@Req() req: AuthenticatedRequest, @Query() query: ListFlashCardListsQueryDto) {
 		return this.flashCardListService.listFlashCardLists({
-			authorId: authorId,
-			isPublic: isPublic,
-			tags: tags ?? [],
-			page: page,
-			limit: limit,
+			...query,
+			...requesterOf(req.user, FLASH_CARD_ADMIN_ROLES),
 		});
 	}
 
@@ -292,17 +364,15 @@ export class ResourceGatewayController implements OnModuleInit {
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Add a card to a list' })
 	addCardToList(
+		@Req() req: AuthenticatedRequest,
 		@Param('id') id: string,
-		@Body() body: Omit<resource.AddCardToListRequest, 'list_id'>,
+		@Body() body: AddCardToListDto,
 	) {
-		return this.flashCardListService.addCardToList({ ...body, listId: id });
-	}
-
-	@Delete('flash-card-lists/:listId/cards/:cardId')
-	@ApiEmptyResponseEntity()
-	@ApiOperation({ summary: 'Remove a card from a list' })
-	removeCardFromList(@Param('listId') listId: string, @Param('cardId') cardId: string) {
-		return this.flashCardListService.removeCardFromList({ listId: listId, flashCardId: cardId });
+		return this.flashCardListService.addCardToList({
+			...body,
+			listId: id,
+			...requesterOf(req.user, FLASH_CARD_ADMIN_ROLES),
+		});
 	}
 
 	@Get('flash-card-lists/:id/cards')
@@ -310,11 +380,15 @@ export class ResourceGatewayController implements OnModuleInit {
 	@ApiResponseEntity(ListFlashCardsDto)
 	@SerializeOptions({ type: ListFlashCardsDto, strategy: 'exposeAll' })
 	listCardsInList(
+		@Req() req: AuthenticatedRequest,
 		@Param('id') id: string,
-		@Query('page') page?: number,
-		@Query('limit') limit?: number,
+		@Query() query: PageQueryDto,
 	) {
-		return this.flashCardListService.listCardsInList({ listId: id, page: page, limit: limit });
+		return this.flashCardListService.listCardsInList({
+			...query,
+			listId: id,
+			...requesterOf(req.user, FLASH_CARD_ADMIN_ROLES),
+		});
 	}
 
 	// ── Reports ──────────────────────────────────────────────────────────────
@@ -328,53 +402,51 @@ export class ResourceGatewayController implements OnModuleInit {
 			...body,
 			fileIds: body.fileIds ?? [],
 			reportedBy: req.user.sub,
-		} as resource.CreateReportRequest);
+			// Only admins may attach a file someone else uploaded.
+			mayAttachAnyFile: hasAnyRole(req.user, [Role.Admin]),
+		});
 	}
 
 	@Get('reports/:id')
-	@ApiOperation({ summary: 'Get a report by ID' })
+	@ApiOperation({ summary: 'Get a report by ID (reporter or moderators/admins)' })
 	@ApiResponseEntity(ReportDto)
 	@SerializeOptions({ type: ReportDto, strategy: 'exposeAll' })
-	getReport(@Param('id') id: string) {
-		return this.reportService.getReport({ id: id });
+	getReport(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
+		return this.reportService.getReport({
+			id: id,
+			...requesterOf(req.user, REPORT_STAFF_ROLES),
+		});
 	}
 
 	@Patch('reports/:id')
-	@ApiOperation({ summary: 'Update a report' })
+	@HasRoles(...REPORT_STAFF_ROLES)
+	@ApiOperation({ summary: 'Update a report (moderators/admins)' })
 	@ApiResponseEntity(ReportDto)
 	@SerializeOptions({ type: ReportDto, strategy: 'exposeAll' })
-	updateReport(@Param('id') id: string, @Body() body: Omit<resource.UpdateReportRequest, 'id'>) {
-		return this.reportService.updateReport({ ...body, id: id });
+	updateReport(
+		@Req() req: AuthenticatedRequest,
+		@Param('id') id: string,
+		@Body() body: UpdateReportDto,
+	) {
+		return this.reportService.updateReport({ ...body, id: id, resolvedBy: req.user.sub });
 	}
 
 	@Delete('reports/:id')
+	@HasRoles(...REPORT_STAFF_ROLES)
 	@ApiEmptyResponseEntity()
-	@ApiOperation({ summary: 'Delete a report' })
+	@ApiOperation({ summary: 'Delete a report (moderators/admins)' })
 	deleteReport(@Param('id') id: string) {
 		return this.reportService.deleteReport({ id: id });
 	}
 
 	@Get('reports')
-	@ApiOperation({ summary: 'List reports' })
+	@ApiOperation({ summary: 'List reports (your own; moderators/admins see all)' })
 	@ApiResponseEntity(ListReportsDto)
 	@SerializeOptions({ type: ListReportsDto, strategy: 'exposeAll' })
-	listReports(
-		@Query('reportedBy') reportedBy?: string,
-		@Query('type') type?: string,
-		@Query('status') status?: string,
-		@Query('targetType') targetType?: string,
-		@Query('targetId') targetId?: string,
-		@Query('page') page?: number,
-		@Query('limit') limit?: number,
-	) {
+	listReports(@Req() req: AuthenticatedRequest, @Query() query: ListReportsQueryDto) {
 		return this.reportService.listReports({
-			reportedBy: reportedBy,
-			type: type,
-			status: status,
-			targetType: targetType,
-			targetId: targetId,
-			page: page,
-			limit: limit,
+			...query,
+			...requesterOf(req.user, REPORT_STAFF_ROLES),
 		});
 	}
 
@@ -382,16 +454,31 @@ export class ResourceGatewayController implements OnModuleInit {
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Add a file to a report' })
 	addFileToReport(
+		@Req() req: AuthenticatedRequest,
 		@Param('id') id: string,
-		@Body() body: Omit<resource.AddFileToReportRequest, 'report_id'>,
+		@Body() body: AddFileToReportDto,
 	) {
-		return this.reportService.addFileToReport({ ...body, reportId: id });
+		return this.reportService.addFileToReport({
+			...body,
+			reportId: id,
+			...requesterOf(req.user, REPORT_STAFF_ROLES),
+			// Only admins may attach a file someone else uploaded.
+			mayAttachAnyFile: hasAnyRole(req.user, [Role.Admin]),
+		});
 	}
 
 	@Delete('reports/:reportId/files/:fileId')
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Remove a file from a report' })
-	removeFileFromReport(@Param('reportId') reportId: string, @Param('fileId') fileId: string) {
-		return this.reportService.removeFileFromReport({ reportId: reportId, fileId: fileId });
+	removeFileFromReport(
+		@Req() req: AuthenticatedRequest,
+		@Param('reportId') reportId: string,
+		@Param('fileId') fileId: string,
+	) {
+		return this.reportService.removeFileFromReport({
+			reportId: reportId,
+			fileId: fileId,
+			...requesterOf(req.user, REPORT_STAFF_ROLES),
+		});
 	}
 }

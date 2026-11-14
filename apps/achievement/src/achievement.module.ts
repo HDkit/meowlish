@@ -18,7 +18,10 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { PrismaClient } from '@prisma-client/achievement';
 import { DATABASE_SERVICE, DatabaseModule } from '@server/database';
 import { LoggerModule } from '@server/logger';
+import { MessagingModule } from '@server/messaging';
+import { HealthModule } from '@server/telemetry';
 import {
+	CursorPaginationFactory,
 	GlobalClassSerializerInterceptor,
 	GlobalRmqExceptionFilter,
 	GlobalRpcExceptionFilter,
@@ -26,10 +29,30 @@ import {
 } from '@server/utils';
 import { ClsGuard, ClsModule } from 'nestjs-cls';
 
+const databaseModule = DatabaseModule.forRoot(PrismaClient);
+// shared with MessagingModule so OutboxRelay can resolve AmqpConnectionManager
+const rmqPubModule = RabbitMQModule.forRootAsync({
+	inject: [ConfigService],
+	useFactory: rmqPubConfig,
+});
+
 @Module({
 	controllers: [BadgeController],
 	imports: [
+		MessagingModule.forRoot({
+			serviceName: 'achievement',
+			prismaToken: DATABASE_SERVICE,
+			relay: true,
+			imports: [databaseModule, rmqPubModule],
+		}),
+		HealthModule.forRoot({
+			serviceName: 'achievement',
+			prismaToken: DATABASE_SERVICE,
+			rabbitmq: true,
+			imports: [databaseModule],
+		}),
 		ConfigModule.forRoot({
+			envFilePath: ['apps/achievement/.env', '.env'], // nx serve runs from the workspace root
 			expandVariables: true,
 			cache: true,
 			isGlobal: true,
@@ -41,7 +64,7 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 			guard: { mount: false },
 			plugins: [
 				new ClsPluginTransactional({
-					imports: [DatabaseModule.forRoot(PrismaClient)],
+					imports: [databaseModule],
 					adapter: new TransactionalAdapterPrisma({
 						prismaInjectionToken: DATABASE_SERVICE,
 						sqlFlavor: 'postgresql',
@@ -50,10 +73,11 @@ import { ClsGuard, ClsModule } from 'nestjs-cls';
 			],
 		}),
 		RabbitMQModule.forRootAsync({ inject: [ConfigService], useFactory: rmqSubConfig }),
-		RabbitMQModule.forRootAsync({ inject: [ConfigService], useFactory: rmqPubConfig }),
+		rmqPubModule,
 		LoggerModule.forRoot({ appName: 'AchievementModule' }),
 	],
 	providers: [
+		CursorPaginationFactory,
 		...IntegrationEventHandlers,
 		...BadgesQueryHandlers,
 		{

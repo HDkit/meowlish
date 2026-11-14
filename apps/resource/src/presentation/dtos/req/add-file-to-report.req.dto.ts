@@ -1,10 +1,18 @@
+import { RequesterReqDto } from './requester.req.dto';
 import { resource } from '@server/generated';
-import { IsString } from 'class-validator';
+import { IsBoolean, IsOptional, IsString } from 'class-validator';
 
-export class AddFileToReportReqDto implements resource.AddFileToReportRequest {
+export class AddFileToReportReqDto
+	extends RequesterReqDto
+	implements resource.AddFileToReportRequest
+{
 	@IsString()
 	reportId!: string;
 
 	@IsString()
 	fileId!: string;
+
+	@IsBoolean()
+	@IsOptional()
+	mayAttachAnyFile?: boolean;
 }

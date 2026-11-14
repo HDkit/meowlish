@@ -1,0 +1,77 @@
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: messaging
+    folder: Meowlish
+    interval: 1m
+    rules:
+      - uid: meowlish-outbox-stuck
+        title: OutboxStuck
+        condition: C
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: max by (service) (outbox_oldest_pending_age_seconds)
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+              settings: { mode: dropNN }
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              conditions: [{ evaluator: { type: gt, params: [60] } }]
+        annotations:
+          summary: '{{ $labels.service }} has an outbox event unpublished for over 60s'
+        labels:
+          severity: critical
+      - uid: meowlish-dead-letters
+        title: DeadLetters
+        condition: C
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: max by (queue) (rabbitmq_detailed_queue_messages{queue=~".*\\.dlq"})
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+              settings: { mode: dropNN }
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              conditions: [{ evaluator: { type: gt, params: [0] } }]
+        annotations:
+          summary: 'Queue {{ $labels.queue }} holds dead-lettered messages'
+        labels:
+          severity: warning

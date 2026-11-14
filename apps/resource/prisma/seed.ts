@@ -1,47 +1,25 @@
+import { childPath } from '../src/domain/comments/comment-path';
+import { SEED_BLOGS } from './seed/blogs';
+import { EXTRA_BLOGS, PUBLIC_FLASHCARD_LISTS } from './seed/catalogue';
+import { DEMO_FLASHCARD_LISTS } from './seed/demo-flashcards';
+import {
+	SEED_BLOG_COMMENTS,
+	SEED_FORUM_CATEGORIES,
+	SEED_FORUM_THREADS,
+	type SeedBlogComment,
+} from './seed/forum';
+import { SEED_USERS } from './seed/users';
 import { PrismaClient } from '@prisma-client/resource';
 
 const prisma = new PrismaClient();
 
 const USER_IDS = [
-	'admin',
-	'8ac3508e-d8bc-425f-9b4d-04461d9bd0ec',
-	'4292d890-805f-4fca-b007-8ce887d87f3d',
-	'f5553ed6-6eac-4be8-af62-fbb4226f2e9f',
-	'2261ce28-2f42-4420-b5af-580f8d4b8abe',
-	'3a2fbb54-984f-4318-bff0-218dc2a9f12c',
-];
-
-const BLOGS = [
-	{
-		title: 'Cách học tiếng Anh hiệu quả mỗi ngày',
-		content:
-			'Học tiếng Anh không khó nếu bạn có phương pháp đúng đắn. Hãy dành 30 phút mỗi ngày để luyện nghe, nói, đọc, viết. Quan trọng nhất là sự kiên trì và thực hành thường xuyên. Bắt đầu với những chủ đề đơn giản và tăng dần độ khó.',
-		tags: ['tieng-anh', 'hoc-tap', 'phuong-phap'],
-	},
-	{
-		title: '5 lỗi thường gặp khi phát âm tiếng Anh',
-		content:
-			'Người Việt thường gặp khó khăn với các âm /θ/, /ð/, /ʃ/, /ʒ/. Cách khắc phục tốt nhất là luyện tập trước gương và ghi âm lại giọng đọc của mình để so sánh với người bản xứ.',
-		tags: ['phat-am', 'tieng-anh', 'luyen-tap'],
-	},
-	{
-		title: 'Từ vựng tiếng Anh chủ đề công sở',
-		content:
-			'Dưới đây là những từ vựng thông dụng trong môi trường công sở: meeting (cuộc họp), deadline (hạn chót), collaborate (hợp tác), presentation (bài thuyết trình), và many more!',
-		tags: ['tu-vung', 'cong-so', 'tieng-anh'],
-	},
-	{
-		title: 'Làm thế nào để viết email chuyên nghiệp bằng tiếng Anh',
-		content:
-			'Một email chuyên nghiệp cần có tiêu đề rõ ràng, lời chào phù hợp, nội dung ngắn gọn và kết thúc lịch sự. Đừng quên kiểm tra chính tả trước khi gửi!',
-		tags: ['email', 'viet-lach', 'tieng-anh'],
-	},
-	{
-		title: 'Bí quyết luyện nghe tiếng Anh qua podcast',
-		content:
-			'Podcast là công cụ tuyệt vời để luyện nghe tiếng Anh. Hãy chọn những chủ đề bạn yêu thích, nghe có phụ đề trước, sau đó nghe lại không phụ đề và ghi chép lại những gì bạn hiểu được.',
-		tags: ['nghe', 'podcast', 'tieng-anh'],
-	},
+	SEED_USERS.admin,
+	SEED_USERS.minh,
+	SEED_USERS.linh,
+	SEED_USERS.duc,
+	SEED_USERS.hoa,
+	SEED_USERS.tuan,
 ];
 
 const FLASHCARD_LISTS = [
@@ -82,22 +60,226 @@ const FLASHCARD_LISTS = [
 	},
 ];
 
-async function main() {
-	// Seed blogs
-	for (const blog of BLOGS) {
-		const authorId = USER_IDS[Math.floor(Math.random() * USER_IDS.length)];
-		await prisma.blog.create({
-			data: {
-				title: blog.title,
-				content: blog.content,
-				authorId: authorId,
-				tags: blog.tags,
+const MINUTE = 60_000;
+const DAY = 24 * 60 * MINUTE;
+
+/** Upserts the seeded posts: matched by seed id or (current/former) title, so re-runs update them. */
+async function seedBlogs(): Promise<Map<string, string>> {
+	const ids = new Map<string, string>();
+	// the extra posts first (older), so the hand-written ones stay the newest
+	const blogs = [...EXTRA_BLOGS, ...SEED_BLOGS];
+	for (const [i, blog] of blogs.entries()) {
+		const existing = await prisma.blog.findFirst({
+			where: {
+				OR: [{ id: blog.id }, { title: { in: [blog.title, ...(blog.formerTitles ?? [])] } }],
 			},
+			select: { id: true },
+		});
+		const data = { title: blog.title, content: blog.content, tags: blog.tags };
+		if (existing) {
+			await prisma.blog.update({ where: { id: existing.id }, data: data });
+			ids.set(blog.id, existing.id);
+		} else {
+			await prisma.blog.create({
+				data: {
+					...data,
+					id: blog.id,
+					authorId: blog.authorId,
+					createdAt: new Date(Date.now() - (blogs.length - i) * 2 * DAY),
+				},
+			});
+			ids.set(blog.id, blog.id);
+		}
+	}
+	console.warn(`Seeded ${blogs.length} blogs`);
+	return ids;
+}
+
+/** Seeded comment trees; paths follow each comment's position among its seeded siblings. */
+async function seedBlogComments(blogIds: Map<string, string>): Promise<void> {
+	let count = 0;
+	const upsert = async (
+		blogId: string,
+		comment: SeedBlogComment,
+		parent: { id: string; rootId: string; path: string } | null,
+		seq: number,
+		createdAt: Date,
+	): Promise<void> => {
+		const path = parent ? childPath(parent.path, seq) : '';
+		const rootId = parent ? parent.rootId : comment.id;
+		const children = comment.replies ?? [];
+		await prisma.blogComment.upsert({
+			where: { id: comment.id },
+			update: { content: comment.content },
+			create: {
+				id: comment.id,
+				blogId: blogId,
+				parentId: parent?.id ?? null,
+				rootId: rootId,
+				path: path,
+				depth: path.length / 4,
+				childSeq: children.length,
+				authorId: comment.authorId,
+				content: comment.content,
+				createdAt: createdAt,
+				updatedAt: createdAt,
+			},
+		});
+		count++;
+		for (const [i, child] of children.entries()) {
+			await upsert(
+				blogId,
+				child,
+				{ id: comment.id, rootId: rootId, path: path },
+				i + 1,
+				new Date(createdAt.getTime() + (i + 1) * 47 * MINUTE),
+			);
+		}
+	};
+
+	for (const [seedBlogId, comments] of Object.entries(SEED_BLOG_COMMENTS)) {
+		const blogId = blogIds.get(seedBlogId);
+		if (!blogId) continue;
+		for (const [i, comment] of comments.entries()) {
+			await upsert(blogId, comment, null, 0, new Date(Date.now() - (comments.length - i) * DAY));
+		}
+	}
+	console.warn(`Seeded ${count} blog comments`);
+}
+
+async function seedForum(): Promise<void> {
+	for (const category of SEED_FORUM_CATEGORIES) {
+		const data = {
+			name: category.name,
+			description: category.description,
+			position: category.position,
+			moderatorsOnly: category.moderatorsOnly ?? false,
+		};
+		await prisma.forumCategory.upsert({
+			where: { id: category.id },
+			update: data,
+			create: { ...data, id: category.id },
 		});
 	}
 
+	let replyCount = 0;
+	for (const thread of SEED_FORUM_THREADS) {
+		const openedAt = new Date(Date.now() - thread.daysAgo * DAY);
+		const content = {
+			categoryId: thread.categoryId,
+			title: thread.title,
+			body: thread.body,
+			isPinned: thread.isPinned ?? false,
+			isLocked: thread.isLocked ?? false,
+		};
+		// Re-runs refresh the content but keep dates, views and counters that real use changed.
+		await prisma.forumThread.upsert({
+			where: { id: thread.id },
+			update: content,
+			create: {
+				...content,
+				id: thread.id,
+				authorId: thread.authorId,
+				viewCount: thread.viewCount,
+				lastActivityAt: openedAt,
+				createdAt: openedAt,
+				updatedAt: openedAt,
+			},
+		});
+
+		for (const reply of thread.replies) {
+			const repliedAt = new Date(openedAt.getTime() + reply.after * MINUTE);
+			await prisma.forumReply.upsert({
+				where: { id: reply.id },
+				update: { body: reply.body },
+				create: {
+					id: reply.id,
+					threadId: thread.id,
+					authorId: reply.authorId,
+					body: reply.body,
+					quotedReplyId: reply.quotes ?? null,
+					createdAt: repliedAt,
+					updatedAt: repliedAt,
+				},
+			});
+			replyCount++;
+		}
+
+		// Counters from what is actually stored (users may have replied since the last seed).
+		const [count, latest] = await Promise.all([
+			prisma.forumReply.count({ where: { threadId: thread.id } }),
+			prisma.forumReply.findFirst({
+				where: { threadId: thread.id },
+				orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+				select: { authorId: true, createdAt: true },
+			}),
+		]);
+		await prisma.forumThread.update({
+			where: { id: thread.id },
+			data: {
+				replyCount: count,
+				lastActivityAt: latest?.createdAt ?? openedAt,
+				lastReplyAuthorId: latest?.authorId ?? null,
+			},
+		});
+	}
+	console.warn(
+		`Seeded ${SEED_FORUM_CATEGORIES.length} forum categories, ${SEED_FORUM_THREADS.length} threads, ${replyCount} replies`,
+	);
+}
+
+/**
+ * The demo account's own lists, with fixed ids. Missing lists and cards are (re)created; ones that
+ * exist are left as testers changed them.
+ */
+async function seedDemoFlashCards(): Promise<void> {
+	for (const list of [...DEMO_FLASHCARD_LISTS, ...PUBLIC_FLASHCARD_LISTS]) {
+		const createdAt = new Date(Date.now() - list.daysAgo * DAY);
+		await prisma.flashCardList.upsert({
+			where: { id: list.id },
+			update: {},
+			create: {
+				id: list.id,
+				name: list.name,
+				description: list.description,
+				authorId: list.authorId,
+				isPublic: list.isPublic,
+				tags: list.tags,
+				createdAt: createdAt,
+				updatedAt: createdAt,
+			},
+		});
+		for (const card of list.cards) {
+			await prisma.flashCard.upsert({
+				where: { id: card.id },
+				update: {},
+				create: {
+					...card,
+					authorId: list.authorId,
+					listId: list.id,
+					tags: [],
+					createdAt: createdAt,
+					updatedAt: createdAt,
+				},
+			});
+		}
+	}
+	console.warn(
+		`Seeded ${DEMO_FLASHCARD_LISTS.length} demo and ${PUBLIC_FLASHCARD_LISTS.length} public flashcard lists`,
+	);
+}
+
+async function main() {
+	const blogIds = await seedBlogs();
+	await seedBlogComments(blogIds);
+	await seedForum();
+
 	// Seed flashcard lists with cards
 	for (const list of FLASHCARD_LISTS) {
+		if (await prisma.flashCardList.findFirst({ where: { name: list.name } })) {
+			console.warn(`List "${list.name}" already exists, skipping`);
+			continue;
+		}
 		const authorId = USER_IDS[Math.floor(Math.random() * USER_IDS.length)];
 		const created = await prisma.flashCardList.create({
 			data: {
@@ -120,7 +302,9 @@ async function main() {
 		console.warn(`Created list "${created.name}" with ${list.cards.length} cards`);
 	}
 
-	console.warn(`Seeded ${BLOGS.length} blogs and ${FLASHCARD_LISTS.length} flashcard lists`);
+	console.warn(`Seeded ${FLASHCARD_LISTS.length} flashcard lists`);
+
+	await seedDemoFlashCards();
 }
 
 main()

@@ -1,18 +1,18 @@
-import {
-	WRITING_SCORED_MAX_RETRIES,
-	WRITING_SCORED_RETRY_QUEUE_NAME,
-} from '../../../configs/rmq.sub.config';
+import { WRITING_SCORED_QUEUE } from '../../../configs/rmq.sub.config';
 import {
 	type IAttemptRepository,
 	IAttemptRepositoryToken,
 } from '../../../domain/repositories/attempt.repository';
-import { AmqpConnectionManager, RabbitPayload, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
-import { Inject, Injectable, InternalServerErrorException, UseFilters } from '@nestjs/common';
+import { retryAttemptConflicts } from '../../services/attempt-conflict-retry';
+import { AttemptRescoredPublisher } from '../publishers/attempt-rescored.publisher';
+import { RabbitPayload, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
+import { Transactional } from '@nestjs-cls/transactional';
+import { Inject, Injectable, NotFoundException, UseFilters } from '@nestjs/common';
 import { AppLoggerService } from '@server/logger';
-import { GlobalRmqExceptionFilter, RETRY_COUNT_HEADER, getRetryRoutingKey } from '@server/utils';
-import type { ConsumeMessage } from 'amqplib';
+import { GlobalRmqExceptionFilter } from '@server/utils';
 import { Type } from 'class-transformer';
 import { IsArray, IsNumber, IsObject, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { UseCls } from 'nestjs-cls';
 
 export class WritingSubScoresDto {
 	@IsNumber()
@@ -82,51 +82,71 @@ export class WritingScoredHandler {
 	constructor(
 		@Inject(IAttemptRepositoryToken) private readonly attemptRepository: IAttemptRepository,
 		private readonly logger: AppLoggerService,
-		private readonly amqpConnectionManager: AmqpConnectionManager,
+		private readonly rescoredPublisher: AttemptRescoredPublisher,
 	) {}
 
-	private get amqpConnection() {
-		const connection = this.amqpConnectionManager.getConnection('pub');
-		if (!connection) throw new InternalServerErrorException('AMQP "pub" connection not available');
-		return connection;
-	}
-
 	@UseFilters(GlobalRmqExceptionFilter)
+	@UseCls()
 	@RabbitSubscribe({
 		connection: 'sub',
 		exchange: 'eventbus',
 		routingKey: 'exam.writing.scored',
-		queue: 'exam.events.writing.scored',
-		queueOptions: {
-			durable: true,
-			deadLetterExchange: 'exam.dlx',
-			deadLetterRoutingKey: 'writing.result.dlq',
-		},
+		// A throw is retried with backoff through exam.events.writing.scored.retry.N, then
+		// dead-lettered to exam.events.writing.scored.dlq.
+		...WRITING_SCORED_QUEUE.subscribe,
 	})
-	async handle(@RabbitPayload() payload: WritingScoredEvent, amqpMsg?: ConsumeMessage) {
-		const retryCount: number = (amqpMsg?.properties?.headers?.[RETRY_COUNT_HEADER] as number) ?? 0;
-
-		try {
-			if (payload.status === 'error' || payload.error_code || payload.error_message)
-				throw new Error(payload.error_message ?? payload.error_code);
-			await this.attemptRepository.saveComment(payload.response_id, JSON.stringify(payload.data));
-		} catch (e) {
-			if (retryCount < WRITING_SCORED_MAX_RETRIES) {
-				const routingKey = getRetryRoutingKey(WRITING_SCORED_RETRY_QUEUE_NAME, retryCount);
-				this.logger.warn(
-					`Writing scored failed, retry ${retryCount + 1}/${WRITING_SCORED_MAX_RETRIES} via ${routingKey}`,
-				);
-				await this.amqpConnection.publish('exam.retry', routingKey, payload, {
-					persistent: true,
-					headers: { [RETRY_COUNT_HEADER]: retryCount + 1 },
-				});
-				return;
-			}
-
-			this.logger.error(
-				`Writing scored max retries (${WRITING_SCORED_MAX_RETRIES}) exceeded for response ${payload.response_id}: ${e as string}`,
-			);
-			throw e;
+	async handle(@RabbitPayload() payload: WritingScoredEvent): Promise<void> {
+		const failed = payload.status === 'error' || !!payload.error_code || !!payload.error_message;
+		if (failed || !payload.data) {
+			// The scorer has already retried on its side: retrying here cannot change the outcome, and
+			// throwing only dead-lettered the message and left the student waiting. Record the failure
+			// so the review shows it; a later successful result for the response replaces it.
+			await this.saveFailure(payload, failed ? undefined : 'INVALID_RESULT');
+			return;
 		}
+		// Two writings of one attempt scored at once: the later save conflicts on the attempt
+		// version and re-runs, now seeing both feedbacks. Redelivery just re-saves the same feedback.
+		await retryAttemptConflicts(() => this.saveFeedbackAndRescore(payload));
+	}
+
+	@Transactional()
+	private async saveFailure(payload: WritingScoredEvent, errorCode?: string): Promise<void> {
+		const failure = {
+			status: 'error',
+			error_code: errorCode ?? payload.error_code ?? 'SCORING_FAILED',
+			error_message:
+				errorCode ? 'The scorer sent a result without feedback' : (payload.error_message ?? null),
+			failed_at: new Date().toISOString(),
+		};
+		// stored like the feedback itself: a JSON string, read back through the review's additionalData
+		const stored = await this.attemptRepository.saveScoringFailure(
+			payload.response_id,
+			JSON.stringify(failure),
+		);
+		if (!stored)
+			this.logger.warn(
+				`Scoring failure for response ${payload.response_id} ignored: it already has a band`,
+			);
+	}
+
+	/** Saves the AI feedback and the attempt score that now includes its points, atomically. */
+	@Transactional()
+	private async saveFeedbackAndRescore(payload: WritingScoredEvent): Promise<void> {
+		const attemptId = await this.attemptRepository.saveComment(
+			payload.response_id,
+			JSON.stringify(payload.data),
+		);
+		const evaluator = await this.attemptRepository.getScoreEvaluator(attemptId);
+		if (!evaluator) throw new NotFoundException('Attempt not found');
+		const previousScore = evaluator.score;
+		evaluator.recomputeScore();
+		await this.attemptRepository.save(evaluator);
+		// same transaction: achievement learns about the writing points (it only saw the submit score)
+		await this.rescoredPublisher.publish(
+			attemptId,
+			previousScore,
+			evaluator.score,
+			evaluator.totalPoints,
+		);
 	}
 }

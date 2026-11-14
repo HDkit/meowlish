@@ -1,12 +1,15 @@
+import { type NotificationReadModel } from '../../../domain/read-models/notification.read-model';
+import { NotificationPreferencesService } from '../../services/notification-preferences.service';
 import { NotificationService } from '../../services/notification.service';
-import {
-	RabbitPayload,
-	RabbitSubscribe,
-	defaultNackErrorHandler,
-} from '@golevelup/nestjs-rabbitmq';
+import { RabbitPayload, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
+import { Transactional } from '@nestjs-cls/transactional';
 import { Injectable } from '@nestjs/common';
-import { AppLoggerService } from '@server/logger';
+import { InboxService, defineConsumerQueue, unwrapEvent } from '@server/messaging';
+import { validatePayload } from '@server/utils';
 import { IsString } from 'class-validator';
+import { UseCls } from 'nestjs-cls';
+
+export const ACHIEVEMENT_EARNED_QUEUE = defineConsumerQueue('notification.events.badge.earned');
 
 class AchievementEarnedEvent {
 	@IsString() uid!: string;
@@ -17,32 +20,39 @@ class AchievementEarnedEvent {
 export class AchievementEarnedHandler {
 	constructor(
 		private readonly notificationService: NotificationService,
-		private readonly logger: AppLoggerService,
+		private readonly preferencesService: NotificationPreferencesService,
+		private readonly inbox: InboxService,
 	) {}
 
+	@UseCls()
 	@RabbitSubscribe({
 		connection: 'sub',
 		exchange: 'eventbus',
 		routingKey: 'achievement.badge.earned',
-		queue: 'notification.events.badge.earned',
-		queueOptions: {
-			durable: true,
-			deadLetterExchange: 'notification.dlx',
-			deadLetterRoutingKey: 'badge.earned.failed',
-		},
-		errorHandler: defaultNackErrorHandler,
+		...ACHIEVEMENT_EARNED_QUEUE.subscribe,
 	})
-	async handle(@RabbitPayload() payload: AchievementEarnedEvent) {
-		try {
+	async handle(@RabbitPayload() message: unknown): Promise<void> {
+		// pushed over SSE only after the commit: a rolled-back delivery must push nothing
+		this.notificationService.push(await this.store(message));
+	}
+
+	/** Claims the event and stores its notifications, in one transaction. */
+	@Transactional()
+	private async store(message: unknown): Promise<NotificationReadModel[]> {
+		const created: NotificationReadModel[] = [];
+		const { id, payload } = unwrapEvent<unknown>(message);
+		if (!(await this.inbox.claim(id, ACHIEVEMENT_EARNED_QUEUE.name))) return created;
+		const event = await validatePayload(AchievementEarnedEvent, payload);
+		if (!(await this.preferencesService.isEnabled(event.uid, 'achievement'))) return created;
+		created.push(
 			await this.notificationService.createNotification({
-				recipientId: payload.uid,
+				recipientId: event.uid,
 				type: 'achievement',
-				title: 'Achievement Unlocked!',
-				message: `You earned the "${payload.badgeName}" badge!`,
-				data: JSON.stringify({ badgeName: payload.badgeName }),
-			});
-		} catch (e) {
-			this.logger.error(e as string);
-		}
+				title: 'Đạt thành tích mới!',
+				message: `Bạn vừa nhận huy hiệu "${event.badgeName}". Tiếp tục phát huy nhé!`,
+				data: JSON.stringify({ badgeName: event.badgeName }),
+			}),
+		);
+		return created;
 	}
 }

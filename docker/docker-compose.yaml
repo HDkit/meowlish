@@ -1,3 +1,5 @@
+name: meowlish
+
 include:
   - docker-compose.app.yaml
   - docker-compose.db.yaml

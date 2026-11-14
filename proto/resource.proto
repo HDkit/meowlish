@@ -11,6 +11,8 @@ service BlogService {
 	rpc UpdateBlog(UpdateBlogRequest) returns (BlogResponse) {}
 	rpc DeleteBlog(DeleteBlogRequest) returns (google.protobuf.Empty) {}
 	rpc ListBlogs(ListBlogsRequest) returns (ListBlogsResponse) {}
+	// every tag used by a blog post, most used first
+	rpc ListBlogTags(google.protobuf.Empty) returns (ListBlogTagsResponse) {}
 }
 
 service FlashCardService {
@@ -38,8 +40,50 @@ service FlashCardListService {
 	rpc DeleteFlashCardList(DeleteFlashCardListRequest) returns (google.protobuf.Empty) {}
 	rpc ListFlashCardLists(ListFlashCardListsRequest) returns (ListFlashCardListsResponse) {}
 	rpc AddCardToList(AddCardToListRequest) returns (google.protobuf.Empty) {}
-	rpc RemoveCardFromList(RemoveCardFromListRequest) returns (google.protobuf.Empty) {}
 	rpc ListCardsInList(ListCardsInListRequest) returns (ListFlashCardsResponse) {}
+	// Saves a private copy of someone else's public list (and its cards) for the requester.
+	rpc ForkFlashCardList(ForkFlashCardListRequest) returns (FlashCardListResponse) {}
+	// The requester's copy compared with its original: cards added, modified and removed in the copy.
+	rpc GetFlashCardListDiff(GetFlashCardListDiffRequest) returns (FlashCardListDiffResponse) {}
+	// Brings the original's changes into the requester's copy, skipping cards changed in the copy.
+	rpc PullFlashCardListUpstream(PullFlashCardListUpstreamRequest) returns (PullFlashCardListUpstreamResponse) {}
+}
+
+// Proposals to apply a copy's card changes to its original list (like pull requests). Visible to
+// the proposer, the original's owner and admins; everyone else gets NOT_FOUND.
+service FlashCardProposalService {
+	rpc CreateFlashCardProposal(CreateFlashCardProposalRequest) returns (FlashCardProposalResponse) {}
+	rpc ListFlashCardProposals(ListFlashCardProposalsRequest) returns (ListFlashCardProposalsResponse) {}
+	rpc GetFlashCardProposal(GetFlashCardProposalRequest) returns (FlashCardProposalDetailResponse) {}
+	rpc AcceptFlashCardProposal(AcceptFlashCardProposalRequest) returns (FlashCardProposalResponse) {}
+	rpc RejectFlashCardProposal(RejectFlashCardProposalRequest) returns (FlashCardProposalResponse) {}
+	rpc WithdrawFlashCardProposal(WithdrawFlashCardProposalRequest) returns (FlashCardProposalResponse) {}
+}
+
+// Nested comments under a blog post. Top-level comments are paginated (newest first); each comes
+// with its whole reply tree (oldest first at every level).
+service BlogCommentService {
+	rpc ListBlogComments(ListBlogCommentsRequest) returns (ListBlogCommentsResponse) {}
+	rpc CreateBlogComment(CreateBlogCommentRequest) returns (BlogCommentResponse) {}
+	rpc UpdateBlogComment(UpdateBlogCommentRequest) returns (BlogCommentResponse) {}
+	rpc DeleteBlogComment(DeleteBlogCommentRequest) returns (google.protobuf.Empty) {}
+}
+
+// Forum: categories (seeded), threads and flat replies. Ownership and moderation are decided here
+// from the forwarded requester; "not yours" is answered with NOT_FOUND.
+service ForumService {
+	rpc ListForumCategories(ListForumCategoriesRequest) returns (ListForumCategoriesResponse) {}
+	rpc GetForumCategory(GetForumCategoryRequest) returns (ForumCategoryResponse) {}
+	rpc ListForumThreads(ListForumThreadsRequest) returns (ListForumThreadsResponse) {}
+	rpc CreateForumThread(CreateForumThreadRequest) returns (ForumThreadResponse) {}
+	rpc GetForumThread(GetForumThreadRequest) returns (ForumThreadResponse) {}
+	rpc UpdateForumThread(UpdateForumThreadRequest) returns (ForumThreadResponse) {}
+	rpc ModerateForumThread(ModerateForumThreadRequest) returns (ForumThreadResponse) {}
+	rpc DeleteForumThread(DeleteForumThreadRequest) returns (google.protobuf.Empty) {}
+	rpc ListForumReplies(ListForumRepliesRequest) returns (ListForumRepliesResponse) {}
+	rpc CreateForumReply(CreateForumReplyRequest) returns (ForumReplyResponse) {}
+	rpc UpdateForumReply(UpdateForumReplyRequest) returns (ForumReplyResponse) {}
+	rpc DeleteForumReply(DeleteForumReplyRequest) returns (google.protobuf.Empty) {}
 }
 
 message BlogResponse {
@@ -68,6 +112,9 @@ message UpdateBlogRequest {
 	optional google.protobuf.StringValue title   = 2;
 	optional google.protobuf.StringValue content = 3;
 	repeated google.protobuf.StringValue tags    = 4;
+	// A repeated field can't tell "not sent" from "empty": this says the request sets the tags,
+	// so an empty list clears them. False keeps the old behaviour (empty = unchanged).
+	bool                                 replace_tags = 5;
 }
 
 message DeleteBlogRequest {
@@ -84,6 +131,15 @@ message ListBlogsRequest {
 message ListBlogsResponse {
 	repeated BlogResponse blogs       = 1;
 	int32                 total_count = 2;
+}
+
+message BlogTagCount {
+	string name  = 1;
+	int32  count = 2;
+}
+
+message ListBlogTagsResponse {
+	repeated BlogTagCount tags = 1;
 }
 
 message FlashCardResponse {
@@ -116,6 +172,10 @@ message CreateFlashCardRequest {
 
 message GetFlashCardRequest {
 	google.protobuf.StringValue id = 1;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue          requester_id   = 2;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged     = 3;
 }
 
 message UpdateFlashCardRequest {
@@ -128,6 +188,10 @@ message UpdateFlashCardRequest {
 	repeated google.protobuf.StringValue examples       = 7;
 	optional google.protobuf.StringValue notes          = 8;
 	repeated google.protobuf.StringValue tags           = 9;
+	// A repeated field can't tell "not sent" from "empty": these say the request sets the list,
+	// so an empty one clears it. False keeps the old behaviour (empty = unchanged).
+	bool                                 replace_examples = 10;
+	bool                                 replace_tags     = 11;
 }
 
 message DeleteFlashCardRequest {
@@ -139,6 +203,10 @@ message ListFlashCardsRequest {
 	repeated google.protobuf.StringValue tags      = 2;
 	optional google.protobuf.Int32Value  page      = 3;
 	optional google.protobuf.Int32Value  limit     = 4;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue          requester_id   = 5;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged     = 6;
 }
 
 message ListFlashCardsResponse {
@@ -147,14 +215,20 @@ message ListFlashCardsResponse {
 }
 
 message FlashCardListResponse {
-	string          id          = 1;
-	string          name        = 2;
-	string          description = 3;
-	string          author_id   = 4;
-	bool            is_public   = 5;
-	repeated string tags        = 6;
-	string          created_at  = 7;
-	string          updated_at  = 8;
+	string          id                    = 1;
+	string          name                  = 2;
+	string          description           = 3;
+	string          author_id             = 4;
+	bool            is_public             = 5;
+	repeated string tags                  = 6;
+	string          created_at            = 7;
+	string          updated_at            = 8;
+	// Set on a copy: the original list (absent once it is deleted) and a snapshot of its name/author.
+	optional string forked_from_id        = 9;
+	optional string forked_from_name      = 10;
+	optional string forked_from_author_id = 11;
+	// How many copies were made of this list.
+	int32           fork_count            = 12;
 }
 
 message FlashCardListDetailResponse {
@@ -166,8 +240,16 @@ message FlashCardListDetailResponse {
 	repeated string            tags        = 6;
 	string                     created_at  = 7;
 	string                     updated_at  = 8;
-	repeated FlashCardResponse flash_cards = 9;
-	int32                      total_cards = 10;
+	repeated FlashCardResponse flash_cards           = 9;
+	int32                      total_cards           = 10;
+	optional string            forked_from_id        = 11;
+	optional string            forked_from_name      = 12;
+	optional string            forked_from_author_id = 13;
+	int32                      fork_count            = 14;
+	// Open proposals on this list; counted only for its owner and admins (0 for everyone else).
+	int32                      open_proposal_count   = 15;
+	// The original of this copy still exists and the requester can see it.
+	bool                       upstream_available    = 16;
 }
 
 message CreateFlashCardListRequest {
@@ -180,6 +262,10 @@ message CreateFlashCardListRequest {
 
 message GetFlashCardListRequest {
 	google.protobuf.StringValue id = 1;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue          requester_id   = 2;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged     = 3;
 }
 
 message UpdateFlashCardListRequest {
@@ -188,10 +274,20 @@ message UpdateFlashCardListRequest {
 	optional google.protobuf.StringValue description = 3;
 	optional google.protobuf.BoolValue   is_public   = 4;
 	repeated google.protobuf.StringValue tags        = 5;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue          requester_id   = 6;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged     = 7;
+	// The request sets the tags, so an empty list clears them (see UpdateBlogRequest.replace_tags).
+	bool                                 replace_tags   = 8;
 }
 
 message DeleteFlashCardListRequest {
 	google.protobuf.StringValue id = 1;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue          requester_id   = 2;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged     = 3;
 }
 
 message ListFlashCardListsRequest {
@@ -200,6 +296,12 @@ message ListFlashCardListsRequest {
 	repeated google.protobuf.StringValue tags      = 3;
 	optional google.protobuf.Int32Value  page      = 4;
 	optional google.protobuf.Int32Value  limit     = 5;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue          requester_id   = 6;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged     = 7;
+	// lists whose name contains this text (case-insensitive)
+	optional google.protobuf.StringValue name           = 8;
 }
 
 message ListFlashCardListsResponse {
@@ -211,17 +313,231 @@ message AddCardToListRequest {
 	google.protobuf.StringValue         list_id       = 1;
 	google.protobuf.StringValue         flash_card_id = 2;
 	optional google.protobuf.Int32Value position      = 3;
-}
-
-message RemoveCardFromListRequest {
-	google.protobuf.StringValue list_id       = 1;
-	google.protobuf.StringValue flash_card_id = 2;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue          requester_id   = 4;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged     = 5;
 }
 
 message ListCardsInListRequest {
 	google.protobuf.StringValue         list_id = 1;
 	optional google.protobuf.Int32Value page    = 2;
 	optional google.protobuf.Int32Value limit   = 3;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue          requester_id   = 4;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged     = 5;
+}
+
+message ForkFlashCardListRequest {
+	google.protobuf.StringValue        id           = 1;
+	// Set by the gateway from the JWT; never from client input. Becomes the copy's owner.
+	google.protobuf.StringValue        requester_id = 2;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue privileged   = 3;
+}
+
+// The editable content of a card, as copied, compared and proposed.
+message FlashCardContent {
+	string          word           = 1;
+	string          definition     = 2;
+	optional string part_of_speech = 3;
+	optional string pronunciation  = 4;
+	repeated string examples       = 5;
+	optional string notes          = 6;
+	repeated string tags           = 7;
+	optional string image          = 8;
+}
+
+message AddedCardChange {
+	// The card in the copy.
+	string           source_card_id = 1;
+	FlashCardContent card           = 2;
+}
+
+message ModifiedCardChange {
+	// The card in the original.
+	string           target_card_id = 1;
+	string           source_card_id = 2;
+	// Changed fields: word, definition, partOfSpeech, pronunciation, examples, notes, tags.
+	repeated string  fields         = 3;
+	// The original's values when the change was computed (proposal time).
+	FlashCardContent base           = 4;
+	FlashCardContent proposed       = 5;
+	// On a proposal: the original card now (absent if it was deleted since).
+	optional FlashCardContent current = 6;
+	// The original card changed the same fields since the proposal: the owner must choose.
+	bool             conflict       = 7;
+	bool             target_missing = 8;
+}
+
+message RemovedCardChange {
+	string           target_card_id = 1;
+	FlashCardContent base           = 2;
+	optional FlashCardContent current = 3;
+	bool             conflict       = 4;
+	bool             target_missing = 5;
+}
+
+message FlashCardListChanges {
+	repeated AddedCardChange    added    = 1;
+	repeated ModifiedCardChange modified = 2;
+	repeated RemovedCardChange  removed  = 3;
+}
+
+message GetFlashCardListDiffRequest {
+	// The requester's copy.
+	google.protobuf.StringValue        id           = 1;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue        requester_id = 2;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue privileged   = 3;
+}
+
+message FlashCardListDiffResponse {
+	string               source_list_id    = 1;
+	string               target_list_id    = 2;
+	string               target_list_name  = 3;
+	string               target_owner_id   = 4;
+	FlashCardListChanges changes           = 5;
+	// An open proposal from this copy, if any (only one may be open at a time).
+	optional string      open_proposal_id  = 6;
+}
+
+message PullFlashCardListUpstreamRequest {
+	// The requester's copy.
+	google.protobuf.StringValue        id           = 1;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue        requester_id = 2;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue privileged   = 3;
+}
+
+message PullFlashCardListUpstreamResponse {
+	int32 updated = 1;
+	int32 added   = 2;
+	int32 removed = 3;
+	// Cards changed both in the copy and in the original: left as they are in the copy.
+	int32 skipped = 4;
+}
+
+message FlashCardProposalResponse {
+	string          id               = 1;
+	optional string source_list_id   = 2;
+	optional string source_list_name = 3;
+	string          target_list_id   = 4;
+	string          target_list_name = 5;
+	string          target_owner_id  = 6;
+	string          author_id        = 7;
+	string          title            = 8;
+	string          message          = 9;
+	// OPEN | ACCEPTED | REJECTED | WITHDRAWN
+	string          status           = 10;
+	int32           added_count      = 11;
+	int32           modified_count   = 12;
+	int32           removed_count    = 13;
+	optional string decided_at       = 14;
+	optional string decided_by       = 15;
+	optional string decision_note    = 16;
+	string          created_at       = 17;
+	string          updated_at       = 18;
+}
+
+message FlashCardProposalDetailResponse {
+	string               id               = 1;
+	optional string      source_list_id   = 2;
+	optional string      source_list_name = 3;
+	string               target_list_id   = 4;
+	string               target_list_name = 5;
+	string               target_owner_id  = 6;
+	string               author_id        = 7;
+	string               title            = 8;
+	string               message          = 9;
+	string               status           = 10;
+	int32                added_count      = 11;
+	int32                modified_count   = 12;
+	int32                removed_count    = 13;
+	optional string      decided_at       = 14;
+	optional string      decided_by       = 15;
+	optional string      decision_note    = 16;
+	string               created_at       = 17;
+	string               updated_at       = 18;
+	// Conflicts are computed against the original's cards now (open proposals only).
+	FlashCardListChanges changes          = 19;
+	int32                conflict_count   = 20;
+	bool                 can_decide       = 21;
+	bool                 can_withdraw     = 22;
+}
+
+message CreateFlashCardProposalRequest {
+	// The requester's copy; the proposal targets its original.
+	google.protobuf.StringValue          source_list_id = 1;
+	google.protobuf.StringValue          title          = 2;
+	optional google.protobuf.StringValue message        = 3;
+	// Set by the gateway from the JWT; never from client input. Becomes the proposer.
+	google.protobuf.StringValue          requester_id   = 4;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged     = 5;
+}
+
+message ListFlashCardProposalsRequest {
+	optional google.protobuf.StringValue target_list_id = 1;
+	optional google.protobuf.StringValue source_list_id = 2;
+	// Only proposals the requester made.
+	optional google.protobuf.BoolValue   mine           = 3;
+	optional google.protobuf.StringValue status         = 4;
+	optional google.protobuf.Int32Value  page           = 5;
+	optional google.protobuf.Int32Value  limit          = 6;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue          requester_id   = 7;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged     = 8;
+}
+
+message ListFlashCardProposalsResponse {
+	repeated FlashCardProposalResponse proposals   = 1;
+	int32                              total_count = 2;
+}
+
+message GetFlashCardProposalRequest {
+	google.protobuf.StringValue        id           = 1;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue        requester_id = 2;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue privileged   = 3;
+}
+
+// The owner's choice for one conflicting card: apply the proposal's version, or keep theirs.
+message ProposalConflictResolution {
+	string target_card_id = 1;
+	bool   apply          = 2;
+}
+
+message AcceptFlashCardProposalRequest {
+	google.protobuf.StringValue          id            = 1;
+	repeated ProposalConflictResolution  resolutions   = 2;
+	optional google.protobuf.StringValue decision_note = 3;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue          requester_id  = 4;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged    = 5;
+}
+
+message RejectFlashCardProposalRequest {
+	google.protobuf.StringValue          id            = 1;
+	optional google.protobuf.StringValue decision_note = 2;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue          requester_id  = 3;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged    = 4;
+}
+
+message WithdrawFlashCardProposalRequest {
+	google.protobuf.StringValue        id           = 1;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue        requester_id = 2;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue privileged   = 3;
 }
 
 // Report messages
@@ -250,10 +566,16 @@ message CreateReportRequest {
 	optional google.protobuf.StringValue target_type    = 5;
 	optional google.protobuf.StringValue target_id      = 6;
 	repeated google.protobuf.StringValue file_ids       = 7;
+	// Reporter may attach files uploaded by someone else (admins only; decided by the gateway).
+	optional google.protobuf.BoolValue   may_attach_any_file = 8;
 }
 
 message GetReportRequest {
 	google.protobuf.StringValue id = 1;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue          requester_id   = 2;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged     = 3;
 }
 
 message UpdateReportRequest {
@@ -275,6 +597,10 @@ message ListReportsRequest {
 	optional google.protobuf.StringValue target_id   = 5;
 	optional google.protobuf.Int32Value  page        = 6;
 	optional google.protobuf.Int32Value  limit       = 7;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue          requester_id   = 8;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged     = 9;
 }
 
 message ListReportsResponse {
@@ -285,9 +611,254 @@ message ListReportsResponse {
 message AddFileToReportRequest {
 	google.protobuf.StringValue report_id = 1;
 	google.protobuf.StringValue file_id   = 2;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue          requester_id   = 3;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged     = 4;
+	// Requester may attach files uploaded by someone else (admins only; decided by the gateway).
+	optional google.protobuf.BoolValue   may_attach_any_file = 5;
 }
 
 message RemoveFileFromReportRequest {
 	google.protobuf.StringValue report_id = 1;
 	google.protobuf.StringValue file_id   = 2;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue          requester_id   = 3;
+	// Requester may bypass ownership/visibility (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged     = 4;
+}
+
+// Forum messages
+
+message ForumThreadSummaryResponse {
+	string          id                   = 1;
+	string          category_id          = 2;
+	string          author_id            = 3;
+	string          title                = 4;
+	// plain-text start of the body
+	string          excerpt              = 5;
+	bool            is_pinned            = 6;
+	bool            is_locked            = 7;
+	int32           reply_count          = 8;
+	int32           view_count           = 9;
+	string          last_activity_at     = 10;
+	optional string last_reply_author_id = 11;
+	string          created_at           = 12;
+	string          updated_at           = 13;
+}
+
+message ForumCategoryResponse {
+	string                              id              = 1;
+	string                              name            = 2;
+	string                              description     = 3;
+	int32                               position        = 4;
+	// only moderators may open threads here (e.g. announcements)
+	bool                                moderators_only = 5;
+	int32                               thread_count    = 6;
+	int32                               reply_count     = 7;
+	optional ForumThreadSummaryResponse latest_thread   = 8;
+}
+
+message ListForumCategoriesRequest {}
+
+message ListForumCategoriesResponse {
+	repeated ForumCategoryResponse categories = 1;
+}
+
+message GetForumCategoryRequest {
+	google.protobuf.StringValue id = 1;
+}
+
+message ForumThreadResponse {
+	string          id                   = 1;
+	string          category_id          = 2;
+	string          category_name        = 3;
+	string          author_id            = 4;
+	string          title                = 5;
+	string          body                 = 6;
+	bool            is_pinned            = 7;
+	bool            is_locked            = 8;
+	int32           reply_count          = 9;
+	int32           view_count           = 10;
+	string          last_activity_at     = 11;
+	optional string last_reply_author_id = 12;
+	optional string edited_at            = 13;
+	string          created_at           = 14;
+	string          updated_at           = 15;
+}
+
+message ListForumThreadsRequest {
+	google.protobuf.StringValue          category_id = 1;
+	// threads whose title contains this text (case-insensitive)
+	optional google.protobuf.StringValue search      = 2;
+	optional google.protobuf.Int32Value  page        = 3;
+	optional google.protobuf.Int32Value  limit       = 4;
+}
+
+message ListForumThreadsResponse {
+	repeated ForumThreadSummaryResponse threads     = 1;
+	int32                               total_count = 2;
+}
+
+message CreateForumThreadRequest {
+	google.protobuf.StringValue        category_id  = 1;
+	google.protobuf.StringValue        title        = 2;
+	google.protobuf.StringValue        body         = 3;
+	// Set by the gateway from the JWT; never from client input. Becomes the author.
+	google.protobuf.StringValue        requester_id = 4;
+	// Requester is a forum moderator (role decided by the gateway).
+	optional google.protobuf.BoolValue privileged   = 5;
+}
+
+message GetForumThreadRequest {
+	google.protobuf.StringValue id = 1;
+}
+
+message UpdateForumThreadRequest {
+	google.protobuf.StringValue          id           = 1;
+	optional google.protobuf.StringValue title        = 2;
+	optional google.protobuf.StringValue body         = 3;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue          requester_id = 4;
+	// Requester is a forum moderator (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged   = 5;
+}
+
+message ModerateForumThreadRequest {
+	google.protobuf.StringValue        id           = 1;
+	optional google.protobuf.BoolValue is_pinned    = 2;
+	optional google.protobuf.BoolValue is_locked    = 3;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue        requester_id = 4;
+	// Requester is a forum moderator (role decided by the gateway).
+	optional google.protobuf.BoolValue privileged   = 5;
+}
+
+message DeleteForumThreadRequest {
+	google.protobuf.StringValue        id           = 1;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue        requester_id = 2;
+	// Requester is a forum moderator (role decided by the gateway).
+	optional google.protobuf.BoolValue privileged   = 3;
+}
+
+message ForumQuoteResponse {
+	string id        = 1;
+	string author_id = 2;
+	// plain-text start of the quoted reply
+	string excerpt   = 3;
+}
+
+message ForumReplyResponse {
+	string                      id           = 1;
+	string                      thread_id    = 2;
+	string                      author_id    = 3;
+	string                      body         = 4;
+	// 1-based position in the thread (oldest first)
+	int32                       position     = 5;
+	optional ForumQuoteResponse quoted_reply = 6;
+	optional string             edited_at    = 7;
+	string                      created_at   = 8;
+	string                      updated_at   = 9;
+}
+
+message ListForumRepliesRequest {
+	google.protobuf.StringValue         thread_id = 1;
+	optional google.protobuf.Int32Value page      = 2;
+	optional google.protobuf.Int32Value limit     = 3;
+}
+
+message ListForumRepliesResponse {
+	repeated ForumReplyResponse replies     = 1;
+	int32                       total_count = 2;
+}
+
+message CreateForumReplyRequest {
+	google.protobuf.StringValue          thread_id       = 1;
+	google.protobuf.StringValue          body            = 2;
+	optional google.protobuf.StringValue quoted_reply_id = 3;
+	// Set by the gateway from the JWT; never from client input. Becomes the author.
+	google.protobuf.StringValue          requester_id    = 4;
+	// Requester is a forum moderator (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged      = 5;
+}
+
+message UpdateForumReplyRequest {
+	google.protobuf.StringValue        id           = 1;
+	google.protobuf.StringValue        body         = 2;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue        requester_id = 3;
+	// Requester is a forum moderator (role decided by the gateway).
+	optional google.protobuf.BoolValue privileged   = 4;
+}
+
+message DeleteForumReplyRequest {
+	google.protobuf.StringValue        id           = 1;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue        requester_id = 2;
+	// Requester is a forum moderator (role decided by the gateway).
+	optional google.protobuf.BoolValue privileged   = 3;
+}
+
+// Blog comment messages
+
+message BlogCommentResponse {
+	string                       id         = 1;
+	string                       blog_id    = 2;
+	optional string              parent_id  = 3;
+	// empty once deleted
+	string                       author_id  = 4;
+	// Markdown; empty once deleted
+	string                       content    = 5;
+	// 0 for top-level comments
+	int32                        depth      = 6;
+	// deleted but kept because it still has replies (shown as "[deleted]")
+	bool                         deleted    = 7;
+	optional string              edited_at  = 8;
+	string                       created_at = 9;
+	string                       updated_at = 10;
+	repeated BlogCommentResponse replies    = 11;
+}
+
+message ListBlogCommentsRequest {
+	google.protobuf.StringValue         blog_id = 1;
+	optional google.protobuf.Int32Value page    = 2;
+	optional google.protobuf.Int32Value limit   = 3;
+}
+
+message ListBlogCommentsResponse {
+	// top-level comments of the page, each with its reply tree
+	repeated BlogCommentResponse comments       = 1;
+	// top-level comments in total (for paging)
+	int32                        total_threads  = 2;
+	// visible (not deleted) comments at any depth
+	int32                        total_comments = 3;
+}
+
+message CreateBlogCommentRequest {
+	google.protobuf.StringValue          blog_id      = 1;
+	google.protobuf.StringValue          content      = 2;
+	// comment being replied to (same blog); top-level when unset
+	optional google.protobuf.StringValue parent_id    = 3;
+	// Set by the gateway from the JWT; never from client input. Becomes the author.
+	google.protobuf.StringValue          requester_id = 4;
+	// Requester is a moderator (role decided by the gateway).
+	optional google.protobuf.BoolValue   privileged   = 5;
+}
+
+message UpdateBlogCommentRequest {
+	google.protobuf.StringValue        id           = 1;
+	google.protobuf.StringValue        content      = 2;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue        requester_id = 3;
+	// Requester is a moderator (role decided by the gateway).
+	optional google.protobuf.BoolValue privileged   = 4;
+}
+
+message DeleteBlogCommentRequest {
+	google.protobuf.StringValue        id           = 1;
+	// Set by the gateway from the JWT; never from client input.
+	google.protobuf.StringValue        requester_id = 2;
+	// Requester is a moderator (role decided by the gateway).
+	optional google.protobuf.BoolValue privileged   = 3;
 }

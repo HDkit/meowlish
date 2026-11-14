@@ -2,15 +2,18 @@ import {
 	type IBadgeManagerRepository,
 	IBadgeManagerRepositoryToken,
 } from '../../../domain/repositories/badge-manager.repository';
-import {
-	RabbitPayload,
-	RabbitSubscribe,
-	defaultNackErrorHandler,
-} from '@golevelup/nestjs-rabbitmq';
+import { inTransactionRetryingConflicts } from './version-conflict';
+import { RabbitPayload, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
+import { TransactionHost } from '@nestjs-cls/transactional';
+import type { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { Inject, Injectable, UseFilters } from '@nestjs/common';
-import { AppLoggerService } from '@server/logger';
-import { GlobalRmqExceptionFilter } from '@server/utils';
+import type { PrismaClient } from '@prisma-client/achievement';
+import { InboxService, defineConsumerQueue, unwrapEvent } from '@server/messaging';
+import { GlobalRmqExceptionFilter, validatePayload } from '@server/utils';
 import { IsNumber, IsString } from 'class-validator';
+import { UseCls } from 'nestjs-cls';
+
+export const ATTEMPT_SCORED_QUEUE = defineConsumerQueue('achievement.events.attempt.scored');
 
 class AttemptScoredEvent {
 	@IsString()
@@ -28,30 +31,27 @@ export class AttemptScoredHandler {
 	constructor(
 		@Inject(IBadgeManagerRepositoryToken)
 		private readonly badgeManagerRepository: IBadgeManagerRepository,
-		private readonly logger: AppLoggerService,
+		private readonly inbox: InboxService,
+		private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>,
 	) {}
 
 	@UseFilters(GlobalRmqExceptionFilter)
+	@UseCls()
 	@RabbitSubscribe({
 		connection: 'sub',
 		exchange: 'eventbus',
 		routingKey: 'exam.attempt.scored',
-		queue: 'achievement.events.attempt.scored',
-		queueOptions: {
-			durable: true,
-			deadLetterExchange: 'achievement.dlx',
-			deadLetterRoutingKey: 'attempt.scored.failed',
-		},
-		errorHandler: defaultNackErrorHandler,
+		...ATTEMPT_SCORED_QUEUE.subscribe,
 	})
-	async handle(@RabbitPayload() payload: AttemptScoredEvent) {
-		try {
+	async handle(@RabbitPayload() message: unknown): Promise<void> {
+		const { id, payload } = unwrapEvent<unknown>(message);
+		await inTransactionRetryingConflicts(this.txHost, async () => {
+			if (!(await this.inbox.claim(id, ATTEMPT_SCORED_QUEUE.name))) return;
+			const event = await validatePayload(AttemptScoredEvent, payload);
 			const attemptScoreBadgeManager =
-				await this.badgeManagerRepository.getAttemptScoreBadgeManager(payload.attemptedBy);
-			attemptScoreBadgeManager.updateProgress(payload.score, payload.totalPoints);
+				await this.badgeManagerRepository.getAttemptScoreBadgeManager(event.attemptedBy);
+			attemptScoreBadgeManager.updateProgress(event.score, event.totalPoints);
 			await this.badgeManagerRepository.saveAttemptScoreBadgeManager(attemptScoreBadgeManager);
-		} catch (e) {
-			this.logger.error(e as string);
-		}
+		});
 	}
 }

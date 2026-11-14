@@ -1,9 +1,12 @@
 import { ResourceAccess } from '../auth/decorators/resource-access.decorator';
 import { HasRoles } from '../auth/decorators/roles.decorator';
+import { requesterOf } from '../auth/functions/requester';
 import { type AuthenticatedRequest } from '../types/authenticated-request';
 import { LIVE_CLIENT } from './constants/live';
 import { BanUserFromRoomDto } from './dtos/req/ban-user-from-room.req.dto';
 import { CreateRoomDto } from './dtos/req/create-room.req.dto';
+import { GetChatLogQueryDto } from './dtos/req/get-chat-log.query.dto';
+import { GetRoomListQueryDto } from './dtos/req/get-room-list.query.dto';
 import { UpdateRoomScheduleDto } from './dtos/req/update-room-schedule.req.dto';
 import { ChatLogDto } from './dtos/res/chat-log.dto';
 import { CreatedRoomDto } from './dtos/res/created-room.dto';
@@ -47,21 +50,25 @@ export class LiveGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'List chat rooms' })
 	@ApiResponseEntity(RoomListDto)
 	@SerializeOptions({ type: RoomListDto, strategy: 'exposeAll' })
-	getRoomList(@Query('cursor') cursor?: string, @Query('limit') limit?: number) {
-		return this.chatService.getRoomList({ cursor: cursor, limit: limit });
+	getRoomList(@Query() query: GetRoomListQueryDto) {
+		return this.chatService.getRoomList({
+			cursor: query.cursor,
+			limit: query.limit,
+			name: query.name,
+		});
 	}
 
 	@Get(':roomId/logs')
-	@ApiOperation({ summary: 'Get chat log for a room' })
+	@ApiOperation({ summary: 'Get chat log for a room, newest messages first' })
 	@ApiResponseEntity(ChatLogDto)
 	@SerializeOptions({ type: ChatLogDto, strategy: 'exposeAll' })
-	getChatLog(
-		@Param('roomId') roomId: string,
-		@Query('uid') uid?: string,
-		@Query('cursor') cursor?: string,
-		@Query('limit') limit?: number,
-	) {
-		return this.chatService.getChatLog({ roomId: roomId, uid: uid, cursor: cursor, limit: limit });
+	getChatLog(@Param('roomId') roomId: string, @Query() query: GetChatLogQueryDto) {
+		return this.chatService.getChatLog({
+			roomId: roomId,
+			uid: query.uid,
+			cursor: query.cursor,
+			limit: query.limit,
+		});
 	}
 
 	@Post()
@@ -102,22 +109,38 @@ export class LiveGatewayController implements OnModuleInit {
 		return this.chatService.updateRoomSchedule({
 			...body,
 			roomId: roomId,
-		} as live.UpdateRoomScheduleRequest);
+		});
 	}
 
 	@Post(':roomId/ban')
 	@HasRoles(Role.Mod, Role.Admin)
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Ban a user from a room' })
-	banUserFromRoom(@Param('roomId') roomId: string, @Body() body: BanUserFromRoomDto) {
-		return this.chatService.banUserFromRoom({ ...body, roomId: roomId });
+	banUserFromRoom(
+		@Req() req: AuthenticatedRequest,
+		@Param('roomId') roomId: string,
+		@Body() body: BanUserFromRoomDto,
+	) {
+		return this.chatService.banUserFromRoom({
+			...body,
+			roomId: roomId,
+			...requesterOf(req.user, [Role.Admin]),
+		});
 	}
 
 	@Delete(':roomId/ban/:uid')
 	@HasRoles(Role.Mod, Role.Admin)
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Unban a user from a room' })
-	unbanUserFromRoom(@Param('roomId') roomId: string, @Param('uid') uid: string) {
-		return this.chatService.unbanUserFromRoom({ uid: uid, roomId: roomId });
+	unbanUserFromRoom(
+		@Req() req: AuthenticatedRequest,
+		@Param('roomId') roomId: string,
+		@Param('uid') uid: string,
+	) {
+		return this.chatService.unbanUserFromRoom({
+			uid: uid,
+			roomId: roomId,
+			...requesterOf(req.user, [Role.Admin]),
+		});
 	}
 }

@@ -1,13 +1,22 @@
 import { exam } from '@server/generated';
-import { ArrayUnique, IsArray, IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
+import {
+	ArrayUnique,
+	IsArray,
+	IsBoolean,
+	IsInt,
+	IsOptional,
+	IsPositive,
+	IsString,
+} from 'class-validator';
 
 export class UpdateExamDto implements exam.UpdateExamDto {
 	@IsOptional()
 	@IsString()
 	description?: string;
 
-	@IsNumber()
+	@IsInt()
 	@IsOptional()
+	@IsPositive()
 	duration?: number;
 
 	@IsString()
@@ -32,4 +41,10 @@ export class UpdateExamDto implements exam.UpdateExamDto {
 	@IsString({ each: true })
 	@ArrayUnique()
 	removeTags!: string[];
+
+	@IsString()
+	requesterId!: string;
+
+	@IsBoolean()
+	privileged!: boolean;
 }

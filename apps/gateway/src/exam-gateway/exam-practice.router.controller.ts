@@ -1,10 +1,12 @@
 import { IsPublic } from '../auth/decorators/public.decorator';
+import { AnswerThrottle } from '../throttle';
 import { type AuthenticatedRequest } from '../types/authenticated-request';
 import { EXAM_CLIENT } from './constants/exam';
 import { AddNoteDto } from './dtos/req/practice/add-note.req.dto';
 import { AnswerDto } from './dtos/req/practice/answer.req.dto';
 import { AttemptDto } from './dtos/req/practice/attempt.req.dto';
 import { FindExamsDto } from './dtos/req/practice/find-exams.req.dto';
+import { GetUserActivityDto } from './dtos/req/practice/get-user-activity.req.dto';
 import { GetUserCalendarDto } from './dtos/req/practice/get-user-calendar.req.dto';
 import { GetUsersAttemptHistoryDto } from './dtos/req/practice/get-users-attempt-history.req.dto';
 import { RemoveAnswerDto } from './dtos/req/practice/remove-answer.req.dto';
@@ -17,7 +19,9 @@ import { ExamStatsDto } from './dtos/res/practice/exam-stats.res.dto';
 import { ExamsInfoDto } from './dtos/res/practice/exams.res.dto';
 import { FlagStateDto } from './dtos/res/practice/flag-state.res.dto';
 import { QuestionDetailDto } from './dtos/res/practice/question-detail.res.dto';
+import { UserActivityDto } from './dtos/res/practice/user-activity.res.dto';
 import { UserCalendarDto } from './dtos/res/practice/user-calendar.res.dto';
+import { UserSkillStatsDto } from './dtos/res/practice/user-skill-stats.res.dto';
 import { UserStatsDto } from './dtos/res/practice/user-stats.res.dto';
 import {
 	Body,
@@ -64,27 +68,36 @@ export class ExamPracticeGatewayController implements OnModuleInit {
 	@Post('attempt/:id/submit')
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Submit an attempt' })
-	endAttempt(@Param('id') id: string) {
-		const res = this.examPracticeService.endAttempt({ attemptId: id });
+	endAttempt(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
+		const res = this.examPracticeService.endAttempt({ attemptId: id, userId: req.user.sub });
 		return res;
 	}
 
 	@Post('attempt/:id/answers/:questionId')
+	@AnswerThrottle()
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Answer a question in an attempt' })
 	answer(
+		@Req() req: AuthenticatedRequest,
 		@Param('id') id: string,
 		@Param('questionId') questionId: string,
 		@Body() body: AnswerDto,
 	) {
-		const res = this.examPracticeService.answer({ ...body, attemptId: id, questionId: questionId });
+		const res = this.examPracticeService.answer({
+			...body,
+			attemptId: id,
+			questionId: questionId,
+			userId: req.user.sub,
+		});
 		return res;
 	}
 
 	@Delete('attempt/:id/answers/:questionId')
+	@AnswerThrottle()
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Remove an answer from a question in an attempt' })
 	removeAnswer(
+		@Req() req: AuthenticatedRequest,
 		@Param('id') id: string,
 		@Param('questionId') questionId: string,
 		@Body() body: RemoveAnswerDto,
@@ -93,26 +106,35 @@ export class ExamPracticeGatewayController implements OnModuleInit {
 			...body,
 			attemptId: id,
 			questionId: questionId,
+			userId: req.user.sub,
 		});
 		return res;
 	}
 
 	@Patch('attempt/:id/answers/:questionId/flag')
+	@AnswerThrottle()
 	@ApiOperation({ summary: 'Toggle question flag state' })
 	@ApiResponseEntity(FlagStateDto)
 	@SerializeOptions({ type: FlagStateDto })
-	toggleFlag(@Param('id') id: string, @Param('questionId') questionId: string) {
+	toggleFlag(
+		@Req() req: AuthenticatedRequest,
+		@Param('id') id: string,
+		@Param('questionId') questionId: string,
+	) {
 		const res = this.examPracticeService.toggleFlag({
 			attemptId: id,
 			questionId: questionId,
+			userId: req.user.sub,
 		});
 		return res;
 	}
 
 	@Patch('attempt/:id/answers/:questionId/note')
+	@AnswerThrottle()
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Add or update a note for a question' })
 	addNote(
+		@Req() req: AuthenticatedRequest,
 		@Param('id') id: string,
 		@Param('questionId') questionId: string,
 		@Body() body: AddNoteDto,
@@ -121,6 +143,7 @@ export class ExamPracticeGatewayController implements OnModuleInit {
 			...body,
 			attemptId: id,
 			questionId: questionId,
+			userId: req.user.sub,
 		});
 		return res;
 	}
@@ -169,8 +192,11 @@ export class ExamPracticeGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Get saved attempt data' })
 	@ApiResponseEntity(AttemptDataDto)
 	@SerializeOptions({ type: AttemptDataDto, strategy: 'exposeAll' })
-	getAttemptSavedData(@Param('id') attemptId: string) {
-		const res = this.examPracticeService.getAttemptSavedData({ attemptId: attemptId });
+	getAttemptSavedData(@Req() req: AuthenticatedRequest, @Param('id') attemptId: string) {
+		const res = this.examPracticeService.getAttemptSavedData({
+			attemptId: attemptId,
+			userId: req.user.sub,
+		});
 		return res;
 	}
 
@@ -178,8 +204,11 @@ export class ExamPracticeGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Get attempt review data' })
 	@ApiResponseEntity(AttemptReviewDto)
 	@SerializeOptions({ type: AttemptReviewDto, strategy: 'exposeAll' })
-	getAttemptReview(@Param('id') attemptId: string) {
-		const res = this.examPracticeService.getAttemptReview({ attemptId: attemptId });
+	getAttemptReview(@Req() req: AuthenticatedRequest, @Param('id') attemptId: string) {
+		const res = this.examPracticeService.getAttemptReview({
+			attemptId: attemptId,
+			userId: req.user.sub,
+		});
 		return res;
 	}
 
@@ -216,6 +245,31 @@ export class ExamPracticeGatewayController implements OnModuleInit {
 	@SerializeOptions({ type: UserStatsDto, strategy: 'exposeAll' })
 	getUserStats(@Req() request: AuthenticatedRequest) {
 		const res = this.examPracticeService.getUserStats({ uid: request.user.sub });
+		return res;
+	}
+
+	@Get('my/activity')
+	@ApiOperation({
+		summary: 'Get the authenticated user daily practice activity and streaks (UTC days)',
+	})
+	@ApiResponseEntity(UserActivityDto)
+	@SerializeOptions({ type: UserActivityDto, strategy: 'exposeAll' })
+	getUserActivity(@Req() request: AuthenticatedRequest, @Query() query: GetUserActivityDto) {
+		const res = this.examPracticeService.getUserActivity({
+			uid: request.user.sub,
+			days: query.days,
+		});
+		return res;
+	}
+
+	@Get('my/skills')
+	@ApiOperation({
+		summary: 'Get the authenticated user per-skill scores and per-tag accuracy',
+	})
+	@ApiResponseEntity(UserSkillStatsDto)
+	@SerializeOptions({ type: UserSkillStatsDto, strategy: 'exposeAll' })
+	getUserSkillStats(@Req() request: AuthenticatedRequest) {
+		const res = this.examPracticeService.getUserSkillStats({ uid: request.user.sub });
 		return res;
 	}
 }

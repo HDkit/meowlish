@@ -15,6 +15,8 @@ import {
 import { ISectionRepository } from '../../domain/repositories/section.repository';
 import { ExamStatus } from '../../enums/exam-status.enum';
 import { SectionType } from '../../enums/section-type.enum';
+import { guardExamVersion } from './prisma-errors';
+import { insertTagLink } from './tag-link';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { Injectable, NotFoundException } from '@nestjs/common';
@@ -57,7 +59,7 @@ class SectionPrismaMapper {
 			children: children,
 			contentType: contentType,
 			fileIds: from.sectionFiles.map(f => f.fileId),
-			tags: from.sectionTags.map(t => t.tag.name),
+			tags: from.sectionTags.map(t => t.tagId),
 		});
 	}
 
@@ -158,6 +160,15 @@ export class SectionPrismaRepositoryImpl implements ISectionRepository {
 		return foundSection ? SectionPrismaMapper.toSectionAggregate(foundSection) : null;
 	}
 
+	async isInSubtreeOf(id: string, ancestorId: string): Promise<boolean> {
+		if (id === ancestorId) return true;
+		const path = await this.txHost.tx.sectionClosure.findUnique({
+			where: { ancestorId_descendantId: { ancestorId: ancestorId, descendantId: id } },
+			select: { depth: true },
+		});
+		return path !== null;
+	}
+
 	async save(section: Section): Promise<void> {
 		const data = SectionPrismaMapper.toParentSectionOrm(section);
 		await this.txHost.withTransaction(async () => {
@@ -167,15 +178,19 @@ export class SectionPrismaRepositoryImpl implements ISectionRepository {
 			}
 
 			// update the main section with lock
-			await this.txHost.tx.section.update({
-				where: { id: data.id, exam: { id: section.examId.id, version: section.examId.version } },
-				data: data,
-			});
+			await guardExamVersion(() =>
+				this.txHost.tx.section.update({
+					where: { id: data.id, exam: { id: section.examId.id, version: section.examId.version } },
+					data: data,
+				}),
+			);
 
-			await this.txHost.tx.exam.update({
-				where: { id: section.examId.id, version: section.examId.version },
-				data: { version: { increment: 1 } },
-			});
+			await guardExamVersion(() =>
+				this.txHost.tx.exam.update({
+					where: { id: section.examId.id, version: section.examId.version },
+					data: { version: { increment: 1 } },
+				}),
+			);
 		});
 	}
 
@@ -239,20 +254,16 @@ export class SectionPrismaRepositoryImpl implements ISectionRepository {
 	}
 
 	private async onSectionTagAdded(event: SectionTagAdded): Promise<void> {
-		await this.txHost.tx.sectionTag.create({
-			data: {
-				section: { connect: { id: event.payload.sectionId } },
-				tag: { connect: { name: event.payload.tag } },
-			},
-		});
+		await insertTagLink(() =>
+			this.txHost.tx.sectionTag.create({
+				data: { sectionId: event.payload.sectionId, tagId: event.payload.tag },
+			}),
+		);
 	}
 
 	private async onSectionTagRemoved(event: SectionTagRemoved): Promise<void> {
-		await this.txHost.tx.sectionTag.deleteMany({
-			where: {
-				sectionId: event.payload.sectionId,
-				tag: { name: event.payload.tag },
-			},
+		await this.txHost.tx.sectionTag.delete({
+			where: { sectionId_tagId: { sectionId: event.payload.sectionId, tagId: event.payload.tag } },
 		});
 	}
 
@@ -280,7 +291,7 @@ type RepoSection = Omit<PrismaSection, 'order'>;
 
 const sectionPrismaIncludeObject = {
 	childSections: { select: { id: true, order: true }, orderBy: { order: 'asc' } },
-	sectionTags: { select: { tag: { select: { name: true } } } },
+	sectionTags: { select: { tagId: true } },
 	sectionFiles: { select: { fileId: true }, orderBy: [{ updatedAt: 'asc' }, { fileId: 'asc' }] },
 	questions: { select: { id: true, order: true }, orderBy: { order: 'asc' } },
 	exam: { select: { id: true, version: true, status: true } },

@@ -11,6 +11,6 @@ export const minioConfig = (configService: ConfigService<IEnvVars>): NestMinioOp
 		port: minioEnvs.port,
 		accessKey: minioEnvs.user,
 		secretKey: minioEnvs.password,
-		useSSL: env === 'production',
+		useSSL: minioEnvs.useSSL ?? env === 'production',
 	};
 };

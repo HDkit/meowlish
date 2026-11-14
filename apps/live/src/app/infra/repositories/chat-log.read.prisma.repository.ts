@@ -54,7 +54,8 @@ export class ChatLogReadPrismaRepositoryImpl implements IChatLogReadRepository {
 					},
 				}),
 			},
-			orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+			// newest first: the first page is the latest messages, direction 1 pages towards older ones
+			orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
 			...(options?.id && {
 				cursor: { id: options.id },
 				skip: 1,

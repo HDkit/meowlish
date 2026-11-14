@@ -21,6 +21,9 @@ model NotificationPreference {
   achievementEnabled  Boolean  @default(true) @map("achievement_enabled")
   reportEnabled       Boolean  @default(true) @map("report_enabled")
   systemEnabled       Boolean  @default(true) @map("system_enabled")
+  blogCommentEnabled  Boolean  @default(true) @map("blog_comment_enabled")
+  commentReplyEnabled Boolean  @default(true) @map("comment_reply_enabled")
+  forumReplyEnabled   Boolean  @default(true) @map("forum_reply_enabled")
   updatedAt           DateTime @updatedAt @map("updated_at")
 
   @@map("notification_preferences")

@@ -1,3 +1,4 @@
+import { USER_LOCKED_QUEUE } from '../app/events/handlers/user-locked.handler';
 import { IEnvVars } from './config';
 import { MessageHandlerErrorBehavior, RabbitMQConfig } from '@golevelup/nestjs-rabbitmq';
 import { ConfigService } from '@nestjs/config';
@@ -11,5 +12,6 @@ export const rmqSubConfig = (configService: ConfigService<IEnvVars>): RabbitMQCo
 		uri: `amqp://${rmqConfig.user}:${rmqConfig.password}@${rmqConfig.host}:${rmqConfig.port}`,
 		connectionInitOptions: { wait: true },
 		defaultSubscribeErrorBehavior: MessageHandlerErrorBehavior.REQUEUE,
+		queues: [...USER_LOCKED_QUEUE.queues],
 	};
 };
