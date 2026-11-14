@@ -1,6 +1,6 @@
 import { live } from '@server/generated';
 import { Type } from 'class-transformer';
-import { IsDate, IsInt, IsOptional, IsPositive, IsString } from 'class-validator';
+import { IsDate, IsInt, IsOptional, IsPositive, IsString, Max } from 'class-validator';
 
 class DateRangeDto implements live.GetChatLogRequest_DateRange {
 	@Type(() => Date)
@@ -26,6 +26,7 @@ export class GetChatLogDto implements live.GetChatLogRequest {
 	@IsInt()
 	@IsOptional()
 	@IsPositive()
+	@Max(100)
 	limit?: number;
 
 	@IsOptional()

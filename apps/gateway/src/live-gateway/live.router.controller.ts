@@ -5,6 +5,7 @@ import { type AuthenticatedRequest } from '../types/authenticated-request';
 import { LIVE_CLIENT } from './constants/live';
 import { BanUserFromRoomDto } from './dtos/req/ban-user-from-room.req.dto';
 import { CreateRoomDto } from './dtos/req/create-room.req.dto';
+import { GetChatLogQueryDto } from './dtos/req/get-chat-log.query.dto';
 import { GetRoomListQueryDto } from './dtos/req/get-room-list.query.dto';
 import { UpdateRoomScheduleDto } from './dtos/req/update-room-schedule.req.dto';
 import { ChatLogDto } from './dtos/res/chat-log.dto';
@@ -58,16 +59,16 @@ export class LiveGatewayController implements OnModuleInit {
 	}
 
 	@Get(':roomId/logs')
-	@ApiOperation({ summary: 'Get chat log for a room' })
+	@ApiOperation({ summary: 'Get chat log for a room, newest messages first' })
 	@ApiResponseEntity(ChatLogDto)
 	@SerializeOptions({ type: ChatLogDto, strategy: 'exposeAll' })
-	getChatLog(
-		@Param('roomId') roomId: string,
-		@Query('uid') uid?: string,
-		@Query('cursor') cursor?: string,
-		@Query('limit') limit?: number,
-	) {
-		return this.chatService.getChatLog({ roomId: roomId, uid: uid, cursor: cursor, limit: limit });
+	getChatLog(@Param('roomId') roomId: string, @Query() query: GetChatLogQueryDto) {
+		return this.chatService.getChatLog({
+			roomId: roomId,
+			uid: query.uid,
+			cursor: query.cursor,
+			limit: query.limit,
+		});
 	}
 
 	@Post()

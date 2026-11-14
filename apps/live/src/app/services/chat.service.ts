@@ -114,36 +114,35 @@ export class ChatService {
 		const inUseLimit = options?.limit ?? decodedCursor?.limit ?? 10;
 		const direction = decodedCursor?.direction ?? 1;
 
-		const chats = await this.chatLogReadRepository.getChatLogsOf(roomId, {
+		// Newest first: the first page is the latest messages, `nextCursor` goes to older ones and
+		// `prevCursor` back to newer ones. One extra row tells whether there is a page beyond this one.
+		const fetched = await this.chatLogReadRepository.getChatLogsOf(roomId, {
 			id: inUseId,
 			uid: inUseUid,
 			direction: direction,
-			limit: inUseLimit,
+			limit: inUseLimit + 1,
 			dateRange: inUseDateRange,
 		});
-		const encodedNextCursor = this.cursorPaginationHelpers[
-			'getChatLogsOf'
-		].encodeCursor<DecodedCursor>({
-			id: chats.at(-1)?.id,
-			direction: 1,
-			limit: inUseLimit,
-			dateRange: inUseDateRange,
-			uid: inUseUid,
-		});
-		const encodedPrevCursor = this.cursorPaginationHelpers[
-			'getChatLogsOf'
-		].encodeCursor<DecodedCursor>({
-			id: chats.at(0)?.id,
-			direction: -1,
-			limit: inUseLimit,
-			dateRange: inUseDateRange,
-			uid: inUseUid,
-		});
+		const more = fetched.length > inUseLimit;
+		// a backward page comes back in list order ending just before the cursor: the extra row is first
+		const chats = direction === -1 ? fetched.slice(-inUseLimit) : fetched.slice(0, inUseLimit);
+		const hasNext = direction === -1 ? true : more;
+		const hasPrev = direction === -1 ? more : !!inUseId;
+
+		const encode = (id: string | undefined, dir: number) =>
+			this.cursorPaginationHelpers['getChatLogsOf'].encodeCursor<DecodedCursor>({
+				id: id,
+				direction: dir,
+				limit: inUseLimit,
+				dateRange: inUseDateRange,
+				uid: inUseUid,
+			});
 
 		return {
 			chats: chats,
-			nextCursor: encodedNextCursor,
-			prevCursor: encodedPrevCursor,
+			// empty when there is no such page (an id-less cursor would restart from the first page)
+			nextCursor: hasNext && chats.length > 0 ? encode(chats.at(-1)?.id, 1) : '',
+			prevCursor: hasPrev && chats.length > 0 ? encode(chats.at(0)?.id, -1) : '',
 		};
 	}
 
