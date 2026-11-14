@@ -106,12 +106,14 @@ export class Exam extends AggregateRoot<Event<any>> implements IAggregate<Exam, 
 	}
 
 	public addTag(tag: string) {
+		this.assertModifiable();
 		if (this.tags.has(tag)) throw new ConflictException('Tag already exists');
 		this.tags.add(tag);
 		this.apply(new ExamTagAdded({ examId: this.id.id, tag: tag }));
 	}
 
 	public removeTag(tag: string) {
+		this.assertModifiable();
 		if (!this.tags.has(tag)) throw new NotFoundException('Tag not found');
 		this.tags.delete(tag);
 		this.apply(new ExamTagRemoved({ examId: this.id.id, tag: tag }));

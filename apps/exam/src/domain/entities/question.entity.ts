@@ -115,12 +115,14 @@ export class Question extends AggregateRoot<Event<any>> implements IAggregate<Qu
 		this.apply(new QuestionUpdatedEvent({ parentId: this.sectionId, data: structuredClone(this) }));
 	}
 	public addTag(tag: string) {
+		this.assertModifiable();
 		if (this.tags.has(tag)) throw new ConflictException('Tag already exists');
 		this.tags.add(tag);
 		this.apply(new QuestionTagAdded({ questionId: this.id, tag: tag }));
 	}
 
 	public removeTag(tag: string) {
+		this.assertModifiable();
 		if (!this.tags.has(tag)) throw new NotFoundException('Tag not found');
 		this.tags.delete(tag);
 		this.apply(new QuestionTagRemoved({ questionId: this.id, tag: tag }));

@@ -6,7 +6,7 @@ Conventions used below:
 
 - **Status mapping.** Exceptions thrown in exam pass through `GlobalRpcExceptionFilter` (`libs/utils/src/filters/global.rpc.filter.ts`) and come back to HTTP through `rpc-to-http.http.filter.ts`. Two mappings matter here. `MethodNotAllowedException` (405) becomes gRPC `CANCELLED`, which the gateway returns as **499**, so exam no longer throws it. Any error that is not a Nest `HttpException` becomes `UNKNOWN`, which the gateway returns as **502**. Expected Prisma errors are therefore translated at the source: `translatePrismaErrors` / `guardExamVersion` (`apps/exam/src/infra/repositories/prisma-errors.ts`) turn P2002/P2025 into 409/404 where they mean a duplicate, a missing row or a stale version.
 - **Exam version lock.** `exams.version` is the optimistic lock for the whole exam tree. Exam, section and question saves update `where { id, version }` and increment it (`apps/exam/src/infra/repositories/{exam,section,question}.prisma.repository.impl.ts`). A stale save fails with Prisma `P2025`, which `guardExamVersion` turns into **409** `ExamVersionConflictException` (reload and retry). Exam-tree saves are not retried.
-- **Approved is frozen.** `assertModifiable()` in `domain/entities/{exam,section,question}.entity.ts` throws **409** `Exam is already approved and can no longer be updated.` for any content change, and for `updateStatus`, once `status = APPROVED`.
+- **Approved is frozen; it can only be deleted.** Once `status = APPROVED`, `assertModifiable()` in `domain/entities/{exam,section,question}.entity.ts` throws **409** `Exam is already approved and can no longer be updated.` for every management mutation except `DELETE /exams/management/:id`, for every caller including admins: status changes (`updateStatus`, so no reject and no back to pending), exam details and tags, creating, updating, deleting and moving sections and questions, section and question tags and files, and choices. Moves only stay inside one exam (the destination is looked up in the same exam), so nothing can be moved into or out of an approved exam either. Covered by `test/app/commands/handlers/management/approved-exam.handlers.spec.ts` and `test/domain/entities/approved-exam-lock.spec.ts`.
 - **Attempt version lock.** `attempts.version` is checked by `updateAtVersion` in `attempt.prisma.repository.impl.ts`, which throws `AttemptVersionConflictException` (409). Practice writes are wrapped in `retryAttemptConflicts` (`apps/exam/src/app/services/attempt-conflict-retry.ts`): up to 6 tries with a 10-60 ms jitter, and each try runs in a fresh `@Transactional()`.
 - **Throttling.** The default throttler allows 100/min per IP and signed-in account (`apps/gateway/src/throttle.ts`). `@AnswerThrottle()` raises this to 300/min per IP and account.
 - **Validation.** The gateway `ValidationPipe` uses `whitelist: true`, so fields a DTO does not declare are dropped. Spreading `...body` after `uid`/`userId` therefore cannot override the id taken from the JWT.
@@ -90,18 +90,18 @@ Updates title, duration, description and exam tags.
 - **Async**:
   - `exam.exam.deleted` → `authorization.events.exam.deleted` → `exam-ownership.handler.ts` removes the ownership row (inbox: yes).
   - The `deleted_files` rows go out within about 60 s as `exam.files.removed` (see [Background work](#publish-deleted-files-bullmq)).
-- **Errors**: there is no approved-status check, so approved exams, and every user's attempt history on them, can be deleted.
+- **Errors**: 404, 403. There is deliberately no status check: **approved exams can be deleted** (it is the only mutation an approved exam allows), and the delete cascades to every user's attempts, responses and AI feedback on it (decision C27).
 
 ### PATCH /api/v1/exams/management/:id/review
 
-Sets `status` (approve, reject, or back to pending).
+Sets `status` (approve, reject, or back to pending) of an exam that is not approved yet.
 
 - **Access**: mod or admin **and** `@HasPermissions(Permission.EXAM_APPROVE)`, which only admins hold in the seed. No requester fields are sent and there is no creator check.
 - **Flow**:
   1. The gateway `ReviewExamDto.status` is a free string.
   2. The service `ReviewExamDto` (`apps/exam/src/presentation/dtos/req/management/review-exam.req.dto.ts`) checks `@IsEnum(ExamStatus)`, so a bad value gives 400.
   3. `ReviewExamHandler` calls `exam.updateStatus` (409 if already approved) and saves with a versioned update.
-- **Errors**: once `APPROVED`, an exam can never be rejected or edited again through the API (`assertModifiable` in `updateStatus`).
+- **Errors**: **409** for any status on an exam that is already `APPROVED`, even for admins: approval is final, and the exam can then only be deleted (decision C28).
 
 ### POST /api/v1/exams/management/:id/sections
 

@@ -99,12 +99,14 @@ export class Section extends AggregateRoot<Event<any>> implements IAggregate<Sec
 	}
 
 	public addTag(tag: string) {
+		this.assertModifiable();
 		if (this.tags.has(tag)) throw new ConflictException('Tag already exists');
 		this.tags.add(tag);
 		this.apply(new SectionTagAdded({ sectionId: this.id, tag: tag }));
 	}
 
 	public removeTag(tag: string) {
+		this.assertModifiable();
 		if (!this.tags.has(tag)) throw new NotFoundException('Tag not found');
 		this.tags.delete(tag);
 		this.apply(new SectionTagRemoved({ sectionId: this.id, tag: tag }));
