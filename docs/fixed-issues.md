@@ -18,6 +18,12 @@ What was fixed from [`backlog.md`](backlog.md), and how. Newest first. Each entr
 
 ## Follow-ups (November 2026)
 
+### Frontend: switches in the off state were white on white
+
+- **Problem:** the switch's off track used `bg-switch-background`, declared only as a Tailwind 4 `--color-*` token in `globals.css`; the frontend runs Tailwind 3, so the class was never generated and the track was transparent (white thumb on a white card), on the settings page and in the flash card screens.
+- **Fix:** `switch-background` is a color in `tailwind.config.ts` (frontend commit "switches in the off state had no track color").
+- **Tests:** checked in the browser: the off track is `rgb(194, 214, 202)`.
+
 ### Badge names were English in notifications, Vietnamese on the badge page
 
 - **Problem:** `BADGE_INFORMATION` (`apps/achievement/src/constants/badge-info.const.ts`) had English names ("Flawless Start"), which `achievement.badge.earned` carries and the notification quotes inside a Vietnamese sentence, while the frontend's badge page shows its own Vietnamese catalogue ("Hoàn hảo").
