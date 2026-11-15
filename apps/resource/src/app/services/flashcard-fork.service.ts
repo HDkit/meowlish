@@ -13,6 +13,7 @@ import {
 import { ResourceEventsPublisher } from '../events/resource-events.publisher';
 import {
 	cardContentData,
+	contentsOf,
 	toCardContent,
 	toForkCard,
 	toListChangesReadModel,
@@ -21,6 +22,8 @@ import {
 } from '../mappers/flash-card-fork.mapper';
 import { toFlashCardListReadModel, visibleListsWhere } from '../mappers/flash-card.mapper';
 import { type Requester } from '../types/requester';
+import { CardImageRefsService } from './card-image-refs.service';
+import { CardImageUrlService } from './card-image-url.service';
 import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
@@ -40,9 +43,15 @@ export class FlashcardForkService {
 	constructor(
 		private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>,
 		private readonly events: ResourceEventsPublisher,
+		private readonly imageRefs: CardImageRefsService,
+		private readonly imageUrls: CardImageUrlService,
 	) {}
 
-	/** Copy cards into `listId` for `authorId`, linked to their originals; returns the new ids. */
+	/**
+	 * Copy cards into `listId` for `authorId`, linked to their originals; returns the new ids.
+	 * A copy shares its original's image file and holds a reference of its own, so deleting the
+	 * original card doesn't free an image the copy still shows.
+	 */
 	private async copyCards(cards: FlashCard[], listId: string, authorId: string): Promise<string[]> {
 		if (cards.length === 0) return [];
 		const now = Date.now();
@@ -62,6 +71,7 @@ export class FlashcardForkService {
 			};
 		});
 		await this.txHost.tx.flashCard.createMany({ data: copies });
+		await this.imageRefs.added(copies.map(c => c.imageFileId));
 		for (const copy of copies) {
 			await this.events.resourceCreated('flashcard', copy.id, authorId);
 		}
@@ -146,12 +156,14 @@ export class FlashcardForkService {
 			},
 			select: { id: true },
 		});
+		const changes = toListChangesReadModel(notEvaluated(this.diffOf(pair)));
+		await this.imageUrls.resolve(contentsOf(changes));
 		return {
 			sourceListId: pair.fork.id,
 			targetListId: pair.original.id,
 			targetListName: pair.original.name,
 			targetOwnerId: pair.original.authorId,
-			changes: toListChangesReadModel(notEvaluated(this.diffOf(pair))),
+			changes: changes,
 			openProposalId: open?.id,
 		};
 	}
@@ -169,6 +181,9 @@ export class FlashcardForkService {
 			where: { id: forkId },
 			data: { forkSyncedAt: syncedAt },
 		});
+		// Lock the copy's cards too: an edit of one of them meanwhile (which locks the card) must not
+		// change its image between the read below and the write, or the image refs would drift.
+		await this.txHost.tx.$queryRaw`SELECT id FROM flash_cards WHERE list_id = ${forkId} FOR UPDATE`;
 		const pair = await this.findForkWithOriginal(forkId, requester);
 		const plan = planUpstreamSync(
 			pair.fork.cards.map(toForkCard),
@@ -176,6 +191,7 @@ export class FlashcardForkService {
 			before.forkSyncedAt,
 		);
 
+		const forkCards = new Map(pair.fork.cards.map(c => [c.id, c]));
 		for (const update of plan.update) {
 			await this.txHost.tx.flashCard.update({
 				where: { id: update.forkCardId },
@@ -184,20 +200,21 @@ export class FlashcardForkService {
 					originSnapshot: toSnapshotJson(update.content),
 				},
 			});
+			// taking the original's image moves this card's reference to it
+			await this.imageRefs.replaced(
+				forkCards.get(update.forkCardId)?.imageFileId,
+				update.content.imageFileId,
+			);
 		}
 		const newCards = pair.original.cards.filter(c => plan.add.some(a => a.id === c.id));
 		await this.copyCards(newCards, forkId, pair.fork.authorId);
-		if (plan.remove.length > 0) {
-			await this.txHost.tx.flashCard.deleteMany({
-				where: { id: { in: plan.remove }, listId: forkId },
-			});
-			await this.events.resourcesDeleted('flashcard', plan.remove);
-		}
+		const removed = await this.imageRefs.deleteCards({ ids: plan.remove, listId: forkId });
+		if (removed.length > 0) await this.events.resourcesDeleted('flashcard', removed);
 
 		return {
 			updated: plan.update.filter(u => u.contentChanged).length,
 			added: newCards.length,
-			removed: plan.remove.length,
+			removed: removed.length,
 			skipped: plan.skipped,
 		};
 	}

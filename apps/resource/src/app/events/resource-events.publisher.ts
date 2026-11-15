@@ -137,14 +137,18 @@ export class ResourceEventsPublisher {
 	}
 
 	/**
-	 * A file is now referenced (attached to a report): file-service raises its `ref_count`, so the
-	 * orphan cleanup keeps it. Same shape as `exam.file.added` / `auth.file.added`.
+	 * A file is now referenced (attached to a report, or the image of a flash card): file-service
+	 * raises its `ref_count`, so the orphan cleanup keeps it. Same shape as `exam.file.added` /
+	 * `auth.file.added`. Card images go through `CardImageRefsService`.
 	 */
 	async fileAdded(fileId: string): Promise<void> {
 		await this.outbox.add('resource.file.added', { fileId: fileId });
 	}
 
-	/** References dropped (detached, or the report deleted): file-service lowers `ref_count` by `count`. */
+	/**
+	 * References dropped (detached, the report deleted, a card's image replaced or the card
+	 * deleted): file-service lowers `ref_count` by `count`.
+	 */
 	async filesRemoved(files: { id: string; count: number }[]): Promise<void> {
 		if (files.length === 0) return;
 		await this.outbox.add('resource.files.removed', { files: files });

@@ -233,6 +233,8 @@ export class ResourceGatewayController implements OnModuleInit {
 			tags: body.tags ?? [],
 			listId: body.listId,
 			authorId: req.user.sub,
+			// Only admins may attach a file someone else uploaded.
+			mayAttachAnyFile: hasAnyRole(req.user, [Role.Admin]),
 		});
 	}
 
@@ -268,6 +270,8 @@ export class ResourceGatewayController implements OnModuleInit {
 			replaceTags: body.tags !== undefined,
 			id: id,
 			...requesterOf(req.user, FLASH_CARD_ADMIN_ROLES),
+			// Only admins may attach a file someone else uploaded.
+			mayAttachAnyFile: hasAnyRole(req.user, [Role.Admin]),
 		});
 	}
 

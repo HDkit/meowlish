@@ -1,5 +1,13 @@
 import { type ResourceEventsPublisher } from '../../../app/events/resource-events.publisher';
 import { FlashcardListService } from '../../../app/services/flashcard-list.service';
+import {
+	type StoredCard,
+	fakeImageUrls,
+	imageEvents,
+	imageRefsOf,
+	queryRawOver,
+	refBalance,
+} from '../../helpers/card-images';
 import { NoOpTransactionalAdapter, TransactionHost } from '@nestjs-cls/transactional';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 
@@ -24,9 +32,9 @@ new TransactionHost<NoOpTransactionalAdapter>({
 	extraProviderTokens: [],
 });
 
-const setup = () => {
+const setup = (cards: StoredCard[] = []) => {
 	const tx = {
-		$queryRaw: jest.fn().mockResolvedValue([]),
+		$queryRaw: queryRawOver(cards),
 		$executeRaw: jest.fn().mockResolvedValue(0),
 		flashCardList: {
 			findUnique: jest.fn(),
@@ -45,10 +53,12 @@ const setup = () => {
 			delete: jest.fn(),
 		},
 	};
-	const events = { resourcesDeleted: jest.fn() };
+	const events = { resourcesDeleted: jest.fn(), ...imageEvents() };
 	const service = new FlashcardListService(
 		{ tx: tx } as never,
 		events as unknown as ResourceEventsPublisher,
+		imageRefsOf(tx, events),
+		fakeImageUrls(),
 	);
 	return { tx: tx, events: events, service: service };
 };
@@ -133,12 +143,79 @@ describe('FlashcardListService access rules', () => {
 		expect(tx.flashCard.update).not.toHaveBeenCalled();
 	});
 
-	it('publishes ownership removal for cards cascaded with a deleted list', async () => {
-		const { tx, events, service } = setup();
+	it('publishes ownership removal for the cards deleted with a list', async () => {
+		const { tx, events, service } = setup([
+			{ id: 'c1', listId: 'l1', imageFileId: null },
+			{ id: 'c2', listId: 'l1', imageFileId: null },
+			{ id: 'x', listId: 'other', imageFileId: null },
+		]);
 		tx.flashCardList.findUnique.mockResolvedValue(list());
-		tx.flashCard.findMany.mockResolvedValue([{ id: 'c1' }, { id: 'c2' }]);
 		await service.deleteFlashCardList('l1', { id: 'owner', privileged: false });
 		expect(events.resourcesDeleted).toHaveBeenCalledWith('flashcard', ['c1', 'c2']);
+	});
+
+	it("releases the images of a deleted list's cards, a shared image once per card", async () => {
+		const { tx, events, service } = setup([
+			{ id: 'c1', listId: 'l1', imageFileId: 'img' },
+			{ id: 'c2', listId: 'l1', imageFileId: 'img' },
+			{ id: 'c3', listId: 'l1', imageFileId: 'other' },
+			{ id: 'c4', listId: 'l1', imageFileId: null },
+			{ id: 'x', listId: 'elsewhere', imageFileId: 'img' },
+		]);
+		tx.flashCardList.findUnique.mockResolvedValue(list());
+		await service.deleteFlashCardList('l1', { id: 'owner', privileged: false });
+		expect(events.filesRemoved).toHaveBeenCalledWith([
+			{ id: 'img', count: 2 },
+			{ id: 'other', count: 1 },
+		]);
+		expect(refBalance(events)).toEqual({ img: -2, other: -1 });
+	});
+
+	it('locks the list before deleting its cards, and deletes them before the list', async () => {
+		const { tx, service } = setup([{ id: 'c1', listId: 'l1', imageFileId: 'img' }]);
+		tx.flashCardList.findUnique.mockResolvedValue(list());
+		await service.deleteFlashCardList('l1', { id: 'owner', privileged: false });
+		const [lock, del] = tx.$queryRaw.mock.calls as unknown as [TemplateStringsArray, string][];
+		expect(lock[0].join('?')).toMatch(/FROM flash_card_lists WHERE id = \? FOR UPDATE/);
+		expect(del[0].join('?')).toMatch(/DELETE FROM flash_cards WHERE list_id = \?/);
+		expect(tx.$queryRaw.mock.invocationCallOrder[1]).toBeLessThan(
+			tx.flashCardList.delete.mock.invocationCallOrder[0],
+		);
+	});
+
+	it('returns image URLs for a list detail and a page of cards, legacy URLs kept', async () => {
+		const { tx, service } = setup();
+		const row = (id: string, image: string | null, imageFileId: string | null) => ({
+			id: id,
+			word: 'w',
+			definition: 'd',
+			image: image,
+			imageFileId: imageFileId,
+			partOfSpeech: null,
+			pronunciation: null,
+			examples: [],
+			notes: null,
+			authorId: 'owner',
+			tags: [],
+			listId: 'l1',
+			position: null,
+			createdAt: new Date('2026-01-01'),
+			updatedAt: new Date('2026-01-01'),
+		});
+		const rows = [row('a', null, 'f1'), row('b', 'https://example.com/b.png', null)];
+		tx.flashCardList.findFirst.mockResolvedValue({ ...list(), cards: rows, _count: { forks: 0 } });
+		const detail = await service.getFlashCardList('l1', { id: 'reader', privileged: false });
+		expect(detail.flashCards.map(c => [c.image, c.imageFileId])).toEqual([
+			['https://cdn.test/public/f1', 'f1'],
+			['https://example.com/b.png', undefined],
+		]);
+
+		tx.flashCard.findMany.mockResolvedValue(rows);
+		const page = await service.listCardsInList(
+			{ listId: 'l1' },
+			{ id: 'owner', privileged: false },
+		);
+		expect(page.flashCards[0].image).toBe('https://cdn.test/public/f1');
 	});
 });
 
@@ -245,7 +322,7 @@ describe('FlashcardListService card order (C29)', () => {
 	it('locks the list before reading its cards', async () => {
 		const { tx, service } = withList([]);
 		await service.addCardToList('l1', 'moving', owner, 0);
-		const [sql, id] = (tx.$queryRaw.mock.calls as [TemplateStringsArray, string][])[0];
+		const [sql, id] = tx.$queryRaw.mock.calls[0] as unknown as [TemplateStringsArray, string];
 		expect(sql.join('?')).toMatch(/FROM flash_card_lists WHERE id = \? FOR UPDATE/);
 		expect(id).toBe('l1');
 		expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(

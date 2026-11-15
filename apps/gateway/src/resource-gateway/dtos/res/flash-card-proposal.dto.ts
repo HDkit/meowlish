@@ -43,8 +43,14 @@ export class FlashCardContentDto {
 	tags!: string[];
 
 	@Expose()
-	@ApiPropertyOptional()
+	@ApiPropertyOptional({
+		description: "URL to show: the image file's URL, else an image URL from before image uploads",
+	})
 	image?: string;
+
+	@Expose()
+	@ApiPropertyOptional({ description: 'The image file (file-service id), if any' })
+	imageFileId?: string;
 }
 
 export class AddedCardChangeDto {

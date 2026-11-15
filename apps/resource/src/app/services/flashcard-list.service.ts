@@ -20,6 +20,8 @@ import {
 } from '../types/flash-card-list.input';
 import { toSkipTake } from '../types/pagination';
 import { type Requester } from '../types/requester';
+import { CardImageRefsService } from './card-image-refs.service';
+import { CardImageUrlService } from './card-image-url.service';
 import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
@@ -31,6 +33,8 @@ export class FlashcardListService {
 	constructor(
 		private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>,
 		private readonly events: ResourceEventsPublisher,
+		private readonly imageRefs: CardImageRefsService,
+		private readonly imageUrls: CardImageUrlService,
 	) {}
 
 	/** Loads a list the requester may modify (owner, or privileged). */
@@ -81,9 +85,11 @@ export class FlashcardListService {
 			:	null,
 		]);
 
+		const cards = entity.cards.map(toFlashCardReadModel);
+		await this.imageUrls.resolve(cards);
 		return {
 			...toFlashCardListReadModel(entity),
-			flashCards: entity.cards.map(toFlashCardReadModel),
+			flashCards: cards,
 			totalCards: entity.cards.length,
 			openProposalCount: openProposalCount,
 			upstreamAvailable: upstream !== null,
@@ -111,18 +117,16 @@ export class FlashcardListService {
 
 	@Transactional()
 	async deleteFlashCardList(id: string, requester: Requester): Promise<void> {
+		// Lock the list first: a card being added to it meanwhile either commits before (and is
+		// deleted below) or fails its foreign key after, so no card escapes the image release.
+		await this.txHost.tx.$queryRaw`SELECT id FROM flash_card_lists WHERE id = ${id} FOR UPDATE`;
 		await this.findOwnedList(id, requester);
 
-		const cards = await this.txHost.tx.flashCard.findMany({
-			where: { listId: id },
-			select: { id: true },
-		});
-		// Cards are removed by the FK cascade; their ownership records must go too.
+		// Delete the cards ourselves (not by the FK cascade) to release their images; their
+		// ownership records must go too.
+		const cardIds = await this.imageRefs.deleteCards({ listId: id });
 		await this.txHost.tx.flashCardList.delete({ where: { id: id } });
-		await this.events.resourcesDeleted(
-			'flashcard',
-			cards.map(c => c.id),
-		);
+		await this.events.resourcesDeleted('flashcard', cardIds);
 	}
 
 	async listFlashCardLists(
@@ -218,6 +222,8 @@ export class FlashcardListService {
 			this.txHost.tx.flashCard.count({ where: where }),
 		]);
 
-		return { flashCards: cards.map(toFlashCardReadModel), totalCount: totalCount };
+		const flashCards = cards.map(toFlashCardReadModel);
+		await this.imageUrls.resolve(flashCards);
+		return { flashCards: flashCards, totalCount: totalCount };
 	}
 }

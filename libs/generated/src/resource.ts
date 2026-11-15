@@ -77,6 +77,10 @@ export interface FlashCardResponse {
   id: string;
   word: string;
   definition: string;
+  /**
+   * URL to show: the image file's URL (from file-service) when the card has one, else the
+   * legacy free URL of cards from before image files.
+   */
   image?: string | undefined;
   partOfSpeech?: string | undefined;
   pronunciation?: string | undefined;
@@ -90,20 +94,34 @@ export interface FlashCardResponse {
    * 0-based place in its list, set by AddCardToList. Absent for cards never placed: they come
    * first in a list (newest first), then placed cards by position.
    */
-  position?: number | undefined;
+  position?:
+    | number
+    | undefined;
+  /** The card's image file (file-service id); absent for no image or a legacy URL-only image. */
+  imageFileId?: string | undefined;
 }
 
 export interface CreateFlashCardRequest {
   word: string | undefined;
   definition: string | undefined;
-  image?: string | undefined;
   partOfSpeech?: string | undefined;
   pronunciation?: string | undefined;
   examples: string[];
   notes?: string | undefined;
   authorId: string | undefined;
   tags: string[];
-  listId: string | undefined;
+  listId:
+    | string
+    | undefined;
+  /**
+   * An uploaded file (POST /files) shown as the card's image. Must be uploaded by author_id
+   * unless may_attach_any_file.
+   */
+  imageFileId?:
+    | string
+    | undefined;
+  /** Requester may attach files uploaded by someone else (admins only; decided by the gateway). */
+  mayAttachAnyFile?: boolean | undefined;
 }
 
 export interface GetFlashCardRequest {
@@ -122,7 +140,6 @@ export interface UpdateFlashCardRequest {
   id: string | undefined;
   word?: string | undefined;
   definition?: string | undefined;
-  image?: string | undefined;
   partOfSpeech?: string | undefined;
   pronunciation?: string | undefined;
   examples: string[];
@@ -142,7 +159,19 @@ export interface UpdateFlashCardRequest {
     | string
     | undefined;
   /** Requester may bypass ownership/visibility (role decided by the gateway). */
-  privileged?: boolean | undefined;
+  privileged?:
+    | boolean
+    | undefined;
+  /**
+   * Absent: keep the image. Empty: remove it (a legacy URL too). Otherwise an uploaded file
+   * (POST /files) that replaces it; it must be the requester's upload, unless it is the card's
+   * current image or may_attach_any_file.
+   */
+  imageFileId?:
+    | string
+    | undefined;
+  /** Requester may attach files uploaded by someone else (admins only; decided by the gateway). */
+  mayAttachAnyFile?: boolean | undefined;
 }
 
 export interface DeleteFlashCardRequest {
@@ -351,7 +380,9 @@ export interface FlashCardContent {
   examples: string[];
   notes?: string | undefined;
   tags: string[];
+  /** URL to show (the image file's URL, or a legacy free URL); see FlashCardResponse.image. */
   image?: string | undefined;
+  imageFileId?: string | undefined;
 }
 
 export interface AddedCardChange {
@@ -1649,6 +1680,9 @@ export const FlashCardResponse: MessageFns<FlashCardResponse> = {
     if (message.position !== undefined) {
       writer.uint32(104).int32(message.position);
     }
+    if (message.imageFileId !== undefined) {
+      writer.uint32(114).string(message.imageFileId);
+    }
     return writer;
   },
 
@@ -1769,6 +1803,14 @@ export const FlashCardResponse: MessageFns<FlashCardResponse> = {
             message.position = reader.int32();
             continue;
           }
+          case 14: {
+            if (tag !== 114) {
+              break;
+            }
+
+            message.imageFileId = reader.string();
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -1794,9 +1836,6 @@ export const CreateFlashCardRequest: MessageFns<CreateFlashCardRequest> = {
     if (message.definition !== undefined) {
       StringValue.encode({ value: message.definition! }, writer.uint32(18).fork()).join();
     }
-    if (message.image !== undefined) {
-      StringValue.encode({ value: message.image! }, writer.uint32(26).fork()).join();
-    }
     if (message.partOfSpeech !== undefined) {
       StringValue.encode({ value: message.partOfSpeech! }, writer.uint32(34).fork()).join();
     }
@@ -1817,6 +1856,12 @@ export const CreateFlashCardRequest: MessageFns<CreateFlashCardRequest> = {
     }
     if (message.listId !== undefined) {
       StringValue.encode({ value: message.listId! }, writer.uint32(82).fork()).join();
+    }
+    if (message.imageFileId !== undefined) {
+      StringValue.encode({ value: message.imageFileId! }, writer.uint32(90).fork()).join();
+    }
+    if (message.mayAttachAnyFile !== undefined) {
+      BoolValue.encode({ value: message.mayAttachAnyFile! }, writer.uint32(98).fork()).join();
     }
     return writer;
   },
@@ -1848,14 +1893,6 @@ export const CreateFlashCardRequest: MessageFns<CreateFlashCardRequest> = {
             }
 
             message.definition = StringValue.decode(reader, reader.uint32()).value;
-            continue;
-          }
-          case 3: {
-            if (tag !== 26) {
-              break;
-            }
-
-            message.image = StringValue.decode(reader, reader.uint32()).value;
             continue;
           }
           case 4: {
@@ -1912,6 +1949,22 @@ export const CreateFlashCardRequest: MessageFns<CreateFlashCardRequest> = {
             }
 
             message.listId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 11: {
+            if (tag !== 90) {
+              break;
+            }
+
+            message.imageFileId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 12: {
+            if (tag !== 98) {
+              break;
+            }
+
+            message.mayAttachAnyFile = BoolValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }
@@ -2010,9 +2063,6 @@ export const UpdateFlashCardRequest: MessageFns<UpdateFlashCardRequest> = {
     if (message.definition !== undefined) {
       StringValue.encode({ value: message.definition! }, writer.uint32(26).fork()).join();
     }
-    if (message.image !== undefined) {
-      StringValue.encode({ value: message.image! }, writer.uint32(34).fork()).join();
-    }
     if (message.partOfSpeech !== undefined) {
       StringValue.encode({ value: message.partOfSpeech! }, writer.uint32(42).fork()).join();
     }
@@ -2039,6 +2089,12 @@ export const UpdateFlashCardRequest: MessageFns<UpdateFlashCardRequest> = {
     }
     if (message.privileged !== undefined) {
       BoolValue.encode({ value: message.privileged! }, writer.uint32(106).fork()).join();
+    }
+    if (message.imageFileId !== undefined) {
+      StringValue.encode({ value: message.imageFileId! }, writer.uint32(114).fork()).join();
+    }
+    if (message.mayAttachAnyFile !== undefined) {
+      BoolValue.encode({ value: message.mayAttachAnyFile! }, writer.uint32(122).fork()).join();
     }
     return writer;
   },
@@ -2078,14 +2134,6 @@ export const UpdateFlashCardRequest: MessageFns<UpdateFlashCardRequest> = {
             }
 
             message.definition = StringValue.decode(reader, reader.uint32()).value;
-            continue;
-          }
-          case 4: {
-            if (tag !== 34) {
-              break;
-            }
-
-            message.image = StringValue.decode(reader, reader.uint32()).value;
             continue;
           }
           case 5: {
@@ -2158,6 +2206,22 @@ export const UpdateFlashCardRequest: MessageFns<UpdateFlashCardRequest> = {
             }
 
             message.privileged = BoolValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 14: {
+            if (tag !== 114) {
+              break;
+            }
+
+            message.imageFileId = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 15: {
+            if (tag !== 122) {
+              break;
+            }
+
+            message.mayAttachAnyFile = BoolValue.decode(reader, reader.uint32()).value;
             continue;
           }
         }
@@ -3608,6 +3672,9 @@ export const FlashCardContent: MessageFns<FlashCardContent> = {
     if (message.image !== undefined) {
       writer.uint32(66).string(message.image);
     }
+    if (message.imageFileId !== undefined) {
+      writer.uint32(74).string(message.imageFileId);
+    }
     return writer;
   },
 
@@ -3686,6 +3753,14 @@ export const FlashCardContent: MessageFns<FlashCardContent> = {
             }
 
             message.image = reader.string();
+            continue;
+          }
+          case 9: {
+            if (tag !== 74) {
+              break;
+            }
+
+            message.imageFileId = reader.string();
             continue;
           }
         }

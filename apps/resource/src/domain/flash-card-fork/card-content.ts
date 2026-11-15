@@ -9,7 +9,10 @@ export interface CardContent {
 	examples: string[];
 	notes: string | null;
 	tags: string[];
+	/** Legacy free image URL (cards from before image files). */
 	image: string | null;
+	/** The image file (file-service id); each card holding one owns a reference to it. */
+	imageFileId: string | null;
 }
 
 /** Fields a proposal compares and changes, field by field. */
@@ -26,7 +29,7 @@ export const CARD_DIFF_FIELDS = [
 export type CardDiffField = (typeof CARD_DIFF_FIELDS)[number];
 
 /** Fields pulling from the original brings over (the image too: it is copied, never proposed). */
-export const CARD_SYNC_FIELDS = [...CARD_DIFF_FIELDS, 'image'] as const;
+export const CARD_SYNC_FIELDS = [...CARD_DIFF_FIELDS, 'image', 'imageFileId'] as const;
 
 export type CardSyncField = (typeof CARD_SYNC_FIELDS)[number];
 
@@ -39,6 +42,8 @@ export const cardContentSchema = z.object({
 	notes: z.string().nullable(),
 	tags: z.array(z.string()),
 	image: z.string().nullable(),
+	// Snapshots and proposals stored before image files have no such key.
+	imageFileId: z.string().nullable().default(null),
 });
 
 /** Reads a stored snapshot (JSON column); null when absent or not a card snapshot. */

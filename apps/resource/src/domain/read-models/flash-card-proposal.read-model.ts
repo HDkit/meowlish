@@ -7,7 +7,9 @@ export interface CardContentReadModel {
 	examples: string[];
 	notes?: string;
 	tags: string[];
+	/** URL to show: the image file's URL when there is one, else the legacy free URL. */
 	image?: string;
+	imageFileId?: string;
 }
 
 export interface AddedCardChangeReadModel {

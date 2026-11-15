@@ -20,6 +20,7 @@ export const toCardContent = (card: FlashCard): CardContent => ({
 	notes: card.notes,
 	tags: card.tags,
 	image: card.image,
+	imageFileId: card.imageFileId,
 });
 
 export const toForkCard = (card: FlashCard): ForkCard => ({
@@ -35,8 +36,11 @@ export const toOriginalCard = (card: FlashCard): OriginalCard => ({
 	content: toCardContent(card),
 });
 
-/** Card columns holding the content (for create/update). */
-export const cardContentData = (content: CardContent) => ({
+/**
+ * Card columns holding the text content, without the image: a proposal never changes an image,
+ * so applying one writes only these (and the image references stay as they are).
+ */
+export const cardTextData = (content: CardContent) => ({
 	word: content.word,
 	definition: content.definition,
 	partOfSpeech: content.partOfSpeech,
@@ -44,7 +48,16 @@ export const cardContentData = (content: CardContent) => ({
 	examples: content.examples,
 	notes: content.notes,
 	tags: content.tags,
+});
+
+/**
+ * Card columns holding the content (for create/update), image included. Whoever writes a changed
+ * `imageFileId` with this publishes the reference change too (`CardImageRefs`).
+ */
+export const cardContentData = (content: CardContent) => ({
+	...cardTextData(content),
 	image: content.image,
+	imageFileId: content.imageFileId,
 });
 
 /** A content snapshot for a JSON column. */
@@ -60,7 +73,9 @@ export const toCardContentReadModel = (content: CardContent): CardContentReadMod
 	examples: content.examples,
 	notes: content.notes ?? undefined,
 	tags: content.tags,
-	image: content.image ?? undefined,
+	// the file's URL replaces this when there is an image file (`CardImageUrlService`)
+	image: content.imageFileId ? undefined : (content.image ?? undefined),
+	imageFileId: content.imageFileId ?? undefined,
 });
 
 /** Changes on the wire (evaluated against the original, or `notEvaluated` for a preview). */
@@ -89,6 +104,13 @@ export const toListChangesReadModel = (evaluated: EvaluatedChanges): ListChanges
 		})),
 	};
 };
+
+/** Every card content in the changes (to resolve their image URLs in one go). */
+export const contentsOf = (changes: ListChangesReadModel): CardContentReadModel[] => [
+	...changes.added.map(c => c.card),
+	...changes.modified.flatMap(c => [c.base, c.proposed, ...(c.current ? [c.current] : [])]),
+	...changes.removed.flatMap(c => [c.base, ...(c.current ? [c.current] : [])]),
+];
 
 /** Stored proposal changes (JSON column). */
 export const toChangesJson = (changes: ListChanges): Prisma.InputJsonObject => ({

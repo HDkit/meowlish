@@ -7,7 +7,9 @@ export const toFlashCardReadModel = (entity: FlashCard): FlashCardReadModel => (
 	id: entity.id,
 	word: entity.word,
 	definition: entity.definition,
-	image: entity.image ?? undefined,
+	// the file's URL replaces this when the card has an image file (`CardImageUrlService`)
+	image: entity.imageFileId ? undefined : (entity.image ?? undefined),
+	imageFileId: entity.imageFileId ?? undefined,
 	partOfSpeech: entity.partOfSpeech ?? undefined,
 	pronunciation: entity.pronunciation ?? undefined,
 	examples: entity.examples,

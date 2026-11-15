@@ -77,6 +77,7 @@ describe('ResourceGatewayController flash cards (C32)', () => {
 	let app: INestApplication;
 	let roles: string[] = [];
 	const cards = {
+		createFlashCard: jest.fn().mockReturnValue({ id: 'card1' }),
 		updateFlashCard: jest.fn().mockReturnValue({ id: 'card1' }),
 		deleteFlashCard: jest.fn().mockReturnValue({}),
 	};
@@ -124,7 +125,38 @@ describe('ResourceGatewayController flash cards (C32)', () => {
 			id: 'card1',
 			requesterId: 'jwt-user',
 			privileged: false,
+			mayAttachAnyFile: false,
 		});
+	});
+
+	it('takes an image as an uploaded file id, never a URL, and lets only admins attach any file', async () => {
+		await request(server())
+			.post('/flash-cards')
+			.send({
+				word: 'apple',
+				definition: 'quả táo',
+				listId: 'l1',
+				imageFileId: 'f1',
+				image: 'https://evil.example/x.png',
+				mayAttachAnyFile: true,
+			})
+			.expect(201);
+		expect(cards.createFlashCard).toHaveBeenCalledWith({
+			word: 'apple',
+			definition: 'quả táo',
+			listId: 'l1',
+			imageFileId: 'f1',
+			examples: [],
+			tags: [],
+			authorId: 'jwt-user',
+			mayAttachAnyFile: false,
+		});
+
+		roles = ['admin'];
+		await request(server()).patch('/flash-cards/card1').send({ imageFileId: '' }).expect(200);
+		expect(cards.updateFlashCard).toHaveBeenCalledWith(
+			expect.objectContaining({ imageFileId: '', mayAttachAnyFile: true, privileged: true }),
+		);
 	});
 
 	it('forwards only admins as privileged on delete', async () => {

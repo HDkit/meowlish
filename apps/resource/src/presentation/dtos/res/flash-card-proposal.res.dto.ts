@@ -25,6 +25,9 @@ export class FlashCardContentDto implements resource.FlashCardContent {
 
 	@Expose()
 	image?: string;
+
+	@Expose()
+	imageFileId?: string;
 }
 
 export class AddedCardChangeDto implements resource.AddedCardChange {

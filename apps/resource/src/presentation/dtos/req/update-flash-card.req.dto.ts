@@ -17,9 +17,10 @@ export class UpdateFlashCardReqDto
 	@IsString()
 	definition?: string;
 
+	/** An uploaded file (file-service id); '' on update removes the image. */
 	@IsOptional()
 	@IsString()
-	image?: string;
+	imageFileId?: string;
 
 	@IsOptional()
 	@IsString()
@@ -48,4 +49,8 @@ export class UpdateFlashCardReqDto
 	@IsBoolean()
 	@IsOptional()
 	replaceTags!: boolean;
+
+	@IsBoolean()
+	@IsOptional()
+	mayAttachAnyFile?: boolean;
 }

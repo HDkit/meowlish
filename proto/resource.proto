@@ -149,6 +149,8 @@ message FlashCardResponse {
 	string          id             = 1;
 	string          word           = 2;
 	string          definition     = 3;
+	// URL to show: the image file's URL (from file-service) when the card has one, else the
+	// legacy free URL of cards from before image files.
 	optional string image          = 4;
 	optional string part_of_speech = 5;
 	optional string pronunciation  = 6;
@@ -161,12 +163,16 @@ message FlashCardResponse {
 	// 0-based place in its list, set by AddCardToList. Absent for cards never placed: they come
 	// first in a list (newest first), then placed cards by position.
 	optional int32  position       = 13;
+	// The card's image file (file-service id); absent for no image or a legacy URL-only image.
+	optional string image_file_id  = 14;
 }
 
 message CreateFlashCardRequest {
+	// 3 was a free image URL; images are file-service files now (image_file_id).
+	reserved 3;
+	reserved "image";
 	google.protobuf.StringValue          word           = 1;
 	google.protobuf.StringValue          definition     = 2;
-	optional google.protobuf.StringValue image          = 3;
 	optional google.protobuf.StringValue part_of_speech = 4;
 	optional google.protobuf.StringValue pronunciation  = 5;
 	repeated google.protobuf.StringValue examples       = 6;
@@ -174,6 +180,11 @@ message CreateFlashCardRequest {
 	google.protobuf.StringValue          author_id      = 8;
 	repeated google.protobuf.StringValue tags           = 9;
 	google.protobuf.StringValue          list_id        = 10;
+	// An uploaded file (POST /files) shown as the card's image. Must be uploaded by author_id
+	// unless may_attach_any_file.
+	optional google.protobuf.StringValue image_file_id  = 11;
+	// Requester may attach files uploaded by someone else (admins only; decided by the gateway).
+	optional google.protobuf.BoolValue   may_attach_any_file = 12;
 }
 
 message GetFlashCardRequest {
@@ -185,10 +196,12 @@ message GetFlashCardRequest {
 }
 
 message UpdateFlashCardRequest {
+	// 4 was a free image URL; images are file-service files now (image_file_id).
+	reserved 4;
+	reserved "image";
 	google.protobuf.StringValue          id             = 1;
 	optional google.protobuf.StringValue word           = 2;
 	optional google.protobuf.StringValue definition     = 3;
-	optional google.protobuf.StringValue image          = 4;
 	optional google.protobuf.StringValue part_of_speech = 5;
 	optional google.protobuf.StringValue pronunciation  = 6;
 	repeated google.protobuf.StringValue examples       = 7;
@@ -203,6 +216,12 @@ message UpdateFlashCardRequest {
 	google.protobuf.StringValue          requester_id     = 12;
 	// Requester may bypass ownership/visibility (role decided by the gateway).
 	optional google.protobuf.BoolValue   privileged       = 13;
+	// Absent: keep the image. Empty: remove it (a legacy URL too). Otherwise an uploaded file
+	// (POST /files) that replaces it; it must be the requester's upload, unless it is the card's
+	// current image or may_attach_any_file.
+	optional google.protobuf.StringValue image_file_id    = 14;
+	// Requester may attach files uploaded by someone else (admins only; decided by the gateway).
+	optional google.protobuf.BoolValue   may_attach_any_file = 15;
 }
 
 message DeleteFlashCardRequest {
@@ -365,7 +384,9 @@ message FlashCardContent {
 	repeated string examples       = 5;
 	optional string notes          = 6;
 	repeated string tags           = 7;
+	// URL to show (the image file's URL, or a legacy free URL); see FlashCardResponse.image.
 	optional string image          = 8;
+	optional string image_file_id  = 9;
 }
 
 message AddedCardChange {

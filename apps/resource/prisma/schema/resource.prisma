@@ -19,7 +19,12 @@ model FlashCard {
   id             String   @id @default(uuid())
   word           String
   definition     String
+  /// Legacy free image URL, from before card images were files. Still shown; new and edited
+  /// cards set `imageFileId` instead (and setting or removing an image clears this).
   image          String?
+  /// The card's image, a file-service file. Each card row holding an id counts as one reference
+  /// (`resource.file.added` / `resource.files.removed`); copies share the id and add their own.
+  imageFileId    String?  @map("image_file_id")
   partOfSpeech   String?  @map("part_of_speech")
   pronunciation  String?
   examples       String[]

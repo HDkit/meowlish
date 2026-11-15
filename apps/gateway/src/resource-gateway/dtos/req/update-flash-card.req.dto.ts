@@ -14,8 +14,11 @@ export class UpdateFlashCardDto {
 
 	@IsOptional()
 	@IsString()
-	@ApiPropertyOptional()
-	image?: string;
+	@ApiPropertyOptional({
+		description:
+			"Absent: keep the image. Empty string: remove it (an old image URL too). Otherwise the id of a file you uploaded (POST /files with isPublicFile: true), or the card's current imageFileId.",
+	})
+	imageFileId?: string;
 
 	@IsOptional()
 	@IsString()

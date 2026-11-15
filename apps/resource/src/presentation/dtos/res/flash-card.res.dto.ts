@@ -15,6 +15,9 @@ export class FlashCardDto implements resource.FlashCardResponse {
 	image?: string;
 
 	@Expose()
+	imageFileId?: string;
+
+	@Expose()
 	partOfSpeech?: string;
 
 	@Expose()

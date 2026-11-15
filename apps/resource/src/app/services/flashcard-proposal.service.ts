@@ -16,6 +16,8 @@ import {
 import { ResourceEventsPublisher } from '../events/resource-events.publisher';
 import {
 	cardContentData,
+	cardTextData,
+	contentsOf,
 	toCardContent,
 	toChangesJson,
 	toListChangesReadModel,
@@ -28,6 +30,8 @@ import {
 } from '../types/flash-card-proposal.input';
 import { toSkipTake } from '../types/pagination';
 import { type Requester } from '../types/requester';
+import { CardImageRefsService } from './card-image-refs.service';
+import { CardImageUrlService } from './card-image-url.service';
 import { FlashcardForkService } from './flashcard-fork.service';
 import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
@@ -68,6 +72,8 @@ export class FlashcardProposalService {
 		private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>,
 		private readonly events: ResourceEventsPublisher,
 		private readonly forks: FlashcardForkService,
+		private readonly imageRefs: CardImageRefsService,
+		private readonly imageUrls: CardImageUrlService,
 	) {}
 
 	private toReadModel(proposal: ProposalWithLists): FlashCardProposalReadModel {
@@ -234,9 +240,11 @@ export class FlashcardProposalService {
 			isOpen ?
 				evaluateChanges(changes, await this.currentCards(proposal.targetListId, changes))
 			:	notEvaluated(changes);
+		const listChanges = toListChangesReadModel(evaluated);
+		await this.imageUrls.resolve(contentsOf(listChanges));
 		return {
 			...this.toReadModel(proposal),
-			changes: toListChangesReadModel(evaluated),
+			changes: listChanges,
 			conflictCount: countConflicts(evaluated),
 			canDecide: isOpen && canDecide(proposal, requester),
 			canWithdraw: isOpen && proposal.authorId === requester.id,
@@ -247,7 +255,8 @@ export class FlashcardProposalService {
 	 * Applies the proposal to the original in one transaction: creates the added cards (owned by
 	 * the list owner), updates the changed fields of modified cards and deletes removed cards.
 	 * Cards the owner changed since the proposal (conflicts) need a resolution each: apply the
-	 * proposal's version, or keep the owner's.
+	 * proposal's version, or keep the owner's. Images: an added card shares the proposer's image
+	 * file and adds a reference; modifications never touch images; removed cards release theirs.
 	 */
 	@Transactional()
 	async acceptFlashCardProposal(
@@ -294,6 +303,7 @@ export class FlashcardProposalService {
 				},
 			});
 			created.push(id);
+			await this.imageRefs.added([change.card.imageFileId]);
 			// Link the proposer's card to the new one, so the copy no longer shows it as added.
 			if (sourceListId) {
 				await this.txHost.tx.flashCard.updateMany({
@@ -309,7 +319,8 @@ export class FlashcardProposalService {
 			const merged = withFields(change.current, change.proposed, change.fields);
 			await this.txHost.tx.flashCard.update({
 				where: { id: change.targetCardId },
-				data: cardContentData(merged),
+				// text only: a proposal never changes an image, so its reference stays as it is
+				data: cardTextData(merged),
 			});
 			if (sourceListId) {
 				await this.txHost.tx.flashCard.updateMany({
@@ -322,12 +333,11 @@ export class FlashcardProposalService {
 		const removed = evaluated.removed
 			.filter(c => c.current && shouldApply(c))
 			.map(c => c.targetCardId);
-		if (removed.length > 0) {
-			await this.txHost.tx.flashCard.deleteMany({
-				where: { id: { in: removed }, listId: proposal.targetListId },
-			});
-			await this.events.resourcesDeleted('flashcard', removed);
-		}
+		const deleted = await this.imageRefs.deleteCards({
+			ids: removed,
+			listId: proposal.targetListId,
+		});
+		if (deleted.length > 0) await this.events.resourcesDeleted('flashcard', deleted);
 
 		await this.publishDecision(closed, requester);
 		return this.toReadModel(closed);

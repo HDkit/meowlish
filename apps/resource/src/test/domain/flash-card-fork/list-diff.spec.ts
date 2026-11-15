@@ -21,6 +21,7 @@ const content = (overrides: Partial<CardContent> = {}): CardContent => ({
 	notes: null,
 	tags: ['fruit'],
 	image: null,
+	imageFileId: null,
 	...overrides,
 });
 
@@ -60,6 +61,14 @@ describe('parseCardContent', () => {
 		expect(parseCardContent(content())).toEqual(content());
 		expect(parseCardContent({ word: 'x' })).toBeNull();
 		expect(parseCardContent(null)).toBeNull();
+	});
+
+	it('reads a snapshot stored before image files as having none', () => {
+		const { imageFileId: _dropped, ...legacy } = content({ image: 'https://example.com/a.png' });
+		void _dropped;
+		expect(parseCardContent(legacy)).toEqual(
+			content({ image: 'https://example.com/a.png', imageFileId: null }),
+		);
 	});
 });
 
@@ -231,6 +240,33 @@ describe('planUpstreamSync', () => {
 		expect(plan.update).toEqual([
 			{ forkCardId: 'f1', content: content({ word: 'apples' }), contentChanged: false },
 		]);
+	});
+
+	it('brings over an image file the original changed, unless the copy changed its own', () => {
+		const plan = planUpstreamSync(
+			[
+				copy('f1', 'o1', content({ imageFileId: 'old' })),
+				copy('f2', 'o2', content({ word: 'pear', imageFileId: 'mine' }), content({ word: 'pear' })),
+			],
+			[
+				original('o1', content({ imageFileId: 'new' })),
+				original('o2', content({ word: 'pear', imageFileId: 'theirs' })),
+			],
+			synced,
+		);
+		expect(plan.update).toEqual([
+			{ forkCardId: 'f1', content: content({ imageFileId: 'new' }), contentChanged: true },
+		]);
+		expect(plan.skipped).toBe(1);
+	});
+
+	it('never proposes an image change (images are copied, not proposed)', () => {
+		const changes = computeListDiff(
+			[copy('f1', 'o1', content({ imageFileId: 'mine' }), content())],
+			[original('o1', content())],
+			synced,
+		);
+		expect(changes.modified).toEqual([]);
 	});
 
 	it('does not re-add original cards that existed at the last sync (deleted in the copy)', () => {

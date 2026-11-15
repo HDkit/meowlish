@@ -3,6 +3,14 @@ import { type FlashcardForkService } from '../../../app/services/flashcard-fork.
 import { FlashcardProposalService } from '../../../app/services/flashcard-proposal.service';
 import { type CardContent } from '../../../domain/flash-card-fork/card-content';
 import { type ListChanges } from '../../../domain/flash-card-fork/list-diff';
+import {
+	type StoredCard,
+	fakeImageUrls,
+	imageEvents,
+	imageRefsOf,
+	queryRawOver,
+	refBalance,
+} from '../../helpers/card-images';
 import { NoOpTransactionalAdapter, TransactionHost } from '@nestjs-cls/transactional';
 import {
 	BadRequestException,
@@ -29,6 +37,7 @@ const content = (overrides: Partial<CardContent> = {}): CardContent => ({
 	notes: null,
 	tags: [],
 	image: null,
+	imageFileId: null,
 	...overrides,
 });
 
@@ -67,6 +76,12 @@ const proposal = (overrides: Record<string, unknown> = {}) => ({
 
 const row = (id: string, c: CardContent) => ({ id: id, listId: 'orig', ...c });
 
+/** Parameters of the `DELETE … RETURNING` statements run. */
+const deletesOf = (tx: { $queryRaw: jest.Mock }): unknown[][] =>
+	(tx.$queryRaw.mock.calls as unknown[][])
+		.filter(c => (c[0] as TemplateStringsArray).join('').includes('DELETE'))
+		.map(c => c.slice(1));
+
 const firstArg = (mock: jest.Mock): unknown => (mock.mock.calls as unknown[][])[0][0];
 
 const owner = { id: 'owner', privileged: false };
@@ -74,10 +89,15 @@ const proposer = { id: 'proposer', privileged: false };
 const admin = { id: 'admin', privileged: true };
 const stranger = { id: 'stranger', privileged: false };
 
-const setup = (opts: { current?: ReturnType<typeof row>[] } = {}) => {
-	let stored = proposal();
+const setup = (
+	opts: { current?: ReturnType<typeof row>[]; changes?: ListChanges; cards?: StoredCard[] } = {},
+) => {
+	let stored = proposal(opts.changes ? { changes: opts.changes } : {});
+	const current = opts.current ?? [row('o1', content()), row('o2', content({ word: 'pear' }))];
 	const tx = {
-		$queryRaw: jest.fn().mockResolvedValue([]),
+		$queryRaw: queryRawOver(
+			opts.cards ?? current.map(c => ({ id: c.id, listId: c.listId, imageFileId: c.imageFileId })),
+		),
 		flashCardListProposal: {
 			findFirst: jest.fn(({ where }: { where: { OR?: [{ authorId: string }] } }) => {
 				// emulate visibleProposalsWhere: author, target owner, or privileged (no OR)
@@ -96,11 +116,7 @@ const setup = (opts: { current?: ReturnType<typeof row>[] } = {}) => {
 			count: jest.fn().mockResolvedValue(0),
 		},
 		flashCard: {
-			findMany: jest
-				.fn()
-				.mockResolvedValue(
-					opts.current ?? [row('o1', content()), row('o2', content({ word: 'pear' }))],
-				),
+			findMany: jest.fn().mockResolvedValue(current),
 			create: jest.fn(),
 			update: jest.fn(),
 			updateMany: jest.fn(),
@@ -113,6 +129,7 @@ const setup = (opts: { current?: ReturnType<typeof row>[] } = {}) => {
 		flashCardProposalCreated: jest.fn(),
 		flashCardProposalDecided: jest.fn(),
 		flashCardProposalWithdrawn: jest.fn(),
+		...imageEvents(),
 	};
 	const forks = {
 		findForkWithOriginal: jest.fn().mockResolvedValue({
@@ -125,6 +142,8 @@ const setup = (opts: { current?: ReturnType<typeof row>[] } = {}) => {
 		{ tx: tx } as never,
 		events as unknown as ResourceEventsPublisher,
 		forks as unknown as FlashcardForkService,
+		imageRefsOf(tx, events),
+		fakeImageUrls(),
 	);
 	return {
 		tx: tx,
@@ -266,9 +285,7 @@ describe('FlashcardProposalService.acceptFlashCardProposal', () => {
 			where: { id: 'o1' },
 			data: { word: 'apple', definition: 'trái táo' },
 		});
-		expect(tx.flashCard.deleteMany).toHaveBeenCalledWith({
-			where: { id: { in: ['o2'] }, listId: 'orig' },
-		});
+		expect(deletesOf(tx)).toEqual([[['o2'], 'orig', 'orig']]);
 		expect(events.resourcesDeleted).toHaveBeenCalledWith('flashcard', ['o2']);
 		expect(events.flashCardProposalDecided).toHaveBeenCalledWith(
 			expect.objectContaining({ status: 'ACCEPTED', authorId: 'proposer' }),
@@ -325,7 +342,7 @@ describe('FlashcardProposalService.acceptFlashCardProposal', () => {
 			where: { id: 'o1' },
 			data: { definition: 'trái táo' },
 		});
-		expect(tx.flashCard.deleteMany).not.toHaveBeenCalled();
+		expect(deletesOf(tx)).toEqual([]);
 		expect(events.resourcesDeleted).not.toHaveBeenCalled();
 	});
 
@@ -368,5 +385,80 @@ describe('FlashcardProposalService reject and withdraw', () => {
 			ForbiddenException,
 		);
 		expect(events.flashCardProposalWithdrawn).not.toHaveBeenCalled();
+	});
+});
+
+describe('FlashcardProposalService card images', () => {
+	const withImages: ListChanges = {
+		added: [{ sourceCardId: 'f9', card: content({ word: 'kiwi', imageFileId: 'kiwi-img' }) }],
+		modified: [
+			{
+				targetCardId: 'o1',
+				sourceCardId: 'f1',
+				fields: ['definition'],
+				base: content({ imageFileId: 'apple-img' }),
+				proposed: content({ definition: 'trái táo', imageFileId: 'proposer-img' }),
+			},
+		],
+		removed: [{ targetCardId: 'o2', base: content({ word: 'pear', imageFileId: 'pear-img' }) }],
+	};
+	const current = [
+		row('o1', content({ imageFileId: 'apple-img' })),
+		row('o2', content({ word: 'pear', imageFileId: 'pear-img' })),
+	];
+
+	it('accepting adds a reference for an added card, releases a removed one, leaves modified alone', async () => {
+		const { tx, events, service } = setup({ changes: withImages, current: current });
+		await service.acceptFlashCardProposal({ id: 'p1', resolutions: [] }, owner);
+		expect(firstArg(tx.flashCard.create)).toMatchObject({ data: { imageFileId: 'kiwi-img' } });
+		// a modification writes text only: the target keeps its own image and reference
+		const update = firstArg(tx.flashCard.update) as { data: Record<string, unknown> };
+		expect(update.data).not.toHaveProperty('imageFileId');
+		expect(update.data).not.toHaveProperty('image');
+		expect(refBalance(events)).toEqual({ 'kiwi-img': 1, 'pear-img': -1 });
+	});
+
+	it('releases nothing for a removal whose card is already gone', async () => {
+		const { events, service } = setup({
+			changes: withImages,
+			current: current,
+			cards: [{ id: 'o1', listId: 'orig', imageFileId: 'apple-img' }],
+		});
+		await service.acceptFlashCardProposal({ id: 'p1', resolutions: [] }, owner);
+		expect(events.resourcesDeleted).not.toHaveBeenCalled();
+		expect(refBalance(events)).toEqual({ 'kiwi-img': 1 });
+	});
+
+	it('rejecting or withdrawing changes no references', async () => {
+		const rejected = setup({ changes: withImages, current: current });
+		await rejected.service.rejectFlashCardProposal('p1', undefined, owner);
+		expect(refBalance(rejected.events)).toEqual({});
+		const withdrawn = setup({ changes: withImages, current: current });
+		await withdrawn.service.withdrawFlashCardProposal('p1', proposer);
+		expect(refBalance(withdrawn.events)).toEqual({});
+	});
+
+	it('shows image URLs in a proposal', async () => {
+		const { service } = setup({ changes: withImages, current: current });
+		const detail = await service.getFlashCardProposal('p1', owner);
+		expect(detail.changes.added[0].card.image).toBe('https://cdn.test/public/kiwi-img');
+		expect(detail.changes.removed[0].current?.image).toBe('https://cdn.test/public/pear-img');
+	});
+
+	it('reads proposals stored before image files (no imageFileId key)', async () => {
+		const { imageFileId: _dropped, ...legacy } = content({ word: 'kiwi' });
+		void _dropped;
+		const { tx, events, service } = setup({
+			changes: {
+				added: [{ sourceCardId: 'f9', card: legacy as CardContent }],
+				modified: [],
+				removed: [],
+			},
+		});
+		await service.acceptFlashCardProposal({ id: 'p1', resolutions: [] }, owner);
+		expect(firstArg(tx.flashCard.create)).toMatchObject({
+			data: { word: 'kiwi', imageFileId: null },
+		});
+		expect(refBalance(events)).toEqual({});
 	});
 });

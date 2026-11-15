@@ -1,6 +1,8 @@
 import { ResourceEventsPublisher } from './app/events/resource-events.publisher';
 import { BlogCommentService } from './app/services/blog-comment.service';
 import { BlogService } from './app/services/blog.service';
+import { CardImageRefsService } from './app/services/card-image-refs.service';
+import { CardImageUrlService } from './app/services/card-image-url.service';
 import { FileOwnershipService } from './app/services/file-ownership.service';
 import { FlashcardForkService } from './app/services/flashcard-fork.service';
 import { FlashcardListService } from './app/services/flashcard-list.service';
@@ -108,6 +110,8 @@ const rmqPubModule = RabbitMQModule.forRootAsync({
 		SlugBackfillService,
 		ResourceEventsPublisher,
 		FileOwnershipService,
+		CardImageRefsService,
+		CardImageUrlService,
 		{
 			provide: FILE_CLIENT,
 			inject: [ConfigService],
