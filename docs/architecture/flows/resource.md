@@ -99,7 +99,7 @@ Update a blog post.
 
 ### GET /api/v1/resources/blogs
 
-`ListBlogsQueryDto` (`authorId?`, `tags` via `ToStringArray`, page/limit) → `resource.BlogService/ListBlogs` → `BlogService.listBlogs`: `where authorId`, `tags hasSome` (any of the tags), order `createdAt desc`, `findMany` + `count` in parallel. Response `ListBlogsDto { blogs, totalCount }`.
+`ListBlogsQueryDto` (`authorId?`, `tags` via `ToStringArray`, `title?` (max 200), `createdFrom?` / `createdTo?` (ISO date-times, sent as `Timestamp`), page/limit) → `resource.BlogService/ListBlogs` → `BlogService.listBlogs`: `where authorId`, `tags hasSome` (any of the tags), `title contains` (case-insensitive, trimmed; blank ignored), `createdAt gte/lte` (either end may be open; 400 `createdFrom must not be after createdTo`), order `createdAt desc`, `findMany` + `count` in parallel. Response `ListBlogsDto { blogs, totalCount }`. The frontend's /blog filters use all four (author through the public username search).
 
 ## Slugs
 

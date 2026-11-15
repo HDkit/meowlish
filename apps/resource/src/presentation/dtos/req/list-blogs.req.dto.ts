@@ -1,6 +1,6 @@
 import { resource } from '@server/generated';
 import { Type } from 'class-transformer';
-import { IsArray, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsArray, IsDate, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 
 export class ListBlogsReqDto implements resource.ListBlogsRequest {
 	@IsOptional()
@@ -22,4 +22,19 @@ export class ListBlogsReqDto implements resource.ListBlogsRequest {
 	@IsOptional()
 	@Min(1)
 	limit?: number;
+
+	@IsOptional()
+	@IsString()
+	@MaxLength(200)
+	title?: string;
+
+	@Type(() => Date)
+	@IsDate()
+	@IsOptional()
+	createdFrom?: Date;
+
+	@Type(() => Date)
+	@IsDate()
+	@IsOptional()
+	createdTo?: Date;
 }

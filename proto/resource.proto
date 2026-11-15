@@ -2,6 +2,7 @@ syntax = "proto3";
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/wrappers.proto";
+import "google/protobuf/timestamp.proto";
 
 package resource;
 
@@ -129,6 +130,11 @@ message ListBlogsRequest {
 	repeated google.protobuf.StringValue tags      = 2;
 	optional google.protobuf.Int32Value  page      = 3;
 	optional google.protobuf.Int32Value  limit     = 4;
+	// posts whose title contains this text (case-insensitive)
+	optional google.protobuf.StringValue title        = 5;
+	// posts created at or after / at or before these moments
+	optional google.protobuf.Timestamp   created_from = 6;
+	optional google.protobuf.Timestamp   created_to   = 7;
 }
 
 message ListBlogsResponse {

@@ -1,6 +1,6 @@
 import { BlogService } from '../../../app/services/blog.service';
 import { NoOpTransactionalAdapter, TransactionHost } from '@nestjs-cls/transactional';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 // Writing methods are @Transactional(); register the static host they look up (no-op adapter).
 new TransactionHost<NoOpTransactionalAdapter>({
@@ -171,5 +171,54 @@ describe('BlogService slugs', () => {
 		const data = (tx.blog.update.mock.calls as [{ data: Record<string, unknown> }][])[0][0].data;
 		expect(data).not.toHaveProperty('slug');
 		expect(updated).toMatchObject({ title: 'A new title', slug: 'lam-the-nao-de-viet-email' });
+	});
+});
+
+describe('BlogService.listBlogs filters', () => {
+	const setup = () => {
+		const tx = {
+			blog: { findMany: jest.fn().mockResolvedValue([]), count: jest.fn().mockResolvedValue(0) },
+		};
+		return { tx: tx, service: new BlogService({ tx: tx } as never, {} as never) };
+	};
+	const whereSent = (tx: ReturnType<typeof setup>['tx']) =>
+		(tx.blog.findMany.mock.calls as [{ where: Record<string, unknown> }][])[0][0].where;
+
+	it('filters by title (case-insensitive, trimmed), tags, author and creation time', async () => {
+		const { tx, service } = setup();
+		const from = new Date('2026-11-01T00:00:00Z');
+		const to = new Date('2026-11-30T23:59:59Z');
+		await service.listBlogs({
+			authorId: 'a1',
+			tags: ['ielts'],
+			title: '  email ',
+			createdFrom: from,
+			createdTo: to,
+		});
+		expect(whereSent(tx)).toEqual({
+			authorId: 'a1',
+			tags: { hasSome: ['ielts'] },
+			title: { contains: 'email', mode: 'insensitive' },
+			createdAt: { gte: from, lte: to },
+		});
+		expect(tx.blog.count).toHaveBeenCalledWith({ where: whereSent(tx) });
+	});
+
+	it('accepts an open-ended time range and ignores a blank title', async () => {
+		const { tx, service } = setup();
+		const from = new Date('2026-11-01T00:00:00Z');
+		await service.listBlogs({ tags: [], title: '   ', createdFrom: from });
+		expect(whereSent(tx)).toEqual({ createdAt: { gte: from } });
+	});
+
+	it('refuses a range that ends before it starts', async () => {
+		const { service } = setup();
+		await expect(
+			service.listBlogs({
+				tags: [],
+				createdFrom: new Date('2026-11-30'),
+				createdTo: new Date('2026-11-01'),
+			}),
+		).rejects.toBeInstanceOf(BadRequestException);
 	});
 });

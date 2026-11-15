@@ -8,8 +8,10 @@
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
 import type { handleUnaryCall, Metadata, UntypedServiceImplementation } from "@grpc/grpc-js";
 import { GrpcMethod, GrpcStreamMethod } from "@nestjs/microservices";
+import { wrappers } from "protobufjs";
 import { Observable } from "rxjs";
 import { Empty } from "./google/protobuf/empty";
+import { Timestamp } from "./google/protobuf/timestamp";
 import { BoolValue, Int32Value, StringValue } from "./google/protobuf/wrappers";
 
 export interface BlogResponse {
@@ -56,7 +58,16 @@ export interface ListBlogsRequest {
   authorId?: string | undefined;
   tags: string[];
   page?: number | undefined;
-  limit?: number | undefined;
+  limit?:
+    | number
+    | undefined;
+  /** posts whose title contains this text (case-insensitive) */
+  title?:
+    | string
+    | undefined;
+  /** posts created at or after / at or before these moments */
+  createdFrom?: Date | undefined;
+  createdTo?: Date | undefined;
 }
 
 export interface ListBlogsResponse {
@@ -1012,6 +1023,15 @@ export interface DeleteBlogCommentRequest {
   privileged?: boolean | undefined;
 }
 
+wrappers[".google.protobuf.Timestamp"] = {
+  fromObject(value: Date) {
+    return { seconds: value.getTime() / 1000, nanos: (value.getTime() % 1000) * 1e6 };
+  },
+  toObject(message: { seconds: number; nanos: number }) {
+    return new Date(message.seconds * 1000 + message.nanos / 1e6);
+  },
+} as any;
+
 function createBaseBlogResponse(): BlogResponse {
   return { id: "", title: "", content: "", authorId: "", tags: [], createdAt: "", updatedAt: "" };
 }
@@ -1414,6 +1434,15 @@ export const ListBlogsRequest: MessageFns<ListBlogsRequest> = {
     if (message.limit !== undefined) {
       Int32Value.encode({ value: message.limit! }, writer.uint32(34).fork()).join();
     }
+    if (message.title !== undefined) {
+      StringValue.encode({ value: message.title! }, writer.uint32(42).fork()).join();
+    }
+    if (message.createdFrom !== undefined) {
+      Timestamp.encode(toTimestamp(message.createdFrom), writer.uint32(50).fork()).join();
+    }
+    if (message.createdTo !== undefined) {
+      Timestamp.encode(toTimestamp(message.createdTo), writer.uint32(58).fork()).join();
+    }
     return writer;
   },
 
@@ -1460,6 +1489,30 @@ export const ListBlogsRequest: MessageFns<ListBlogsRequest> = {
             }
 
             message.limit = Int32Value.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.title = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
+
+            message.createdFrom = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 7: {
+            if (tag !== 58) {
+              break;
+            }
+
+            message.createdTo = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
             continue;
           }
         }
@@ -10014,6 +10067,18 @@ export interface ForumServiceServer extends UntypedServiceImplementation {
   createForumReply: handleUnaryCall<CreateForumReplyRequest, ForumReplyResponse>;
   updateForumReply: handleUnaryCall<UpdateForumReplyRequest, ForumReplyResponse>;
   deleteForumReply: handleUnaryCall<DeleteForumReplyRequest, Empty>;
+}
+
+function toTimestamp(date: Date): Timestamp {
+  const seconds = Math.trunc(date.getTime() / 1_000);
+  const nanos = (date.getTime() % 1_000) * 1_000_000;
+  return { seconds, nanos };
+}
+
+function fromTimestamp(t: Timestamp): Date {
+  let millis = (t.seconds || 0) * 1_000;
+  millis += (t.nanos || 0) / 1_000_000;
+  return new globalThis.Date(millis);
 }
 
 interface MessageFns<T> {

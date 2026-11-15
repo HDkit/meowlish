@@ -19,4 +19,9 @@ export interface UpdateBlogInput {
 export interface ListBlogsInput extends PageInput {
 	authorId?: string;
 	tags: string[];
+	/** Title contains this text (case-insensitive). */
+	title?: string;
+	/** Created at or after / at or before. */
+	createdFrom?: Date;
+	createdTo?: Date;
 }

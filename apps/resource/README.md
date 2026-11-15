@@ -23,7 +23,7 @@ No Redis and no BullMQ (Docker Compose lists `redis` in its `depends_on` but not
 - **Called by**: the gateway (`/api/v1/resources/*`). Private lists, "own reports only" and similar rules are enforced here from the `requesterId` + `privileged` the gateway sends; "not yours" answers 404. Blog and flash card mutations are also guarded by the gateway's legacy `@ResourceAccess`.
 - **Calls**: file-service gRPC (`GetUrls`, `CheckFilesOwnedBy`).
 - **gRPC** (`proto/resource.proto`):
-  - `BlogService`: `CreateBlog`, `GetBlog` (id or slug), `UpdateBlog`, `DeleteBlog`, `ListBlogs`, `ListBlogTags` (every tag with its post count).
+  - `BlogService`: `CreateBlog`, `GetBlog` (id or slug), `UpdateBlog`, `DeleteBlog`, `ListBlogs` (filters: author, any of the tags, title contains, created from/to), `ListBlogTags` (every tag with its post count).
   - `BlogCommentService`: `ListBlogComments` (as a tree), `CreateBlogComment`, `UpdateBlogComment`, `DeleteBlogComment`.
   - `ForumService`: `ListForumCategories`, `GetForumCategory`, `ListForumThreads`, `CreateForumThread`, `GetForumThread` (id or slug), `UpdateForumThread`, `ModerateForumThread`, `DeleteForumThread`, `ListForumReplies`, `CreateForumReply`, `UpdateForumReply`, `DeleteForumReply`.
   - `FlashCardService`: `CreateFlashCard`, `GetFlashCard`, `UpdateFlashCard`, `DeleteFlashCard`, `ListFlashCards`.

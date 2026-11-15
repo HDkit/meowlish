@@ -18,6 +18,19 @@ What was fixed from [`backlog.md`](roadmap.md) (now [`roadmap.md`](roadmap.md)),
 
 ## Follow-ups (November 2026)
 
+### Blog search by title, tags, time and author
+
+- **Problem:** the blog page could only filter by tag; there was no way to search titles, pick a time range or find an author's posts.
+- **Fix:** `ListBlogsRequest` gains `title` (contains, case-insensitive), `created_from` and `created_to` (`google.protobuf.Timestamp`; either end may be open, 400 `createdFrom must not be after createdTo`) (`proto/resource.proto`, gateway `ListBlogsQueryDto`, resource `ListBlogsReqDto`, `BlogService.listBlogs`). The frontend /blog page has a title box (350 ms debounce), the author picker (public username search) and a from/to date range next to the tag chips, all kept in the address (`?q=&author=&from=&to=&tag=`), with "Xóa bộ lọc"; dates are local days sent as start/end-of-day ISO times (`BlogPage.tsx`, `BlogService.ts`).
+- **Deploy:** resource and gateway (proto change; an older service ignores the new fields). No database change.
+- **Tests:** `apps/resource/src/test/app/services/blog.service.spec.ts` ("BlogService.listBlogs filters"); checked live: title, title+tag, date range, reversed range (400), author; in the browser, typing "email cong" sends one request.
+
+### Frontend: the flash card author filter dropped filters, and the exam toggle's save state
+
+- **Problem:** the Discover filters wrote the address with `router.replace`, which only changes `window.location` after Next's server round trip. The name search (350 ms debounce) rebuilt the address from a copy made before an author was picked, so the author silently disappeared ("works at first, then breaks"). Late answers to older searches could also replace newer results, and a cancelled author search could leave its spinner on.
+- **Fix:** filters update the address with `window.history.replaceState` (Next 15 syncs it into `useSearchParams` immediately) and read the current address; list requests ignore answers that arrive after a newer request; the author search resets its spinner when cancelled (`FlashcardPage.tsx`, `BlogPage.tsx`, `admin/AuthorFilter.tsx`). The collapsed exam panel toggle also shows the save state (saved / saving / not saved with the count, amber outline on failure) (`TestInterface.tsx`).
+- **Tests:** in the browser: typing a name then picking an author keeps both (`?author=admin&q=ti`); four quick author switches end with matching cards; the collapsed toggle reads "đã lưu mọi câu trả lời".
+
 ### Frontend: the test panel toggle was easy to miss and hid the clock
 
 - **Problem:** the "Hiện / Thu gọn bảng điều khiển" toggle on the test screen was a small white tab with a grey chevron, and with the panel collapsed the remaining time was nowhere on screen.

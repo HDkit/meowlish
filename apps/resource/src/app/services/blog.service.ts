@@ -13,7 +13,7 @@ import {
 import { toSkipTake } from '../types/pagination';
 import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Blog, Prisma, PrismaClient } from '@prisma-client/resource';
 
 @Injectable()
@@ -110,6 +110,17 @@ export class BlogService {
 		const where: Prisma.BlogWhereInput = {};
 		if (data.authorId) where.authorId = data.authorId;
 		if (data.tags.length > 0) where.tags = { hasSome: data.tags };
+		const title = data.title?.trim();
+		if (title) where.title = { contains: title, mode: 'insensitive' };
+		if (data.createdFrom && data.createdTo && data.createdFrom > data.createdTo) {
+			throw new BadRequestException('createdFrom must not be after createdTo');
+		}
+		if (data.createdFrom || data.createdTo) {
+			where.createdAt = {
+				...(data.createdFrom ? { gte: data.createdFrom } : {}),
+				...(data.createdTo ? { lte: data.createdTo } : {}),
+			};
+		}
 
 		const [blogs, totalCount] = await Promise.all([
 			this.txHost.tx.blog.findMany({
