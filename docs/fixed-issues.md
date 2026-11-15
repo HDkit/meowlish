@@ -18,6 +18,12 @@ What was fixed from [`backlog.md`](roadmap.md) (now [`roadmap.md`](roadmap.md)),
 
 ## Follow-ups (November 2026)
 
+### Frontend: flash card list authors, and long list names
+
+- **Problem:** public flash card lists showed no author and could not be searched by author; a long list name without spaces didn't wrap and pushed the report button out of the card.
+- **Fix (frontend only; the backend already filtered lists by `authorId`, only returned another user's public lists, and had the public username search `GET /auth/identities-public`):** Discover cards show "bởi <name>" (click to see that author's public lists), the Discover filters have an author picker with username search (`?author=<id>` in the URL, reusing `AuthorFilter`), and the list page shows its author with a link to their lists. Names wrap (`overflow-wrap: anywhere`) and the buttons no longer shrink (`FlashcardPage.tsx`, `FlashcardListDetail.tsx`, `admin/AuthorFilter.tsx`).
+- **Tests:** checked in the browser at 390 px and 1280 px: a 67-character name without spaces stays inside its card, clicking an author filters to their lists, the username search finds `@admin`.
+
 ### Frontend: switches in the off state were white on white
 
 - **Problem:** the switch's off track used `bg-switch-background`, declared only as a Tailwind 4 `--color-*` token in `globals.css`; the frontend runs Tailwind 3, so the class was never generated and the track was transparent (white thumb on a white card), on the settings page and in the flash card screens.
