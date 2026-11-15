@@ -18,6 +18,12 @@ What was fixed from [`backlog.md`](roadmap.md) (now [`roadmap.md`](roadmap.md)),
 
 ## Follow-ups (November 2026)
 
+### Frontend: the test panel toggle was easy to miss and hid the clock
+
+- **Problem:** the "Hiện / Thu gọn bảng điều khiển" toggle on the test screen was a small white tab with a grey chevron, and with the panel collapsed the remaining time was nowhere on screen.
+- **Fix:** the toggle is solid green in both states (red under 5 minutes, like the big timer). Collapsed, it shows a clock, the time left (pulsing under 5 minutes) and answered/total questions; its accessible label includes the time left (`TestInterface.tsx`).
+- **Tests:** checked in the browser on a 20-minute and a 4-minute attempt (open, collapsed, and the red state).
+
 ### Frontend: flash card list authors, and long list names
 
 - **Problem:** public flash card lists showed no author and could not be searched by author; a long list name without spaces didn't wrap and pushed the report button out of the card.
