@@ -73,14 +73,14 @@ Creates a `files` row and returns a presigned POST policy for direct browser upl
 
 ### gRPC FileService/CheckFilesOwnedBy
 
-No HTTP route. Called by `FileOwnershipService.assertOwnedBy` in `apps/auth/src/app/services/file-ownership.service.ts` (avatar, from `update-identity.handler.ts`), `apps/exam/src/app/services/file-ownership.service.ts` (`ExamManagementController` `addFiles`, admins skip it) and `apps/resource/src/app/services/file-ownership.service.ts` (`report.service.ts`). See [../authorization.md §7(c)](../authorization.md#c-attaching-a-file-someone-else-uploaded).
+No HTTP route. Called by `FileOwnershipService.assertOwnedBy` in `apps/auth/src/app/services/file-ownership.service.ts` (avatar, from `update-identity.handler.ts`), `apps/exam/src/app/services/file-ownership.service.ts` (`ExamManagementController` `addFiles`, admins skip it) and `apps/resource/src/app/services/file-ownership.service.ts` (`report.service.ts`; `flashcard.service.ts` for card images, admins skip it, re-sending a card's current image is not checked). See [../authorization.md §7(c)](../authorization.md#c-attaching-a-file-someone-else-uploaded).
 
 - **Flow**: `CheckFilesOwnedByDto { fileIds: string[], userId }` → `FileService.checkFilesOwnedBy`: dedupes ids, returns `{ ok: true, foreignIds: [] }` for an empty list, else `findIdsUploadedBy` (`files where id in ids and uploaded_by = userId`). Every id not returned is foreign: other users' uploads, rows with `uploaded_by NULL` (legacy/seeded/system) and unknown ids. Response `FilesOwnershipDto { ok, foreignIds }`.
 - **Errors**: the callers turn `ok: false` into 403 `You can only attach files you uploaded: <ids>`.
 
 ### gRPC FileService/GetUrls
 
-No HTTP route. Called by auth (avatar hydration) and exam (question/section/attempt files) query handlers.
+No HTTP route. Called by auth (avatar hydration), exam (question/section/attempt files) query handlers and resource (`CardImageUrlService`, flash card images: one call per response; on failure the images are left out).
 
 - **Flow**: `GetUrlsDto { ids }` → `FileService.getFilesUrls`: `files.findMany` for `id, isPublic`; public files get `<MINIO_PUBLIC_URL or scheme://host:port>/public/<id>`, private files a presigned GET valid **5 min** (`file.service.ts:200`). Unknown ids are omitted. Response `UrlsDto { urls: Record<id, url> }`. No ownership check (viewing is unrestricted).
 
@@ -137,11 +137,11 @@ Published by `apps/exam/src/app/events/publishers/attempt-scored.publisher.ts` a
 
 #### `*.file.added` → `file.events.file.added`
 
-`apps/file-service/src/app/events/handlers/file-added.handler.ts`. Publishers: `auth.file.added` (`apps/auth/src/app/events/publisher/file-added.publisher.ts`, avatar) and `exam.file.added` (`apps/exam/src/app/events/publishers/file-added.publisher.ts`, question/section files). Payload `{ fileId }`. `incrementRef([fileId])`: `updateMany files set ref_count + 1` (also bumps `updatedAt`). An unknown or already-deleted id updates 0 rows and logs a warning (`file.added for unknown file …`): the attaching service then holds a dangling id. `resource.file.added` (report attachments, `apps/resource/src/app/services/report.service.ts`).
+`apps/file-service/src/app/events/handlers/file-added.handler.ts`. Publishers: `auth.file.added` (`apps/auth/src/app/events/publisher/file-added.publisher.ts`, avatar) and `exam.file.added` (`apps/exam/src/app/events/publishers/file-added.publisher.ts`, question/section files). Payload `{ fileId }`. `incrementRef([fileId])`: `updateMany files set ref_count + 1` (also bumps `updatedAt`). An unknown or already-deleted id updates 0 rows and logs a warning (`file.added for unknown file …`): the attaching service then holds a dangling id. `resource.file.added` (report attachments, `apps/resource/src/app/services/report.service.ts`; flash card images, `apps/resource/src/app/services/card-image-refs.service.ts`: one per card row that starts holding the file, so a copied card or an accepted added card adds its own reference to the shared file).
 
 #### `*.file.removed`, `*.files.removed` → `file.events.files.removed`
 
-`apps/file-service/src/app/events/handlers/files-removed.handler.ts`, bound to both keys. Payload `{ file?: { id, count } }` or `{ files: { id, count }[] }`. `decrementRef`: one `updateMany ref_count - count` per file, sequential in the transaction, then one `updateMany ref_count = 0 where ref_count < 0` over those ids, so a count never goes below 0; unknown ids are skipped. Publishers on this branch: `auth.files.removed` and `exam.files.removed`, both from BullMQ jobs that drain the publisher's `deleted_files` table (`apps/exam/src/app/events/publishers/files-removed.publisher.ts`: `publish-deleted-files` every 60 s; auth's `files-removed.publisher.ts` likewise). No app publishes the singular `*.file.removed`.
+`apps/file-service/src/app/events/handlers/files-removed.handler.ts`, bound to both keys. Payload `{ file?: { id, count } }` or `{ files: { id, count }[] }`. `decrementRef`: one `updateMany ref_count - count` per file, sequential in the transaction, then one `updateMany ref_count = 0 where ref_count < 0` over those ids, so a count never goes below 0; unknown ids are skipped. Publishers on this branch: `auth.files.removed` and `exam.files.removed`, both from BullMQ jobs that drain the publisher's `deleted_files` table (`apps/exam/src/app/events/publishers/files-removed.publisher.ts`: `publish-deleted-files` every 60 s; auth's `files-removed.publisher.ts` likewise), and `resource.files.removed`, written to the outbox in the same transaction (report attachments detached or the report deleted; flash card images replaced, removed, or their cards deleted, including a whole list's cards and cards removed by a pull or an accepted proposal, with `count` = cards that held the file). No app publishes the singular `*.file.removed`.
 
 #### BullMQ `cleanup-orphaned-files` (every 5 min)
 

@@ -12,37 +12,37 @@ Common to every route below:
 
 ## Contents
 
-| Operation                                                                                   | Access                                  | Writes                          | Events                                               |
-| ------------------------------------------------------------------------------------------- | --------------------------------------- | ------------------------------- | ---------------------------------------------------- |
-| [POST /blogs](#post-apiv1resourcesblogs)                                                    | any user                                | `Blog`                          | `resource.resource.created`                          |
-| [GET /blogs/tags](#get-apiv1resourcesblogstags)                                             | any user                                | -                               | -                                                    |
-| [GET /blogs/:id](#get-apiv1resourcesblogsid)                                                | any user                                | -                               | -                                                    |
-| [PATCH /blogs/:id](#patch-apiv1resourcesblogsid)                                            | `@ResourceAccess` blog                  | `Blog`                          | -                                                    |
-| [DELETE /blogs/:id](#delete-apiv1resourcesblogsid)                                          | `@ResourceAccess` blog                  | `Blog` (cascade `BlogComment`)  | `resource.resource.deleted`                          |
-| [GET /blogs](#get-apiv1resourcesblogs)                                                      | any user                                | -                               | -                                                    |
-| [GET /blogs/:id/comments](#get-apiv1resourcesblogsidcomments)                               | any user                                | -                               | -                                                    |
-| [POST /blogs/:id/comments](#post-apiv1resourcesblogsidcomments)                             | any user                                | `BlogComment`                   | `resource.blog-comment.created`                      |
-| [PATCH /blog-comments/:commentId](#patch-apiv1resourcesblog-commentscommentid)              | author (service)                        | `BlogComment`                   | -                                                    |
-| [DELETE /blog-comments/:commentId](#delete-apiv1resourcesblog-commentscommentid)            | author or mod/admin (service)           | `BlogComment`                   | -                                                    |
-| [POST /flash-cards](#post-apiv1resourcesflash-cards)                                        | list owner (service)                    | `FlashCard`                     | `resource.resource.created`                          |
-| [GET /flash-cards/:id](#get-apiv1resourcesflash-cardsid)                                    | visible list (service)                  | -                               | -                                                    |
-| [PATCH /flash-cards/:id](#patch-apiv1resourcesflash-cardsid)                                | list owner or admin (service)           | `FlashCard`                     | -                                                    |
-| [DELETE /flash-cards/:id](#delete-apiv1resourcesflash-cardsid)                              | list owner or admin (service)           | `FlashCard`                     | `resource.resource.deleted`                          |
-| [GET /flash-cards](#get-apiv1resourcesflash-cards)                                          | visible lists (service)                 | -                               | -                                                    |
-| [POST /flash-card-lists](#post-apiv1resourcesflash-card-lists)                              | any user                                | `FlashCardList`                 | -                                                    |
-| [GET /flash-card-lists/:id](#get-apiv1resourcesflash-card-listsid)                          | visible (service)                       | -                               | -                                                    |
-| [PATCH /flash-card-lists/:id](#patch-apiv1resourcesflash-card-listsid)                      | owner or admin (service)                | `FlashCardList`                 | -                                                    |
-| [DELETE /flash-card-lists/:id](#delete-apiv1resourcesflash-card-listsid)                    | owner or admin (service)                | `FlashCardList` (cascade cards) | `resource.resource.deleted` x cards                  |
-| [GET /flash-card-lists](#get-apiv1resourcesflash-card-lists)                                | visible (service)                       | -                               | -                                                    |
-| [POST /flash-card-lists/:id/cards](#post-apiv1resourcesflash-card-listsidcards)             | owner or admin (service)                | `FlashCard.listId`              | -                                                    |
-| [GET /flash-card-lists/:id/cards](#get-apiv1resourcesflash-card-listsidcards)               | visible (service)                       | -                               | -                                                    |
-| [POST /reports](#post-apiv1resourcesreports)                                                | any user                                | `Report`, `ReportFile`          | `resource.report.created`                            |
-| [GET /reports/:id](#get-apiv1resourcesreportsid)                                            | reporter or mod/admin (service)         | -                               | -                                                    |
-| [PATCH /reports/:id](#patch-apiv1resourcesreportsid)                                        | `@HasRoles(Mod, Admin)`; 409 once final | `Report`                        | `resource.report.status-changed` (if status changed) |
-| [DELETE /reports/:id](#delete-apiv1resourcesreportsid)                                      | `@HasRoles(Mod, Admin)`                 | `Report` (cascade files)        | -                                                    |
-| [GET /reports](#get-apiv1resourcesreports)                                                  | own; mod/admin all (service)            | -                               | -                                                    |
-| [POST /reports/:id/files](#post-apiv1resourcesreportsidfiles)                               | reporter or mod/admin + uploader check  | `ReportFile`                    | -                                                    |
-| [DELETE /reports/:reportId/files/:fileId](#delete-apiv1resourcesreportsreportidfilesfileid) | reporter or mod/admin (service)         | `ReportFile`                    | -                                                    |
+| Operation                                                                                   | Access                                  | Writes                         | Events                                                        |
+| ------------------------------------------------------------------------------------------- | --------------------------------------- | ------------------------------ | ------------------------------------------------------------- |
+| [POST /blogs](#post-apiv1resourcesblogs)                                                    | any user                                | `Blog`                         | `resource.resource.created`                                   |
+| [GET /blogs/tags](#get-apiv1resourcesblogstags)                                             | any user                                | -                              | -                                                             |
+| [GET /blogs/:id](#get-apiv1resourcesblogsid)                                                | any user                                | -                              | -                                                             |
+| [PATCH /blogs/:id](#patch-apiv1resourcesblogsid)                                            | `@ResourceAccess` blog                  | `Blog`                         | -                                                             |
+| [DELETE /blogs/:id](#delete-apiv1resourcesblogsid)                                          | `@ResourceAccess` blog                  | `Blog` (cascade `BlogComment`) | `resource.resource.deleted`                                   |
+| [GET /blogs](#get-apiv1resourcesblogs)                                                      | any user                                | -                              | -                                                             |
+| [GET /blogs/:id/comments](#get-apiv1resourcesblogsidcomments)                               | any user                                | -                              | -                                                             |
+| [POST /blogs/:id/comments](#post-apiv1resourcesblogsidcomments)                             | any user                                | `BlogComment`                  | `resource.blog-comment.created`                               |
+| [PATCH /blog-comments/:commentId](#patch-apiv1resourcesblog-commentscommentid)              | author (service)                        | `BlogComment`                  | -                                                             |
+| [DELETE /blog-comments/:commentId](#delete-apiv1resourcesblog-commentscommentid)            | author or mod/admin (service)           | `BlogComment`                  | -                                                             |
+| [POST /flash-cards](#post-apiv1resourcesflash-cards)                                        | list owner (service) + uploader check   | `FlashCard`                    | `resource.resource.created`, `resource.file.added`            |
+| [GET /flash-cards/:id](#get-apiv1resourcesflash-cardsid)                                    | visible list (service)                  | -                              | -                                                             |
+| [PATCH /flash-cards/:id](#patch-apiv1resourcesflash-cardsid)                                | list owner or admin + uploader check    | `FlashCard`                    | `resource.file.added` / `.files.removed` (image)              |
+| [DELETE /flash-cards/:id](#delete-apiv1resourcesflash-cardsid)                              | list owner or admin (service)           | `FlashCard`                    | `resource.resource.deleted`, `resource.files.removed`         |
+| [GET /flash-cards](#get-apiv1resourcesflash-cards)                                          | visible lists (service)                 | -                              | -                                                             |
+| [POST /flash-card-lists](#post-apiv1resourcesflash-card-lists)                              | any user                                | `FlashCardList`                | -                                                             |
+| [GET /flash-card-lists/:id](#get-apiv1resourcesflash-card-listsid)                          | visible (service)                       | -                              | -                                                             |
+| [PATCH /flash-card-lists/:id](#patch-apiv1resourcesflash-card-listsid)                      | owner or admin (service)                | `FlashCardList`                | -                                                             |
+| [DELETE /flash-card-lists/:id](#delete-apiv1resourcesflash-card-listsid)                    | owner or admin (service)                | `FlashCard`, `FlashCardList`   | `resource.resource.deleted` x cards, `resource.files.removed` |
+| [GET /flash-card-lists](#get-apiv1resourcesflash-card-lists)                                | visible (service)                       | -                              | -                                                             |
+| [POST /flash-card-lists/:id/cards](#post-apiv1resourcesflash-card-listsidcards)             | owner or admin (service)                | `FlashCard.listId`             | -                                                             |
+| [GET /flash-card-lists/:id/cards](#get-apiv1resourcesflash-card-listsidcards)               | visible (service)                       | -                              | -                                                             |
+| [POST /reports](#post-apiv1resourcesreports)                                                | any user                                | `Report`, `ReportFile`         | `resource.report.created`                                     |
+| [GET /reports/:id](#get-apiv1resourcesreportsid)                                            | reporter or mod/admin (service)         | -                              | -                                                             |
+| [PATCH /reports/:id](#patch-apiv1resourcesreportsid)                                        | `@HasRoles(Mod, Admin)`; 409 once final | `Report`                       | `resource.report.status-changed` (if status changed)          |
+| [DELETE /reports/:id](#delete-apiv1resourcesreportsid)                                      | `@HasRoles(Mod, Admin)`                 | `Report` (cascade files)       | -                                                             |
+| [GET /reports](#get-apiv1resourcesreports)                                                  | own; mod/admin all (service)            | -                              | -                                                             |
+| [POST /reports/:id/files](#post-apiv1resourcesreportsidfiles)                               | reporter or mod/admin + uploader check  | `ReportFile`                   | -                                                             |
+| [DELETE /reports/:reportId/files/:fileId](#delete-apiv1resourcesreportsreportidfilesfileid) | reporter or mod/admin (service)         | `ReportFile`                   | -                                                             |
 
 All paths in the table are relative to `/api/v1/resources`.
 
@@ -160,35 +160,44 @@ Delete a comment; kept as a placeholder if it has replies.
 
 Service: `FlashcardService` (`apps/resource/src/app/services/flashcard.service.ts`). Visibility helper `visibleListsWhere` (`apps/resource/src/app/mappers/flash-card.mapper.ts:44`): privileged sees all; others see cards in public lists or in their own lists. Privileged here means `Admin` only (`FLASH_CARD_ADMIN_ROLES`).
 
+**Card images** are file-service files. The client uploads with `POST /files` (`isPublicFile: true`, like avatars and exam media, so the URL never expires) and sends the returned id as `imageFileId`; free image URLs are no longer accepted (the request field `image` is gone, its proto numbers reserved). `flash_cards.image_file_id` holds the id; the old `flash_cards.image` column keeps the URL of cards from before, still returned, and is cleared when an image is set or removed.
+
+- **References**: every card row holding an `imageFileId` is one reference in file-service's `ref_count`. `CardImageRefsService` (`apps/resource/src/app/services/card-image-refs.service.ts`) writes `resource.file.added { fileId }` (one per new holder) and `resource.files.removed { files: [{ id, count }] }` (repeats grouped) to the outbox in the same transaction as the card change. Cards are deleted with `DELETE FROM flash_cards … RETURNING id, image_file_id`, so only rows this statement removed are released (a card deleted concurrently is never released twice). Copies share the file id and hold their own reference (see [resource-community.md](resource-community.md#card-images-in-copies-and-proposals)).
+- **URLs**: responses carry `imageFileId` and `image`, the URL to show. `CardImageUrlService` (`card-image-url.service.ts`) resolves all ids of one response with a single `file.FileService/GetUrls` call, outside any transaction, and sets `image` to the file's public URL; a card without a file keeps its legacy URL. An id file-service doesn't know (or file-service down: logged, the read still succeeds) leaves `image` absent.
+
 ### POST /api/v1/resources/flash-cards
 
 - **Access**: any user; the service requires the target list to be theirs.
 - **Flow**:
-  1. Gateway: `CreateFlashCardDto` (`word`, `definition`, `listId` required; `image`, `partOfSpeech`, `pronunciation`, `notes` optional; `examples`, `tags` default `[]`) + `authorId = sub` → `resource.FlashCardService/CreateFlashCard`.
-  2. `FlashcardService.createFlashCard`, `@Transactional()`: load list (404 `FlashCardList not found`); 403 `Cards can only be added to your own lists` if `list.authorId !== authorId` (admins included); insert `FlashCard`; outbox `resource.resource.created` `{ resourceType: 'flashcard', resourceId, ownerId }`.
-  3. Response `FlashCardDto`.
-- **Async**: authorization registers ownership (as for blogs), but no route reads `flashcard` ownership any more: the author can update or delete the new card at once.
-- **Notes**: `image` is a plain string; no file-ownership check or `file.added` event.
+  1. Gateway: `CreateFlashCardDto` (`word`, `definition`, `listId` required; `imageFileId`, `partOfSpeech`, `pronunciation`, `notes` optional; `examples`, `tags` default `[]`) + `authorId = sub` + `mayAttachAnyFile = hasAnyRole(user, [Admin])` → `resource.FlashCardService/CreateFlashCard`.
+  2. `FlashcardService.createFlashCard`: if `imageFileId` is set and the caller is not an admin, `CheckFilesOwnedBy([imageFileId], authorId)` (403 `You can only attach files you uploaded: <id>`), before any transaction opens.
+  3. `@Transactional()` `insertCard`: load list (404 `FlashCardList not found`); 403 `Cards can only be added to your own lists` if `list.authorId !== authorId` (admins included); insert `FlashCard` (`imageFileId`); outbox `resource.file.added { fileId }` if it has an image; outbox `resource.resource.created` `{ resourceType: 'flashcard', resourceId, ownerId }`.
+  4. Image URL resolved (`GetUrls`); response `FlashCardDto` (`image` = URL, `imageFileId`).
+- **Async**: authorization registers ownership (as for blogs), but no route reads `flashcard` ownership any more: the author can update or delete the new card at once. file-service raises the image's `ref_count`.
 
 ### GET /api/v1/resources/flash-cards/:id
 
-`requesterOf(user, [Admin])` → `resource.FlashCardService/GetFlashCard` → `FlashcardService.getFlashCard`: `findFirst({ id, list: visibleListsWhere })`; 404 `FlashCard not found` if missing or in a private list that is not yours. Response `FlashCardDto`.
+`requesterOf(user, [Admin])` → `resource.FlashCardService/GetFlashCard` → `FlashcardService.getFlashCard`: `findFirst({ id, list: visibleListsWhere })`; 404 `FlashCard not found` if missing or in a private list that is not yours. Image URL resolved. Response `FlashCardDto`.
 
 ### PATCH /api/v1/resources/flash-cards/:id
 
 - **Access**: owner of the card's list, or admin, checked in the service (requester pattern). The gateway adds `requesterOf(user, [Admin])`; no `@ResourceAccess`.
-- **Flow**: `UpdateFlashCardDto` (all optional; `examples`, `tags` default `[]`; the gateway sets `replaceExamples`/`replaceTags` when the body has the list) → `resource.FlashCardService/UpdateFlashCard { ...body, id, requesterId, privileged }` → `FlashcardService.updateFlashCard`: `findOwnedCard` = `findFirst({ id, list: { authorId: requesterId } })` (no list filter when privileged), 404 `FlashCard not found` if nothing matches; then `update`; undefined fields are left unchanged, `examples`/`tags` replaced when their `replace*` flag is set (so `[]` clears them) or non-empty. Not `@Transactional`. Response `FlashCardDto`.
+- **Flow**: `UpdateFlashCardDto` (all optional; `examples`, `tags` default `[]`; the gateway sets `replaceExamples`/`replaceTags` when the body has the list) → `resource.FlashCardService/UpdateFlashCard { ...body, id, requesterId, privileged, mayAttachAnyFile }` → `FlashcardService.updateFlashCard`:
+  1. `findOwnedCard` = `findFirst({ id, list: { authorId: requesterId } })` (no list filter when privileged), 404 `FlashCard not found` if nothing matches.
+  2. `imageFileId`: absent keeps the image; `''` removes it; an id replaces it. A new id that is not the card's current image is checked with `CheckFilesOwnedBy([id], requesterId)` (403) unless admin, before the transaction. Re-sending the current id is no change (so the owner of a copy can save a card whose image someone else uploaded).
+  3. `@Transactional()` `writeCard`: `SELECT id FROM flash_cards WHERE id = $1 FOR UPDATE`, `findOwnedCard` again; 409 `The card changed while saving; please try again` if the image changed meanwhile so that the sent id was never checked. `update`: undefined fields are left unchanged, `examples`/`tags` replaced when their `replace*` flag is set (so `[]` clears them) or non-empty; setting or removing an image writes `imageFileId` and clears the legacy `image`. If the image changed: outbox `resource.files.removed` for the old file and `resource.file.added` for the new one.
+  4. Image URL resolved; response `FlashCardDto`.
 - **Errors**: 404 for a missing card and for someone else's card (public list or not), so ids don't leak. Walkthrough: [authorization.md §7(e)](../authorization.md#e-updating-a-flash-card-patch-apiv1resourcesflash-cardsid-via-the-requester-pattern).
 
 ### DELETE /api/v1/resources/flash-cards/:id
 
 - **Access**: owner of the card's list, or admin (service), as for `PATCH`.
-- **Flow**: `resource.FlashCardService/DeleteFlashCard { id, requesterId, privileged }` → `FlashcardService.deleteFlashCard`, `@Transactional()`: `findOwnedCard` (404) → delete → outbox `resource.resource.deleted` `{ resourceType: 'flashcard', resourceId }`.
+- **Flow**: `resource.FlashCardService/DeleteFlashCard { id, requesterId, privileged }` → `FlashcardService.deleteFlashCard`, `@Transactional()`: `findOwnedCard` (404) → `DELETE … RETURNING` (404 if a concurrent delete got there first) → outbox `resource.files.removed` for its image, if any → outbox `resource.resource.deleted` `{ resourceType: 'flashcard', resourceId }`.
 - **Async**: authorization removes the ownership row.
 
 ### GET /api/v1/resources/flash-cards
 
-`ListFlashCardsQueryDto` (`authorId?`, `tags`, page/limit) + `requesterOf(user, [Admin])` → `resource.FlashCardService/ListFlashCards` → `FlashcardService.listFlashCards`: `where { list: visibleListsWhere, authorId?, tags hasSome }`, order `createdAt desc`, `findMany` + `count`. Response `ListFlashCardsDto { flashCards, totalCount }`.
+`ListFlashCardsQueryDto` (`authorId?`, `tags`, page/limit) + `requesterOf(user, [Admin])` → `resource.FlashCardService/ListFlashCards` → `FlashcardService.listFlashCards`: `where { list: visibleListsWhere, authorId?, tags hasSome }`, order `createdAt desc`, `findMany` + `count`. Image URLs resolved (one `GetUrls` for the page). Response `ListFlashCardsDto { flashCards, totalCount }`.
 
 ## Flash card lists
 
@@ -203,7 +212,7 @@ Service: `FlashcardListService` (`apps/resource/src/app/services/flashcard-list.
 - **Flow**: `resource.FlashCardListService/GetFlashCardList` → `FlashcardListService.getFlashCardList`:
   1. `findFirst({ id, ...visibleListsWhere })` including all `cards` (in `CARD_ORDER`, see [add a card](#post-apiv1resourcesflash-card-listsidcards)) and the fork count (`_count.forks`); 404 if not visible.
   2. In parallel: if owner or admin, count `FlashCardListProposal` with `targetListId = id` and status `OPEN` (else 0); if the list is a copy, check the upstream list is still visible to the requester.
-  3. Response `FlashCardListDetailDto` (list fields + `flashCards` (all, unpaged), `totalCards`, `openProposalCount`, `upstreamAvailable`).
+  3. Image URLs of the cards resolved (one `GetUrls`). Response `FlashCardListDetailDto` (list fields + `flashCards` (all, unpaged), `totalCards`, `openProposalCount`, `upstreamAvailable`).
 
 ### PATCH /api/v1/resources/flash-card-lists/:id
 
@@ -212,8 +221,8 @@ Service: `FlashcardListService` (`apps/resource/src/app/services/flashcard-list.
 ### DELETE /api/v1/resources/flash-card-lists/:id
 
 - **Access**: owner or admin (service).
-- **Flow**: `resource.FlashCardListService/DeleteFlashCardList` → `FlashcardListService.deleteFlashCardList`, `@Transactional()`: `findOwnedList` → read the list's card ids → delete the list (FK cascade deletes `FlashCard` rows and proposals targeting the list; copies of it keep existing with `forkedFromId` set null) → one outbox `resource.resource.deleted` `{ resourceType: 'flashcard', resourceId }` per card, written sequentially.
-- **Async**: authorization removes each card's ownership row.
+- **Flow**: `resource.FlashCardListService/DeleteFlashCardList` → `FlashcardListService.deleteFlashCardList`, `@Transactional()`: `SELECT id FROM flash_card_lists WHERE id = $1 FOR UPDATE` (a card being created in the list meanwhile either commits first and is deleted here, or fails its foreign key after) → `findOwnedList` → `DELETE FROM flash_cards WHERE list_id = $1 RETURNING id, image_file_id` → one outbox `resource.files.removed` releasing their images (one entry per file, `count` = cards that held it) → delete the list (FK cascade deletes proposals targeting it; copies of it keep existing with `forkedFromId` set null, and keep their own image references) → one outbox `resource.resource.deleted` `{ resourceType: 'flashcard', resourceId }` per card, written sequentially.
+- **Async**: authorization removes each card's ownership row; file-service lowers the images' `ref_count` (a file no card holds any more is deleted by the orphan cleanup 24 h after its last change).
 
 ### GET /api/v1/resources/flash-card-lists
 
@@ -232,7 +241,7 @@ Move an existing card into this list.
 
 ### GET /api/v1/resources/flash-card-lists/:id/cards
 
-`PageQueryDto` → `resource.FlashCardListService/ListCardsInList` → `FlashcardListService.listCardsInList`: 404 unless the list is visible; then cards `where listId`, order `CARD_ORDER` (see above), paged, plus count. Response `ListFlashCardsDto`.
+`PageQueryDto` → `resource.FlashCardListService/ListCardsInList` → `FlashcardListService.listCardsInList`: 404 unless the list is visible; then cards `where listId`, order `CARD_ORDER` (see above), paged, plus count. Image URLs resolved. Response `ListFlashCardsDto`.
 
 ## Reports
 
@@ -299,6 +308,8 @@ Consumers (in other apps) of the events emitted by the operations above; every q
 | `resource.blog-comment.created`  | `notification.events.blog-comment.created`  | `BlogCommentCreatedHandler`, `apps/notification/src/app/events/handlers/blog-comment-created.handler.ts`   | yes   | notify replied-to author and post author (preferences `commentReply`, `blogComment`)                  |
 | `resource.report.created`        | `notification.events.report.created`        | `ReportCreatedHandler`, `apps/notification/src/app/events/handlers/report-created.handler.ts`              | yes   | gRPC `auth.FindIdentityIdsByRole(Admin)`, notify each admin except the reporter (preference `report`) |
 | `resource.report.status-changed` | `notification.events.report.status-changed` | `ReportStatusChangedHandler`, `apps/notification/src/app/events/handlers/report-status-changed.handler.ts` | yes   | notify the reporter (preference `report`)                                                             |
+| `resource.file.added`            | `file.events.file.added`                    | `FileAddedHandler`, `apps/file-service/src/app/events/handlers/file-added.handler.ts`                      | yes   | `ref_count + 1` (report attachment, card image)                                                       |
+| `resource.files.removed`         | `file.events.files.removed`                 | `FileRemovedHandler`, `apps/file-service/src/app/events/handlers/files-removed.handler.ts`                 | yes   | `ref_count - count`, floored at 0                                                                     |
 
 None of these consumers emits further events.
 
@@ -313,4 +324,5 @@ None of these consumers emits further events.
 - ~~Soft delete keeps `authorId` while the class comment says it is cleared~~: comment corrected (keeping `authorId` is intended: the column is required and responses blank it).
 - ~~`totalThreads` counts placeholders that `buildCommentTree` may prune~~: not a bug in consistent data (`deleteComment` keeps a placeholder only while it has replies, so a root is never pruned); two concurrent deletes could leave an empty placeholder: fixed (see fixed-issues.md; `deleteComment` row-locks the comment and its parent before counting replies).
 - ~~`updateFlashCard`/`deleteFlashCard` rely on `@ResourceAccess` alone~~: fixed (see fixed-issues.md; requester pattern, owner check via the card's list).
+- ~~Card images are free URL strings (no upload, no uploader check, no cleanup)~~: fixed (see fixed-issues.md, "Flash card images in file-service"; `image_file_id`, reference counted).
 - ~~Doc drift~~: `messaging.md` §7 and `services-and-data.md` now list `resource.report.created` and `resource.blog-comment.created`.

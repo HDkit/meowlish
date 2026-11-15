@@ -2,6 +2,14 @@
 
 Steps an operator must take when deploying a build over an existing environment. Newest release first. Queue-level details live in [observability.md](observability.md) ("One-time upgrade: recreate consumer queues").
 
+## Flash card images in file-service (November 2026)
+
+Details in [`../fixed-issues.md`](../fixed-issues.md#flash-card-images-in-file-service-november-2026).
+
+1. **Database:** `prisma db push` for **resource** (`nx run resource:prisma:push`): adds the nullable `flash_cards.image_file_id`. Nothing is rewritten; old cards keep their `image` URL and still show it.
+2. **Deploy order:** resource (after the push), then gateway together with the frontend. Mixed versions fail safe: the card is saved without its image (an old gateway's `image` URL is ignored by the new resource, a new gateway's `image_file_id` by an old one). file-service needs no change; it already consumes `resource.file.added` / `resource.files.removed` (report attachments).
+3. **Behaviour operators will see:** `POST/PATCH /flash-cards` no longer accept an image URL (`image` is silently dropped); they take `imageFileId` from `POST /files` (`isPublicFile: true`). Attaching someone else's upload is 403 unless admin. Card images now count in file-service's `ref_count` (one per card, copies included), and a file no card holds any more is removed by the orphan cleanup 24 h later.
+
 ## November 2026 backlog decisions (S21–S25, C23–C40)
 
 Details of each change are in [`../fixed-issues.md`](../fixed-issues.md#backlog-decisions-november-2026).
