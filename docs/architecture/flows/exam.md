@@ -1,6 +1,6 @@
 # Exam flows
 
-Every HTTP route the gateway serves under `/api/v1/exams`, traced into `apps/exam`. Gateway controllers: `apps/gateway/src/exam-gateway/{exam-management,exam-practice,tag,goal}.router.controller.ts`, mounted at `/exams` by `apps/gateway/src/router.module.ts` (global prefix `api`, URI version `v1`). All four use one gRPC client (`EXAM_CLIENT`, `exam.router.module.ts`) for the `exam.ExamManagementService`, `exam.ExamPracticeService`, `exam.TagService` and `exam.GoalService` services. Tables and models: [services-and-data.md, exam](../services-and-data.md#exam-appsexam). Outbox, inbox and retry queues: [messaging.md](../messaging.md). Requester pattern: [authorization.md §6](../authorization.md#6-requester-pattern-authorization-in-the-owning-service).
+Every HTTP route the gateway serves under `/api/v1/exams`, traced into `apps/exam`. Gateway controllers: `apps/gateway/src/exam-gateway/{exam-management,exam-practice,tag,goal}.router.controller.ts`, mounted at `/exams` by `apps/gateway/src/router.module.ts` (global prefix `api`, URI version `v1`). All four use one gRPC client (`EXAM_CLIENT`, `exam.router.module.ts`) for the `exam.ExamManagementService`, `exam.ExamPracticeService`, `exam.TagService` and `exam.GoalService` services. Tables and models: [apps/exam/README.md](../../../apps/exam/README.md). Outbox, inbox and retry queues: [messaging.md](../messaging.md). Requester pattern: [authorization.md §6](../authorization.md#6-requester-pattern-authorization-in-the-owning-service).
 
 Conventions used below:
 
@@ -40,8 +40,8 @@ Conventions used below:
 | [GET /exams/practice/attempt/:id/review](#get-apiv1examspracticeattemptidreview)                               | owner                        | -                                                                                       | -                                                                                |
 | [Public catalogue reads](#public-catalogue-reads) (4 routes)                                                   | public                       | -                                                                                       | -                                                                                |
 | [`my/*` reads](#my-reads) (5 routes)                                                                           | signed in, own data          | -                                                                                       | -                                                                                |
-| [Tags](#tags-tagrouter) (6 routes)                                                                             | mod, admin; 2 reads public   | `tags`, `tags_table_lock`                                                               | -                                                                                |
-| [Goals](#goals-goalrouter) (4 routes)                                                                          | signed in, own goal          | `goals`                                                                                 | -                                                                                |
+| [Tags](#tags-taggatewaycontroller) (6 routes)                                                                  | mod, admin; 2 reads public   | `tags`, `tags_table_lock`                                                               | -                                                                                |
+| [Goals](#goals-goalgatewaycontroller) (4 routes)                                                               | signed in, own goal          | `goals`                                                                                 | -                                                                                |
 | [Background work](#background-work)                                                                            | -                            | `deleted_files`, `scorer_data`, outbox                                                  | `exam.files.removed`, consumer of `exam.writing.scored`                          |
 
 ## Exam management (`ExamManagementGatewayController`)
@@ -301,7 +301,7 @@ Ends the attempt and starts scoring. This is the start of the [writing round tri
   - `exam.attempt.submitted` → `achievement.events.attempt.submitted` → `apps/achievement/src/app/events/handlers/attempt-submitted.handler.ts` updates attempt-count badges (inbox: yes).
   - `exam.attempt.scored` `{ attemptId, attemptedBy, score, totalPoints }` → `achievement.events.attempt.scored` → `attempt-scored.handler.ts` updates score badges (inbox: yes).
   - `exam.writing.submitted` → the AI scorer or the mock (next section).
-- **Errors**: if `score()` still fails after the retries, the error is only logged. The attempt then stays unscored and no `.scored` or `.writing.submitted` is sent. This is a known issue in `docs/backlog.md`.
+- **Errors**: if `score()` still fails after the retries, the error is only logged. The attempt then stays unscored and no `.scored` or `.writing.submitted` is sent. This is a known issue in `docs/roadmap.md`.
 
 ### Writing scoring round trip
 

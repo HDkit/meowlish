@@ -1,6 +1,6 @@
 # Messaging (RabbitMQ, outbox, inbox)
 
-How services exchange events: the shared library `@server/messaging` (`libs/messaging/src`), the transactional outbox and its relay, the idempotent inbox, and the RabbitMQ topology with per-consumer retry and dead-letter queues. Operational runbooks (DLQ replay, alerts, one-time queue recreation) are in [`docs/operations/observability.md`](../operations/observability.md) and [`docs/operations/upgrade-notes.md`](../operations/upgrade-notes.md).
+How services exchange events: the shared library `@server/messaging` (`libs/messaging/src`), the transactional outbox and its relay, the idempotent inbox, and the RabbitMQ topology with per-consumer retry and dead-letter queues. Operational runbooks (DLQ replay, alerts, one-time queue recreation) are in [`docs/operations.md`](../operations.md) and [`docs/operations.md`](../operations.md).
 
 ## 1. The pieces
 
@@ -255,7 +255,7 @@ Scoring runs in exam's own consumer of `exam.attempt.submitted` (inbox, retries,
 | Stage                       | Guarantee                                                                                                                                                          |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Business write → outbox row | Atomic (same Postgres transaction)                                                                                                                                 |
-| Outbox → broker             | At-least-once, retried forever with back-off; dropped if no queue is bound (no `mandatory`)                                                                        |
+| Outbox → broker             | At-least-once, retried forever with back-off; published `mandatory`, so an event with no bound queue stays in the outbox and is retried (`OutboxStuck`)            |
 | Broker → handler            | At-least-once; 5 retries with back-off, then DLQ                                                                                                                   |
 | Handler side effects        | Exactly-once per `(eventId, queue)` within the 7-day inbox retention; only the two writing keys (bare, not read through `unwrapEvent`) rely on idempotent handlers |
 
@@ -276,7 +276,7 @@ From `git log main..HEAD` (commits `e14f4c1` relay, `4faaf16`/`dca6965` inbox, `
 | Observability               | None for messaging                                                                                                                                                                                                                                                                                                                                            | Outbox/inbox/consumer metrics, Messaging dashboard, `OutboxStuck` and `DeadLetters` alerts, RabbitMQ scrape |
 | Missing publishers          | `notification` consumed `achievement.badge.earned` and `resource.report.status-changed`, but nothing on `main` published either (`git grep` on `main`)                                                                                                                                                                                                        | Both published through the outbox                                                                           |
 
-Upgrading a broker from `main` requires deleting the old consumer queues once (their arguments changed, so redeclaring fails with `PRECONDITION_FAILED`) and starting consumers before publishers: see [observability.md "One-time upgrade"](../operations/observability.md#one-time-upgrade-recreate-consumer-queues) and [upgrade-notes.md](../operations/upgrade-notes.md).
+Upgrading a broker from `main` requires deleting the old consumer queues once (their arguments changed, so redeclaring fails with `PRECONDITION_FAILED`) and starting consumers before publishers: see [operations.md "One-time: outbox/inbox and consumer queue recreation"](../operations.md#one-time-outboxinbox-and-consumer-queue-recreation) and [upgrade-notes.md](../operations.md).
 
 ## 11. Observations (from reading the code, not verified at runtime)
 

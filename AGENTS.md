@@ -16,7 +16,7 @@ Backend for an English-learning app: an Nx + pnpm monorepo of NestJS 11 microser
 
 ## Known issues
 
-Check `docs/backlog.md` before working on a service: it lists open security and correctness issues. When you fix one, delete its entry in the same commit.
+Check `docs/roadmap.md` before working on a service: it lists open security and correctness issues and planned work. When you fix one, delete its entry in the same commit and describe the fix in `docs/fixed-issues.md`. Each service has a `README.md` (tech used, data, events); update it when the service's dependencies, tables or events change.
 
 ## Tooling rules
 
@@ -134,7 +134,7 @@ Root:
 | `.husky/pre-commit`                                   | Runs affected format, lint, and test                                                                             |
 | `.github/workflows/*.yml`                             | CI: install → prisma generate → lint → test → build                                                              |
 | `docker/`                                             | Compose stacks, Dockerfile, Envoy configs, `.env*.example`                                                       |
-| `docker/docker-compose.observability.yaml`            | Grafana LGTM stack (OTLP ingest on 4317/4318); see `docs/operations/observability.md`                            |
+| `docker/docker-compose.observability.yaml`            | Grafana LGTM stack (OTLP ingest on 4317/4318); see `docs/operations.md`                                          |
 | `docker/observability/`                               | Provisioned Grafana dashboards (`dashboards/`) and alert rules (`alerting/`)                                     |
 
 Per app (`apps/<svc>/`):
@@ -198,7 +198,7 @@ test/           *.spec.ts, mirroring the folders above (no specs next to the sou
 - Every route is documented (see **API documentation**).
 - Auth is on by default. Use `@IsPublic()` to open a route, and `@HasRoles(Role.X, …)` (from `@server/typing`) to restrict one.
 - **Session tokens travel in cookies.** Login, register, `/auth/refresh` and `POST /auth/google/tokens` (JSON body only) set HttpOnly `access_token` (`Path=/`) and `refresh_token` (`Path=/api/v1/auth`) cookies (`SameSite=Lax`, `Secure` on HTTPS or in production, `Max-Age` from each token's `exp`) and return `data: null`; `/auth/logout` and `/auth/logout-all` clear them (`apps/gateway/src/auth-gateway/auth-cookies.ts`). The JWT strategies and the live socket handshake read the cookie first and fall back to `Authorization: Bearer`. Never return tokens in a response body. Refresh tokens rotate: each `/auth/refresh` issues the next token of the session's family (`fam` claim, used jtis in auth's Redis); the same token again within 30 s gets the current one back, later it revokes the family.
-  - **Deployment: the browser talks only to the frontend origin.** The frontend proxies `/api/*` and `/socket.io/*` to the gateway, so the cookies are first-party on the frontend host and the API host may be on any site. Calling a cross-site API host directly from the browser isn't supported (third-party cookies). `TRUST_PROXY` counts only proxies that append to `X-Forwarded-For`; Next's rewrite proxy doesn't (see `docs/operations/upgrade-notes.md`).
+  - **Deployment: the browser talks only to the frontend origin.** The frontend proxies `/api/*` and `/socket.io/*` to the gateway, so the cookies are first-party on the frontend host and the API host may be on any site. Calling a cross-site API host directly from the browser isn't supported (third-party cookies). `TRUST_PROXY` counts only proxies that append to `X-Forwarded-For`; Next's rewrite proxy doesn't (see `docs/operations.md`).
   - Routes that set or clear these cookies carry `@UseGuards(CookieIssuanceGuard)` (login-CSRF / forced-logout guard): `Sec-Fetch-Site: cross-site`, or an `Origin` that is neither in `CORS_ORIGINS` nor the gateway itself, gets 403. Add it to any new cookie-issuing route. live's socket.io `allowRequest` likewise refuses handshakes whose `Origin` isn't in `CORS_ORIGINS`.
   - Google account linking (frontend on a different origin, same site): open `/auth/credentials/google` with a top-level navigation, not fetch. The navigation carries the `access_token` cookie, and the `oauth2_state` cookie set there comes back on the callback.
 - **Authorization: pick the right mechanism.**

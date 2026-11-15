@@ -1,356 +1,313 @@
 # Authentication and authorization
 
-How a request is authenticated, how each kind of rule is enforced **today**, five traced examples, and how this compares with the target designs in `docs/superpowers/`. Everything here is read from the code on branch `chore/local-dev-fixes`; file paths are given for each claim.
+How the backend decides who you are and what you may do, as the code works **today** (branch `chore/local-dev-fixes`). Sections 1 and 2 are the 10-minute version. Section 3 traces one request per mechanism. Sections 4 to 6 are reference. Per-route detail lives in [flows/](README.md#operation-flows); token and session flows in [flows/auth.md](flows/auth.md).
 
-## 1. Layers at a glance
+## 1. In short
 
-| #   | Layer                                 | Where                                                                                                                                                                            | Decides                                            | Failure            |
-| --- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ------------------ |
-| 1   | Authentication (JWT RS256)            | Gateway `JwtAuthGuard` + `JwtStrategy` (`apps/gateway/src/auth/guards/jwt-auth.guard.ts`, `apps/gateway/src/auth-gateway/strategies/jwt.strategy.ts`), auth `ValidateAccess` RPC | Who you are; token not revoked; account not locked | 401 / 403 (locked) |
-| 2   | Role and permission gates             | Gateway `RolesGuard`, `PermissionsGuard` (`apps/gateway/src/auth/guards/`) via `@HasRoles`, `@HasPermissions`                                                                    | Coarse capability by role/permission in the JWT    | 403                |
-| 3   | Legacy ownership copy                 | Gateway `ResourceAccessGuard` + authorization service (`apps/authorization`) via `@ResourceAccess`                                                                               | Owner of a blog / room, from a copy fed by events  | 403                |
-| 4   | Requester pattern (local domain auth) | Gateway sends `requesterOf(req.user, ROLES)`; the owning service checks its own rows                                                                                             | Owner-or-privileged, visibility, file uploader     | 404 / 403          |
+Every HTTP request enters through the gateway. The gateway checks the JWT (signature, expiry, not revoked, account not locked), and then one of **three mechanisms** decides whether the caller may do the thing:
 
-Global guard order is the `APP_GUARD` registration order in `apps/gateway/src/gateway.module.ts`: `ThrottlerGuard` → `JwtAuthGuard` → `RolesGuard` → `PermissionsGuard` → `ResourceAccessGuard`. Route-level `@UseGuards(...)` (e.g. `CookieIssuanceGuard`) run after them. Every guard short-circuits on `@IsPublic()`.
+1. **Role/permission check in the gateway.** The JWT carries the caller's `roles` and `permissions`. A route marked `@HasRoles(...)` or `@HasPermissions(...)` is refused with 403 if the token has none of them. Nothing else is looked up. Good for "only admins may list users".
+2. **`@ResourceAccess`: ask the authorization service "does this user own this object?"** The authorization service keeps a table of `(resource type, resource id, owner id)`. It fills that table by listening to `*.created` / `*.deleted` events that the owning services publish. The gateway calls `CheckOwnership` before forwarding the request. **Legacy**: only four routes still use it, and AGENTS.md says not to add more.
+3. **Requester pattern: the owning service decides from its own rows.** The gateway forwards _who is asking_ (`requesterId` = JWT `sub`, plus `privileged` = "has one of the override roles") inside the gRPC request. The service compares that with its own column (`exams.created_by`, `flash_card_lists.author_id`, `rooms.created_by`, `reports.reported_by`, `files.uploaded_by`, ...) and answers 404 or 403. This is how almost all ownership rules work now.
 
-Services do **not** verify the JWT themselves (except live for sockets): the gateway does not forward the token over gRPC, and services trust the `requesterId` / `privileged` / `userId` / `recipientId` fields of the request message. See §9 for what that implies.
+Mechanisms combine: e.g. live ban first needs `@HasRoles(Mod, Admin)` (1) and then room ownership in live (3).
 
-## 2. Authentication
+**Is ownership data pulled into each service's local database?** No. No service pulls from, or caches, the authorization service. That was the plan in the hybrid design (section 2), but it was never built. Each service already _owns_ its ownership column and checks it directly; the authorization service holds an **extra copy** of some of those columns, used only by the `@ResourceAccess` routes. The one place data ever flowed _from_ authorization _into_ a service is a one-off backfill (live's `rooms.created_by`, section 2.2), not a sync.
 
-### Tokens
+### Which routes use which
 
-- auth signs with `JWT_PRIVATE_KEY` (RS256); only the gateway and live hold `JWT_PUBLIC_KEY`.
-- Access token claims (`libs/utils/src/types/payload.type.ts` `payloadSchema`): `sub`, `roles[]`, `permissions[]`, `iat`, `iatMs` (ms issue time), `exp`, plus a random `jti` (`apps/auth/src/app/services/token.service.ts`). The refresh token carries `sub`, `iat`, `iatMs`, `exp`, `jti` (no roles/permissions).
-- Default lifetimes (`apps/auth/src/configs/config.ts`): access **15 min** (`JWT_ACCESS_TOKEN_EXPIRATION`, default 900 s), refresh **7 days** (`JWT_REFRESH_TOKEN_EXPIRATION`, default 604800 s).
+All paths are under `/api/v1`. "Override" is who skips the ownership check (`privileged`).
 
-### Verification in the gateway
+| Mechanism                    | Routes                                                                                                                                                                                             | Rule                                                                                                                        |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| 1 roles                      | `GET /auth/identities`, `/auth/roles`, `/auth/perms`, `/auth/identity/search/phone`, `POST`/`DELETE /auth/:id/roles`, `POST /notifications`                                                        | `@HasRoles(Admin)`                                                                                                          |
+| 1 roles                      | `/exams/tags/*`; every `/exams/management/*` route (class level); `POST /chat/rooms`; `PATCH`/`DELETE /resources/reports/:id`; `PATCH /resources/forum/threads/:threadId/moderation`               | `@HasRoles(Mod, Admin)`                                                                                                     |
+| 1 permissions                | `POST /auth/:id/lock`, `DELETE /auth/:id/lock`, `PATCH /exams/management/:id/review`                                                                                                               | `@HasPermissions(USER_LOCK / USER_UNLOCK / EXAM_APPROVE)`                                                                   |
+| 2 `@ResourceAccess`          | `PATCH`/`DELETE /resources/blogs/:id`                                                                                                                                                              | admin; or mod/user/student/teacher **and** owner of `blog`                                                                  |
+| 2 `@ResourceAccess`          | `DELETE /chat/rooms/:roomId`, `PATCH /chat/rooms/:roomId/schedule` (also `@HasRoles(Mod, Admin)`)                                                                                                  | admin; or mod **and** owner of `room`                                                                                       |
+| 3 requester                  | exam management: update/delete/move exam, sections, questions                                                                                                                                      | creator (`exams.created_by`) or admin; 403 / 404 missing                                                                    |
+| 3 requester                  | flash cards, flash card lists (read, update, delete, add card), copies and proposals (`/resources/flash-card-lists/:id/fork`, `/diff`, `/pull`, `/proposals`, `/resources/flash-card-proposals/*`) | owner of the list or admin; private and not yours = 404                                                                     |
+| 3 requester                  | reports: `GET /resources/reports`, `GET /resources/reports/:id`, report files                                                                                                                      | reporter or mod/admin; not yours = 404                                                                                      |
+| 3 requester                  | blog comments (`/resources/blogs/:id/comments`, `/resources/blog-comments/:commentId`), forum threads and replies (`/resources/forum/*`)                                                           | edit: author only; delete: author or mod/admin; not yours = 404                                                             |
+| 3 requester                  | `POST /chat/rooms/:roomId/ban`, `DELETE /chat/rooms/:roomId/ban/:uid`                                                                                                                              | room owner (`rooms.created_by`) or admin; ownerless rooms admin-only                                                        |
+| 3 file attach                | exam section/question `addFiles`, `POST /resources/reports` (`fileIds`), `POST /resources/reports/:id/files`, flash card `imageFileId`, avatar (`POST /auth/my/identity`)                          | file uploaded by you (`files.uploaded_by`), checked with file-service `CheckFilesOwnedBy`; admins skip it except on avatars |
+| 3 "own data" (simplest form) | notifications (`recipientId: sub`), preferences, `/auth/my/*`, `/achievements/badges/my*`, exam attempts                                                                                           | the service filters by the id the gateway took from the JWT                                                                 |
 
-`JwtStrategy` (`passport-jwt`, name `access-jwt`):
+The full route list with every guard is in each `flows/*.md` file.
 
-1. **Extraction, cookie first**: `ExtractJwt.fromExtractors([cookieExtractor('access_token'), ExtractJwt.fromAuthHeaderAsBearerToken()])`. Browsers use the cookie; API clients and the Scalar UI may send `Authorization: Bearer`.
-2. Signature and expiry with the public key, `algorithms: ['RS256']`.
-3. `payloadSchema.safeParse` (a validly signed but malformed payload is 401, not 500).
-4. gRPC `auth.ValidateAccess({ identityId, iat, iatMs })` → `ValidateAccessCommandHandler` (`apps/auth/src/app/commands/handlers/validate-access.handler.ts`):
-   - revoked → 401: Redis key `jwt:blacklist:user:<id>` holds the revocation time in ms; every token with `iatMs` (or `iat*1000` for legacy tokens) `<=` that time is revoked (`TokenService.isTokenRevoked`). The key lives as long as a refresh token (`revokeUser` uses `setex` with the refresh TTL).
-   - identity missing → 401; `isLocked` → 403 `Account locked`.
-5. `req.user = { sub, permissions, roles }` (`Claims`).
+Guard order (global `APP_GUARD`s, `apps/gateway/src/gateway.module.ts`): `ThrottlerGuard` → `JwtAuthGuard` → `RolesGuard` → `PermissionsGuard` → `ResourceAccessGuard`; route-level `@UseGuards(...)` such as `CookieIssuanceGuard` run after them. `@IsPublic()` skips all four auth guards.
 
-`revokeUser` is called by `logout-all`, password change, `AssignRoleTo` and `RemoveRoleFrom` (`apps/auth/src/app/commands/handlers/*.handler.ts`), so a role change forces re-login and new claims. Locking an identity does not revoke tokens; it is enforced by the `isLocked` check above on every request.
+## 2. What the design said vs what was built
 
-## 3. Session cookies
+### 2.1 The plans
 
-All of this is in `apps/gateway/src/auth-gateway/auth-cookies.ts` and `auth.router.controller.ts`.
+Two planning documents (formerly in `docs/superpowers/`, now summarized in [`../roadmap.md`](../roadmap.md#earlier-plans-and-what-became-of-them); full text in git history) describe a target that is **not** what runs:
 
-| Cookie          | Set by                                                                       | `Path`                         | Attributes                                                                                                   | `Max-Age`                  |
-| --------------- | ---------------------------------------------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------ | -------------------------- |
-| `access_token`  | `POST /auth/register`, `/auth/login`, `/auth/refresh`, `/auth/google/tokens` | `/`                            | `HttpOnly`, `SameSite=Lax`, `Secure` when `req.secure`, `X-Forwarded-Proto: https`, or `NODE_ENV=production` | from the token's own `exp` |
-| `refresh_token` | same (only when the RPC returned one)                                        | `/api/v1/auth`                 | same                                                                                                         | from the token's own `exp` |
-| `oauth2_state`  | `GET /auth/google`, `GET /auth/credentials/google` (`GoogleOAuth2Guard`)     | `/api/v1/auth/google/callback` | `HttpOnly`, `SameSite=Lax`, `Secure` on HTTPS                                                                | 300 s                      |
+- **Actor/permission plan** (`plans/2026-11-12-actor-permission-authorization.md`, a pilot on reports): the gateway forwards the caller's JWT in gRPC metadata; each service verifies it itself (`ActorAuthGuard`) and decides from an `Actor { id, permissions }` plus its own rows. `requesterId`/`privileged`, `@HasRoles` and `@ResourceAccess` go away; permissions become `<context>:<resource>:<action>` (e.g. `resource:report:manage`). It also proposed retiring the authorization service.
+- **Hybrid authorization design** (`specs/2026-11-12-hybrid-authorization-design.md`, status "agreed in conversation, pending final read-through"). It reverses the "retire authorization" direction. This is the design with local copies:
+  - The authorization service becomes the **single source of truth and only writer** of relationships, stored as tuples `(objectType, objectId, relation, subjectType, subjectId)` (only `owner` for now), with an append-only, versioned **change log**.
+  - Each service keeps a **local snapshot** (`authz_tuple` + `authz_sync_state`) of the tuples for its own object types, **synced incrementally by version** with `PullChanges(objectTypes, afterVersion)`, bootstrapped with `ExportSnapshot`, nudged by `authz.changed.<objectType>` events, with a 30 s safety poll and catch-up before the service reports ready.
+  - **Everyday operations are decided locally** from the snapshot plus JWT permissions (fast, no network hop) and written to a local audit log. Policies join `authz_tuple`; columns like `authorId` become display-only.
+  - **Deleting a top-level object** (blog, list, report, exam, room) goes gateway → authorization `DeleteResource`, two-phase (`pending_delete`, compensation on failure, 204 within 5 s or 202 + operation id). The owning service only applies it by consuming an event.
+  - Creation publishes `authz.ownership.register` through the outbox and writes a provisional local tuple so the creator isn't blocked.
+  - Rollout: (1) observability and health, (2) outbox/inbox, (3) authorization tuples + change log + sync API, (4) resource pilot, (5) exam and live, (6) remove the legacy paths.
 
-Cookie-issuing routes return `data: null`; tokens never appear in a response body.
+### 2.2 What exists
 
-| Route                          | Guards                                                                                      | Effect                                                                                                                                        |
-| ------------------------------ | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST /api/v1/auth/register`   | `@IsPublic`, `CookieIssuanceGuard`, strict throttle by mail                                 | `auth.RegisterMail` → set both cookies                                                                                                        |
-| `POST /api/v1/auth/login`      | same                                                                                        | `auth.LoginMail` → set both cookies (also writes `auth.user.login` to the outbox)                                                             |
-| `POST /api/v1/auth/refresh`    | `@IsPublic`, `CookieIssuanceGuard`, `JwtRefreshAuthGuard`, strict throttle by refresh token | `JwtRefreshStrategy` reads `refresh_token` cookie, else Bearer; `auth.ValidateRefresh` (revocation) → `auth.Refresh` (rotation) → new cookies |
-| `POST /api/v1/auth/logout`     | `@IsPublic`, `CookieIssuanceGuard`                                                          | Clears both cookies. **No server-side revocation**: a copied refresh token stays valid until it expires                                       |
-| `POST /api/v1/auth/logout-all` | authenticated                                                                               | `auth.LogOutAll` (revokes every token of the identity) → clears cookies                                                                       |
+| Hybrid design element                                                               | In the code?                                                                                                                                                                                                                                          |
+| ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Step 1: observability, `/health/live` + `/health/ready`                             | **Yes** (`@server/telemetry`, Grafana LGTM). `ReadinessRegistry` can take an extra readiness check (its tests use the name `authz-catchup`), but no app registers one. The "Authz sync health" dashboard is listed as "later" (`docs/operations.md`). |
+| Step 2: outbox/inbox in every service, event envelope                               | **Yes** (`@server/messaging`), plus retry queues and DLQs                                                                                                                                                                                             |
+| Step 3: tuples, change log, `PullChanges`/`ExportSnapshot`/`Check`/`DeleteResource` | **No.** `proto/authorization.proto` has one RPC, `CheckOwnership`. The only table is `resource_ownership`.                                                                                                                                            |
+| Local snapshots in services (`authz_tuple`, `authz_sync_state`), sync loop          | **No.** No service has such a table, and nothing outside the gateway calls the authorization service (`grep -ri authz apps libs proto` finds only that test).                                                                                         |
+| `Actor`, `ActorAuthGuard`, JWT forwarded to services                                | **No.** Services trust `requesterId`/`privileged` in the request message.                                                                                                                                                                             |
+| Sensitive deletes through authorization                                             | **No.** Every delete goes to the owning service.                                                                                                                                                                                                      |
+| Retire `@ResourceAccess`                                                            | **Partly**: removed from exams (`e71f80c`) and flash cards (`c89d5dc`); still on blogs and room delete/schedule                                                                                                                                       |
+| Retire `requesterId`/`privileged`, `@HasRoles`, the shared `Permission` enum        | **No**: the requester pattern is now the main mechanism                                                                                                                                                                                               |
 
-### Refresh token rotation
+So, today:
 
-Every refresh token is single-use. Each carries a `jti` and a family id `fam` (one family per login); `POST /auth/refresh` records the exchange in auth's Redis (`auth:refresh:used:<jti>`, `SET NX`) and returns the next member of the family. The same token presented again within 30 s (several tabs refreshing with the shared cookie) gets the current member back; later it counts as stolen and revokes the whole family (`auth:refresh:family:<fam>:revoked`), so both the thief and the victim must sign in again. Refresh tokens from before rotation (no `fam`) start a family on their first exchange. Details: [flows/auth.md](flows/auth.md#post-apiv1authrefresh).
+- **Ownership lives in the owning service's own tables** (`exams.created_by`, `blogs.author_id`, `flash_card_lists.author_id`, `reports.reported_by`, forum and comment `author_id`, `rooms.created_by`, `files.uploaded_by`), and those services check it themselves (mechanism 3).
+- **The authorization service is an event-fed copy** (`resource_ownership`) of some of those columns. Consumers: `exam.exam.created/deleted`, `live.room.created/deleted`, `resource.resource.created/deleted` (types `blog` and `flashcard`). Only the four `@ResourceAccess` routes read it (`blog` and `room` rows). The `exam` and `flashcard` rows are still written and seeded, but nothing reads them.
+- **Blog and room ownership is stored twice.** resource has `blogs.author_id` and live has `rooms.created_by`, but `UpdateBlog`/`DeleteBlog` and `RemoveRoom`/`UpdateRoomSchedule` don't check them; the gateway relies on the authorization copy instead. Room ban/unban, on the other hand, checks live's own column. So one room is authorized from two sources depending on the route.
+- **live's `rooms.created_by` is the closest thing to "pull into local db", and it is a one-off.** It was added in `aaa6100` (S12, "only the room owner or an admin may ban/unban") because live had no owner column. New rooms get it from `req.user.sub` at creation, inside live. Older rooms were filled by `apps/authorization/prisma/seed.ts`, which copies `resource_ownership` owners into `live.rooms.created_by` where it is empty (and then copies live's owners back into `resource_ownership`). That runs only when someone runs `prisma:seed`. No consumer or poller keeps it in sync, and none is needed: live writes the column itself from then on.
 
-### `CookieIssuanceGuard`
+### 2.3 Why it ended up like this
 
-`apps/gateway/src/auth/guards/cookie-issuance.guard.ts`. `SameSite=Lax` does not stop a cross-site top-level navigation or form POST from **receiving** `Set-Cookie`, so the routes that set or clear cookies refuse:
+From the commit history (`git log -- apps/authorization docs/architecture/authorization.md`) and the plans:
 
-- `Sec-Fetch-Site: cross-site` → 403 `Cross-site request refused`;
-- an `Origin` that is neither in `CORS_ORIGINS` nor the gateway itself (`${req.protocol}://${req.get('host')}`, for the Scalar UI) → 403 `Origin not allowed`;
-- requests with neither header (curl, mobile, server-to-server) pass.
+1. The hybrid design was written on 2026-11-12 (`b2468e6`). The same day, the backlog plan (`plans/2026-11-12-backlog-goal.md`) had security bugs to close: S2 (any mod could edit any exam) and S12 (any mod could ban in any room). It kept the hybrid design as "the target architecture", but fixed these with the existing requester pattern (`requesterOf(...)`, the service checks `createdBy`), because the owning services already had, or could cheaply add, an owner column. That needed no new infrastructure and no wait for event delivery.
+2. Hybrid rollout steps 1 and 2 (observability, outbox/inbox) were built because the whole system needed them anyway. Step 3, the authorization tuples and sync API, was never started. The Restate spec (`specs/2026-11-12-restate-adoption-design.md`, decision D5) also says the delete saga (hybrid §6.3) should wait until it is decided whether to build it on Restate.
+3. `@ResourceAccess` kept causing the very problem the hybrid design describes: the copy is eventually consistent, so a creator got 403 on their own new object until the event arrived, and a lost event locked them out. Flash cards were moved off it for that reason (`c89d5dc`: "A new card is no longer 403 for its author until resource.resource.created is consumed"). Instead of adding a sync, the check moved to the column the service already had.
+4. AGENTS.md made this the convention: "Don't add new `@ResourceAccess` routes; prefer the requester pattern", and "rules that depend on the data itself are enforced in the owning service".
 
-`POST /auth/google/tokens` additionally requires `Content-Type: application/json` (415 otherwise), so a cross-site `<form>` can't trigger it even in a browser that sends neither header.
+The result is that the owner's observation is right: today's ownership checking is the same idea as before (compare the caller with the object's owner), just done in the service that owns the row instead of through the authorization copy.
 
-### Frontend proxy: cookies stay first-party
+### 2.4 Two ways to finish (options, not decisions)
 
-The browser only talks to the frontend's origin. `meowlish-fe/next.config.ts` rewrites:
+**Option A: drop the authorization copy (finish the requester direction).**
 
-- `/api/:path*` → `${NEXT_PUBLIC_API_URL}/api/:path*` (gateway), including `/api/v1/auth/google/callback`;
-- `/socket.io/:path*` → `${NEXT_PUBLIC_API_URL}/api/v1/chat/ws/socket.io/:path*`.
+1. Move `PATCH`/`DELETE /resources/blogs/:id` to the requester pattern: add `requester_id`/`privileged` to `UpdateBlogRequest`/`DeleteBlogRequest`, check `blogs.author_id` in `BlogService` (admin override; decide whether mods keep their own-blog rights, as today, or get an override).
+2. Move `DELETE /chat/rooms/:roomId` and `PATCH .../schedule` the same way, reusing `ChatService.assertCanModerate` (owner or admin, ownerless rooms admin-only). Run the authorization seed once more first, so no room that has an owner row in `resource_ownership` still has `created_by NULL`.
+3. Then remove `ResourceAccessGuard`, `@ResourceAccess`, the gateway's `AUTHORIZATION_CLIENT`, the ownership consumers, and either the whole `apps/authorization` service or keep it as an empty shell. The `exam.exam.*`, `live.room.*`, `resource.resource.*` events then have no consumer (nothing else subscribes to them today) and can be dropped too.
+4. Separate decision, still open either way: services trust `requesterId`/`privileged` from the message (section 6.4). The Actor step (forward the JWT, verify it in each service) is what would close that.
 
-So the session cookies are set by, and sent to, the frontend origin: they are first-party, `refresh_token`'s `Path=/api/v1/auth` matches the proxied path, and the gateway's origin doesn't need to be same-site with the frontend. What still matters:
+**Option B: build the hybrid design (central truth + local replicas).**
 
-- `CORS_ORIGINS` (gateway and live) must list the frontend origin, because the browser's `Origin` header is checked by `CookieIssuanceGuard` and by live's handshake `allowRequest` (`apps/live/src/app/infra/adapter/redis-io.adapter.ts`).
-- `BASE_URL` is the frontend's public origin, so Google redirects back through the proxy (where `oauth2_state` lives). Every Google flow needs that cookie on the callback: if `BASE_URL` pointed at another host, every Google login would fail with `SESSION_EXPIRED`.
-- More than one frontend: list the others in `GOOGLE_OAUTH_FRONTENDS` and have each open `/auth/google` and `/auth/credentials/google` with `?frontend=${location.origin}`. The start guard (`GoogleOAuth2Guard`) stores that origin in the state and sends Google `<origin>/api/v1/auth/google/callback`; the callback guard (`GoogleOAuth2CallbackGuard`) reads it back, repeats the same `redirect_uri` in the code exchange, and the user lands on `<origin>` + the path of `FE_LOGIN_REDIRECT_URL`. An unlisted origin is 400, so the redirect can't be pointed elsewhere. No `frontend` (or the default frontend's own origin) keeps the single-frontend behaviour below.
-- Next's built-in proxy doesn't add `X-Forwarded-For`; see [operations.md](operations.md) (`TRUST_PROXY`) and `docs/operations/upgrade-notes.md`.
+1. Authorization: `relation_tuple` + `change_log` (migrated from `resource_ownership`, backfilled from the services' own owner columns), RPCs `PullChanges`, `ExportSnapshot`, `Check`, `authz.changed.*` nudges.
+2. Each service: `authz_tuple` + `authz_sync_state` tables, a sync worker (startup catch-up registered in `ReadinessRegistry`, nudge consumer, 30 s poll), sync metrics and the "Authz sync health" dashboard and alerts.
+3. Rewrite every requester-pattern check to read the snapshot instead of `created_by`/`author_id`; creation publishes `authz.ownership.register` and writes a provisional tuple.
+4. Sensitive deletes through `DeleteResource` (decide Restate or not first, D5). Add Actor/JWT forwarding.
+5. That is a new subsystem in every service. What it buys over option A: one place that knows all ownership (needed for future groups/sharing or cross-service rules), and a committed central record before irreversible deletes. Today no feature needs either: every rule only looks at data its own service already holds.
 
-### Live sockets
+## 3. Request walkthroughs
 
-Gateway `LiveWsGatewayController` (`apps/gateway/src/live-ws-gateway/live-ws.router.controller.ts`, `@IsPublic`, all throttlers skipped) proxies `/api/v1/chat/ws/socket.io*` to live (`LIVE_SERVICE_WS_URL` or `LIVE_SERVICE_WS_HOST:PORT`), rewriting the path to `/socket.io/`. Live verifies the token itself (`apps/live/src/app/services/chat.gateway.ts`): `access_token` cookie first, then socket.io `auth.token`, `?token=`, or Bearer; `jwt.verify(…, RS256)`. Without `JWT_PUBLIC_KEY` every connection is refused.
-
-### Google login and account linking
+### 3.1 Role/permission only: `POST /api/v1/auth/:id/lock`
 
 ```mermaid
 sequenceDiagram
   autonumber
-  participant B as Browser
-  participant FE as Frontend origin (Next proxy)
+  participant C as Client
   participant G as Gateway
-  participant R as Redis
-  participant Go as Google
   participant A as auth
 
-  Note over B,A: Login / register
-  B->>FE: navigate GET /api/v1/auth/google
-  FE->>G: proxied
-  G->>R: SET gateway:oauth2:state:nonce = {frontend?, bound}, EX 300
-  G-->>B: Set-Cookie oauth2_state=nonce, 302 to Google with state=nonce
-  B->>Go: consent
-  Go-->>B: 302 BASE_URL/api/v1/auth/google/callback?code&state
-  B->>FE: GET callback (oauth2_state cookie comes back)
-  FE->>G: proxied
-  G->>G: GET state key, state == cookie?, DEL (single use) -> frontend
-  G->>A: RegisterOrLoginGoogle(googleId)
-  A-->>G: Tokens
-  G->>R: SETEX oauth2:google:loginToken:uuid 60 s = Tokens
-  G-->>B: 302 FE_LOGIN_REDIRECT_URL?loginToken=uuid
-  B->>FE: POST /api/v1/auth/google/tokens {"loginToken": "..."} (application/json)
-  FE->>G: proxied
-  G->>G: CookieIssuanceGuard, JSON check
-  G->>R: GET + DEL loginToken (single use)
-  G-->>B: Set-Cookie access_token, refresh_token, body data null
-
-  Note over B,A: Linking (already logged in)
-  B->>FE: top-level navigation GET /api/v1/auth/credentials/google (sends access_token cookie)
-  FE->>G: proxied, JwtAuthGuard ok
-  G->>R: SET gateway:oauth2:state:nonce = {identityId, frontend?, bound}, EX 300
-  G-->>B: Set-Cookie oauth2_state=nonce, 302 to Google with state=nonce
-  B->>Go: consent
-  Go-->>B: 302 callback?code&state
-  B->>FE: GET callback (oauth2_state cookie comes back)
-  FE->>G: proxied
-  G->>G: GET state key, state == cookie?, DEL (single use) -> identityId, frontend
-  G->>A: AddGoogleCredential(googleId, identityId)
-  G->>R: SETEX loginToken = true
-  G-->>B: 302 FE_LOGIN_REDIRECT_URL?loginToken=...
-  B->>G: POST /auth/google/tokens -> nothing to set (value is true)
-```
-
-Failures never end as a JSON page: `GoogleOAuthCallbackFilter` (`apps/gateway/src/auth-gateway/google-oauth-callback.filter.ts`) redirects to the flow's frontend callback page with `?error=<code>` (`ACCESS_DENIED`, `SESSION_EXPIRED`, `GOOGLE_ALREADY_LINKED`, `GOOGLE_ACCOUNT_IN_USE`, `FORBIDDEN`, `GOOGLE_FAILED`; `apps/gateway/src/enums/google-oauth-error.enum.ts`) and `flow=link` for linking, which success redirects also carry. An account has at most one sign-in method per type (`Identity.addCredential`, matching the `identity_id + login_type` unique index), so linking a second Google account is `GOOGLE_ALREADY_LINKED`; a Google account that signs in to another account is `GOOGLE_ACCOUNT_IN_USE`. New Google accounts take their full name from the Google profile and their username from the email's local part (random suffix if taken); older ones with no full name or a UUID username get them on their next Google login.
-
-Sources: `apps/gateway/src/auth/guards/google-oauth2.guard.ts`, `apps/gateway/src/auth-gateway/google-oauth-frontends.ts`, `apps/gateway/src/auth-gateway/strategies/google-oauth2.strategy.ts`, `auth.router.controller.ts` (`googleCallback`, `getGoogleTokens`). `FE_LOGIN_REDIRECT_URL` must be the frontend's callback page, not `/` (`docs/operations/upgrade-notes.md`).
-
-## 4. Role and permission gates
-
-- `@IsPublic()` (`apps/gateway/src/auth/decorators/public.decorator.ts`): skips every guard above. Everything else requires a valid token.
-- `@HasRoles(...roles)`: `RolesGuard` passes if the user has **any** listed role (`Role` enum in `libs/typing/src/enums/role.enum.ts`: `admin`, `mod`, `user`, `student`, `parent`, `teacher`, `mentor`). Class-level and handler-level metadata are merged with `getAllAndOverride` (handler wins).
-- `@HasPermissions(...perms)`: `PermissionsGuard`, also **any-of**, against `Permission` (`libs/typing/src/enums/permission.enum.ts`, e.g. `exam:approve`, `user:lock`).
-- Role → permission mapping is seeded in `apps/auth/prisma/seed.ts` (`rolePermissions`): admin gets all; mod `exam:write`, `exam:review`, `user:lock`, …; teacher `exam:write`, `notification:send`, …. Tables: `roles`, `permissions`, `roles_permissions`, `identity_roles` (auth DB). The claims are copied into the JWT at issue time.
-
-Examples: `GET /auth/identities` `@HasRoles(Role.Admin)`; `POST /auth/:id/lock` `@HasPermissions(Permission.USER_LOCK)`; the whole exam management controller `@HasRoles(Role.Mod, Role.Admin)`; `PATCH /exams/management/:id/review` additionally `@HasPermissions(Permission.EXAM_APPROVE)`.
-
-## 5. Legacy: `@ResourceAccess` and the authorization service
-
-`ResourceAccessGuard` (`apps/gateway/src/auth/guards/resource-access.guard.ts`) reads `{ resourceType, resourceIdParam, rules }`. For each rule in order: skip it if the user has none of `rule.roles`; if the rule has no `requireOwnership`, allow; otherwise call `authorization.CheckOwnership({ userId: sub, resourceType, resourceId: req.params[resourceIdParam] })` and allow if `isOwner`. If no rule allows: 403 `Access denied. You do not have the required role or ownership for this resource.`
-
-Routes still using it:
-
-| Route                                                           | `resourceType` | Rules                                                            |
-| --------------------------------------------------------------- | -------------- | ---------------------------------------------------------------- |
-| `PATCH` / `DELETE /api/v1/resources/blogs/:id`                  | `blog`         | admin; or mod/user/student/teacher **and** owner                 |
-| `DELETE /api/v1/chat/rooms/:roomId`, `PATCH …/:roomId/schedule` | `room`         | (route also `@HasRoles(Mod, Admin)`) admin; or mod **and** owner |
-
-The authorization service (`apps/authorization`) is only this ownership store:
-
-- table `resource_ownership` (`apps/authorization/prisma/schema/ownership.prisma`): `id`, `resource_type`, `resource_id`, `owner_id`, `created_at`; unique `(resource_type, resource_id)`.
-- gRPC `CheckOwnership`, `RegisterOwnership`, `RemoveOwnership` (`proto/authorization.proto`); only `CheckOwnership` is called (by the guard).
-- fed by events: `exam.exam.created/deleted`, `live.room.created/deleted`, `resource.resource.created/deleted` (handlers in `apps/authorization/src/app/events/handlers/`, each with `InboxService.claim`). `registerOwnership` is an upsert with `update: {}`: **first owner wins**, a replayed or forged "created" event can't transfer ownership.
-- backfilled by `apps/authorization/prisma/seed.ts` from the owning services' columns (`exams.created_by`, `blogs.author_id`, `flash_cards.author_id`, `live.rooms.created_by`); it deletes the stale `flashcard-list` rows (nothing reads them) and also copies room owners **back** into `live.rooms.created_by` where that column is empty.
-
-Exam and flash card ownership rows are still registered (`exam.exam.*`, `resource.resource.*` with `flashcard`) and backfilled, but no exam or flash card route uses `@ResourceAccess` anymore (card update/delete moved to the requester pattern, §7(e)).
-
-## 6. Requester pattern (authorization in the owning service)
-
-`apps/gateway/src/auth/functions/requester.ts`:
-
-```ts
-export const requesterOf = (user: Claims, privilegedRoles: readonly Role[]) => ({
-	requesterId: user.sub,
-	privileged: hasAnyRole(user, privilegedRoles),
-});
-```
-
-Always derived from the verified JWT, never from body or query. The service decides from its own data and answers "you can't see this" with **404** and "you can see it but not change it" with **403**.
-
-| Area                                                        | Gateway sends                                                                                              | Service check (file)                                                                                                                                                                                                                                                            |
-| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Exam content (sections, questions, update/delete/move exam) | `requesterOf(req.user, [Role.Admin])`                                                                      | `ExamManagementController.assertCanModify` (`apps/exam/src/presentation/controllers/exam-management.controller.ts`): creator or privileged; move also checks the destination                                                                                                    |
-| Exam file attach (`addFiles`)                               | same                                                                                                       | `assertCanAttach` → `FileOwnershipService.assertOwnedBy` (`apps/exam/src/app/services/file-ownership.service.ts`); privileged skips                                                                                                                                             |
-| Reports                                                     | `requesterOf(req.user, [Role.Mod, Role.Admin])`; attach also `mayAttachAnyFile: hasAnyRole(user, [Admin])` | `ReportService.findVisibleReport`, `listReports` (`apps/resource/src/app/services/report.service.ts`)                                                                                                                                                                           |
-| Flash card lists, cards (read, update, delete)              | `requesterOf(req.user, [Role.Admin])`                                                                      | `FlashcardListService.findOwnedList` (404 if private and not yours, 403 if visible but not yours), `visibleListsWhere`; card update/delete `FlashcardService.findOwnedCard` (404 unless the card is in your list)                                                               |
-| Live ban / unban                                            | `requesterOf(req.user, [Role.Admin])` (route `@HasRoles(Mod, Admin)`)                                      | `ChatService.assertCanModerate` (`apps/live/src/app/services/chat.service.ts`)                                                                                                                                                                                                  |
-| Avatar                                                      | `identityId: req.user.sub`                                                                                 | `UpdateIdentityHandler` (`apps/auth/src/app/commands/handlers/update-identity.handler.ts`)                                                                                                                                                                                      |
-| Notifications                                               | `recipientId: req.user.sub`                                                                                | notification service filters by recipient (`findOwned` in `apps/notification/src/app/services/notification.service.ts`); SSE `stream/:recipientId` is refused in the gateway unless it equals `sub` (`apps/gateway/src/notification-gateway/notification.router.controller.ts`) |
-| Exam attempts                                               | `userId` / `attemptedBy` fields                                                                            | per handler                                                                                                                                                                                                                                                                     |
-
-## 7. Worked examples
-
-### (a) Updating an exam: `PATCH /api/v1/exams/management/:id`
-
-Gateway: `ExamManagementGatewayController` (`apps/gateway/src/exam-gateway/exam-management.router.controller.ts`, `@Controller('management')` under the `/exams` router prefix, class-level `@HasRoles(Role.Mod, Role.Admin)`). `updateExam` calls `examManagementService.updateExam({ ...body, id, ...requesterOf(req.user, [Role.Admin]) })`.
-
-Exam: `ExamManagementController.updateExam` → `assertCanModify({ examId: id }, request)`:
-
-```ts
-const creator = await this.managementReadRepository.getExamCreator(target); // exams.created_by
-if (creator === null) throw new NotFoundException('Exam not found');
-if (!who.privileged && creator !== who.requesterId)
-	throw new ForbiddenException('Only the exam creator or an admin can modify this exam');
-```
-
-`createdBy` was set at creation from `req.user.sub` (gateway `createExam`). `Forbidden` becomes gRPC `PERMISSION_DENIED` (`libs/utils/src/filters/global.rpc.filter.ts`) and HTTP 403 again in the gateway (`libs/utils/src/filters/rpc-to-http.http.filter.ts`).
-
-| Caller                                             | Outcome                                                                                                                                                                         |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| User whose only role is `teacher`, not the creator | **403 at the gateway** from `RolesGuard` (`Access denied. Allowed role(s): mod, admin`), no gRPC call. The seed gives teachers `exam:write`, but this controller gates on roles |
-| `mod`, not the creator                             | Passes `RolesGuard`; `privileged: false`; `created_by ≠ sub` → **403** from exam                                                                                                |
-| `mod`, the creator                                 | `created_by = sub` → `UpdateExamCommand` runs → 200                                                                                                                             |
-| `admin` (creator or not)                           | `privileged: true` → check skipped → 200                                                                                                                                        |
-| Anyone, unknown exam id                            | **404** (`Exam not found`), checked before the creator comparison                                                                                                               |
-
-The same check covers sections (`section → exam`) and questions (`question → section → exam`, `getExamCreator` in `apps/exam/src/infra/repositories/management.read.prisma.repository.impl.ts`). `moveSection` / `moveQuestion` check the source and, when given, the destination (`parentId` / `sectionId`), so you can't move content into someone else's exam. `createExam` and `reviewExam` have no creator check (`reviewExam` is gated by `@HasPermissions(EXAM_APPROVE)`, which only admins hold in the seed). Note that "not yours" is 403 here, not 404: exam management content is not treated as private.
-
-### (b) Reading someone else's report: `GET /api/v1/resources/reports/:id`
-
-Gateway (`apps/gateway/src/resource-gateway/resource.router.controller.ts`) sends `{ id, ...requesterOf(req.user, REPORT_STAFF_ROLES) }` with `REPORT_STAFF_ROLES = [Role.Mod, Role.Admin]`. Resource maps it with `toRequester` (`apps/resource/src/presentation/dtos/req/requester.req.dto.ts`) and calls:
-
-```ts
-private async findVisibleReport(id: string, requester: Requester) {
-  const report = await this.txHost.tx.report.findUnique({ where: { id }, include: withFiles });
-  if (!report || (!requester.privileged && report.reportedBy !== requester.id)) {
-    throw new NotFoundException('Report not found');
-  }
-  return report;
-}
-```
-
-A `user` asking for another user's report gets **404**, exactly as for an id that doesn't exist. Why 404 and not 403: a 403 would confirm that the id exists, which leaks information about other people's private data (and lets ids be probed). Visibility is enforced the same way in lists: `listReports` replaces any `reportedBy` filter with `requester.id` unless privileged. `addFileToReport` and `removeFileFromReport` go through `findVisibleReport` too. Update and delete are `@HasRoles(Mod, Admin)` at the gateway and have no ownership check in the service.
-
-### (c) Attaching a file someone else uploaded
-
-1. Upload: `POST /api/v1/files` (`apps/gateway/src/file-gateway/file.router.controller.ts`) → `file.GetPresignedUrl({ ...body, uploadedBy: req.user.sub })`. file-service creates the `files` row first (`uploaded_by` = caller, server-generated uuid as object key) and returns a presigned POST policy (`apps/file-service/src/app/services/file.service.ts` `getPresignedUrl`); the client uploads straight to MinIO.
-2. Attach: e.g. `PATCH /api/v1/exams/management/sections/:id` with `addFiles: [fileId]`. Exam runs `assertCanModify` (creator or admin), then `assertCanAttach(addFiles, request)`: if `privileged` (admin) return; otherwise `FileOwnershipService.assertOwnedBy(fileIds, requesterId)` → gRPC `file.CheckFilesOwnedBy({ fileIds, userId })`.
-3. file-service `checkFilesOwnedBy`: dedupes ids, selects `files WHERE id IN (...) AND uploaded_by = userId`; every other id is **foreign** (someone else's, legacy/seeded/system rows with `uploaded_by NULL`, unknown ids) → `{ ok: false, foreignIds }`.
-4. Exam throws `ForbiddenException('You can only attach files you uploaded: <ids>')` → **403** listing the foreign ids.
-5. On success, the section update writes `exam.file.added` to the outbox; file-service increments `ref_count`.
-
-Where the check runs and who may override it:
-
-| Attach point                          | Check                                                                      | Override                                                                                              |
-| ------------------------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Exam section/question `addFiles`      | `ExamManagementController.assertCanAttach`                                 | `privileged` = admin (`requesterOf(…, [Role.Admin])`)                                                 |
-| `POST /resources/reports` (`fileIds`) | `ReportService.createReport` → `assertOwnedBy(fileIds, reportedBy)`        | **none** (always checked)                                                                             |
-| `POST /resources/reports/:id/files`   | `ReportService.addFileToReport`                                            | `mayAttachAnyFile` = admin only (mods are `privileged` for visibility but can't attach foreign files) |
-| Avatar (`POST /auth/my/identity`)     | `UpdateIdentityHandler`: only when `avatarId` differs from the current one | none; re-sending the current (maybe legacy) avatar is exempt                                          |
-
-Viewing files is not restricted by uploader. Files uploaded before this release have no `uploaded_by`, so only admins can attach them (on exams and report attaches).
-
-### (d) Live ban / unban: `POST /api/v1/chat/rooms/:roomId/ban`, `DELETE /api/v1/chat/rooms/:roomId/ban/:uid`
-
-Gateway (`apps/gateway/src/live-gateway/live.router.controller.ts`): `@HasRoles(Role.Mod, Role.Admin)`, then `chatService.banUserFromRoom({ ...body, roomId, ...requesterOf(req.user, [Role.Admin]) })`. Live `ChatService.assertCanModerate`:
-
-```ts
-const owner = await this.roomRepository.getRoomOwner(roomId); // rooms.created_by of a non-deleted room
-if (owner === undefined) throw new NotFoundException('Room not found');
-if (!who.privileged && owner !== who.requesterId)
-	throw new ForbiddenException('Only the room owner or an admin can moderate this room');
-```
-
-| Caller                             | Outcome                                                                            |
-| ---------------------------------- | ---------------------------------------------------------------------------------- |
-| `user`/`student`/…                 | 403 at the gateway (`RolesGuard`)                                                  |
-| `mod` who created the room         | allowed: socket disconnected (`chatGateway.disconnectUser`), `banneds` row written |
-| `mod`, someone else's room         | 403 from live                                                                      |
-| `mod`, room with `created_by NULL` | 403 (`null !== sub`): ownerless rooms are admin-only                               |
-| `admin`                            | allowed for any existing room                                                      |
-| missing or soft-deleted room       | 404                                                                                |
-
-`rooms.created_by` is set by `createRoom` from `req.user.sub`; older rooms are backfilled by the authorization seed from `resource_ownership`. Room delete and schedule still use `@ResourceAccess` (§5), so one room is authorized from two sources: live's own column for ban/unban, the authorization copy for delete/schedule.
-
-### (e) Updating a flash card: `PATCH /api/v1/resources/flash-cards/:id` via the requester pattern
-
-Card update and delete used to go through `@ResourceAccess` (the authorization copy, §5). They now follow §6: the gateway forwards who is asking and resource decides from its own rows.
-
-```mermaid
-sequenceDiagram
-  autonumber
-  participant B as Browser
-  participant G as Gateway
-  participant RS as resource
-  participant RDB as resource_db
-
-  B->>G: POST /api/v1/resources/flash-cards {listId,...}
-  G->>RS: CreateFlashCard {..., authorId: sub}
-  RS->>RDB: tx: list.author_id == authorId? (else 403)<br/>INSERT flash_cards + outbox resource.resource.created
-  RS-->>B: 200 card
-
-  B->>G: PATCH /api/v1/resources/flash-cards/:id
-  G->>G: JwtAuth, Roles (none), Permissions (none), ResourceAccess (none)
-  G->>RS: UpdateFlashCard {id,..., requesterId: sub, privileged: hasAnyRole(user,[Admin])}
-  RS->>RDB: findFirst flash_cards WHERE id AND list.author_id = requesterId<br/>(no list filter when privileged)
-  alt found
-    RS->>RDB: update
-    RS-->>B: 200
-  else missing or not in your list
-    RS-->>B: 404 FlashCard not found
+  C->>G: POST /api/v1/auth/:id/lock (access_token cookie)
+  G->>G: JwtStrategy: RS256 signature, exp, payloadSchema
+  G->>A: ValidateAccess(identityId, iat, iatMs)
+  A-->>G: ok (not revoked, not locked)
+  G->>G: RolesGuard: no @HasRoles, pass
+  G->>G: PermissionsGuard: @HasPermissions(user:lock) in JWT permissions?
+  alt has user:lock (admin, mod in the seed)
+    G->>G: ResourceAccessGuard: no metadata, pass
+    G->>A: LockIdentity(identityId: id, lockedBy: sub)
+    A-->>C: 200
+  else no
+    G-->>C: 403 Access denied. Allowed permission(s): user:lock
   end
 ```
 
-`FlashcardService.findOwnedCard` (`apps/resource/src/app/services/flashcard.service.ts`) does the check for both `updateFlashCard` and `deleteFlashCard`; the gateway routes (`apps/gateway/src/resource-gateway/resource.router.controller.ts`) send `requesterOf(req.user, FLASH_CARD_ADMIN_ROLES)` (`[Role.Admin]`).
+No database lookup decides the permission: it is whatever was in the JWT when it was issued. That is why a role change revokes the user's tokens (section 4).
 
-Consequences:
+### 3.2 `@ResourceAccess`: `PATCH /api/v1/resources/blogs/:id`
 
-- The creator can edit or delete a new card immediately: nothing waits for `resource.resource.created` to reach authorization (the event is still published and the seed still backfills `flashcard` ownership rows, but no route reads them any more).
-- Ownership is "owner of the card's list" (`flash_card_lists.author_id`), which is always the card's author (cards are only created in, or moved into, lists by the same author).
-- Any role may change cards in their own lists (the old rules left out `parent` and `mentor`); mods have no override, admins do.
-- Unknown ids and other people's cards give **404** (not 403), so card ids in private lists don't leak.
-- Deleting a list deletes its cards by FK cascade and writes one `resource.resource.deleted` per card (`FlashcardListService.deleteFlashCardList`).
+<a id="5-legacy-resourceaccess-and-the-authorization-service"></a>
 
-## 8. Status code policy
+```mermaid
+sequenceDiagram
+  autonumber
+  participant C as Client
+  participant G as Gateway
+  participant R as resource
+  participant MQ as RabbitMQ
+  participant Z as authorization
 
-| Situation                                               | Code | Example                                                                         |
-| ------------------------------------------------------- | ---- | ------------------------------------------------------------------------------- |
-| No/invalid/expired/revoked token                        | 401  | `JwtStrategy`, `ValidateAccess`                                                 |
-| Account locked                                          | 403  | `ValidateAccess`                                                                |
-| Wrong role/permission                                   | 403  | `RolesGuard`, `PermissionsGuard`                                                |
-| Private data that isn't yours (existence must not leak) | 404  | reports, private flash card lists, flash cards not in your list (update/delete) |
-| Visible but not yours to change                         | 403  | exam content, public list of someone else, live moderation, foreign files       |
+  Note over C,Z: Earlier: the blog is created
+  C->>G: POST /resources/blogs
+  G->>R: CreateBlog {..., authorId: sub}
+  R->>R: tx: INSERT blogs + outbox resource.resource.created {blog, id, ownerId}
+  R-->>C: 200
+  R--)MQ: outbox relay publishes (about 1 s later)
+  MQ--)Z: consumer: inbox claim, INSERT resource_ownership ON CONFLICT DO NOTHING
 
-## 9. Target design vs what is implemented
+  Note over C,Z: Update
+  C->>G: PATCH /resources/blogs/:id
+  G->>G: JwtAuth, Roles (none), Permissions (none)
+  G->>G: ResourceAccessGuard rule 1: admin? then allow without lookup
+  G->>Z: rule 2 (mod/user/student/teacher): CheckOwnership(userId: sub, blog, id)
+  Z-->>G: isOwner = resource_ownership.owner_id == sub
+  alt owner
+    G->>R: UpdateBlog {id, ...} (no requester fields)
+    R-->>C: 200 (resource checks only that the blog exists)
+  else not owner, or the event has not arrived yet
+    G-->>C: 403 Access denied. You do not have the required role or ownership...
+  end
+```
 
-Two documents describe where this is going:
+Facts worth knowing (`apps/gateway/src/auth/guards/resource-access.guard.ts`, `apps/authorization/`):
 
-- The earlier **Actor/permission model** (previous version of this file, plan `docs/superpowers/plans/2026-11-12-actor-permission-authorization.md`): auth owns roles → permissions; the gateway forwards the JWT over gRPC; each service verifies it (`ActorAuthGuard`) and decides from `Actor { id, permissions }` plus its own rows; `requesterId`/`privileged`, `@ResourceAccess`, `@HasRoles` and the shared `Permission` enum are retired; permissions are named `<context>:<resource>:<action>`.
-- The **hybrid authorization design** (`docs/superpowers/specs/2026-11-12-hybrid-authorization-design.md`, status "agreed in conversation, pending final read-through"), which supersedes the Actor doc's "retire the authorization service" direction: authorization becomes the single source of truth for relationships (tuples `(objectType, objectId, relation, subjectType, subjectId)`, only `owner` today), with a versioned change log; each service keeps a local snapshot synced incrementally (`PullChanges`, nudges on `authz.changed.<type>`, 30 s safety poll, catch-up before ready); non-sensitive operations are decided locally from the snapshot plus JWT permissions and audit-logged; **deleting a top-level object** goes gateway → authorization `DeleteResource` (two-phase `pending_delete`, compensation on failure, 204 within 5 s or 202 + operation id); creation registers ownership via `authz.ownership.register` through the outbox with a provisional local tuple.
+- Rules are tried in order. A rule is skipped if the user has none of its roles; a rule without `requireOwnership` allows immediately. A `parent` or `mentor` matches no blog rule, so gets 403 even on their own blog.
+- `registerOwnership` is `createMany(..., skipDuplicates)`: the first owner wins, so a replayed or forged "created" event can't transfer ownership. The seed, however, upserts with the owner from the service's column.
+- The copy is eventually consistent (403 right after create) and has no repair path except re-running `apps/authorization/prisma/seed.ts`, which re-copies `exams.created_by`, `blogs.author_id`, `flash_cards.author_id` and `live.rooms.created_by`.
+- Room delete/schedule work the same way with `resourceType: 'room'`; live's `RemoveRoom`/`UpdateRoomSchedule` don't check `rooms.created_by`.
 
-| Element of the target                                                                | Implemented now?                                                                                                                                    |
-| ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Observability stack + health endpoints (hybrid step 1)                               | Yes (`@server/telemetry`, LGTM, dashboards, alerts)                                                                                                 |
-| Outbox / inbox in every service (step 2)                                             | Yes (`@server/messaging`), with broker retries and DLQs beyond the spec                                                                             |
-| Envelope `{ id, type, occurredAt, payload }`                                         | Yes; legacy bare payload still accepted (removal on backlog)                                                                                        |
-| `Actor`, `ActorAuthGuard`, JWT forwarded to services                                 | **No**: no such code in `apps/` or `libs/`; the gateway doesn't forward the token                                                                   |
-| Tuples, change log, `PullChanges`/`ExportSnapshot`/`Check`/`DeleteResource` (step 3) | **No**: `proto/authorization.proto` has only `CheckOwnership`/`RegisterOwnership`/`RemoveOwnership`; table is `resource_ownership`                  |
-| Local snapshots, sync metrics, "Authz sync health" dashboard                         | **No** (the observability guide lists that dashboard as "later")                                                                                    |
-| Sensitive deletes via authorization                                                  | **No**: deletes go to the owning service (blog/room via `@ResourceAccess`, card via its list owner, exam via creator check, report via `@HasRoles`) |
-| Retire `requesterId`/`privileged`                                                    | **No**: it is the current mechanism for exam, reports, flash cards and lists, live moderation                                                       |
-| Retire `@ResourceAccess`                                                             | Partly: removed from exam and flash cards; still on blogs, room delete/schedule (AGENTS.md: no new uses)                                            |
-| Retire gateway `@HasRoles`, per-context permission constants                         | **No**: `@HasRoles` everywhere, shared `Permission` enum in `@server/typing`                                                                        |
-| File uploader check on attach                                                        | Yes (not part of either spec)                                                                                                                       |
+### 3.3 Requester pattern: `PATCH /api/v1/exams/management/:id`
 
-## 10. Risks visible in the current design
+<a id="6-requester-pattern-authorization-in-the-owning-service"></a><a id="a-updating-an-exam-patch-apiv1examsmanagementid"></a>
 
-- **Services trust the request message.** `requesterId`, `privileged`, `mayAttachAnyFile`, `userId`, `recipientId` are plain gRPC fields. Each gRPC service except authorization has an Envoy gRPC-web sidecar (`docker/envoy/*.yaml`, e.g. exam on `8082`); since S16 their ports are published on `127.0.0.1` only, so only processes on the host can reach them. Anything that can still reach a sidecar or a gRPC port (the host itself, the Docker network) can call `UpdateExam` with `privileged: true`. This is the reason the Actor design re-verifies the JWT in each service. Whether those ports are reachable in a given deployment depends on its firewall, which this repo doesn't show.
-- Revocation (`ValidateAccess`) is checked by the gateway on every request and by live's socket handshake (`ChatGateway.handleConnection`). A lock also closes the user's open sockets (`auth.user.locked` → live `UserLockedHandler`). A socket opened before a logout-all or password change stays open until it disconnects; only new connections are refused.
-- `@ResourceAccess` ownership is eventually consistent (403 right after create) and can be lost if an event is dropped (no `mandatory` publish).
-- `logout` doesn't revoke; only `logout-all` does.
+```mermaid
+sequenceDiagram
+  autonumber
+  participant C as Client
+  participant G as Gateway
+  participant E as exam
+  participant DB as exam_db
+
+  C->>G: PATCH /exams/management/:id
+  G->>G: JwtAuth; RolesGuard: class-level @HasRoles(Mod, Admin)
+  Note right of G: teacher, user, ... get 403 here
+  G->>E: UpdateExam {...body, id, requesterId: sub, privileged: hasAnyRole(user, [Admin])}
+  E->>DB: getExamCreator(examId) = exams.created_by
+  alt no such exam
+    E-->>C: 404 Exam not found
+  else not privileged and created_by != requesterId
+    E-->>C: 403 Only the exam creator or an admin can modify this exam
+  else creator or admin
+    E->>DB: UpdateExamCommand
+    E-->>C: 200
+  end
+```
+
+`requesterOf(user, roles)` (`apps/gateway/src/auth/functions/requester.ts`) builds `{ requesterId: user.sub, privileged: hasAnyRole(user, roles) }`, always from the verified JWT and never from the body or query. The check is `ExamManagementController.assertCanModify` (`apps/exam/src/presentation/controllers/exam-management.controller.ts`). Sections and questions resolve to their exam; moves also check the destination. A `ForbiddenException` crosses gRPC as `PERMISSION_DENIED` and comes back as HTTP 403 (`libs/utils/src/filters/`).
+
+<a id="d-live-ban--unban-post-apiv1chatroomsroomidban-delete-apiv1chatroomsroomidbanuid"></a>
+
+Same shape, different details:
+
+| Route                                       | Gateway sends                                              | Service check                                                                                                    | "Not yours"                                         |
+| ------------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| `PATCH`/`DELETE /resources/flash-cards/:id` | `requesterOf(user, [Admin])`                               | `FlashcardService.findOwnedCard`: `flash_cards WHERE id AND list.author_id = requesterId` (no filter for admins) | **404** `FlashCard not found` (private data)        |
+| `GET /resources/reports/:id`                | `requesterOf(user, [Mod, Admin])`                          | `ReportService.findVisibleReport`: `reported_by = requesterId` unless privileged                                 | **404** `Report not found`                          |
+| `POST /chat/rooms/:roomId/ban`, unban       | `requesterOf(user, [Admin])` after `@HasRoles(Mod, Admin)` | `ChatService.assertCanModerate`: `rooms.created_by` of a non-deleted room                                        | **403**; ownerless room: 403 for mods; missing: 404 |
+
+Status rule: "you can't see this" is 404, the same answer as for an id that doesn't exist, so ids of private data don't leak. "You can see it but not change it" is 403 (exam content, someone else's public list, live moderation, foreign files).
+
+### 3.4 File attach: `PATCH /api/v1/exams/management/sections/:id` with `addFiles`
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant C as Client
+  participant G as Gateway
+  participant F as file-service
+  participant E as exam
+  participant S3 as MinIO
+
+  C->>G: POST /files (presign)
+  G->>F: GetPresignedUrl {..., uploadedBy: sub}
+  F->>F: INSERT files (id, uploaded_by = sub)
+  F-->>C: presigned POST policy
+  C->>S3: upload the object directly
+
+  C->>G: PATCH /exams/management/sections/:id {addFiles: [fileId]}
+  G->>E: UpdateSection {..., requesterId, privileged (admin)}
+  E->>E: assertCanModify (creator or admin)
+  alt privileged
+    E->>E: skip the file check
+  else
+    E->>F: CheckFilesOwnedBy {fileIds, userId: requesterId}
+    F-->>E: {ok, foreignIds} (foreign = someone else's, uploaded_by NULL, or unknown)
+    E-->>C: 403 You can only attach files you uploaded: <ids> (if any foreign)
+  end
+  E->>E: tx: update section + outbox exam.file.added
+  E-->>C: 200
+```
+
+| Attach point                             | Check                                                 | Override                                                                        |
+| ---------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Exam section/question `addFiles`         | `ExamManagementController.assertCanAttach`            | admin (`privileged`)                                                            |
+| `POST /resources/reports` (`fileIds`)    | `ReportService.createReport` → `assertOwnedBy`        | `mayAttachAnyFile` (admin)                                                      |
+| `POST /resources/reports/:id/files`      | `ReportService.addFileToReport`                       | `mayAttachAnyFile` (admin; mods see all reports but can't attach foreign files) |
+| Flash card `imageFileId` (create/update) | `FlashcardService` → `assertOwnedBy`                  | `mayAttachAnyFile` (admin); re-sending the card's current image is no change    |
+| Avatar (`POST /auth/my/identity`)        | `UpdateIdentityHandler`, only when `avatarId` changes | none                                                                            |
+
+Viewing files is not restricted by uploader. Files from before `uploaded_by` existed can only be attached by admins (where an admin override exists).
+
+## 4. Tokens and sessions
+
+Detail and every route: [flows/auth.md](flows/auth.md). The short version:
+
+- **JWT, RS256.** auth signs with `JWT_PRIVATE_KEY`; gateway and live verify with `JWT_PUBLIC_KEY`. Access token (default 15 min): `sub`, `roles[]`, `permissions[]`, `typ: ACCESS`, `jti`, `iat`, `iatMs`, `exp`. Refresh token (default 7 days): `sub`, `typ: REFRESH`, `jti`, `fam` (rotation family), `iat`, `iatMs`, `exp`, and no roles or permissions. `typ` keeps one kind from being used as the other (`libs/utils/src/types/payload.type.ts`).
+- **Verification in the gateway** (`JwtStrategy`): token from the `access_token` cookie, else `Authorization: Bearer`; signature and expiry; `payloadSchema`; then gRPC `auth.ValidateAccess`, which rejects revoked tokens (401) and locked accounts (403). `req.user = { sub, roles, permissions }`. live verifies its own socket handshakes the same way.
+- **Cookies** (`apps/gateway/src/auth-gateway/auth-cookies.ts`): `access_token` (`Path=/`) and `refresh_token` (`Path=/api/v1/auth`), HttpOnly, `SameSite=Lax`, `Secure` on HTTPS or in production, `Max-Age` from each token's `exp`. Login, register, refresh and `POST /auth/google/tokens` set them and return `data: null`; tokens never appear in a body. Those routes carry `CookieIssuanceGuard` (403 on `Sec-Fetch-Site: cross-site` or a foreign `Origin`). The browser only talks to the frontend origin, which proxies `/api/*`, so the cookies are first-party.
+- **Refresh rotation with reuse detection** (`TokenService.rotateTokens`): each refresh token works once (`auth:refresh:used:<jti>`, `SET NX`). Presenting it again within 30 s (tabs refreshing at once) returns the same successor; later it counts as stolen and revokes its whole family (`auth:refresh:family:<fam>:revoked`). Refresh re-reads roles and permissions from the database.
+- **Revocation**: `revokeUser` stores a timestamp in `jwt:blacklist:user:<id>`; every token with `iatMs` at or before it is rejected. Called by `logout-all`, password change, and role assign/remove (so new roles take effect at the next login). Locking does not revoke but `ValidateAccess` refuses locked accounts on every request, and live closes their sockets. Plain `logout` only clears cookies.
+- **Google OAuth**: the start route stores a single-use nonce in Redis and sets the `oauth2_state` cookie (`Path=/api/v1/auth/google/callback`, 300 s); the callback requires cookie == state. The callback hands the frontend a 60 s one-time `loginToken`, exchanged at `POST /auth/google/tokens` for the cookies. Linking a Google account is a top-level navigation to `/auth/credentials/google` so it carries the session cookie.
+
+## 5. Roles and permissions
+
+- **Defined in code**: `Role` (`admin`, `mod`, `user`, `student`, `parent`, `teacher`, `mentor`) in `libs/typing/src/enums/role.enum.ts`, `Permission` (`exam:write`, `user:lock`, ...) in `libs/typing/src/enums/permission.enum.ts`.
+- **Stored in auth's database**: tables `roles`, `permissions`, `roles_permissions`, `identity_roles`. `apps/auth/prisma/seed.ts` creates one row per enum value and links them with its `rolePermissions` map: admin gets every permission; mod gets `exam:write`, `exam:review`, `user:lock`, `booking:view-all`, `payment:read`; teacher and mentor get teaching permissions; `user` gets none.
+- **Into the JWT**: on login, register, Google login and refresh, `IdentityRepository.getClaimsOfId` joins identity → roles → permissions and the token is signed with both lists. Nothing else reads these tables per request.
+- **Admin routes**: `POST`/`DELETE /auth/:id/roles` change a user's roles and revoke their tokens.
+
+**Adding a permission:**
+
+1. Add it to the `Permission` enum (`@server/typing`). It must be there: auth's `parseEnum` and the gateway's `payloadSchema` reject unknown values.
+2. Grant it to roles in `rolePermissions` in `apps/auth/prisma/seed.ts` and run `nx run auth:prisma:seed`. The seed only adds rows; removing a grant needs a manual delete or a migration.
+3. Use it with `@HasPermissions(Permission.X)` on gateway routes. Users get it with their next token (log in again, or refresh).
+
+## 6. Reference
+
+### 6.1 Decorators and helpers (`apps/gateway/src/auth/`)
+
+| Name                                                        | Effect                                                                                                              |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `@IsPublic()`                                               | Skips `JwtAuthGuard`, `RolesGuard`, `PermissionsGuard`, `ResourceAccessGuard`                                       |
+| `@HasRoles(...roles)`                                       | `RolesGuard`: any listed role in the JWT, else 403. Handler metadata overrides class metadata (`getAllAndOverride`) |
+| `@HasPermissions(...perms)`                                 | `PermissionsGuard`: any listed permission, else 403                                                                 |
+| `@ResourceAccess({ resourceType, resourceIdParam, rules })` | `ResourceAccessGuard` → `authorization.CheckOwnership`. Legacy, no new uses                                         |
+| `requesterOf(user, roles)`, `hasAnyRole(user, roles)`       | Build `requesterId`/`privileged` (or `mayAttachAnyFile`) for gRPC requests                                          |
+| `CookieIssuanceGuard`                                       | Route-level, on routes that set or clear session cookies                                                            |
+
+### 6.2 Status codes
+
+| Situation                             | Code |
+| ------------------------------------- | ---- |
+| No, invalid, expired or revoked token | 401  |
+| Account locked                        | 403  |
+| Missing role or permission            | 403  |
+| Private data that isn't yours         | 404  |
+| Visible but not yours to change       | 403  |
+
+### 6.3 Files
+
+- Gateway: `apps/gateway/src/gateway.module.ts` (guard order), `apps/gateway/src/auth/{guards,decorators,functions}/`, `apps/gateway/src/auth-gateway/strategies/jwt.strategy.ts`, `apps/gateway/src/auth-gateway/auth-cookies.ts`.
+- auth: `apps/auth/src/app/services/token.service.ts` (signing, rotation, revocation), `apps/auth/src/app/commands/handlers/validate-access.handler.ts`, `apps/auth/prisma/seed.ts` (roles and permissions).
+- authorization: `proto/authorization.proto`, `apps/authorization/prisma/schema/ownership.prisma`, `apps/authorization/src/app/events/handlers/`, `apps/authorization/prisma/seed.ts`. Flows: [flows/achievement-file-authorization.md](flows/achievement-file-authorization.md).
+- Requester checks: `apps/exam/src/presentation/controllers/exam-management.controller.ts`, `apps/resource/src/app/services/{flashcard,flashcard-list,flashcard-proposal,flashcard-fork,report,blog-comment,forum}.service.ts`, `apps/live/src/app/services/chat.service.ts`, `apps/*/src/app/services/file-ownership.service.ts`, `apps/file-service/src/app/services/file.service.ts` (`checkFilesOwnedBy`).
+
+### 6.4 Known risks
+
+- **Services trust the request message.** `requesterId`, `privileged`, `mayAttachAnyFile`, `userId`, `recipientId` are plain gRPC fields; the gateway does not forward the JWT. Anything that can reach a service's gRPC port or its Envoy gRPC-web sidecar (published on `127.0.0.1` only since S16) can send `privileged: true`. Closing this is the Actor step (section 2.1), not built.
+- `@ResourceAccess` ownership is eventually consistent (403 just after create) and a lost event loses ownership until the authorization seed is re-run.
+- `logout` doesn't revoke tokens; `logout-all` does. A socket opened before a logout-all or password change stays open until it disconnects (locks do close sockets).

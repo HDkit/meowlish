@@ -38,45 +38,21 @@ What the API offers, and which service owns it:
 
 <img width="1113" height="824" alt="Architecture" src="https://github.com/user-attachments/assets/2bc5ce0b-ff57-4d9f-9e7b-776b89cb0644" />
 
-## Architecture
+## Documentation
 
-Detailed architecture docs (services, data, authorization, messaging, operations): [docs/architecture/README.md](docs/architecture/README.md).
+| Read                                                                     | For                                                                                                    |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| [docs/architecture/README.md](docs/architecture/README.md)               | **Start here.** How the system fits together, which technology each service uses, shared libraries     |
+| `apps/<service>/README.md`                                               | One service: what it does, tech used (Redis, BullMQ, MinIO, file-service, …), events, tables, env vars |
+| [docs/architecture/authorization.md](docs/architecture/authorization.md) | Who may do what, tokens and sessions, the authorization design vs what was built                       |
+| [docs/architecture/messaging.md](docs/architecture/messaging.md)         | Events, outbox/inbox, retries and dead letters                                                         |
+| [docs/architecture/flows/](docs/architecture/README.md#operation-flows)  | Every operation traced from the HTTP route to the tables and events                                    |
+| [docs/operations.md](docs/operations.md)                                 | Opening Grafana, RabbitMQ, MinIO, RedisInsight, Adminer; alerts; ports; upgrades; backups              |
+| [docs/roadmap.md](docs/roadmap.md)                                       | Open issues and future plans, in one list                                                              |
+| [docs/fixed-issues.md](docs/fixed-issues.md)                             | What was fixed and how                                                                                 |
+| [AGENTS.md](AGENTS.md)                                                   | Coding conventions (also read by AI coding agents)                                                     |
 
-```
-                       ┌──────────────────────────────────────────────┐
-                       │                 Gateway (HTTP)                │
-                       │  /api/v1/*   (Swagger @ /reference)          │
-                       └──────────────────────────────────────────────┘
-                              │            │            │
-                    ┌─────────┴──┐   ┌──────┴──────┐   ┌┴──────────┐
-                    │  gRPC      │   │  gRPC       │   │ gRPC      │
-                    ▼            ▼   ▼             ▼   ▼           ▼
-                 ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐
-                 │ auth   │  │ exam   │  │ file   │  │ live   │  │ ...    │
-                 └────────┘  └────────┘  └────────┘  └────────┘  └────────┘
-                      │            │           │           │
-                 ┌────┴─────┐ ┌────┴──────┐ ┌──┴────┐ ┌────┴───┐
-                 │PostgreSQL│ │  RabbitMQ │ │ Redis │ │ MinIO  │
-                 └──────────┘ └───────────┘ └───────┘ └────────┘
-```
-
-- **Gateway** — the only HTTP entry point. Authenticates/authorizes requests (JWT + roles/permissions) and proxies them to the appropriate gRPC microservice. Exposes OpenAPI docs at `/reference`.
-- **Microservices** — each is an independent NestJS application exposing one or more **gRPC** services. They communicate between themselves over **RabbitMQ** (events) and call each other over gRPC.
-- **Envoy sidecars** (Docker) — expose each gRPC service over HTTP/gRPC-web for external clients, independently of the gateway.
-
-### Auth flow (JWT, RS256)
-
-Authentication uses **asymmetric RS256** JWTs:
-
-- The **auth service** **signs** both access and refresh tokens with the **private key**.
-- The **gateway** only **verifies** tokens with the **public key** (it never sees the private key).
-
-This means the private key must only exist in the auth service environment, while the public key is shared with the gateway (and anywhere else that needs to validate a token).
-
-| Env var           | Used by      | Purpose                                                       |
-| ----------------- | ------------ | ------------------------------------------------------------- |
-| `JWT_PRIVATE_KEY` | auth service | Private key used to **sign** access & refresh tokens (RS256)  |
-| `JWT_PUBLIC_KEY`  | gateway      | Public key used to **verify** access & refresh tokens (RS256) |
+In short: a single HTTP **gateway** (`/api/v1/*`, OpenAPI docs at `/reference`) verifies RS256 JWTs (the private key lives only in `auth`, the gateway has the public key), rate-limits, checks roles, and calls the **gRPC microservices**; each service owns one Postgres database and exchanges events with the others over **RabbitMQ** through a transactional outbox. **Envoy** sidecars (Docker) also expose each gRPC service over gRPC-web.
 
 ## Tech Stack
 
@@ -117,35 +93,12 @@ This means the private key must only exist in the auth service environment, whil
 ├── proto/                    # protobuf (*.proto) contracts
 ├── docker/                   # Dockerfiles, docker-compose, Envoy configs, env examples,
 │                             #   ai-scorer/ (real AI writing scorer image + patches)
-├── docs/                     # Architecture (incl. per-operation flows), operations, backlog
+├── docs/                     # Architecture overview + flows, operations, roadmap, fixed issues
 ├── migrations.json           # Nx package migration config
 └── package.json              # pnpm workspace root
 ```
 
-### Services (apps)
-
-| App              | gRPC services                                                                                                                                | Responsibility                                                                                                                |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `gateway`        | — (HTTP)                                                                                                                                     | API routing, JWT verification, role/permission guards, docs                                                                   |
-| `auth`           | `AuthService`                                                                                                                                | Registration/login (mail & Google), token issuance & refresh, roles/permissions, identity management, Google Calendar linking |
-| `authorization`  | `AuthorizationService`                                                                                                                       | Ownership registration/checking (`is owner?`) for resources                                                                   |
-| `exam`           | `ExamManagementService`, `ExamPracticeService`, `TagService`, `GoalService`                                                                  | Create/manage/review exams, sections & questions; attempts, answers, notes & flags; stats, activity, skill stats; tags; goals |
-| `achievement`    | `AchievementService`                                                                                                                         | Badges catalog (17), user badges, login/attempt/score progress fed by RabbitMQ events                                         |
-| `resource`       | `BlogService`, `BlogCommentService`, `FlashCardService`, `FlashCardListService`, `FlashCardProposalService`, `ForumService`, `ReportService` | Blogs and comments, flash cards and lists (forks, upstream pulls, proposals), forum, moderation reports                       |
-| `file-service`   | `FileService`                                                                                                                                | Presigned upload/download URLs, file metadata (MinIO)                                                                         |
-| `live`           | `ChatService`                                                                                                                                | Chat rooms, chat logs, room scheduling, bans; Socket.IO real-time                                                             |
-| `notification`   | `NotificationService`, `NotificationPreferencesService`                                                                                      | Notifications built from other services' events, mark read, preferences; SSE streaming                                        |
-| `mock-ai-scorer` | — (RabbitMQ only)                                                                                                                            | Dev stand-in for the external AI writing scorer: random scores after a random delay (see below)                               |
-
-### Libraries (libs)
-
-| Lib                 | Purpose                                                                   |
-| ------------------- | ------------------------------------------------------------------------- |
-| `@server/generated` | Auto-generated gRPC types/clients from `proto/*.proto`                    |
-| `@server/database`  | Prisma/PostgreSQL module utilities                                        |
-| `@server/logger`    | Shared Winston logger integration                                         |
-| `@server/utils`     | Validation pipes, exception filters, interceptors, shared types & schemas |
-| `@server/typing`    | Reusable TypeScript utility types                                         |
+Each app has its own `README.md`; the shared libraries are described in [docs/architecture/README.md](docs/architecture/README.md#4-shared-libraries-libs).
 
 ## Prerequisites
 
@@ -334,7 +287,7 @@ The Docker setup builds each app separately and adds **Envoy** sidecars so each 
 
 This brings up the database infrastructure, all application services, and the Envoy sidecars (ports defined in `docker/.env.example`, e.g. gateway `8080`, auth `8081`, exam `8082`, achievement `8083`, resource `8084`, notification `8085`/`8095`, file `8086`, live `8087`/`8088`).
 
-Upgrading an existing environment? Follow [docs/operations/upgrade-notes.md](docs/operations/upgrade-notes.md) (deploy order, migrations, queues to recreate, new env vars).
+Upgrading an existing environment? Follow [docs/operations.md](docs/operations.md#deploying-an-upgrade) (deploy order, migrations, queues to recreate, new env vars).
 
 ## Observability
 
@@ -344,7 +297,7 @@ Every app exports traces, metrics, and logs over OTLP and serves `/health/live` 
 docker compose -f docker/docker-compose.observability.yaml up -d
 ```
 
-Grafana is at http://localhost:3001 (`admin` / `admin`). Set `OTEL_SDK_DISABLED=true` to turn telemetry off. See [docs/operations/observability.md](docs/operations/observability.md) for ports, health endpoints, metrics, and alert runbooks.
+Grafana is at http://localhost:3001 (`admin` / `admin`). Set `OTEL_SDK_DISABLED=true` to turn telemetry off. See [docs/operations.md](docs/operations.md) for ports, health endpoints, metrics, and alert runbooks.
 
 ## Regenerating gRPC Code
 

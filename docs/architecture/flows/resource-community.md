@@ -1,6 +1,6 @@
 # Resource community flows (forum, flash card copies and proposals)
 
-The forum and the flash card copy / proposal ("fork / pull request") features of `apps/resource`, reached through `apps/gateway/src/resource-gateway/forum.router.controller.ts` and `apps/gateway/src/resource-gateway/flash-card-proposal.router.controller.ts`, plus the `apps/notification` consumers of the events they emit. Tables and the service overview are in [services-and-data.md, resource](../services-and-data.md#resource-appsresource) and [notification](../services-and-data.md#notification-appsnotification). Outbox, inbox and retry queues are described once in [messaging.md](../messaging.md); the requester pattern in [authorization.md section 6](../authorization.md#6-requester-pattern-authorization-in-the-owning-service).
+The forum and the flash card copy / proposal ("fork / pull request") features of `apps/resource`, reached through `apps/gateway/src/resource-gateway/forum.router.controller.ts` and `apps/gateway/src/resource-gateway/flash-card-proposal.router.controller.ts`, plus the `apps/notification` consumers of the events they emit. Tables and the service overview are in [apps/resource/README.md](../../../apps/resource/README.md) and [notification](../../../apps/notification/README.md). Outbox, inbox and retry queues are described once in [messaging.md](../messaging.md); the requester pattern in [authorization.md section 6](../authorization.md#6-requester-pattern-authorization-in-the-owning-service).
 
 Common to every route below:
 

@@ -1,6 +1,6 @@
 # Resource flows (blogs, comments, flash cards, lists, reports)
 
-Routes served by `ResourceGatewayController` (`apps/gateway/src/resource-gateway/resource.router.controller.ts`), mounted under `/api/v1/resources` (global prefix `api` + URI version `1` in `apps/gateway/src/bootstrap.ts`, `RouterModule` path `/resources` in `apps/gateway/src/router.module.ts`). They call the `resource` app (`apps/resource`) over gRPC; it uses plain application services in `apps/resource/src/app/services/` with Prisma through `TransactionHost`, no CQRS. Tables: [services-and-data.md, resource](../services-and-data.md#resource-appsresource). Forum routes are in [resource-community.md](resource-community.md); flash card copy/diff/pull and proposals (`FlashCardProposalGatewayController`) are in [resource-community.md](resource-community.md).
+Routes served by `ResourceGatewayController` (`apps/gateway/src/resource-gateway/resource.router.controller.ts`), mounted under `/api/v1/resources` (global prefix `api` + URI version `1` in `apps/gateway/src/bootstrap.ts`, `RouterModule` path `/resources` in `apps/gateway/src/router.module.ts`). They call the `resource` app (`apps/resource`) over gRPC; it uses plain application services in `apps/resource/src/app/services/` with Prisma through `TransactionHost`, no CQRS. Tables: [apps/resource/README.md](../../../apps/resource/README.md). Forum routes are in [resource-community.md](resource-community.md); flash card copy/diff/pull and proposals (`FlashCardProposalGatewayController`) are in [resource-community.md](resource-community.md).
 
 Common to every route below:
 
@@ -187,7 +187,7 @@ Service: `FlashcardService` (`apps/resource/src/app/services/flashcard.service.t
   2. `imageFileId`: absent keeps the image; `''` removes it; an id replaces it. A new id that is not the card's current image is checked with `CheckFilesOwnedBy([id], requesterId)` (403) unless admin, before the transaction. Re-sending the current id is no change (so the owner of a copy can save a card whose image someone else uploaded).
   3. `@Transactional()` `writeCard`: `SELECT id FROM flash_cards WHERE id = $1 FOR UPDATE`, `findOwnedCard` again; 409 `The card changed while saving; please try again` if the image changed meanwhile so that the sent id was never checked. `update`: undefined fields are left unchanged, `examples`/`tags` replaced when their `replace*` flag is set (so `[]` clears them) or non-empty; setting or removing an image writes `imageFileId` and clears the legacy `image`. If the image changed: outbox `resource.files.removed` for the old file and `resource.file.added` for the new one.
   4. Image URL resolved; response `FlashCardDto`.
-- **Errors**: 404 for a missing card and for someone else's card (public list or not), so ids don't leak. Walkthrough: [authorization.md §7(e)](../authorization.md#e-updating-a-flash-card-patch-apiv1resourcesflash-cardsid-via-the-requester-pattern).
+- **Errors**: 404 for a missing card and for someone else's card (public list or not), so ids don't leak. Walkthrough: [authorization.md §7(e)](../authorization.md#33-requester-pattern-patch-apiv1examsmanagementid).
 
 ### DELETE /api/v1/resources/flash-cards/:id
 
@@ -259,7 +259,7 @@ Service: `ReportService` (`apps/resource/src/app/services/report.service.ts`). P
 
 ### GET /api/v1/resources/reports/:id
 
-`requesterOf(user, [Mod, Admin])` → `resource.ReportService/GetReport` → `findVisibleReport`; 404 for missing or someone else's report. Response `ReportDto`. Worked example: [authorization.md §7(b)](../authorization.md#b-reading-someone-elses-report-get-apiv1resourcesreportsid).
+`requesterOf(user, [Mod, Admin])` → `resource.ReportService/GetReport` → `findVisibleReport`; 404 for missing or someone else's report. Response `ReportDto`. Worked example: [authorization.md §7(b)](../authorization.md#33-requester-pattern-patch-apiv1examsmanagementid).
 
 ### PATCH /api/v1/resources/reports/:id
 
@@ -286,7 +286,7 @@ Triage a report.
 ### POST /api/v1/resources/reports/:id/files
 
 - **Access**: reporter or mod/admin (`findVisibleReport`); uploader check skipped only when `mayAttachAnyFile = hasAnyRole(user, [Admin])`.
-- **Flow**: `AddFileToReportDto` (`fileId`) → `resource.ReportService/AddFileToReport` → `ReportService.addFileToReport`: `findVisibleReport` (404), 409 if the report is in a final status → unless admin, `CheckFilesOwnedBy([fileId], requesterId)` (403), both outside any transaction → `@Transactional()` `attachFile`: lock the report row (`FOR UPDATE`), `findVisibleReport` and the final-status check again (it may have been resolved during the gRPC call), `ReportFile.createMany(skipDuplicates)`; only a new row writes outbox `resource.file.added { fileId }` (re-attaching is a no-op). Response empty. Worked example: [authorization.md §7(c)](../authorization.md#c-attaching-a-file-someone-else-uploaded).
+- **Flow**: `AddFileToReportDto` (`fileId`) → `resource.ReportService/AddFileToReport` → `ReportService.addFileToReport`: `findVisibleReport` (404), 409 if the report is in a final status → unless admin, `CheckFilesOwnedBy([fileId], requesterId)` (403), both outside any transaction → `@Transactional()` `attachFile`: lock the report row (`FOR UPDATE`), `findVisibleReport` and the final-status check again (it may have been resolved during the gRPC call), `ReportFile.createMany(skipDuplicates)`; only a new row writes outbox `resource.file.added { fileId }` (re-attaching is a no-op). Response empty. Worked example: [authorization.md §7(c)](../authorization.md#34-file-attach-patch-apiv1examsmanagementsectionsid-with-addfiles).
 
 ### DELETE /api/v1/resources/reports/:reportId/files/:fileId
 
@@ -325,4 +325,4 @@ None of these consumers emits further events.
 - ~~`totalThreads` counts placeholders that `buildCommentTree` may prune~~: not a bug in consistent data (`deleteComment` keeps a placeholder only while it has replies, so a root is never pruned); two concurrent deletes could leave an empty placeholder: fixed (see fixed-issues.md; `deleteComment` row-locks the comment and its parent before counting replies).
 - ~~`updateFlashCard`/`deleteFlashCard` rely on `@ResourceAccess` alone~~: fixed (see fixed-issues.md; requester pattern, owner check via the card's list).
 - ~~Card images are free URL strings (no upload, no uploader check, no cleanup)~~: fixed (see fixed-issues.md, "Flash card images in file-service"; `image_file_id`, reference counted).
-- ~~Doc drift~~: `messaging.md` §7 and `services-and-data.md` now list `resource.report.created` and `resource.blog-comment.created`.
+- ~~Doc drift~~: `messaging.md` §7 and the service docs (now `apps/resource/README.md`) list `resource.report.created` and `resource.blog-comment.created`.

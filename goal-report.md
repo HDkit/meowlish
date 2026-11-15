@@ -4,7 +4,7 @@ Status: ✅ fixed and deployed (backend live on meowlish.servebeer.com, frontend
 meowlish-fe-share.vercel.app). All 20 problems are done.
 
 Backend = `~/meowlish` (branch `chore/local-dev-fixes`), frontend = `~/meowlish-fe` (branch
-`feat/backlog-goal`). Nothing is pushed. The main frontend (meowlish-fe.vercel.app) still runs the
+`feat/backlog-goal`). Nothing is pushed (at the time of this entry; everything was pushed later). The main frontend (meowlish-fe.vercel.app) still runs the
 old code until `feat/backlog-goal` reaches `main`.
 
 ## Deployment state found along the way
@@ -14,7 +14,8 @@ exam, notification, achievement, authorization, resource and file-service were b
 before the shared event bus (outbox/inbox, retries). Their RabbitMQ queues still used the old
 per-service dead-letter exchanges, and there was no writing scorer at all.
 
-Done, following `docs/operations/upgrade-notes.md` + `observability.md`:
+Done, following `docs/operations.md` + `observability.md`:
+
 - Checked databases: auth/exam/achievement/file migrations already applied; resource, notification,
   authorization, live schemas match (`prisma migrate diff` empty). No DB change needed.
 - Rebuilt every backend image from the current branch.
@@ -97,6 +98,7 @@ cancelled pending saves and didn't wait for in-flight ones**; "Nộp & Bắt đ�
 attempt while its saves were pending and started a new attempt even if ending failed; answer routes
 shared a 100/min per-IP limit.
 **Fixes:**
+
 - `lib/answer-sync.ts`: one queue per question, only the latest value, strictly in order, retries
   transient errors, reports failures (8 tests).
 - Test page shows "Đang lưu… / Đã lưu mọi câu trả lời / Chưa lưu được N câu"; submit waits for every
@@ -109,7 +111,7 @@ shared a 100/min per-IP limit.
 
 **Causes:** (1) **no scorer ran** (mock scorer was behind an opt-in compose profile), so
 submissions were never scored; (2) **the /writing page faked it**: it showed the attempt's
-*maximum* points as the score on the first poll.
+_maximum_ points as the score on the first poll.
 **Fix:** mock scorer started (`docker compose --profile mock-ai`; waits 1–3 min, random IELTS band);
 the page now waits for the real band/feedback. Pipeline verified: `exam.writing.submitted` →
 scorer → `exam.writing.scored` → exam. **Verified live end to end:** a test writing submission was
@@ -142,14 +144,16 @@ console, blog and the new forum (all below), and the shared form-error pattern.
 ## Problem 18 — notifications don't work — ✅
 
 **Causes:**
+
 - Nothing consumed a "report created" event — none existed — so **admins were never notified**
-  of reports. (Report *status* notifications to the reporter existed.)
+  of reports. (Report _status_ notifications to the reporter existed.)
 - In the database there was **not a single real notification**: all 30 rows were seed data.
 - The seed invented notifications the system never sends ("Tuần này bạn đã học được 5 bài mới", a
   "first lesson" badge, …). Real texts were also in English.
 - The half-migrated event setup (see top) also affected the notification queues.
 
 **Fixes:**
+
 - auth: new service-to-service RPC `FindIdentityIdsByRole` (active admins).
 - resource: creating a report publishes `resource.report.created` (inside the same transaction).
 - notification: new consumer — every admin (except a reporting admin) gets "Có báo cáo mới cần xử
@@ -178,6 +182,7 @@ bars per question type, weakest first. New backend endpoint `GET /exams/practice
   time. New endpoint `GET /exams/practice/my/activity` (verified live).
 
 **Decisions for you (from this work):**
+
 1. Days and streaks use **UTC** (07:00–07:00 Vietnam time), matching the existing login streak. I
    can switch to local days.
 2. The weekly target lives in the browser only (a server copy needs a schema change).
@@ -196,10 +201,11 @@ errors inline, skeleton/empty/error states, access-denied panel, real user names
 creators/reporters/authors.
 
 **Bugs found and fixed on the way:**
+
 - **Exam editor sent minutes as seconds** (a "60-minute" exam got a 60-second timer). Checked the
   database: all 12 exams are seeded with correct durations, none was created through the editor, so
   no data to repair.
-- Removing a role sent the role *name* instead of its id → always 409.
+- Removing a role sent the role _name_ instead of its id → always 409.
 - User list loaded only 20 users; role filter compared names with ids; role labels didn't match
   backend names; empty option could crash the role dialog. Backend also rejected filtering by a
   single role ("must be an array") — fixed in the gateway.
@@ -212,7 +218,7 @@ creators/reporters/authors.
 
 **Limits:** the backend's exam title filter only matches exact titles, so admin exam pages load up to
 2,000 exams and search in the browser; report and blog search filter the current page only (no
-server search). The exam *editor* (sections/questions) got error handling and the header fix, not a
+server search). The exam _editor_ (sections/questions) got error handling and the header fix, not a
 full redesign.
 
 ## Problem 20 — form errors break layouts — ✅
@@ -259,6 +265,7 @@ digit and symbol, so signups failed with an English error — rules now match.
 
 **Structure: materialized path.** Each comment stores its top-level comment (`rootId`) and a `path`
 of fixed-width base36 segments (one per level, from an atomic per-parent counter).
+
 - Insert = one row + one counter increment (concurrent replies can't collide).
 - Reading a page of threads = one indexed query, already in display order (sort by path).
 - Nested set was rejected: every insert renumbers later rows, bad for an insert-heavy table. Closure
@@ -280,7 +287,7 @@ report a comment. Top-level comments paginated newest first.
    gateway controller.
 5. **Forum view counts** go up on every page load (no de-duplication). Forum replies are deleted
    outright (a reply quoting one loses the quote); comments keep a "[đã xóa]" placeholder.
-6. Not built: notifications when someone replies to you (forum/comments).
+6. Not built: notifications when someone replies to you (forum/comments). (Built later, see below.)
 7. **Mock AI scorer runs in production** (no real scorer exists). Stop it when there is one.
 8. **`TRUST_PROXY` is unset**, so all users may share per-IP rate limits on most routes.
 9. Admin exam search is client-side (backend title filter is exact match); report/blog search
@@ -288,7 +295,7 @@ report a comment. Top-level comments paginated newest first.
 
 ## Not done / out of scope
 
-- **Nothing is pushed.** The main frontend (meowlish-fe.vercel.app) still runs old code until
+- **Nothing is pushed** (at the time; pushed later). The main frontend (meowlish-fe.vercel.app) still runs old code until
   `feat/backlog-goal` reaches `main`, and pushing the backend needs `git-lfs` reinstalled
   (`sudo pacman -S git-lfs`).
 - Husky isn't installed in the backend clone (`pnpm exec husky`), so pre-commit hooks don't run; I
@@ -413,7 +420,7 @@ admin console, form errors, forum, blog redesign + comments).
   outline, which made the grid look heavy.
 - **Blog tag filter:** there was no backend endpoint for blog tags, so the page only knew the tags
   of the posts it had loaded and the list grew as you changed page. New `GET
-  /resources/blogs/tags` returns every tag (most used first); /blog and /blog-management use it.
+/resources/blogs/tags` returns every tag (most used first); /blog and /blog-management use it.
   The seeded posts also mixed tag styles ("IELTS" and "ielts", "Writing" and "viet-lach"), so some
   tags showed twice. All tags are now slugs (live data fixed too; backup
   `~/meowlish-db-backups/resource_db-20261114-093343.sql`).
@@ -468,7 +475,7 @@ admin console, form errors, forum, blog redesign + comments).
   documented in docs/fixed-issues.md (outbox relay publishes `mandatory`, malformed pagination
   cursors give 400, limit > 100 gives 400, presign validation, achievement duplicate-badge
   migration, stale authorization rows cleaned). Deployed and smoke-tested. The 23 findings that
-  need a decision are in docs/backlog.md (S21–S25, C23–C40).
+  need a decision are in docs/backlog.md (S21–S25, C23–C40; that file is now docs/roadmap.md).
 - **Readable URLs (slugs):** exams, blog posts and forum threads now have slugs made from their
   titles (`/test/toeic-lr-1`, `/blog/5-loi-thuong-gap-khi-phat-am-tieng-anh`). A slug never
   changes after it is created, old id links still work and switch to the slug in the address
