@@ -2,6 +2,15 @@
 
 What was fixed from [`backlog.md`](backlog.md), and how. Newest first. Each entry says what was wrong, what changed (files), what it means for running systems, and how it is tested. The backlog row is deleted in the same commit as the fix.
 
+## Follow-ups (November 2026)
+
+### Badge names were English in notifications, Vietnamese on the badge page
+
+- **Problem:** `BADGE_INFORMATION` (`apps/achievement/src/constants/badge-info.const.ts`) had English names ("Flawless Start"), which `achievement.badge.earned` carries and the notification quotes inside a Vietnamese sentence, while the frontend's badge page shows its own Vietnamese catalogue ("Hoàn hảo").
+- **Fix:** the backend names and descriptions are the same Vietnamese texts as the frontend catalogue (`src/lib/badges.ts`). The seed now upserts the badges (it used `createMany … skipDuplicates`, so stored texts never changed), so re-running it updates `badges.display_name`/`description`. Notifications already stored were rewritten once on production (message and `data.badgeName`, matched on the old English name).
+- **Deploy:** re-run the achievement seed (`nx run achievement:prisma:seed`, re-runnable) and redeploy achievement. Old notifications keep their English names unless rewritten.
+- **Tests:** `apps/achievement/src/test/infra/repositories/badge-manager.prisma.repository.impl.spec.ts` (the event carries `displayName`).
+
 ## Backlog decisions (November 2026)
 
 The items in the backlog that needed a decision (S21–S25, C23–C40), after the product owner decided each one. Kept as they are, by decision: **S24** (question explanations stay public), **C23** (deleted users' identities are still returned by hydration), **C27** (approved exams can be deleted, and the delete cascades to every attempt), **C34** (every thread view counts), **C36** (the unused email/push/system switches stay).

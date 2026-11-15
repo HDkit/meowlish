@@ -4,14 +4,16 @@ import { PrismaClient } from '@prisma-client/achievement';
 
 const prisma = new PrismaClient();
 
+/** Upserts every badge, so re-running the seed also updates the names and descriptions. */
 async function seedBadges() {
-	await prisma.badge.createMany({
-		data: Object.values(Badge).map(b => ({
-			name: b,
-			...BADGE_INFORMATION[b],
-		})),
-		skipDuplicates: true,
-	});
+	for (const b of Object.values(Badge)) {
+		const info = BADGE_INFORMATION[b];
+		await prisma.badge.upsert({
+			where: { name: b },
+			update: info,
+			create: { name: b, ...info },
+		});
+	}
 }
 
 const DAY = 24 * 60 * 60 * 1000;

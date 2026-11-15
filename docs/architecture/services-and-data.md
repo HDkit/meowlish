@@ -117,12 +117,12 @@ gRPC (`proto/exam.proto`):
 
 Badges from login streaks and attempts. Schemas `apps/achievement/prisma/schema/{badge,exam-criteria,login-criteria}.prisma`.
 
-| Model             | Table              | Key columns                                                                  | Relations                     | Purpose                                          |
-| ----------------- | ------------------ | ---------------------------------------------------------------------------- | ----------------------------- | ------------------------------------------------ |
-| `Badge`           | `badges`           | `name` PK, `type`, `description`, `display_name`                             | `userBadges`                  | Badge catalogue                                  |
-| `UserBadge`       | `user_badges`      | `id`, `uid`, `badge` (→ `badges.name`), `updatedAt`; index `(updatedAt, id)` | → `Badge` (on update cascade) | Badges a user earned                             |
-| `AttemptCriteria` | `attempt_criteria` | `uid` PK, `version`, `total`, `perfect`, `good`                              | -                             | Per-user attempt counters (optimistic `version`) |
-| `LoginCriteria`   | `login_criteria`   | `uid` PK, `version`, `longest_streak`, `total`, `started_at`, `last_login`   | -                             | Per-user login streak (UTC days)                 |
+| Model             | Table              | Key columns                                                                  | Relations                     | Purpose                                                                                                                                  |
+| ----------------- | ------------------ | ---------------------------------------------------------------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `Badge`           | `badges`           | `name` PK, `type`, `description`, `display_name`                             | `userBadges`                  | Badge catalogue; `display_name`/`description` are the Vietnamese texts users see (`constants/badge-info.const.ts`, upserted by the seed) |
+| `UserBadge`       | `user_badges`      | `id`, `uid`, `badge` (→ `badges.name`), `updatedAt`; index `(updatedAt, id)` | → `Badge` (on update cascade) | Badges a user earned                                                                                                                     |
+| `AttemptCriteria` | `attempt_criteria` | `uid` PK, `version`, `total`, `perfect`, `good`                              | -                             | Per-user attempt counters (optimistic `version`)                                                                                         |
+| `LoginCriteria`   | `login_criteria`   | `uid` PK, `version`, `longest_streak`, `total`, `started_at`, `last_login`   | -                             | Per-user login streak (UTC days)                                                                                                         |
 
 gRPC `AchievementService` (`proto/achievement.proto`): `GetAll`, `GetUsersBadges`, `GetUsersProgess` (sic).
 
