@@ -3,11 +3,7 @@ import { AUTH_CLIENT } from '../../auth-gateway/constants/auth';
 import { GOOGLE_CALLBACK_PATH } from '../../auth-gateway/google-oauth-frontends';
 import { GoogleOAuth2Strategy } from '../../auth-gateway/strategies/google-oauth2.strategy';
 import { JwtStrategy } from '../../auth-gateway/strategies/jwt.strategy';
-import {
-	LEGACY_STATE_ACCEPTED_UNTIL,
-	OAUTH_STATE_COOKIE,
-	oauthStateKey,
-} from '../../auth/guards/google-oauth2.guard';
+import { OAUTH_STATE_COOKIE, oauthStateKey } from '../../auth/guards/google-oauth2.guard';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { status } from '@grpc/grpc-js';
 import { RedisService } from '@liaoliaots/nestjs-redis';
@@ -99,24 +95,13 @@ describe('Google OAuth across frontends', () => {
 	};
 	const putState = (nonce: string, record: object) =>
 		redis.store.set(oauthStateKey(nonce), JSON.stringify(record));
-	/** A login state as the start writes it now; returns the matching cookie header. */
+	/** A login state as the start writes it; returns the matching cookie header. */
 	const putLogin = (nonce: string, record: object = {}) => {
-		putState(nonce, { ...record, bound: true });
+		putState(nonce, record);
 		return { Cookie: `${OAUTH_STATE_COOKIE}=${nonce}` };
 	};
 	const stateCookie = (res: Response) =>
 		res.headers.getSetCookie().find(c => c.startsWith(`${OAUTH_STATE_COOKIE}=`));
-	/** Runs a test at a moment before or after the transition window for pre-deploy flows. */
-	const at = async (moment: number, run: () => Promise<void>) => {
-		const now = jest.spyOn(Date, 'now').mockReturnValue(moment);
-		try {
-			await run();
-		} finally {
-			now.mockRestore();
-		}
-	};
-	const duringTransition = (run: () => Promise<void>) => at(LEGACY_STATE_ACCEPTED_UNTIL - 1, run);
-	const afterTransition = (run: () => Promise<void>) => at(LEGACY_STATE_ACCEPTED_UNTIL + 1, run);
 
 	beforeAll(async () => {
 		const moduleRef = await Test.createTestingModule({
@@ -171,7 +156,7 @@ describe('Google OAuth across frontends', () => {
 			expect(url.host).toBe('accounts.google.com');
 			expect(url.searchParams.get('redirect_uri')).toBe(`${MAIN}${GOOGLE_CALLBACK_PATH}`);
 			const state = url.searchParams.get('state') ?? '';
-			expect(JSON.parse(redis.store.get(oauthStateKey(state)) ?? '')).toEqual({ bound: true });
+			expect(JSON.parse(redis.store.get(oauthStateKey(state)) ?? '')).toEqual({});
 			const cookie = stateCookie(res);
 			expect(cookie).toContain(`${OAUTH_STATE_COOKIE}=${state}`);
 			expect(cookie).toContain(`Path=${GOOGLE_CALLBACK_PATH}`);
@@ -183,17 +168,16 @@ describe('Google OAuth across frontends', () => {
 			const url = location(await get(`/google?frontend=${encodeURIComponent(`${MAIN}/`)}`));
 			expect(url.searchParams.get('redirect_uri')).toBe(`${MAIN}${GOOGLE_CALLBACK_PATH}`);
 			const state = url.searchParams.get('state') ?? '';
-			expect(JSON.parse(redis.store.get(oauthStateKey(state)) ?? '')).toEqual({ bound: true });
+			expect(JSON.parse(redis.store.get(oauthStateKey(state)) ?? '')).toEqual({});
 		});
 
-		it('listed frontend: its own callback, remembered in the bound state', async () => {
+		it('listed frontend: its own callback, remembered in the state', async () => {
 			const res = await get(`/google?frontend=${encodeURIComponent(SHARE)}`);
 			const url = location(res);
 			expect(url.searchParams.get('redirect_uri')).toBe(`${SHARE}${GOOGLE_CALLBACK_PATH}`);
 			const state = url.searchParams.get('state') ?? '';
 			expect(JSON.parse(redis.store.get(oauthStateKey(state)) ?? '')).toEqual({
 				frontend: SHARE,
-				bound: true,
 			});
 			expect(stateCookie(res)).toContain(`${OAUTH_STATE_COOKIE}=${state}`);
 		});
@@ -213,7 +197,6 @@ describe('Google OAuth across frontends', () => {
 			expect(JSON.parse(redis.store.get(oauthStateKey(state)) ?? '')).toEqual({
 				identityId: 'user-1',
 				frontend: SHARE,
-				bound: true,
 			});
 			const cookie = stateCookie(res);
 			expect(cookie).toContain(`${OAUTH_STATE_COOKIE}=${state}`);
@@ -267,39 +250,20 @@ describe('Google OAuth across frontends', () => {
 			expect(authService.registerOrLoginGoogle).not.toHaveBeenCalled();
 		});
 
-		it('transition: a pre-deploy login without a state is still accepted', async () => {
-			await duringTransition(async () => {
-				const res = await get('/google/callback?code=c');
-				expect(res.status).toBe(302);
-				expect(location(res).searchParams.get('loginToken')).toBeTruthy();
+		it('a missing state, or a state without its cookie, is refused', async () => {
+			expect(errorRedirect(await get('/google/callback?code=c'))).toEqual({
+				at: `${MAIN}/auth/callback`,
+				error: 'SESSION_EXPIRED',
+				flow: null,
 			});
-		});
-
-		it('transition: a pre-deploy unbound listed-frontend state needs no cookie', async () => {
-			await duringTransition(async () => {
-				putState('n9', { frontend: SHARE });
-				const res = await get('/google/callback?code=c&state=n9');
-				expect(res.status).toBe(302);
-				expect(location(res).searchParams.get('loginToken')).toBeTruthy();
+			putState('n10', { frontend: SHARE });
+			expect(errorRedirect(await get('/google/callback?code=c&state=n10'))).toMatchObject({
+				at: `${SHARE}/auth/callback`,
+				error: 'SESSION_EXPIRED',
 			});
-		});
-
-		it('after the transition a missing or unbound state is refused', async () => {
-			await afterTransition(async () => {
-				expect(errorRedirect(await get('/google/callback?code=c'))).toEqual({
-					at: `${MAIN}/auth/callback`,
-					error: 'SESSION_EXPIRED',
-					flow: null,
-				});
-				putState('n10', { frontend: SHARE });
-				expect(errorRedirect(await get('/google/callback?code=c&state=n10'))).toMatchObject({
-					at: `${SHARE}/auth/callback`,
-					error: 'SESSION_EXPIRED',
-				});
-				// a bound state with its cookie still works
-				const res = await get('/google/callback?code=c&state=n11', putLogin('n11'));
-				expect(location(res).searchParams.get('loginToken')).toBeTruthy();
-			});
+			// a state with its cookie works
+			const res = await get('/google/callback?code=c&state=n11', putLogin('n11'));
+			expect(location(res).searchParams.get('loginToken')).toBeTruthy();
 			expect(authService.registerOrLoginGoogle).toHaveBeenCalledTimes(1);
 		});
 

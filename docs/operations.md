@@ -328,7 +328,7 @@ Details in [`fixed-issues.md`](fixed-issues.md#backlog-decisions-november-2026).
    - **gateway with exam** (goal `target` changed from int32 to double, not wire-compatible) and **gateway with live** (`GetChatLogRequest.requester_id` is required).
    - auth and gateway can go in either order (refresh rotation just doesn't rotate in a mixed pair).
 4. **Behaviour you will see:**
-   - Every Google login needs the `oauth2_state` cookie on the callback, so `BASE_URL` (and every `GOOGLE_OAUTH_FRONTENDS` origin) must be the frontend origin that proxies `/api`. Callbacks without a state were accepted until `LEGACY_STATE_ACCEPTED_UNTIL` (2026-11-15 06:00 UTC); remove that constant in the next release.
+   - Every Google login needs the `oauth2_state` cookie on the callback, so `BASE_URL` (and every `GOOGLE_OAUTH_FRONTENDS` origin) must be the frontend origin that proxies `/api`. Callbacks without a state were accepted until 2026-11-15 06:00 UTC (`LEGACY_STATE_ACCEPTED_UNTIL`); that transition code was removed in the next release, so a callback without a matching state and cookie is now always refused.
    - Refresh tokens rotate (see the release below); a refresh token reused after the 30 s grace revokes its session.
    - New usernames must match `^[a-z0-9._-]{3,30}$`; existing ones are kept until changed.
    - Approved exams and resolved/rejected/dismissed/closed reports are frozen (409 for any change); an approved exam can still be deleted (cascades to its attempts).

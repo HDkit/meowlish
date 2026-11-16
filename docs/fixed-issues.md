@@ -18,6 +18,11 @@ What was fixed from [`backlog.md`](roadmap.md) (now [`roadmap.md`](roadmap.md)),
 
 ## Follow-ups (November 2026)
 
+### Google login transition code removed; Grafana running in production
+
+- **Transition code:** the S21 grace period (`LEGACY_STATE_ACCEPTED_UNTIL`, which until 2026-11-15 06:00 UTC let a Google callback through without a state, or with a state record that had no cookie binding) is gone, together with the `bound` flag it relied on. Every callback now needs a state that matches its `oauth2_state` cookie (`apps/gateway/src/auth/guards/google-oauth2.guard.ts`). Tests: `apps/gateway/src/test/auth-gateway/google-oauth.spec.ts` ("a missing state, or a state without its cookie, is refused").
+- **Grafana LGTM on the production host:** the stack was never started there, and `docker/.env.services` had no `OTEL_EXPORTER_OTLP_ENDPOINT`, so nothing was exported. Now `lgtm` runs (`docker compose -f docker/docker-compose.observability.yaml up -d`), the apps send OTLP to `http://lgtm:4318`, and its OTLP host ports are 4327/4328 (`LGTM_OTLP_GRPC_PORT` / `LGTM_OTLP_HTTP_PORT` in `docker/.env`) because another project on the host already uses 4317/4318. Grafana is on `127.0.0.1:3001`. Checked: all 10 services report `service_ready`, the RabbitMQ queue metrics and outbox metrics arrive, both dashboards and the 13 alert rules are provisioned, and no alert fires. Env files were backed up to `~/meowlish-env-backups/` first.
+
 ### Blog search by title, tags, time and author
 
 - **Problem:** the blog page could only filter by tag; there was no way to search titles, pick a time range or find an author's posts.

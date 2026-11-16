@@ -122,7 +122,7 @@ Design and cookie rationale: [Google login and account linking](../authorization
 
 | Key                               | Written by                    | TTL   | Value                                              |
 | --------------------------------- | ----------------------------- | ----- | -------------------------------------------------- |
-| `gateway:oauth2:state:<nonce>`    | `GoogleOAuth2Guard.startFlow` | 300 s | `{ identityId?, frontend?, bound: true }`          |
+| `gateway:oauth2:state:<nonce>`    | `GoogleOAuth2Guard.startFlow` | 300 s | `{ identityId?, frontend? }`                       |
 | `oauth2:google:loginToken:<uuid>` | `googleCallback`              | 60 s  | `auth.Tokens` JSON, or `true` for the linking flow |
 
 Frontend resolution (`google-oauth-frontends.ts`): no `?frontend=` or the origin of `FE_LOGIN_REDIRECT_URL` → default (`BASE_URL` + `/api/v1/auth/google/callback`, land on `FE_LOGIN_REDIRECT_URL`); any other origin must be in `GOOGLE_OAUTH_FRONTENDS` (else 400 `Unknown frontend`), and the callback then goes through that origin.
@@ -134,7 +134,7 @@ Start a Google login/sign-up (redirect to Google).
 - **Access**: `@IsPublic()`, `GoogleOAuth2Guard` (`apps/gateway/src/auth/guards/google-oauth2.guard.ts`).
 - **Flow**:
   1. Resolve `?frontend` (default frontend, or a listed one).
-  2. Every flow, default frontend included: random nonce, Redis `SET gateway:oauth2:state:<nonce> {frontend?, bound: true} EX 300`, and an `oauth2_state=<nonce>` cookie (HttpOnly, Lax, `Secure` like the session cookies, Path=`/api/v1/auth/google/callback`, 300 s) that binds the flow to this browser (login CSRF protection). `state=<nonce>`, `callbackURL=<frontend>/api/v1/auth/google/callback` (`BASE_URL` for the default frontend, which must be the frontend's origin so the cookie comes back).
+  2. Every flow, default frontend included: random nonce, Redis `SET gateway:oauth2:state:<nonce> {frontend?} EX 300`, and an `oauth2_state=<nonce>` cookie (HttpOnly, Lax, `Secure` like the session cookies, Path=`/api/v1/auth/google/callback`, 300 s) that binds the flow to this browser (login CSRF protection). `state=<nonce>`, `callbackURL=<frontend>/api/v1/auth/google/callback` (`BASE_URL` for the default frontend, which must be the frontend's origin so the cookie comes back).
   3. Passport redirects to Google (scopes `email profile`).
 - **Errors**: 400 unknown frontend.
 
@@ -143,7 +143,7 @@ Start a Google login/sign-up (redirect to Google).
 Start linking a Google account to the signed-in identity. Must be a top-level navigation.
 
 - **Access**: authenticated (the global `JwtAuthGuard` sets `req.user` before `GoogleOAuth2Guard`).
-- **Flow**: as `GET /google` (state record and `oauth2_state` cookie), but `req.user.sub` is present, so the record also carries `identityId` (`{ identityId, frontend?, bound: true }`, 300 s).
+- **Flow**: as `GET /google` (state record and `oauth2_state` cookie), but `req.user.sub` is present, so the record also carries `identityId` (`{ identityId, frontend? }`, 300 s).
 - **Errors**: 401 no session; 400 unknown frontend.
 
 ### GET /api/v1/auth/google/callback
@@ -153,7 +153,6 @@ Google's redirect target. Always answers with a redirect to the frontend login c
 - **Access**: `@IsPublic()`, `GoogleOAuth2CallbackGuard`, `GoogleOAuthCallbackFilter`.
 - **Flow**:
   1. `GoogleOAuth2CallbackGuard.consumeState` (`google-oauth2.guard.ts`): no `state` → 401. Otherwise read `gateway:oauth2:state:<state>` (missing → 401); re-resolve the frontend; require the `oauth2_state` cookie to equal the state (401 otherwise, checked before deletion, so a forged callback can't burn the state); `DEL` the key, and 0 deleted → 401 (single use); clear the cookie. Sets `req.googleOAuth = { identityId?, frontend }`.
-     - **Transition** (`LEGACY_STATE_ACCEPTED_UNTIL`, until 2026-11-15 06:00 UTC, a fixed moment a few hours after the deploy so a restart does not reopen it): a callback without `state` (default-frontend login started before the deploy) is still accepted as a default-frontend login, and a login record without `bound` (listed-frontend login started before the deploy) skips the cookie check. After that both are 401. The branch is to be removed in the next release.
   2. Passport exchanges the code with Google using the same callback URL, then `GoogleOAuth2Strategy.validate` (`strategies/google-oauth2.strategy.ts:45`):
      - **Linking** (`identityId` set): gRPC `GetCredentials`; already has a `GOOGLE` credential → `GOOGLE_ALREADY_LINKED` (409). Else gRPC `AddGoogleCredential({ identifier: googleId, identityId })` → `AddGoogleCredCommandHandler`: 404 missing identity; 409 if the Google id belongs to another identity (mapped to `GOOGLE_ACCOUNT_IN_USE`); `identity.addCredential` (403 demo, 409 duplicate type) → `save` inserts `Credential`. Result `true`.
      - **Login/sign-up**: gRPC `RegisterOrLoginGoogle({ identifier: googleId, username: randomUUID(), fullName, email })` → `GoogleRegisterOrLoginCommandHandler` (`google-register-or-login.handler.ts`, `@Transactional()`):
