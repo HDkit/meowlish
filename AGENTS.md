@@ -36,7 +36,7 @@ pnpm exec nx run-many -t test
 pnpm exec nx run-many -t build
 ```
 
-To check only what you touched, use `nx affected -t lint test build`. The Husky pre-commit hook runs `nx affected -t format, lint` and `nx affected -t test`. Don't bypass it with `--no-verify`.
+To check only what you touched, use `nx affected -t lint test build`. Tests share the host with the running app stack, so they are capped: Nx runs 2 tasks at a time (`nx.json` `parallel`), each Jest run uses at most 25% of the cores (`jest.preset.js`; override with `JEST_MAX_WORKERS`), and the pre-commit hook runs tests under `nice`. The Husky pre-commit hook runs `nx affected -t format, lint` and `nx affected -t test`. Don't bypass it with `--no-verify`.
 
 ## Formatting (Prettier, enforced by ESLint)
 

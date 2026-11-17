@@ -1,3 +1,4 @@
+import { IS_PUBLIC_KEY } from '../../auth/decorators/public.decorator';
 import { RESOURCE_ACCESS_KEY } from '../../auth/decorators/resource-access.decorator';
 import { RESOURCE_CLIENT } from '../../resource-gateway/constants/resource';
 import { ResourceGatewayController } from '../../resource-gateway/resource.router.controller';
@@ -175,5 +176,29 @@ describe('ResourceGatewayController flash cards (C32)', () => {
 			requesterId: 'jwt-user',
 			privileged: true,
 		});
+	});
+});
+
+describe('ResourceGatewayController blog visibility', () => {
+	const proto = ResourceGatewayController.prototype as unknown as Record<string, object>;
+	const isPublic = (route: string): unknown => Reflect.getMetadata(IS_PUBLIC_KEY, proto[route]);
+
+	it('lets anonymous visitors read blogs, tags and comments', () => {
+		for (const route of ['listBlogs', 'getBlog', 'listBlogTags', 'listBlogComments']) {
+			expect(isPublic(route)).toBe(true);
+		}
+	});
+
+	it('still requires a session to write blogs and comments', () => {
+		for (const route of [
+			'createBlog',
+			'updateBlog',
+			'deleteBlog',
+			'createBlogComment',
+			'updateBlogComment',
+			'deleteBlogComment',
+		]) {
+			expect(isPublic(route)).toBeUndefined();
+		}
 	});
 });

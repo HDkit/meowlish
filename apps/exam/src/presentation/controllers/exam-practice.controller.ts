@@ -203,7 +203,12 @@ export class ExamPracticeController implements exam.ExamPracticeServiceControlle
 	@SerializeOptions({ type: UserActivityDto, strategy: 'exposeAll' })
 	async getUserActivity(@Payload() request: GetUserActivityDto): Promise<UserActivityDto> {
 		return await this.queryBus.execute(
-			new GetUserActivityQuery({ userId: request.uid, days: request.days }),
+			new GetUserActivityQuery({
+				userId: request.uid,
+				days: request.days,
+				from: request.from,
+				to: request.to,
+			}),
 		);
 	}
 

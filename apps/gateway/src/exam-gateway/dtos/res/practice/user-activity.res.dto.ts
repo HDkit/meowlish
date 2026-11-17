@@ -41,8 +41,15 @@ export class UserActivityDto {
 	longestStreak!: number;
 
 	@Expose()
-	@ApiProperty({ example: '2026-11-13', description: 'Today (UTC)' })
+	@ApiProperty({
+		example: '2026-11-13',
+		description: 'Last day of the range (UTC): today unless `from`/`to` were sent',
+	})
 	to!: string;
+
+	@Expose()
+	@ApiProperty({ example: '2026-11-13', description: 'Today (UTC); streaks are counted up to it' })
+	today!: string;
 
 	@Expose()
 	@ApiProperty({ type: Number, description: 'All-time finished attempts' })

@@ -1,4 +1,4 @@
-import { IRoomRepository } from '../../../domain/repositories/room.repository';
+import { IRoomRepository, type RoomSchedule } from '../../../domain/repositories/room.repository';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
@@ -17,14 +17,15 @@ export class RoomPrismaRepositoryImpl implements IRoomRepository {
 	async updateRoomSchedule(
 		roomId: string,
 		options: { url?: string | null; time?: Date | null },
-	): Promise<void> {
+	): Promise<RoomSchedule> {
 		try {
-			await this.txHost.tx.room.update({
+			return await this.txHost.tx.room.update({
 				where: { id: roomId, isDeleted: false },
 				data: {
 					scheduledLiveUrl: options.url,
 					scheduledTime: options.time,
 				},
+				select: { scheduledLiveUrl: true, scheduledTime: true },
 			});
 		} catch (e) {
 			throw notFoundIfMissing(e);

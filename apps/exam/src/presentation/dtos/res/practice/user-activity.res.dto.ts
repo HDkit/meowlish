@@ -33,5 +33,8 @@ export class UserActivityDto implements exam.UserActivity {
 	to!: string;
 
 	@Expose()
+	today!: string;
+
+	@Expose()
 	totalAttempts!: number;
 }

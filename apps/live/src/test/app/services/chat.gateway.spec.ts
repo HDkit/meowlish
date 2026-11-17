@@ -199,3 +199,36 @@ describe('ChatGateway authentication', () => {
 		);
 	});
 });
+
+describe('ChatGateway.announceRoomSchedule', () => {
+	const announce = (schedule: { scheduledLiveUrl: string | null; scheduledTime: Date | null }) => {
+		const gateway = makeGateway();
+		const emit = jest.fn();
+		const to = jest.fn(() => ({ emit: emit }));
+		gateway.server = { to: to } as never;
+		gateway.announceRoomSchedule('r1', schedule);
+		return { to: to, emit: emit };
+	};
+
+	it('sends the new schedule to everyone in the room', () => {
+		const { to, emit } = announce({
+			scheduledLiveUrl: 'https://twitch.tv/x',
+			scheduledTime: new Date('2026-11-20T12:00:00.000Z'),
+		});
+		expect(to).toHaveBeenCalledWith('r1');
+		expect(emit).toHaveBeenCalledWith('room-schedule', {
+			roomId: 'r1',
+			scheduledLiveUrl: 'https://twitch.tv/x',
+			scheduledDate: '2026-11-20T12:00:00.000Z',
+		});
+	});
+
+	it('sends null for cleared fields', () => {
+		const { emit } = announce({ scheduledLiveUrl: null, scheduledTime: null });
+		expect(emit).toHaveBeenCalledWith('room-schedule', {
+			roomId: 'r1',
+			scheduledLiveUrl: null,
+			scheduledDate: null,
+		});
+	});
+});

@@ -15,12 +15,12 @@ Common to every route below:
 | Operation                                                                                   | Access                                  | Writes                         | Events                                                        |
 | ------------------------------------------------------------------------------------------- | --------------------------------------- | ------------------------------ | ------------------------------------------------------------- |
 | [POST /blogs](#post-apiv1resourcesblogs)                                                    | any user                                | `Blog`                         | `resource.resource.created`                                   |
-| [GET /blogs/tags](#get-apiv1resourcesblogstags)                                             | any user                                | -                              | -                                                             |
-| [GET /blogs/:id](#get-apiv1resourcesblogsid)                                                | any user                                | -                              | -                                                             |
+| [GET /blogs/tags](#get-apiv1resourcesblogstags)                                             | public                                  | -                              | -                                                             |
+| [GET /blogs/:id](#get-apiv1resourcesblogsid)                                                | public                                  | -                              | -                                                             |
 | [PATCH /blogs/:id](#patch-apiv1resourcesblogsid)                                            | `@ResourceAccess` blog                  | `Blog`                         | -                                                             |
 | [DELETE /blogs/:id](#delete-apiv1resourcesblogsid)                                          | `@ResourceAccess` blog                  | `Blog` (cascade `BlogComment`) | `resource.resource.deleted`                                   |
-| [GET /blogs](#get-apiv1resourcesblogs)                                                      | any user                                | -                              | -                                                             |
-| [GET /blogs/:id/comments](#get-apiv1resourcesblogsidcomments)                               | any user                                | -                              | -                                                             |
+| [GET /blogs](#get-apiv1resourcesblogs)                                                      | public                                  | -                              | -                                                             |
+| [GET /blogs/:id/comments](#get-apiv1resourcesblogsidcomments)                               | public                                  | -                              | -                                                             |
 | [POST /blogs/:id/comments](#post-apiv1resourcesblogsidcomments)                             | any user                                | `BlogComment`                  | `resource.blog-comment.created`                               |
 | [PATCH /blog-comments/:commentId](#patch-apiv1resourcesblog-commentscommentid)              | author (service)                        | `BlogComment`                  | -                                                             |
 | [DELETE /blog-comments/:commentId](#delete-apiv1resourcesblog-commentscommentid)            | author or mod/admin (service)           | `BlogComment`                  | -                                                             |
@@ -74,11 +74,11 @@ Create a blog post.
 
 ### GET /api/v1/resources/blogs/tags
 
-Every tag used by blogs with its count, most used first then by name. `BlogService.listBlogTags` runs one raw SQL query over `blogs, unnest(tags)`; response `ListBlogTagsDto { tags: [{ name, count }] }`. Declared before `blogs/:id` so `tags` is not taken as an id.
+Every tag used by blogs with its count, most used first then by name. `BlogService.listBlogTags` runs one raw SQL query over `blogs, unnest(tags)`; response `ListBlogTagsDto { tags: [{ name, count }] }`. Declared before `blogs/:id` so `tags` is not taken as an id. `@IsPublic()`.
 
 ### GET /api/v1/resources/blogs/:id
 
-`:id` is the id **or** the slug. `resource.BlogService/GetBlog` → `BlogService.getBlog` → `findBlog`: `Blog.findUnique` by id (same query as before), then by `slug` if that misses; 404 `Blog not found`. Response `BlogDto`. No visibility rules (all blogs are readable by any logged-in user).
+`:id` is the id **or** the slug. `resource.BlogService/GetBlog` → `BlogService.getBlog` → `findBlog`: `Blog.findUnique` by id (same query as before), then by `slug` if that misses; 404 `Blog not found`. Response `BlogDto`. No visibility rules: `@IsPublic()`, so anyone can read any blog, signed in or not.
 
 ### PATCH /api/v1/resources/blogs/:id
 
@@ -99,7 +99,7 @@ Update a blog post.
 
 ### GET /api/v1/resources/blogs
 
-`ListBlogsQueryDto` (`authorId?`, `tags` via `ToStringArray`, `title?` (max 200), `createdFrom?` / `createdTo?` (ISO date-times, sent as `Timestamp`), page/limit) → `resource.BlogService/ListBlogs` → `BlogService.listBlogs`: `where authorId`, `tags hasSome` (any of the tags), `title contains` (case-insensitive, trimmed; blank ignored), `createdAt gte/lte` (either end may be open; 400 `createdFrom must not be after createdTo`), order `createdAt desc`, `findMany` + `count` in parallel. Response `ListBlogsDto { blogs, totalCount }`. The frontend's /blog filters use all four (author through the public username search).
+`ListBlogsQueryDto` (`authorId?`, `tags` via `ToStringArray`, `title?` (max 200), `createdFrom?` / `createdTo?` (ISO date-times, sent as `Timestamp`), page/limit) → `resource.BlogService/ListBlogs` → `BlogService.listBlogs`: `where authorId`, `tags hasSome` (any of the tags), `title contains` (case-insensitive, trimmed; blank ignored), `createdAt gte/lte` (either end may be open; 400 `createdFrom must not be after createdTo`), order `createdAt desc`, `findMany` + `count` in parallel. Response `ListBlogsDto { blogs, totalCount }`. The frontend's /blog filters use all four (author through the public username search). `@IsPublic()`.
 
 ## Slugs
 
@@ -113,7 +113,7 @@ Comments are a materialized-path tree (`BlogComment`, table `blog_comments`; sch
 
 ### GET /api/v1/resources/blogs/:id/comments
 
-Top-level comments paged (newest first), each with its full reply tree.
+Top-level comments paged (newest first), each with its full reply tree. `@IsPublic()`: anyone can read comments; writing them needs a session.
 
 - **Flow**:
   1. Gateway: `ListBlogCommentsQueryDto` (`page >= 1`, `1 <= limit <= 50`) → `resource.BlogCommentService/ListBlogComments { ...query, blogId }`. No requester is sent.
