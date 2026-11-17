@@ -2,6 +2,14 @@
 
 What was fixed from [`backlog.md`](roadmap.md) (now [`roadmap.md`](roadmap.md)), and how. Newest first. Each entry says what was wrong, what changed (files), what it means for running systems, and how it is tested. The backlog row is deleted in the same commit as the fix.
 
+## Notification stream sent empty events (November 2026)
+
+- **Problem:** `GET /notifications/stream/:recipientId` never delivered a notification. The notification service's global `GlobalClassSerializerInterceptor` (`excludeAll`, `excludeExtraneousValues`) also runs on every `MessageEvent` the SSE observable emits, and stripped each one to `{}`: Nest then wrote only an automatic `id: N`, with no `event: notification` and no `data`, and the `: ping` comment became an event too. A browser `EventSource` never fired, and `Last-Event-ID` was a counter rather than a notification id, so replay never matched. The frontend polled every 30 s instead.
+- **Fix:** the SSE route carries `@SerializeOptions({ strategy: 'exposeAll', excludeExtraneousValues: false })`, as `HealthController` does (`apps/notification/src/presentation/controllers/notification-sse.controller.ts`).
+- **Frontend:** notifications arrive over the stream (`src/lib/notification-stream.ts`, used by `NotificationsProvider`). Dropped connections are retried by the browser with `Last-Event-ID`. A refused one (401 after the access cookie expires, 403, 5xx) makes the browser give up, so the session is refreshed and a new stream opened with backoff (1, 2, 5, 10, 30 s), then the list is reloaded once since a new stream can't replay. The stream stops when the session is gone. The list poll stays as a safety net, every 5 min instead of 30 s.
+- **Deploy:** notification, then the frontend. An old notification service with the new frontend still works through the 5 min poll.
+- **Tests:** `apps/notification/src/test/presentation/controllers/notification-sse.controller.spec.ts` ("over HTTP": a real app with the global serializer writes `: ping`, `event: notification`, the notification id and its JSON; fails without the fix). Frontend: `src/lib/notification-stream.test.ts` (pushes for the caller only, browser retries left alone, refresh + reopen + resync after a refusal, backoff reset, stop on expiry and on close). Checked live through the Next `/api` rewrite: a created notification reached the stream about 80 ms later, so the rewrite doesn't buffer it.
+
 ## Public blogs (November 2026)
 
 - **Problem:** every blog route needed a session, so visitors who were not signed in could not read the blog at all (the frontend sent /blog to the login page).
