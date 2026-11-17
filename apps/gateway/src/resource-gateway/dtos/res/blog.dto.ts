@@ -1,10 +1,18 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
 
 export class BlogDto {
 	@Expose()
 	@ApiProperty()
 	id!: string;
+
+	@Expose()
+	@ApiPropertyOptional({
+		description:
+			'Readable URL key from the title (never changes when the title is edited). Use it in links; the id works in its place. Missing only on old rows not yet backfilled.',
+		example: 'lam-the-nao-de-viet-email',
+	})
+	slug?: string;
 
 	@Expose()
 	@ApiProperty()
@@ -29,6 +37,23 @@ export class BlogDto {
 	@Expose()
 	@ApiProperty({ type: String, format: 'date-time' })
 	updatedAt!: Date;
+}
+
+export class BlogTagCountDto {
+	@Expose()
+	@ApiProperty({ example: 'ielts' })
+	name!: string;
+
+	@Expose()
+	@ApiProperty({ description: 'How many blog posts use the tag', example: 4 })
+	count!: number;
+}
+
+export class ListBlogTagsDto {
+	@Expose()
+	@Type(() => BlogTagCountDto)
+	@ApiProperty({ type: () => [BlogTagCountDto], description: 'Most used first' })
+	tags!: BlogTagCountDto[];
 }
 
 export class ListBlogsDto {

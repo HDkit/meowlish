@@ -14,7 +14,7 @@ import {
 	QuestionUpdatedEvent,
 } from '../events/exam-management.event';
 import { ExamId } from './exam.entity';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { AggregateRoot } from '@nestjs/cqrs';
 import { Event, IAggregate, IEntity } from '@server/utils';
 
@@ -105,17 +105,24 @@ export class Question extends AggregateRoot<Event<any>> implements IAggregate<Qu
 		this.assertModifiable();
 		if (options.content) this.content = options.content;
 		if (options.explanation) this.explanation = options.explanation;
-		if (options.points) this.points = options.points;
+		if (options.points !== undefined) {
+			// 0 is a valid weight (e.g. an unscored practice question)
+			if (!Number.isInteger(options.points) || options.points < 0)
+				throw new BadRequestException('Points must be a non-negative whole number');
+			this.points = options.points;
+		}
 		if (options.type) this.type = options.type;
 		this.apply(new QuestionUpdatedEvent({ parentId: this.sectionId, data: structuredClone(this) }));
 	}
 	public addTag(tag: string) {
+		this.assertModifiable();
 		if (this.tags.has(tag)) throw new ConflictException('Tag already exists');
 		this.tags.add(tag);
 		this.apply(new QuestionTagAdded({ questionId: this.id, tag: tag }));
 	}
 
 	public removeTag(tag: string) {
+		this.assertModifiable();
 		if (!this.tags.has(tag)) throw new NotFoundException('Tag not found');
 		this.tags.delete(tag);
 		this.apply(new QuestionTagRemoved({ questionId: this.id, tag: tag }));
@@ -139,16 +146,24 @@ export class Question extends AggregateRoot<Event<any>> implements IAggregate<Qu
 		this.assertModifiable();
 		if (this.choices.some(c => c.id === choice.id))
 			throw new ConflictException('Choice already exists');
-		if (
-			choice.isCorrect &&
-			!questionTypesWithMultipleCorrectChoices.includes(this.type) &&
-			this.choices.find(c => c.isCorrect)
-		)
-			throw new ConflictException('This type of question only allows one correct choice');
 		if (this.choices.find(c => c.key === choice.key))
 			throw new ConflictException('Choice must not have duplicate key');
 		this.choices.push(choice);
 		this.apply(new ChoiceCreatedEvent({ questionId: this.id, data: structuredClone(choice) }));
+	}
+
+	/**
+	 * Single-correct question types (MCQ, Fill, Writing) may have only one correct choice.
+	 *
+	 * Checked once, after a whole batch of edits (type, addChoice, updateChoice, removeChoice), not
+	 * per operation: an intermediate state may briefly hold two correct choices, e.g. marking B
+	 * before un-marking A, or switching MCQ_MULTI → MCQ in the same request that un-marks the
+	 * extra choice. Whoever mutates choices must call this before saving.
+	 */
+	public assertChoicesConsistent(): void {
+		if (questionTypesWithMultipleCorrectChoices.includes(this.type)) return;
+		if (this.choices.filter(c => c.isCorrect).length > 1)
+			throw new ConflictException('This type of question only allows one correct choice');
 	}
 
 	public removeChoice(choiceOrChoiceId: string | Choice): void {
@@ -164,6 +179,8 @@ export class Question extends AggregateRoot<Event<any>> implements IAggregate<Qu
 		this.assertModifiable();
 		const choice = this.choices.find(c => c.id === choiceId);
 		if (!choice) throw new NotFoundException('Choice not found');
+		if (options.key && options.key !== choice.key && this.choices.some(c => c.key === options.key))
+			throw new ConflictException('Choice must not have duplicate key');
 		choice.updateDetails(options);
 		this.apply(
 			new ChoiceUpdatedEvent({

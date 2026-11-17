@@ -1,6 +1,7 @@
+import { GoalType } from '../../../../enums/goal-type.enum';
 import { exam } from '@server/generated';
 import { Type } from 'class-transformer';
-import { IsDate, IsIn, IsNumber, IsString } from 'class-validator';
+import { IsDate, IsEnum, IsNumber, IsString } from 'class-validator';
 
 export class SetGoalDto implements exam.SetGoalDto {
 	@IsString()
@@ -10,10 +11,10 @@ export class SetGoalDto implements exam.SetGoalDto {
 	@IsDate()
 	date!: Date;
 
-	@IsNumber()
+	// the range and step depend on the type: checked by assertValidGoalTarget in GoalService
+	@IsNumber({ allowInfinity: false, allowNaN: false })
 	target!: number;
 
-	@IsIn(['IELTS', 'TOEIC', 'VSTEP', 'TOEFL'])
-	@IsString()
-	type!: string;
+	@IsEnum(GoalType)
+	type!: GoalType;
 }

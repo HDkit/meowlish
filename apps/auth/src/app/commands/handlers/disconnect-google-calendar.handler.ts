@@ -7,9 +7,7 @@ import { Inject } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 
 @CommandHandler(DisconnectGoogleCalendarCommand)
-export class DisconnectGoogleCalendarCommandHandler
-	implements ICommandHandler<DisconnectGoogleCalendarCommand>
-{
+export class DisconnectGoogleCalendarCommandHandler implements ICommandHandler<DisconnectGoogleCalendarCommand> {
 	constructor(
 		@Inject(IGoogleCalendarTokenRepositoryToken)
 		private readonly tokenRepository: IGoogleCalendarTokenRepository,

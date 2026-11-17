@@ -11,7 +11,7 @@ import { Inject, OnModuleInit, ServiceUnavailableException } from '@nestjs/commo
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { ClientGrpc } from '@nestjs/microservices';
 import { file } from '@server/generated';
-import { CursorPaginationHelper } from '@server/utils';
+import { CursorPaginationFactory, CursorPaginationHelper } from '@server/utils';
 import { firstValueFrom } from 'rxjs';
 
 type FindIdentitiesByPhoneCursor = {
@@ -28,13 +28,12 @@ export class FindIdentitiesByPhoneQueryHandler
 	private fileService!: file.FileServiceClient;
 
 	constructor(
+		cursorPaginationFactory: CursorPaginationFactory,
 		@Inject(IIdentityReadRepositoryToken)
 		private readonly identityReadRepository: IIdentityReadRepository,
 		@Inject(FILE_CLIENT) private readonly fileClient: ClientGrpc,
 	) {
-		this.cursorPaginationHelper = new CursorPaginationHelper(
-			`${process.env.HOST}${process.env.PORT}FindIdentitiesByPhone`,
-		);
+		this.cursorPaginationHelper = cursorPaginationFactory.create('FindIdentitiesByPhone');
 	}
 
 	onModuleInit() {

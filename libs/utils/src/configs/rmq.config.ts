@@ -8,4 +8,9 @@ export const defaultRmqExchanges: ExchangesType = [
 		type: 'topic',
 		options: { durable: true },
 	},
+	{
+		name: 'eventbus.dlx',
+		type: 'topic',
+		options: { durable: true },
+	},
 ];

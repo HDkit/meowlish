@@ -1,16 +1,19 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { live } from '@server/generated';
+import { Type } from 'class-transformer';
+import { IsBoolean, IsDate, IsOptional, IsString } from 'class-validator';
 
-export class UpdateRoomScheduleDto {
+export class UpdateRoomScheduleDto implements Omit<live.UpdateRoomScheduleRequest, 'roomId'> {
 	@IsOptional()
 	@IsString()
 	@ApiPropertyOptional()
 	url?: string;
 
+	@Type(() => Date)
+	@IsDate()
 	@IsOptional()
-	@IsString()
-	@ApiPropertyOptional()
-	time?: string;
+	@ApiPropertyOptional({ type: String, format: 'date-time' })
+	time?: Date;
 
 	@IsBoolean()
 	@IsOptional()

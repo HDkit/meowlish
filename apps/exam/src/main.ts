@@ -1,33 +1,4 @@
-import { ExamModule } from './exam.module';
-import { PackageDefinition } from '@grpc/grpc-js/build/src/make-client';
-import { INestApplicationContext } from '@nestjs/common';
-import { NestFactory } from '@nestjs/core';
-import { MicroserviceOptions, Transport } from '@nestjs/microservices';
-import { exam } from '@server/generated';
-import { AppLoggerService } from '@server/logger';
-import 'reflect-metadata';
+import { startTelemetry } from '@server/telemetry';
 
-const useLogger = (module: INestApplicationContext) => {
-	const logger = module.get(AppLoggerService);
-	module.useLogger(logger);
-};
-
-async function bootstrap() {
-	const examModule = await NestFactory.createMicroservice<MicroserviceOptions>(ExamModule, {
-		transport: Transport.GRPC,
-		options: {
-			url: `${process.env.HOST ?? '127.0.0.1'}:${process.env.PORT ?? 50050}`,
-			package: 'exam',
-			packageDefinition: {
-				[`exam.${exam.EXAM_MANAGEMENT_SERVICE_NAME}`]: exam.ExamManagementServiceService,
-				[`exam.${exam.EXAM_PRACTICE_SERVICE_NAME}`]: exam.ExamPracticeServiceService,
-				[`exam.${exam.TAG_SERVICE_NAME}`]: exam.TagServiceService,
-				[`exam.${exam.GOAL_SERVICE_NAME}`]: exam.GoalServiceService,
-			} satisfies PackageDefinition,
-		},
-	});
-	useLogger(examModule);
-	await examModule.listen();
-}
-
-bootstrap().catch(console.error);
+startTelemetry({ serviceName: 'exam' });
+void import('./bootstrap.js');

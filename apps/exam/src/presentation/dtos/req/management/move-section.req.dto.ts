@@ -16,4 +16,10 @@ export class MoveSectionDto implements exam.MoveSectionDto {
 	@IsBoolean()
 	@IsOptional()
 	toRoot?: boolean;
+
+	@IsString()
+	requesterId!: string;
+
+	@IsBoolean()
+	privileged!: boolean;
 }

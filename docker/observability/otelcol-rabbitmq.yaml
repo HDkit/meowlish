@@ -1,0 +1,22 @@
+# Extra collector config for otel-lgtm, passed with OTELCOL_EXTRA_ARGS (see docker-compose.observability.yaml).
+# Scrapes RabbitMQ's per-queue metrics (rabbitmq_prometheus plugin, enabled in docker-compose.db.yaml).
+# Lists are replaced, not merged, when configs are combined, so the metrics pipeline repeats the
+# receivers from the image's otelcol-config.yaml and adds prometheus/rabbitmq.
+receivers:
+  prometheus/rabbitmq:
+    config:
+      scrape_configs:
+        - job_name: rabbitmq
+          scrape_interval: 15s
+          metrics_path: /metrics/detailed
+          params:
+            family: [queue_coarse_metrics]
+          static_configs:
+            - targets: ['rabbit-mq:15692']
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp, prometheus/collector, prometheus/rabbitmq]
+      processors: [batch]
+      exporters: [otlp_http/metrics]

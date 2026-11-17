@@ -13,12 +13,15 @@ import { LiveWsGatewayModule } from './live-ws-gateway/live-ws.router.module';
 import { NotificationGatewayModule } from './notification-gateway/notification.router.module';
 import { ResourceGatewayModule } from './resource-gateway/resource.router.module';
 import { RouteModule } from './router.module';
+import { throttlerOptions } from './throttle';
+import { RedisThrottlerStorage, ThrottlerStorageModule } from './throttle-storage';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { CqrsModule } from '@nestjs/cqrs';
-// import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from '@server/logger';
+import { HealthModule } from '@server/telemetry';
 import {
 	GlobalClassSerializerInterceptor,
 	GlobalHttpExceptionFilter,
@@ -30,7 +33,9 @@ import { GlobalValidationPipe } from '@server/utils';
 
 @Module({
 	imports: [
+		HealthModule.forRoot({ serviceName: 'gateway', rabbitmq: false }),
 		ConfigModule.forRoot({
+			envFilePath: ['apps/gateway/.env', '.env'], // nx serve runs from the workspace root
 			expandVariables: true,
 			cache: true,
 			isGlobal: true,
@@ -38,15 +43,12 @@ import { GlobalValidationPipe } from '@server/utils';
 		}),
 		CqrsModule.forRoot(),
 		LoggerModule.forRoot({ appName: 'GatewayModule' }),
-		// ThrottlerModule.forRoot({
-		// 	throttlers: [
-		// 		{
-		// 			ttl: 60000,
-		// 			limit: 60,
-		// 		},
-		// 	],
-		// 	errorMessage: 'Rate limit reached',
-		// }),
+		// counters in Redis, shared by every gateway replica (in memory while Redis is down)
+		ThrottlerModule.forRootAsync({
+			imports: [ThrottlerStorageModule],
+			inject: [RedisThrottlerStorage],
+			useFactory: (storage: RedisThrottlerStorage) => ({ ...throttlerOptions, storage: storage }),
+		}),
 		RouteModule,
 		AuthGatewayModule,
 		ExamGatewayModule,
@@ -66,10 +68,10 @@ import { GlobalValidationPipe } from '@server/utils';
 			provide: APP_PIPE,
 			useClass: GlobalValidationPipe,
 		},
-		// {
-		// 	provide: APP_GUARD,
-		// 	useClass: ThrottlerGuard,
-		// },
+		{
+			provide: APP_GUARD,
+			useClass: ThrottlerGuard,
+		},
 		{
 			provide: APP_GUARD,
 			useClass: JwtAuthGuard,

@@ -19,16 +19,19 @@ export class NotificationController implements notification.NotificationServiceC
 
 	@SerializeOptions({ type: NotificationDto, strategy: 'exposeAll' })
 	async createNotification(@Payload() data: CreateNotificationReqDto): Promise<NotificationDto> {
-		return this.notificationService.createNotification(data);
+		// no surrounding transaction: the row is committed once createNotification returns
+		const created = await this.notificationService.createNotification(data);
+		this.notificationService.push([created]);
+		return created;
 	}
 
 	@SerializeOptions({ type: NotificationDto, strategy: 'exposeAll' })
 	async getNotification(@Payload() data: GetNotificationReqDto): Promise<NotificationDto> {
-		return this.notificationService.getNotification(data.id);
+		return this.notificationService.getNotification(data.id, data.recipientId);
 	}
 
 	async deleteNotification(@Payload() data: DeleteNotificationReqDto): Promise<void> {
-		await this.notificationService.deleteNotification(data.id);
+		await this.notificationService.deleteNotification(data.id, data.recipientId);
 	}
 
 	@SerializeOptions({ type: ListNotificationsDto, strategy: 'exposeAll' })
@@ -38,7 +41,7 @@ export class NotificationController implements notification.NotificationServiceC
 
 	@SerializeOptions({ type: NotificationDto, strategy: 'exposeAll' })
 	async markAsRead(@Payload() data: MarkAsReadReqDto): Promise<NotificationDto> {
-		return this.notificationService.markAsRead(data.id);
+		return this.notificationService.markAsRead(data.id, data.recipientId);
 	}
 
 	async markAllAsRead(@Payload() data: MarkAllAsReadReqDto): Promise<void> {

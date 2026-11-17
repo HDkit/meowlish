@@ -12,6 +12,8 @@
 		"src/**/*.test.ts",
 		"src/**/*.spec.ts",
 		"src/**/*.d.ts",
-		"prisma/seed.ts"
+		"src/test/**/*.ts",
+		"prisma/seed.ts",
+		"prisma/seed/*.ts"
 	]
 }

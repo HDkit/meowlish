@@ -14,7 +14,11 @@ export interface ExamCounts {
 	rejected: number;
 }
 
+export type ExamTarget = { examId: string } | { sectionId: string } | { questionId: string };
+
 export interface IManagementReadRepository {
+	/** Creator of the exam that owns the target; null when the target (or its exam) doesn't exist. */
+	getExamCreator(target: ExamTarget): Promise<string | null>;
 	findExams(options?: {
 		filter?: {
 			title?: string;

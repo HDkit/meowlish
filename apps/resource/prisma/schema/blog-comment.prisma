@@ -1,0 +1,35 @@
+/// Nested blog comments stored as a materialized path (see domain/comments/comment-path.ts).
+///
+/// `path` is the comment's position under its top-level comment: one fixed-width base36 segment per
+/// level, so sorting a thread by `path` yields depth-first order with siblings oldest first.
+/// Top-level comments have an empty path and `rootId = id`; a whole thread is one indexed
+/// `WHERE root_id IN (...)` query, and inserting a reply touches only its parent's counter.
+model BlogComment {
+  id        String    @id
+  blogId    String    @map("blog_id")
+  /// null for top-level comments
+  parentId  String?   @map("parent_id")
+  /// top-level ancestor (itself for top-level comments)
+  rootId    String    @map("root_id")
+  path      String
+  depth     Int
+  /// Segment counter for the next child; only ever grows, so paths are never reused.
+  childSeq  Int       @default(0) @map("child_seq")
+  authorId  String    @map("author_id")
+  /// Markdown; cleared on soft delete
+  content   String
+  editedAt  DateTime? @map("edited_at")
+  /// Soft delete: kept as "[deleted]" while it still has replies.
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  blog     Blog          @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  parent   BlogComment?  @relation("BlogCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  children BlogComment[] @relation("BlogCommentReplies")
+
+  @@index([blogId, parentId, createdAt])
+  @@index([rootId, path])
+  @@index([parentId])
+  @@map("blog_comments")
+}

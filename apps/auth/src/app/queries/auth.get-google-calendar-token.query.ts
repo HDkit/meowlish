@@ -1,13 +1,12 @@
 import { Query } from '@server/utils';
 
-export type GoogleCalendarTokenResult = {
+/** Server-side view only; the refresh token never leaves auth. */
+export type GoogleCalendarAccessTokenResult = {
 	accessToken: string;
-	refreshToken: string;
 	expiresAt: number;
-	scopes: string;
 };
 
 export class GetGoogleCalendarTokenQuery extends Query<
-	GoogleCalendarTokenResult,
+	GoogleCalendarAccessTokenResult,
 	{ identityId: string }
 > {}

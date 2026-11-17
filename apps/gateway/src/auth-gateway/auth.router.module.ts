@@ -1,3 +1,4 @@
+import { type IEnvVars } from '../configs/config';
 import { redisConfig } from '../configs/redis.config';
 import { AuthGatewayController } from './auth.router.controller';
 import { AUTH_CLIENT } from './constants/auth';
@@ -22,16 +23,17 @@ import { ErrorHandlingGrpcProxy } from '@server/utils';
 	providers: [
 		{
 			provide: AUTH_CLIENT,
-			useFactory: () =>
-				new ErrorHandlingGrpcProxy({
-					url:
-						process.env.AUTH_SERVICE_URL ??
-						`${process.env.AUTH_SERVICE_HOST}:${process.env.AUTH_SERVICE_PORT}`,
+			inject: [ConfigService],
+			useFactory: (configService: ConfigService<IEnvVars>) => {
+				const conn = configService.getOrThrow('microservicesConnection.auth', { infer: true });
+				return new ErrorHandlingGrpcProxy({
+					url: conn.url ?? `${conn.host}:${conn.port}`,
 					package: 'auth',
 					packageDefinition: {
 						[`auth.${auth.AUTH_SERVICE_NAME}`]: auth.AuthServiceService,
 					} satisfies PackageDefinition,
-				}),
+				});
+			},
 		},
 		JwtRefreshStrategy,
 		JwtStrategy,

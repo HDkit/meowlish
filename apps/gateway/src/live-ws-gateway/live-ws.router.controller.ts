@@ -1,57 +1,57 @@
 import { IsPublic } from '../auth/decorators/public.decorator';
-import { type AuthenticatedRequest } from '../types/authenticated-request';
+import { type IEnvVars } from '../configs/config';
+import { SkipAllThrottlers } from '../throttle';
 import { All, Controller, Next, Req, Res } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { NextFunction, Response } from 'express';
-import { ClientRequest } from 'http';
-import { createProxyMiddleware } from 'http-proxy-middleware';
-import jwt from 'jsonwebtoken';
-import { ExtractJwt } from 'passport-jwt';
+import { NextFunction, Request, Response } from 'express';
+import { type RequestHandler, createProxyMiddleware } from 'http-proxy-middleware';
+import { type IncomingMessage } from 'node:http';
+import { type Duplex } from 'node:stream';
 
+// The live service verifies the access token itself (`access_token` cookie, socket.io
+// `auth.token`, `?token=` or `Authorization: Bearer`), so this proxy forwards the handshake untouched.
 @IsPublic()
 @ApiBearerAuth()
 @ApiTags('Live Service Websocket')
 @Controller('socket.io')
 export class LiveWsGatewayController {
-	private proxy = createProxyMiddleware({
-		target:
-			process.env.LIVE_SERVICE_WS_URL ??
-			`http://${process.env.LIVE_SERVICE_WS_HOST}:${process.env.LIVE_SERVICE_WS_PORT}`,
-		changeOrigin: true,
-		ws: true,
-		pathRewrite: {
-			'^.*\\/socket\\.io': '/socket.io',
-		},
-		on: {
-			proxyReqWs: function (proxyReq: ClientRequest, req: AuthenticatedRequest) {
-				try {
-					let token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
-					if (!token) {
-						const query = req.url?.split('?')[1];
-						if (query) {
-							token = new URLSearchParams(query).get('token');
-						}
-					}
-					if (!token) throw Error('No token found');
-					const publicKey = process.env.JWT_PUBLIC_KEY;
-					if (!publicKey) throw Error('JWT_PUBLIC_KEY not configured');
-					const payload = jwt.verify(token, publicKey, {
-						algorithms: ['RS256'],
-					}) as { sub: string };
-					proxyReq.setHeader('Authorization', payload.sub);
-				} catch (e) {
-					console.error(e);
-				}
-			},
-		},
-	});
+	private readonly proxy: RequestHandler;
 
+	constructor(configService: ConfigService<IEnvVars>) {
+		const live = configService.getOrThrow('microservicesConnection.live', { infer: true });
+		this.proxy = createProxyMiddleware({
+			target: live.wsUrl ?? `http://${live.hostWs}:${live.portWs}`,
+			changeOrigin: true,
+			ws: true,
+			// Live's engine.io matches its path by the strict prefix `/socket.io/`, so every form the
+			// gateway receives (`…/socket.io?EIO=…`, `…/socket.io/?EIO=…`, upgrades) must reach it with
+			// the slash. `[^?]*` keeps the match inside the path, never the query string.
+			pathRewrite: {
+				'^[^?]*/socket\\.io/?': '/socket.io/',
+			},
+		});
+	}
+
+	/**
+	 * Proxies a WebSocket upgrade for the socket.io path. Subscribed to the HTTP server at start-up
+	 * (`bootstrap.ts`): http-proxy-middleware only subscribes itself on the first normal request, so
+	 * after a restart a websocket-only client timed out until a polling request came through. Once
+	 * the library has subscribed, its `upgrade` steps aside, so nothing is handled twice.
+	 */
+	readonly handleUpgrade = (req: IncomingMessage, socket: Duplex, head: Buffer): void => {
+		if (!req.url?.includes('/socket.io')) return;
+		this.proxy.upgrade(req, socket as never, head);
+	};
+
+	// long-polling and reconnects must not eat the API rate-limit bucket
 	@All()
 	@ApiOperation({
 		summary: 'Proxy to Live service',
 		description: 'Handles WebSocket upgrade and proxies requests to Live service Socket.IO server.',
 	})
-	async get(@Req() req: AuthenticatedRequest, @Res() res: Response, @Next() next: NextFunction) {
+	@SkipAllThrottlers()
+	async get(@Req() req: Request, @Res() res: Response, @Next() next: NextFunction) {
 		await this.proxy(req, res, next);
 	}
 }

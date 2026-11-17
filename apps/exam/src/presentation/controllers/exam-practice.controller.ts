@@ -28,7 +28,9 @@ import { GetAttemptReviewQuery } from '../../app/queries/practice/exam.get-attem
 import { GetExamDetailsQuery } from '../../app/queries/practice/exam.get-exam-details.query';
 import { GetExamStatsQuery } from '../../app/queries/practice/exam.get-exam-stats.query';
 import { GetQuestionDetailsQuery } from '../../app/queries/practice/exam.get-question-details.query';
+import { GetUserActivityQuery } from '../../app/queries/practice/exam.get-user-activity.query';
 import { GetUserCalendarQuery } from '../../app/queries/practice/exam.get-user-calendar.query';
+import { GetUserSkillStatsQuery } from '../../app/queries/practice/exam.get-user-skill-stats.query';
 import { GetUserStatsQuery } from '../../app/queries/practice/exam.get-user-stats.query';
 import { GetUsersAttemptHistoryQuery } from '../../app/queries/practice/exam.get-users-attempt-history.query';
 import {
@@ -45,7 +47,9 @@ import { GetAttemptReviewDto } from '../dtos/req/practice/get-attempt-review.req
 import { GetExamDetailsDto } from '../dtos/req/practice/get-exam-details.req.dto';
 import { GetExamStatsDto } from '../dtos/req/practice/get-exam-stats.req.dto';
 import { GetQuestionDetailsDto } from '../dtos/req/practice/get-question-details.req.dto';
+import { GetUserActivityDto } from '../dtos/req/practice/get-user-activity.req.dto';
 import { GetUserCalendarDto } from '../dtos/req/practice/get-user-calendar.req.dto';
+import { GetUserSkillStatsDto } from '../dtos/req/practice/get-user-skill-stats.req.dto';
 import { GetUsersAttemptHistoryDto } from '../dtos/req/practice/get-users-attempt-history.req.dto';
 import { GetUsersStatsDto } from '../dtos/req/practice/get-users-stats.req.dto';
 import { RemoveAnswerDto } from '../dtos/req/practice/remove-answer.req.dto';
@@ -59,9 +63,17 @@ import { ExamStatsDto } from '../dtos/res/practice/exam-stats.res.dto';
 import { ExamsInfoDto } from '../dtos/res/practice/exams.res.dto';
 import { FlagStateDto } from '../dtos/res/practice/flag-state.res.dto';
 import { QuestionDetailDto } from '../dtos/res/practice/question-detail.res.dto';
+import { UserActivityDto } from '../dtos/res/practice/user-activity.res.dto';
 import { UserCalendarDto } from '../dtos/res/practice/user-calendar.res.dto';
+import { UserSkillStatsDto } from '../dtos/res/practice/user-skill-stats.res.dto';
 import { UserStatsDto } from '../dtos/res/practice/user-stats.res.dto';
-import { Controller, Inject, SerializeOptions, UseFilters } from '@nestjs/common';
+import {
+	Controller,
+	Inject,
+	NotFoundException,
+	SerializeOptions,
+	UseFilters,
+} from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { Payload } from '@nestjs/microservices';
 import { exam } from '@server/generated';
@@ -78,6 +90,12 @@ export class ExamPracticeController implements exam.ExamPracticeServiceControlle
 		private readonly praciceReadRepository: IPracticeReadRepository,
 	) {}
 
+	/** Attempts are private to the user who started them; anyone else gets 404. */
+	private async assertOwnAttempt(attemptId: string, userId: string): Promise<void> {
+		const owner = await this.praciceReadRepository.getAttemptOwner(attemptId);
+		if (!owner || owner !== userId) throw new NotFoundException('Attempt not found');
+	}
+
 	@SerializeOptions({ type: CreatedAttemptDto })
 	async attempt(@Payload() request: AttemptDto): Promise<CreatedAttemptDto> {
 		return await this.commandBus.execute(
@@ -88,12 +106,14 @@ export class ExamPracticeController implements exam.ExamPracticeServiceControlle
 	}
 
 	async endAttempt(@Payload() request: EndAttemptDto): Promise<void> {
+		await this.assertOwnAttempt(request.attemptId, request.userId);
 		await this.commandBus.execute(
 			new EndAttemptCommand(new EndAttemptCommandPayload(request.attemptId)),
 		);
 	}
 
 	async answer(@Payload() request: AnswerDto): Promise<void> {
+		await this.assertOwnAttempt(request.attemptId, request.userId);
 		await this.commandBus.execute(
 			new AnswerCommand(
 				new AnswerCommandPayload(request.attemptId, request.questionId, request.answer),
@@ -102,6 +122,7 @@ export class ExamPracticeController implements exam.ExamPracticeServiceControlle
 	}
 
 	async removeAnswer(@Payload() request: RemoveAnswerDto): Promise<void> {
+		await this.assertOwnAttempt(request.attemptId, request.userId);
 		await this.commandBus.execute(
 			new RemoveAnswerCommand(
 				new RemoveAnswerCommandPayload(request.attemptId, request.questionId, request.answer),
@@ -111,12 +132,14 @@ export class ExamPracticeController implements exam.ExamPracticeServiceControlle
 
 	@SerializeOptions({ type: FlagStateDto })
 	async toggleFlag(@Payload() request: ToggleFlagDto): Promise<FlagStateDto> {
+		await this.assertOwnAttempt(request.attemptId, request.userId);
 		return await this.commandBus.execute(
 			new ToggleFlagCommand(new ToggleFlagCommandPayload(request.attemptId, request.questionId)),
 		);
 	}
 
 	async addNote(@Payload() request: AddNoteDto): Promise<void> {
+		await this.assertOwnAttempt(request.attemptId, request.userId);
 		await this.commandBus.execute(
 			new AddNoteCommand(
 				new AddNoteCommandPayload(request.attemptId, request.questionId, request.note),
@@ -148,11 +171,13 @@ export class ExamPracticeController implements exam.ExamPracticeServiceControlle
 
 	@SerializeOptions({ type: AttemptDataDto, strategy: 'exposeAll' })
 	async getAttemptSavedData(@Payload() request: GetAttemptDataDto): Promise<AttemptDataDto> {
+		await this.assertOwnAttempt(request.attemptId, request.userId);
 		return await this.queryBus.execute(new GetAttemptDataQuery(request));
 	}
 
 	@SerializeOptions({ type: AttemptReviewDto, strategy: 'exposeAll' })
 	async getAttemptReview(@Payload() request: GetAttemptReviewDto): Promise<AttemptReviewDto> {
+		await this.assertOwnAttempt(request.attemptId, request.userId);
 		return await this.queryBus.execute(new GetAttemptReviewQuery(request));
 	}
 
@@ -173,5 +198,17 @@ export class ExamPracticeController implements exam.ExamPracticeServiceControlle
 	@SerializeOptions({ type: UserStatsDto, strategy: 'exposeAll' })
 	async getUserStats(@Payload() request: GetUsersStatsDto): Promise<UserStatsDto> {
 		return await this.queryBus.execute(new GetUserStatsQuery({ userId: request.uid, ...request }));
+	}
+
+	@SerializeOptions({ type: UserActivityDto, strategy: 'exposeAll' })
+	async getUserActivity(@Payload() request: GetUserActivityDto): Promise<UserActivityDto> {
+		return await this.queryBus.execute(
+			new GetUserActivityQuery({ userId: request.uid, days: request.days }),
+		);
+	}
+
+	@SerializeOptions({ type: UserSkillStatsDto, strategy: 'exposeAll' })
+	async getUserSkillStats(@Payload() request: GetUserSkillStatsDto): Promise<UserSkillStatsDto> {
+		return await this.queryBus.execute(new GetUserSkillStatsQuery({ userId: request.uid }));
 	}
 }

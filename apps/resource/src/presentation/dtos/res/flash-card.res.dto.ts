@@ -15,6 +15,9 @@ export class FlashCardDto implements resource.FlashCardResponse {
 	image?: string;
 
 	@Expose()
+	imageFileId?: string;
+
+	@Expose()
 	partOfSpeech?: string;
 
 	@Expose()
@@ -31,6 +34,9 @@ export class FlashCardDto implements resource.FlashCardResponse {
 
 	@Expose()
 	tags!: string[];
+
+	@Expose()
+	position?: number;
 
 	@Expose()
 	createdAt!: string;

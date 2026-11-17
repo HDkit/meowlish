@@ -1,16 +1,19 @@
 import { auth } from '@server/generated';
 import { Expose } from 'class-transformer';
 
-export class GoogleCalendarTokenResponseDto implements auth.GoogleCalendarTokenResponse {
+/** Short-lived access token only; the refresh token never leaves auth. */
+export class GoogleCalendarAccessTokenDto implements auth.GoogleCalendarAccessToken {
 	@Expose()
 	accessToken!: string;
 
 	@Expose()
-	refreshToken!: string;
+	expiresAt!: number;
+}
+
+export class GoogleCalendarConnectionDto implements auth.GoogleCalendarConnection {
+	@Expose()
+	connected!: boolean;
 
 	@Expose()
 	expiresAt!: number;
-
-	@Expose()
-	scopes!: string;
 }

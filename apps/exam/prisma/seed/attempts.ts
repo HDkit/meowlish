@@ -1,130 +1,158 @@
-import { SectionType } from '../../src/enums/section-type.enum';
-import { PrismaClient } from '@prisma-client/exam';
-import { randomInt } from 'crypto';
+import {
+	SEED_ATTEMPT_PREFIX,
+	type SeedAttemptPlan,
+	buildPairAttempts,
+	groupPlansByPair,
+	toQuestionType,
+} from './attempt-builder';
+import { SEED_ATTEMPT_PLANS } from './attempt-plans';
+import { Prisma, PrismaClient } from '@prisma-client/exam';
+import { randomUUID } from 'crypto';
 
-export async function seedAttempts(prisma: PrismaClient) {
-	const existingAttempts = await prisma.attempt.findMany({
-		where: { id: { in: ['1', '2', '3', '4', '5', '6'] } },
+/**
+ * Ids of the attempts earlier versions of this seed created for `admin`: six attempts that were
+ * all left open, three of them on the same exam, so admin could never start that exam again.
+ */
+const LEGACY_SEED_ATTEMPT_IDS = ['1', '2', '3', '4', '5', '6'];
+const LEGACY_SEED_USER = 'admin';
+
+const isSeedOwned = (id: string): boolean => id.startsWith(SEED_ATTEMPT_PREFIX);
+
+/**
+ * Removes what earlier runs left behind, touching only rows the seed owns:
+ * - the legacy open attempts `1`..`6` of admin (a legacy attempt admin has since submitted is a
+ *   real result now and is kept: it doesn't break the rule);
+ * - `seed-attempt-*` rows, recreated below with fresh dates. A (user, exam) pair that also holds an
+ *   attempt someone really made is left as it is: deleting the seeded rows under it would shift
+ *   the `order` numbering the real attempt was given.
+ */
+async function removeStaleSeedAttempts(prisma: PrismaClient): Promise<void> {
+	const legacy = await prisma.attempt.deleteMany({
+		where: { id: { in: LEGACY_SEED_ATTEMPT_IDS }, attemptedBy: LEGACY_SEED_USER, endedAt: null },
 	});
-	if (existingAttempts.length >= 6) {
-		console.warn('Attempts already seeded, skipping.');
-		return;
+	if (legacy.count) console.warn(`Removed ${legacy.count} legacy open seed attempts of admin`);
+
+	const seeded = await prisma.attempt.findMany({
+		where: { id: { startsWith: SEED_ATTEMPT_PREFIX } },
+		select: { id: true, examId: true, attemptedBy: true },
+	});
+	const pairs = new Map<string, { examId: string; attemptedBy: string; ids: string[] }>();
+	for (const a of seeded) {
+		const key = `${a.attemptedBy}|${a.examId}`;
+		const pair = pairs.get(key) ?? { examId: a.examId, attemptedBy: a.attemptedBy, ids: [] };
+		pair.ids.push(a.id);
+		pairs.set(key, pair);
+	}
+	let removed = 0;
+	for (const pair of pairs.values()) {
+		const others = await prisma.attempt.count({
+			where: {
+				examId: pair.examId,
+				attemptedBy: pair.attemptedBy,
+				NOT: { id: { startsWith: SEED_ATTEMPT_PREFIX } },
+			},
+		});
+		if (others) {
+			console.warn(
+				`Keeping seeded attempts of ${pair.attemptedBy} on exam ${pair.examId}: the pair also has ${others} real attempt(s)`,
+			);
+			continue;
+		}
+		const { count } = await prisma.attempt.deleteMany({ where: { id: { in: pair.ids } } });
+		removed += count;
+	}
+	console.warn(`Removed ${removed} seeded attempts from earlier runs`);
+}
+
+async function loadExam(prisma: PrismaClient, examId: string) {
+	const exam = await prisma.exam.findUnique({ where: { id: examId }, select: { duration: true } });
+	if (!exam) return null;
+	const questions = await prisma.question.findMany({
+		where: { section: { examId: examId } },
+		orderBy: [{ section: { order: 'asc' } }, { order: 'asc' }],
+		select: {
+			id: true,
+			type: true,
+			points: true,
+			choices: { select: { key: true, isCorrect: true } },
+		},
+	});
+	return {
+		duration: exam.duration,
+		questions: questions.map(q => ({ ...q, type: toQuestionType(q.type) })),
+	};
+}
+
+async function seedPair(
+	prisma: PrismaClient,
+	plans: SeedAttemptPlan[],
+	now: Date,
+): Promise<number> {
+	const { userId, examId } = plans[0];
+	const existing = await prisma.attempt.findMany({
+		where: { examId: examId, attemptedBy: userId },
+		select: { id: true },
+	});
+	if (existing.length) {
+		// Real attempts (or seeded ones kept above): adding more could open a second attempt or
+		// collide with their `order`, so this pair gets nothing new.
+		if (existing.some(a => !isSeedOwned(a.id)))
+			console.warn(
+				`Skipping seeded attempts of ${userId} on exam ${examId}: it has attempts already`,
+			);
+		return 0;
+	}
+	const exam = await loadExam(prisma, examId);
+	if (!exam) {
+		console.warn(`Skipping seeded attempts of ${userId} on exam ${examId}: no such exam`);
+		return 0;
 	}
 
-	const exam1q = await prisma.question.findMany({
-		where: { section: { contentType: SectionType.Question, examId: '1' } },
-		include: { choices: true },
-	});
-
-	const attempt1Choices: [string, string[]][] = exam1q.map(q => {
-		const a = q.choices.filter(c => c.isCorrect).map(c => c.key);
-		return [q.id, a];
-	});
-
-	const attempt2Choices: [string, string[]][] = exam1q.map(q => {
-		const a = q.choices.filter(c => !c.isCorrect).map(c => c.key);
-		return [q.id, a];
-	});
-
-	const attempt3Choices: [string, string[]][] = exam1q.map(q => {
-		const choiceLength = q.choices.length;
-		const a = choiceLength ? q.choices[randomInt(0, choiceLength)].key : 'those who know';
-		return [q.id, [a]];
-	});
-
-	const exam2q = await prisma.question.findMany({
-		where: { section: { contentType: SectionType.Question, examId: '2' } },
-		include: { choices: true },
-	});
-
-	const attempt4Choices: [string, string[]][] = exam2q.map(q => {
-		const a = q.choices.filter(c => c.isCorrect).map(c => c.key);
-		return [q.id, a];
-	});
-
-	const attempt5Choices: [string, string[]][] = exam2q.map(q => {
-		const a = q.choices.filter(c => !c.isCorrect).map(c => c.key);
-		return [q.id, a];
-	});
-
-	const exam3q = await prisma.question.findMany({
-		where: { section: { contentType: SectionType.Question, examId: '3' } },
-		include: { choices: true },
-	});
-
-	const attempt6Choices: [string, string[]][] = exam3q.map(q => {
-		const choiceLength = q.choices.length;
-		const a = choiceLength ? q.choices[randomInt(0, choiceLength)].key : 'those who know';
-		return [q.id, [a]];
-	});
-
-	await prisma.attempt.createMany({
-		data: [
-			{
-				id: '1',
-				attemptedBy: 'admin',
-				durationLimit: 1000,
-				isStrict: false,
-				examId: '1',
-				order: 1,
-				startedAt: new Date(),
+	const rows = buildPairAttempts(plans, exam, now);
+	try {
+		await prisma.$transaction(
+			async tx => {
+				for (const { responses, ...attempt } of rows) {
+					await tx.attempt.create({ data: attempt });
+					const withIds = responses.map(r => ({ ...r, id: randomUUID() }));
+					await tx.attemptResponse.createMany({
+						data: withIds.map(r => ({
+							id: r.id,
+							attemptId: attempt.id,
+							questionId: r.questionId,
+							answers: r.answers,
+							isCorrect: r.isCorrect,
+						})),
+					});
+					const feedback = withIds.flatMap(r =>
+						r.writingFeedback ? [{ responseId: r.id, comment: r.writingFeedback }] : [],
+					);
+					if (feedback.length) await tx.scorerData.createMany({ data: feedback });
+				}
 			},
-			{
-				id: '2',
-				attemptedBy: 'admin',
-				durationLimit: 1000,
-				isStrict: false,
-				examId: '1',
-				order: 2,
-				startedAt: new Date(Date.now() + 10 * 60 * 1000),
-			},
-			{
-				id: '3',
-				attemptedBy: 'admin',
-				durationLimit: 1000,
-				isStrict: false,
-				examId: '1',
-				order: 3,
-				startedAt: new Date(Date.now() + 20 * 60 * 1000),
-			},
-			{
-				id: '4',
-				attemptedBy: 'admin',
-				durationLimit: 1000,
-				isStrict: false,
-				examId: '2',
-				order: 1,
-				startedAt: new Date(Date.now() + 30 * 60 * 1000),
-			},
-			{
-				id: '5',
-				attemptedBy: 'admin',
-				durationLimit: 1000,
-				isStrict: false,
-				examId: '2',
-				order: 2,
-				startedAt: new Date(Date.now() + 40 * 60 * 1000),
-			},
-			{
-				id: '6',
-				attemptedBy: 'admin',
-				durationLimit: 1000,
-				isStrict: false,
-				examId: '3',
-				order: 1,
-				startedAt: new Date(Date.now() + 50 * 60 * 1000),
-			},
-		],
-	});
+			{ timeout: 60_000 },
+		);
+	} catch (e) {
+		// someone started this exam meanwhile: their attempt took the order number
+		if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+			console.warn(`Skipping seeded attempts of ${userId} on exam ${examId}: attempted meanwhile`);
+			return 0;
+		}
+		throw e;
+	}
+	return rows.length;
+}
 
-	await prisma.attemptResponse.createMany({
-		data: [
-			...attempt1Choices.map(c => ({ attemptId: '1', questionId: c[0], answers: c[1] })),
-			...attempt2Choices.map(c => ({ attemptId: '2', questionId: c[0], answers: c[1] })),
-			...attempt3Choices.map(c => ({ attemptId: '3', questionId: c[0], answers: c[1] })),
-			...attempt4Choices.map(c => ({ attemptId: '4', questionId: c[0], answers: c[1] })),
-			...attempt5Choices.map(c => ({ attemptId: '5', questionId: c[0], answers: c[1] })),
-			...attempt6Choices.map(c => ({ attemptId: '6', questionId: c[0], answers: c[1] })),
-		],
-	});
+/**
+ * Seeded practice history for admin and the shared demo account (see `attempt-plans.ts`).
+ * Re-runnable: every run replaces the seed's own rows, with dates relative to now.
+ */
+export async function seedAttempts(prisma: PrismaClient): Promise<void> {
+	await removeStaleSeedAttempts(prisma);
+	const now = new Date();
+	let created = 0;
+	for (const plans of groupPlansByPair(SEED_ATTEMPT_PLANS).values()) {
+		created += await seedPair(prisma, plans, now);
+	}
+	console.warn(`Seeded ${created} attempts`);
 }

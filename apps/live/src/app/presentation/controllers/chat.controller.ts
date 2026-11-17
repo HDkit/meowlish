@@ -25,12 +25,13 @@ export class ChatController implements live.ChatServiceController {
 		return this.chatService.getRoomList({
 			cursor: request.cursor,
 			limit: request.limit,
+			name: request.name,
 		});
 	}
 
 	@SerializeOptions({ type: ChatLogDto })
 	async getChatLog(@Payload() request: GetChatLogDto): Promise<ChatLogDto> {
-		return this.chatService.getChatLogsOf(request.roomId, {
+		return this.chatService.getChatLogsOf(request.roomId, request.requesterId, {
 			cursor: request.cursor,
 			dateRange: request.dateRange,
 			limit: request.limit,
@@ -49,11 +50,11 @@ export class ChatController implements live.ChatServiceController {
 	}
 
 	async banUserFromRoom(@Payload() request: BanUserDto): Promise<void> {
-		return this.chatService.banUserFrom(request.roomId, request.uid, request.reason);
+		return this.chatService.banUserFrom(request.roomId, request.uid, request.reason ?? '', request);
 	}
 
 	async unbanUserFromRoom(@Payload() request: UnbanUserDto): Promise<void> {
-		return this.chatService.unbanUserFrom(request.roomId, request.uid);
+		return this.chatService.unbanUserFrom(request.roomId, request.uid, request);
 	}
 
 	async updateRoomSchedule(@Payload() request: UpdateRoomDto): Promise<void> {

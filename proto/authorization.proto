@@ -1,13 +1,11 @@
 syntax = "proto3";
 
-import "google/protobuf/empty.proto";
-
 package authorization;
 
+// Ownership rows are written only by the RabbitMQ consumers in apps/authorization
+// (`<svc>.<resource>.created` / `.deleted`) and the seed; there is no RPC to change them.
 service AuthorizationService {
 	rpc CheckOwnership(CheckOwnershipRequest) returns (CheckOwnershipResponse) {}
-	rpc RegisterOwnership(RegisterOwnershipRequest) returns (google.protobuf.Empty) {}
-	rpc RemoveOwnership(RemoveOwnershipRequest) returns (google.protobuf.Empty) {}
 }
 
 message CheckOwnershipRequest {
@@ -18,15 +16,4 @@ message CheckOwnershipRequest {
 
 message CheckOwnershipResponse {
 	bool is_owner = 1;
-}
-
-message RegisterOwnershipRequest {
-	string resource_type = 1;
-	string resource_id = 2;
-	string owner_id = 3;
-}
-
-message RemoveOwnershipRequest {
-	string resource_type = 1;
-	string resource_id = 2;
 }

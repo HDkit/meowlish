@@ -3,17 +3,20 @@ import {
 	type IQuestionRepository,
 	IQuestionRepositoryToken,
 } from '../../../../domain/repositories/question.repository';
+import { FileAddedPublisher } from '../../../events/publishers/file-added.publisher';
 import { UpdateQuestionCommand } from '../../staff/exam.update-question.command';
+import { Transactional } from '@nestjs-cls/transactional';
 import { Inject, NotFoundException } from '@nestjs/common';
-import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 
 @CommandHandler(UpdateQuestionCommand)
 export class UpdateQuestionHandler implements ICommandHandler<UpdateQuestionCommand> {
 	constructor(
 		@Inject(IQuestionRepositoryToken) private readonly questionRepository: IQuestionRepository,
-		private readonly eventBus: EventBus,
+		private readonly fileAddedPublisher: FileAddedPublisher,
 	) {}
 
+	@Transactional()
 	public async execute(command: UpdateQuestionCommand): Promise<void> {
 		const payload = command.payload;
 		const question = await this.questionRepository.findOne(payload.id);
@@ -31,7 +34,8 @@ export class UpdateQuestionHandler implements ICommandHandler<UpdateQuestionComm
 		if (payload.removeTags) payload.removeTags.forEach(t => question.removeTag(t));
 		if (payload.addFiles) payload.addFiles.forEach(t => question.addFile(t));
 		if (payload.removeFiles) payload.removeFiles.forEach(t => question.removeFile(t));
+		question.assertChoicesConsistent();
 		await this.questionRepository.save(question);
-		this.eventBus.publishAll(question.getUncommittedEvents());
+		await this.fileAddedPublisher.publish(question.getUncommittedEvents());
 	}
 }

@@ -12,8 +12,11 @@ export class CreateFlashCardDto {
 
 	@IsOptional()
 	@IsString()
-	@ApiPropertyOptional()
-	image?: string;
+	@ApiPropertyOptional({
+		description:
+			'Image of the card: the id of a file you uploaded (POST /files with isPublicFile: true). Image URLs are no longer accepted.',
+	})
+	imageFileId?: string;
 
 	@IsOptional()
 	@IsString()
@@ -42,8 +45,7 @@ export class CreateFlashCardDto {
 	@ApiPropertyOptional({ type: [String] })
 	tags?: string[];
 
-	@IsOptional()
 	@IsString()
-	@ApiPropertyOptional()
-	listId?: string;
+	@ApiProperty({ description: 'List the card belongs to; must be one of your own lists' })
+	listId!: string;
 }

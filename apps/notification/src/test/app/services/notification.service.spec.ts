@@ -1,0 +1,141 @@
+import { type NotificationSseService } from '../../../app/services/notification-sse.service';
+import { NotificationService } from '../../../app/services/notification.service';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
+
+const setup = () => {
+	const tx = {
+		notification: {
+			findFirst: jest.fn(),
+			create: jest.fn(),
+			update: jest.fn(),
+			delete: jest.fn(),
+			deleteMany: jest.fn(),
+			findMany: jest.fn(),
+		},
+	};
+	const sse = { emit: jest.fn() };
+	const service = new NotificationService(
+		{ tx: tx } as never,
+		sse as unknown as NotificationSseService,
+	);
+	return { tx: tx, sse: sse, service: service };
+};
+
+describe('NotificationService', () => {
+	it('looks notifications up by id AND recipient', async () => {
+		const { tx, service } = setup();
+		tx.notification.findFirst.mockResolvedValue(null);
+		await expect(service.getNotification('n1', 'intruder')).rejects.toBeInstanceOf(
+			NotFoundException,
+		);
+		expect(tx.notification.findFirst).toHaveBeenCalledWith({
+			where: { id: 'n1', recipientId: 'intruder' },
+		});
+	});
+
+	it('does not delete or mark read a notification the caller does not own', async () => {
+		const { tx, service } = setup();
+		tx.notification.findFirst.mockResolvedValue(null);
+		await expect(service.deleteNotification('n1', 'intruder')).rejects.toBeInstanceOf(
+			NotFoundException,
+		);
+		await expect(service.markAsRead('n1', 'intruder')).rejects.toBeInstanceOf(NotFoundException);
+		expect(tx.notification.delete).not.toHaveBeenCalled();
+		expect(tx.notification.update).not.toHaveBeenCalled();
+	});
+
+	it('stores without pushing; push emits each notification to its recipient', async () => {
+		const { tx, sse, service } = setup();
+		const now = new Date('2026-11-14T00:00:00Z');
+		tx.notification.create.mockResolvedValue({
+			id: 'n1',
+			recipientId: 'u1',
+			type: 'system',
+			title: 't',
+			message: 'm',
+			data: null,
+			isRead: false,
+			readAt: null,
+			createdAt: now,
+		});
+		const created = await service.createNotification({
+			recipientId: 'u1',
+			type: 'system',
+			title: 't',
+			message: 'm',
+		});
+		expect(sse.emit).not.toHaveBeenCalled();
+		service.push([created]);
+		expect(sse.emit).toHaveBeenCalledWith('u1', created);
+	});
+
+	it('rejects a non-JSON data payload with 400 instead of crashing', async () => {
+		const { tx, service } = setup();
+		await expect(
+			service.createNotification({
+				recipientId: 'u1',
+				type: 'system',
+				title: 't',
+				message: 'm',
+				data: '{not json',
+			}),
+		).rejects.toBeInstanceOf(BadRequestException);
+		expect(tx.notification.create).not.toHaveBeenCalled();
+	});
+
+	it('deletes only the recipient’s flash card notifications about that proposal', async () => {
+		const { tx, service } = setup();
+		tx.notification.deleteMany.mockResolvedValue({ count: 1 });
+		await expect(service.deleteProposalNotifications('owner', 'p1')).resolves.toBe(1);
+		expect(tx.notification.deleteMany).toHaveBeenCalledWith({
+			where: {
+				recipientId: 'owner',
+				type: 'flashcard',
+				data: { path: ['proposalId'], equals: 'p1' },
+			},
+		});
+	});
+
+	describe('listMissed (SSE Last-Event-ID replay)', () => {
+		const row = (id: string, ms: number) => ({
+			id: id,
+			recipientId: 'u1',
+			type: 'achievement',
+			title: 't',
+			message: 'm',
+			data: null,
+			isRead: false,
+			readAt: null,
+			createdAt: new Date(ms),
+		});
+
+		it('replays nothing for an id that is not one of the recipient’s notifications', async () => {
+			const { tx, service } = setup();
+			tx.notification.findFirst.mockResolvedValue(null);
+			await expect(service.listMissed('u1', 'someone-elses')).resolves.toEqual([]);
+			expect(tx.notification.findFirst).toHaveBeenCalledWith(
+				expect.objectContaining({ where: { id: 'someone-elses', recipientId: 'u1' } }),
+			);
+			expect(tx.notification.findMany).not.toHaveBeenCalled();
+		});
+
+		it('returns the newest 100 notifications after the anchor, oldest first', async () => {
+			const { tx, service } = setup();
+			tx.notification.findFirst.mockResolvedValue({ id: 'n1', createdAt: new Date(1000) });
+			tx.notification.findMany.mockResolvedValue([row('n3', 3000), row('n2', 2000)]);
+			const missed = await service.listMissed('u1', 'n1');
+			expect(missed.map(n => n.id)).toEqual(['n2', 'n3']);
+			expect(tx.notification.findMany).toHaveBeenCalledWith({
+				where: {
+					recipientId: 'u1',
+					OR: [
+						{ createdAt: { gt: new Date(1000) } },
+						{ createdAt: new Date(1000), id: { gt: 'n1' } },
+					],
+				},
+				orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+				take: 100,
+			});
+		});
+	});
+});

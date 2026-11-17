@@ -1,3 +1,4 @@
+import { BADGE_INFORMATION } from '../../constants/badge-info.const';
 import { AttemptCounterBadgeManager } from '../../domain/entities/attempt-counter-badge-manager.entity';
 import { AttemptScoreBadgeManager } from '../../domain/entities/attempt-score-badge-manager.entity';
 import { LoginBadgeManager } from '../../domain/entities/login-badge-manager.entity';
@@ -14,6 +15,7 @@ import {
 	PrismaClient,
 	UserBadge,
 } from '@prisma-client/achievement';
+import { OutboxPublisher } from '@server/messaging';
 import { Event, parseEnum } from '@server/utils';
 
 class BadgeManagerPrismaMapper {
@@ -79,7 +81,10 @@ class BadgeManagerPrismaMapper {
 
 @Injectable()
 export class BadgeManagerPrismaRepositoryImpl implements IBadgeManagerRepository {
-	constructor(private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>) {}
+	constructor(
+		private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>,
+		private readonly outbox: OutboxPublisher,
+	) {}
 
 	async getAttemptCounterBadgeManager(uid: string): Promise<AttemptCounterBadgeManager> {
 		const foundManager = await this.txHost.tx.attemptCriteria.upsert({
@@ -167,15 +172,18 @@ export class BadgeManagerPrismaRepositoryImpl implements IBadgeManagerRepository
 	}
 
 	private async onBadgeAdded(event: BadgeAddedEvent): Promise<void> {
-		try {
-			await this.txHost.tx.userBadge.create({
-				data: { badgeName: event.payload.badge, uid: event.payload.uid },
-			});
-		} catch (e) {
-			if (e instanceof Prisma.PrismaClientKnownRequestError) {
-				if (e.code === 'P2002') return;
-			}
-			throw e;
-		}
+		// ON CONFLICT DO NOTHING: catching a unique violation would leave the Postgres
+		// transaction aborted, so the commit (and every retry) would fail.
+		const { count } = await this.txHost.tx.userBadge.createMany({
+			data: [{ badgeName: event.payload.badge, uid: event.payload.uid }],
+			skipDuplicates: true,
+		});
+		// Already awarded: announce it only once.
+		if (count === 0) return;
+		// Same transaction as the award: a rolled-back or retried attempt publishes nothing.
+		await this.outbox.add('achievement.badge.earned', {
+			uid: event.payload.uid,
+			badgeName: BADGE_INFORMATION[event.payload.badge].displayName,
+		});
 	}
 }

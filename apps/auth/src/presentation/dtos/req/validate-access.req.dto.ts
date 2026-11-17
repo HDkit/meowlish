@@ -1,5 +1,5 @@
 import { auth } from '@server/generated';
-import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class ValidateAccessDto implements auth.ValidateAccessDto {
 	@IsNotEmpty()
@@ -8,4 +8,8 @@ export class ValidateAccessDto implements auth.ValidateAccessDto {
 
 	@IsNumber()
 	iat!: number;
+
+	@IsNumber()
+	@IsOptional()
+	iatMs!: number | undefined;
 }

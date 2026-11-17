@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { exam } from '@server/generated';
 import { Type } from 'class-transformer';
 import {
 	ArrayUnique,
@@ -6,12 +7,12 @@ import {
 	IsBoolean,
 	IsInt,
 	IsOptional,
-	IsPositive,
 	IsString,
+	Min,
 	ValidateNested,
 } from 'class-validator';
 
-class AddChoiceDto {
+class AddChoiceDto implements exam.UpdateQuestionDto_AddChoice {
 	@IsString()
 	@ApiProperty()
 	key!: string;
@@ -26,7 +27,7 @@ class AddChoiceDto {
 	isCorrect!: boolean;
 }
 
-class UpdateChoiceDto {
+class UpdateChoiceDto implements exam.UpdateQuestionDto_UpdateChoice {
 	@IsString()
 	@ApiProperty()
 	id!: string;
@@ -52,7 +53,10 @@ class UpdateChoiceDto {
 	setContentNull?: boolean;
 }
 
-export class UpdateQuestionDto {
+export class UpdateQuestionDto implements Omit<
+	exam.UpdateQuestionDto,
+	'id' | 'requesterId' | 'privileged'
+> {
 	@Type(() => AddChoiceDto)
 	@IsArray()
 	@ValidateNested({ each: true })
@@ -82,7 +86,7 @@ export class UpdateQuestionDto {
 
 	@IsInt()
 	@IsOptional()
-	@IsPositive()
+	@Min(0)
 	@ApiPropertyOptional({ type: Number })
 	points?: number;
 
@@ -93,13 +97,19 @@ export class UpdateQuestionDto {
 
 	@IsArray()
 	@IsString({ each: true })
-	@ApiProperty({ type: [String] })
+	@ApiProperty({
+		description: 'Ids of tags (not names) to add to the question',
+		type: [String],
+	})
 	@ArrayUnique()
 	addTags: string[] = [];
 
 	@IsArray()
 	@IsString({ each: true })
-	@ApiProperty({ type: [String] })
+	@ApiProperty({
+		description: 'Ids of tags (not names) to remove from the question',
+		type: [String],
+	})
 	@ArrayUnique()
 	removeTags: string[] = [];
 

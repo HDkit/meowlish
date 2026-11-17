@@ -23,6 +23,7 @@ model Identity {
   isLocked      Boolean        @default(false) @map("is_locked")
   lockedAt      DateTime?      @map("locked_at")
   lockedBy      String?        @map("locked_by")
+  isDemo        Boolean        @default(false) @map("is_demo")
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
   deletedAt     DateTime?      @map("deleted_at")

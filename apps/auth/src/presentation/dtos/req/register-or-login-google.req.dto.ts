@@ -1,5 +1,5 @@
 import { auth } from '@server/generated';
-import { IsString } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 export class RegisterOrLoginGoogleDto implements auth.RegisterOrLoginGoogleDto {
 	@IsString()
@@ -7,4 +7,12 @@ export class RegisterOrLoginGoogleDto implements auth.RegisterOrLoginGoogleDto {
 
 	@IsString()
 	username!: string;
+
+	@IsOptional()
+	@IsString()
+	fullName?: string;
+
+	@IsOptional()
+	@IsString()
+	email?: string;
 }

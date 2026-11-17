@@ -5,7 +5,12 @@ import {
 	IPracticeReadRepositoryToken,
 } from '../../../../domain/repositories/practice.read.repository';
 import { GetAttemptDataQuery } from '../../practice/exam.get-attempt-data.query';
-import { Inject, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import {
+	ConflictException,
+	Inject,
+	NotFoundException,
+	ServiceUnavailableException,
+} from '@nestjs/common';
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { ClientGrpc } from '@nestjs/microservices';
 import { file } from '@server/generated';
@@ -29,7 +34,15 @@ export class GetAttemptDataQueryHandler implements IQueryHandler<GetAttemptDataQ
 		const payload = query.payload;
 		const data = await this.practiceReadRepository.getAttemptSavedData(payload.attemptId);
 
-		if (!data) throw new NotFoundException('Attempt not found');
+		if (!data) {
+			// Only unfinished attempts have saved data. The caller has already checked ownership, so
+			// an attempt that still exists here is a finished one: 409, so the client can send the
+			// user to its result instead of treating it as missing.
+			if (await this.practiceReadRepository.getAttemptOwner(payload.attemptId)) {
+				throw new ConflictException('Attempt already submitted');
+			}
+			throw new NotFoundException('Attempt not found');
+		}
 
 		const ids = new Set<string>();
 		this.treeVisitor(data.sections, this.collectFileIds.bind(this), ids);

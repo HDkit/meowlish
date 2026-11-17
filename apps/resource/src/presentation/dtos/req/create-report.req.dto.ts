@@ -1,5 +1,5 @@
 import { resource } from '@server/generated';
-import { IsArray, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class CreateReportReqDto implements resource.CreateReportRequest {
 	@IsString()
@@ -25,4 +25,8 @@ export class CreateReportReqDto implements resource.CreateReportRequest {
 	@IsArray()
 	@IsString({ each: true })
 	fileIds!: string[];
+
+	@IsBoolean()
+	@IsOptional()
+	mayAttachAnyFile?: boolean;
 }

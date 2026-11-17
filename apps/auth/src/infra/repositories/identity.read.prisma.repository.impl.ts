@@ -14,6 +14,7 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 
 	async findIdentityIds(options?: {
 		usernameOrCredentialIdentifier?: string;
+		usernameOnly?: boolean;
 		lastId?: string;
 		limit?: number;
 		direction?: number;
@@ -24,14 +25,19 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 		const direction = Math.sign(options?.direction || 1);
 		const foundIdentities = await this.txHost.tx.identity.findMany({
 			where: {
+				deletedAt: null,
 				...(options?.usernameOrCredentialIdentifier && {
 					OR: [
 						{ username: { contains: options.usernameOrCredentialIdentifier } },
-						{
-							credentials: {
-								some: { identifier: { contains: options.usernameOrCredentialIdentifier } },
-							},
-						},
+						...(options.usernameOnly ?
+							[]
+						:	[
+								{
+									credentials: {
+										some: { identifier: { contains: options.usernameOrCredentialIdentifier } },
+									},
+								},
+							]),
 					],
 				}),
 			},
@@ -46,6 +52,7 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 	// raw SQL join might be better without processing in-app but time is of the essence
 	async findIdentities(options?: {
 		usernameOrCredentialIdentifierOrId?: string;
+		usernameOnly?: boolean;
 		hasRoles?: string[];
 		hasPerms?: string[];
 		lastId?: string;
@@ -89,20 +96,31 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 
 		const foundIdentities = await this.txHost.tx.identity.findMany({
 			where: {
-				...(options?.usernameOrCredentialIdentifierOrId && {
-					OR: [
-						{ username: { contains: options.usernameOrCredentialIdentifierOrId } },
+				deletedAt: null,
+				// Two independent OR groups: spreading both as `OR` let the role filter overwrite the
+				// identifier filter.
+				AND: [
+					options?.usernameOrCredentialIdentifierOrId ?
 						{
-							credentials: {
-								some: { identifier: { contains: options.usernameOrCredentialIdentifierOrId } },
-							},
-						},
-						{ id: { contains: options.usernameOrCredentialIdentifierOrId } },
-					],
-				}),
-				...(roleOr.length && {
-					OR: roleOr,
-				}),
+							OR: [
+								{ username: { contains: options.usernameOrCredentialIdentifierOrId } },
+								...(options.usernameOnly ?
+									[]
+								:	[
+										{
+											credentials: {
+												some: {
+													identifier: { contains: options.usernameOrCredentialIdentifierOrId },
+												},
+											},
+										},
+										{ id: { contains: options.usernameOrCredentialIdentifierOrId } },
+									]),
+							],
+						}
+					:	{},
+					roleOr.length ? { OR: roleOr } : {},
+				],
 			},
 			orderBy: { id: 'asc' },
 			select: {
@@ -153,6 +171,7 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 
 		const foundIdentities = await this.txHost.tx.identity.findMany({
 			where: {
+				deletedAt: null,
 				phoneNumber: { contains: options.phoneNumber },
 			},
 			orderBy: { id: 'asc' },
@@ -192,6 +211,20 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 		}));
 	}
 
+	async findIdentityIdsByRole(role: string, limit: number): Promise<string[]> {
+		const identities = await this.txHost.tx.identity.findMany({
+			where: {
+				deletedAt: null,
+				isLocked: false,
+				identityRoles: { some: { role: { name: role } } },
+			},
+			select: { id: true },
+			orderBy: { id: 'asc' },
+			take: limit,
+		});
+		return identities.map(i => i.id);
+	}
+
 	async hydrate(id: string): Promise<HydratedIdentityReadModel | null> {
 		const foundIdentity = await this.txHost.tx.identity.findUnique({
 			where: { id: id },
@@ -202,6 +235,7 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 				avatarFileId: true,
 				bio: true,
 				phoneNumber: true,
+				isDemo: true,
 				identityRoles: {
 					select: {
 						role: { select: { name: true } },
@@ -217,6 +251,7 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 					avatarUrl: foundIdentity.avatarFileId ?? undefined,
 					bio: foundIdentity.bio ?? undefined,
 					phoneNumber: foundIdentity.phoneNumber ?? undefined,
+					isDemo: foundIdentity.isDemo,
 					roles: foundIdentity.identityRoles.map(r => r.role.name),
 				}
 			:	null;
@@ -232,6 +267,7 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 				avatarFileId: true,
 				bio: true,
 				phoneNumber: true,
+				isDemo: true,
 				identityRoles: {
 					select: {
 						role: { select: { name: true } },
@@ -247,6 +283,7 @@ export class IdentityReadPrismaRepositoryImpl implements IIdentityReadRepository
 			avatarUrl: i.avatarFileId ?? undefined,
 			bio: i.bio ?? undefined,
 			phoneNumber: i.phoneNumber ?? undefined,
+			isDemo: i.isDemo,
 			roles: i.identityRoles.map(r => r.role.name),
 		}));
 	}

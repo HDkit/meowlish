@@ -7,6 +7,9 @@ class CredentialDto implements auth.Credentials_Credential {
 
 	@Expose()
 	type!: string;
+
+	@Expose()
+	mail?: string;
 }
 
 export class CredentialsDto implements auth.Credentials {

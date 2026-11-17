@@ -6,6 +6,9 @@ export class BlogDto implements resource.BlogResponse {
 	id!: string;
 
 	@Expose()
+	slug?: string;
+
+	@Expose()
 	title!: string;
 
 	@Expose()
@@ -22,6 +25,20 @@ export class BlogDto implements resource.BlogResponse {
 
 	@Expose()
 	updatedAt!: string;
+}
+
+export class BlogTagCountDto implements resource.BlogTagCount {
+	@Expose()
+	name!: string;
+
+	@Expose()
+	count!: number;
+}
+
+export class ListBlogTagsDto implements resource.ListBlogTagsResponse {
+	@Expose()
+	@Type(() => BlogTagCountDto)
+	tags!: BlogTagCountDto[];
 }
 
 export class ListBlogsDto implements resource.ListBlogsResponse {

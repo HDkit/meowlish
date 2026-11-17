@@ -1,0 +1,510 @@
+diff --git a/app/core/config.py b/app/core/config.py
+index 3446a19..3c13e02 100644
+--- a/app/core/config.py
++++ b/app/core/config.py
+@@ -7,6 +7,8 @@ class Settings(BaseSettings):
+     LLM_MODEL_NAME: str = "" # Note: Có thể không cần cho HF Endpoint nếu token URL đã chứa endpoint.
+     HF_TOKEN: str = ""
+     LLM_TIMEOUT: int = 300  # seconds
++    # Extra LLM calls when the answer has no readable band (each retry reminds the model of the format)
++    LLM_FORMAT_RETRIES: int = 2
+ 
+     # RabbitMQ Connection
+     RABBITMQ_URL: str = "amqp://guest:guest@localhost:5672/"
+diff --git a/app/mq/connection.py b/app/mq/connection.py
+index 6c0b316..afce7b7 100644
+--- a/app/mq/connection.py
++++ b/app/mq/connection.py
+@@ -1,3 +1,4 @@
++import re
+ import aio_pika
+ from aio_pika.abc import AbstractRobustConnection
+ from core.logger import logger
+@@ -11,7 +12,9 @@ async def get_connection() -> AbstractRobustConnection:
+     global _connection
+ 
+     if _connection is None or _connection.is_closed:
+-        logger.info(f"Connecting to RabbitMQ at {settings.RABBITMQ_URL}...")
++        # never log the password
++        safe_url = re.sub(r"//([^:@/]*):[^@/]*@", r"//\1:***@", settings.RABBITMQ_URL)
++        logger.info(f"Connecting to RabbitMQ at {safe_url}...")
+         _connection = await aio_pika.connect_robust(settings.RABBITMQ_URL)
+         logger.info("Connected to RabbitMQ successfully.")
+ 
+diff --git a/app/mq/consumer.py b/app/mq/consumer.py
+index 4bd9852..21ff8b1 100644
+--- a/app/mq/consumer.py
++++ b/app/mq/consumer.py
+@@ -5,7 +5,7 @@ from aio_pika.abc import AbstractIncomingMessage, AbstractRobustConnection
+ from core.logger import logger
+ from core.config import settings
+ from schemas.writing import WritingRequest, WritingFeedback, WritingResultEvent
+-from services.evaluation_llm import evaluate_writing_with_local_llm
++from services.evaluation_llm import LlmParseError, evaluate_writing_with_local_llm
+ 
+ 
+ # Structured error codes for BE to classify errors
+@@ -161,7 +161,9 @@ class WritingConsumer:
+                 error_msg = str(e)
+ 
+                 # Classify error code
+-                if "timeout" in error_msg.lower() or "Timeout" in error_type:
++                if isinstance(e, LlmParseError):
++                    error_code = ErrorCode.LLM_PARSE_ERROR
++                elif "timeout" in error_msg.lower() or "Timeout" in error_type:
+                     error_code = ErrorCode.LLM_TIMEOUT
+                 elif "connect" in error_msg.lower():
+                     error_code = ErrorCode.LLM_CONNECTION_ERROR
+@@ -173,12 +175,14 @@ class WritingConsumer:
+                     exc_info=True,
+                 )
+ 
+-                # Retry logic
+-                if retry_count < settings.MQ_MAX_RETRIES:
++                # Retry logic. A parse error was already retried against the LLM: report it now.
++                if retry_count < settings.MQ_MAX_RETRIES and not isinstance(e, LlmParseError):
+                     headers = dict(message.headers or {})
+                     headers["x-retry-count"] = retry_count + 1
+ 
+-                    await self._exchange.publish(
++                    # straight back to our own queue (default exchange), not to the shared routing
++                    # key: every other queue bound to it would receive the retry too
++                    await self._channel.default_exchange.publish(
+                         aio_pika.Message(
+                             body=message.body,
+                             headers=headers,
+@@ -186,7 +190,7 @@ class WritingConsumer:
+                             content_type="application/json",
+                             delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
+                         ),
+-                        routing_key=settings.WRITING_ROUTING_KEY,
++                        routing_key=settings.WRITING_QUEUE_NAME,
+                     )
+                     logger.info(f"Message requeued (retry {retry_count + 1}) [correlation_id={correlation_id}]")
+                     return
+diff --git a/app/services/evaluation_llm.py b/app/services/evaluation_llm.py
+index cafa1b0..642302c 100644
+--- a/app/services/evaluation_llm.py
++++ b/app/services/evaluation_llm.py
+@@ -1,7 +1,8 @@
++import math
+ import re
+ import httpx
+ from pathlib import Path
+-from typing import Optional
++from typing import Dict, Optional
+ from core.logger import logger
+ from core.config import settings
+ from schemas.writing import WritingRequest, WritingFeedback
+@@ -33,13 +34,93 @@ async def close_http_client() -> None:
+         _http_client = None
+ 
+ 
+-def _parse_score(pattern: str, text: str, label: str, log_prefix: str) -> float:
+-    """Parse a score from LLM output with warning on failure."""
+-    match = re.search(pattern, text, re.IGNORECASE)
+-    if match:
+-        return float(match.group(1))
+-    logger.warning(f"{log_prefix} Failed to parse \'{label}\' from LLM output")
+-    return 0.0
++class LlmParseError(Exception):
++    """The LLM answered, but no band could be read from it (even after format retries)."""
++
++
++# Labels as the model writes them, most specific first. The model is not consistent: it writes
++# "Overall Band Score: 7", "**Score: 3.5**", "Scoring: 8.0", "Task Achievement (TA): 3.5", ...
++_OVERALL_LABELS = [
++    r"Suggested Overall Band Score",
++    r"Overall Band Score",
++    r"Overall Score",
++    r"Overall Band",
++    r"Band Score",
++    # generic words count only at the start of a line ("**Score: 3.5**", "Scoring: 8.0"), so a
++    # criterion line like "Task Achievement Score: 7" is not taken for the overall band
++    r"^[\s#*>\-]*(?:Scoring|Score)",
++]
++_CRITERIA = {
++    "Task Achievement": [r"Task Achievement(?:\s*/\s*Response)?", r"Task Response"],
++    "Coherence & Cohesion": [r"Coherence\s*(?:and|&)\s*Cohesion"],
++    "Lexical Resource": [r"Lexical Resources?"],
++    "Grammatical Range & Accuracy": [r"Grammatical Range\s*(?:and|&)\s*Accuracy", r"Grammar"],
++}
++
++
++def _score_pattern(label: str) -> re.Pattern:
++    # label, optional "(TA)", optional bold markers, optional ":" or "-", then the number
++    return re.compile(
++        rf"(?<![A-Za-z])(?:{label})(?:\s*\([^)]{{0,12}}\))?\s*\**\s*[:\-\u2013]?\s*\**\s*(\d+(?:\.\d+)?)",
++        re.IGNORECASE | re.MULTILINE,
++    )
++
++
++def _to_band(value: float) -> Optional[float]:
++    """A band is 0-9 in half steps; anything else is not a band."""
++    if not 0 <= value <= 9:
++        return None
++    return round(value * 2) / 2
++
++
++def _find_band(labels: list[str], text: str) -> Optional[float]:
++    for label in labels:
++        for match in _score_pattern(label).finditer(text):
++            band = _to_band(float(match.group(1)))
++            if band is not None:
++                return band
++    return None
++
++
++def _overall_from_criteria(scores: Dict[str, float]) -> float:
++    """IELTS overall: mean of the four criteria, rounded to the nearest half band (ties up)."""
++    mean = sum(scores.values()) / len(scores)
++    return math.floor(mean * 2 + 0.5) / 2
++
++
++def _parse_scores(text: str) -> tuple[Optional[float], Dict[str, float]]:
++    criteria = {name: band for name, labels in _CRITERIA.items() if (band := _find_band(labels, text)) is not None}
++    overall = _find_band(_OVERALL_LABELS, text)
++    if overall is None and len(criteria) == len(_CRITERIA):
++        overall = _overall_from_criteria(criteria)
++    return overall, criteria
++
++
++_FORMAT_REMINDER = (
++    "\n\nStart your answer with exactly these five lines, each with a band from 0 to 9:\n"
++    "Overall Band Score: <band>\nTask Achievement: <band>\nCoherence and Cohesion: <band>\n"
++    "Lexical Resource: <band>\nGrammatical Range and Accuracy: <band>\n"
++    "Then write ### Detailed Feedback: followed by your feedback."
++)
++
++
++def _clean_feedback(text: str) -> str:
++    # the model sometimes leaks special tokens ("<|end_of_document|>") and keeps writing after them
++    return re.split(r"<\|[a-z_]+\|>", text, maxsplit=1)[0].strip()
++
++
++def _response_text(response_data) -> str:
++    """The answer text, from an OpenAI-style or a Hugging Face response."""
++    if isinstance(response_data, dict) and response_data.get("choices"):
++        choice = response_data["choices"][0]
++        if "message" in choice:
++            return choice["message"].get("content", "") or ""
++        return choice.get("text", "") or ""
++    if isinstance(response_data, list) and response_data:
++        return response_data[0].get("generated_text", "") or ""
++    if isinstance(response_data, dict):
++        return response_data.get("generated_text", "") or response_data.get("response", "") or ""
++    return ""
+ 
+ 
+ async def evaluate_writing_with_local_llm(
+@@ -72,77 +153,58 @@ async def evaluate_writing_with_local_llm(
+ 
+     try:
+         client = _get_http_client()
+-        headers = {
+-            "Authorization": f"Bearer {settings.HF_TOKEN}",
+-            "Content-Type": "application/json"
+-        }
+-        
++        headers = {"Content-Type": "application/json"}
++        # an empty token would send "Bearer " (an invalid header): only send it when there is one
++        if settings.HF_TOKEN:
++            headers["Authorization"] = f"Bearer {settings.HF_TOKEN}"
++
+         api_url = settings.LLM_API_URL.rstrip('/')
+         if not api_url.endswith("/v1/chat/completions"):
+             if api_url.endswith("/v1"):
+                 api_url += "/chat/completions"
+             else:
+                 api_url += "/v1/chat/completions"
+-                
+-        payload = {
+-            "model": "linhma139/Phi-3-IELTS-Scorer",
+-            "messages": [
+-                {
+-                    "role": "system",
+-                    "content": _SYSTEM_PROMPT
+-                },
+-                {
+-                    "role": "user",
+-                    "content": user_prompt
+-                }
+-            ],
+-            "max_tokens": 1024,
+-            "temperature": 0.2
+-        }
+-
+-        logger.info(f"{log_prefix} Sending evaluation request to Endpoint: {api_url}")
+-        response = await client.post(api_url, headers=headers, json=payload)
+-        response.raise_for_status()
+-
+-        response_data = response.json()
+-        response_text = ""
+-        
+-        # Parse the JSON response (OpenAI schema format)
+-        if "choices" in response_data and len(response_data["choices"]) > 0:
+-            choice = response_data["choices"][0]
+-            if "message" in choice:
+-                 response_text = choice["message"].get("content", "")
+-            else:
+-                 response_text = choice.get("text", "")
+-        elif isinstance(response_data, list) and len(response_data) > 0:
+-            response_text = response_data[0].get("generated_text", "")
+-        elif isinstance(response_data, dict):
+-            response_text = response_data.get("generated_text", "") or response_data.get("response", "")
+-
+-        # Parse scores with warnings on failure
+-        overall = _parse_score(
+-            r"Overall (?:Band )?Score:\s*([\d.]+)", response_text, "Overall Score", log_prefix
+-        )
+-        ta_score = _parse_score(
+-            r"Task Achievement(?: / Response)?:?\s*([\d.]+)", response_text, "Task Achievement", log_prefix
+-        )
+-        cc_score = _parse_score(
+-            r"Coherence and Cohesion:?\s*([\d.]+)", response_text, "Coherence & Cohesion", log_prefix
+-        )
+-        lr_score = _parse_score(
+-            r"Lexical Resource:?\s*([\d.]+)", response_text, "Lexical Resource", log_prefix
+-        )
+-        gra_score = _parse_score(
+-            r"Grammatical Range and Accuracy:?\s*([\d.]+)", response_text, "Grammar", log_prefix
+-        )
+ 
+-        # Log warning if all scores are 0 (likely parse failure)
+-        if overall == 0.0 and ta_score == 0.0:
++        # best answer so far: (overall, criteria, text); one with a band beats one without, then more criteria
++        best: Optional[tuple[Optional[float], Dict[str, float], str]] = None
++        calls = 1 + max(0, settings.LLM_FORMAT_RETRIES)
++        for call in range(calls):
++            retry = call > 0
++            payload = {
++                "model": settings.LLM_MODEL_NAME or "linhma139/Phi-3-IELTS-Scorer",
++                "messages": [
++                    {"role": "system", "content": _SYSTEM_PROMPT},
++                    {"role": "user", "content": user_prompt + (_FORMAT_REMINDER if retry else "")},
++                ],
++                "max_tokens": 1024,
++                # a retry needs a different answer, not the same one again
++                "temperature": 0.5 if retry else 0.2,
++            }
++
++            logger.info(f"{log_prefix} Sending evaluation request to Endpoint: {api_url} (call {call + 1}/{calls})")
++            response = await client.post(api_url, headers=headers, json=payload)
++            response.raise_for_status()
++            text = _clean_feedback(_response_text(response.json()))
++
++            overall, criteria = _parse_scores(text)
++            rank = lambda b: (b[0] is not None, len(b[1]))
++            if best is None or rank((overall, criteria, text)) > rank(best):
++                best = (overall, criteria, text)
++            if overall is not None and len(criteria) == len(_CRITERIA):
++                break
+             logger.warning(
+-                f"{log_prefix} All scores parsed as 0.0 - LLM output may be malformed. "
+-                f"Raw output (first 300 chars): {response_text[:300]}"
++                f"{log_prefix} No complete band in LLM output (overall={overall}, criteria={sorted(criteria)}); "
++                f"{'retrying with a format reminder' if call + 1 < calls else 'giving up'}. "
++                f"Raw output (first 300 chars): {text[:300]}"
+             )
+ 
++        overall, criteria, response_text = best
++
++        # Never report a band the model did not give: a missing overall is an error, not band 0.
++        # (A real band 0, e.g. off-topic or memorised, is written as a 0 and parsed as such.)
++        if overall is None:
++            raise LlmParseError(f"No band score found in the LLM output after {calls} calls")
++
+         # Extract detailed feedback
+         detailed_feedback = response_text
+         feedback_split = re.split(
+@@ -155,12 +217,8 @@ async def evaluate_writing_with_local_llm(
+             attempt_id=request.attempt_id,
+             response_id=request.response_id,
+             overall_score=overall,
+-            sub_scores={
+-                "Task Achievement": ta_score,
+-                "Coherence & Cohesion": cc_score,
+-                "Lexical Resource": lr_score,
+-                "Grammatical Range & Accuracy": gra_score,
+-            },
++            # only the criteria the model actually scored
++            sub_scores=criteria,
+             detailed_feedback=detailed_feedback,
+             corrected_version="",
+             corrections=[],
+@@ -174,6 +232,9 @@ async def evaluate_writing_with_local_llm(
+         logger.error(f"{log_prefix} Cannot connect to LLM at {settings.LLM_API_URL}: {e}")
+         raise
+ 
++    except LlmParseError:
++        raise
++
+     except Exception as e:
+         logger.error(f"{log_prefix} Error calling LLM API: {e}", exc_info=True)
+         raise
+diff --git a/tests/test_scoring.py b/tests/test_scoring.py
+new file mode 100644
+index 0000000..b697102
+--- /dev/null
++++ b/tests/test_scoring.py
+@@ -0,0 +1,160 @@
++"""Band parsing and format retries (python -m unittest discover -s tests, from the repo root)."""
++import asyncio
++import os
++import sys
++import unittest
++from unittest import mock
++
++sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "app"))
++
++from schemas.writing import WritingRequest  # noqa: E402
++from services import evaluation_llm  # noqa: E402
++from services.evaluation_llm import LlmParseError, _clean_feedback, _parse_scores  # noqa: E402
++
++STANDARD = """## IELTS Writing Evaluation
++
++### Scores:
++- Overall Band Score: 8.0
++- Task Achievement: 8.0
++- Coherence and Cohesion: 8.5
++- Lexical Resource: 7.5
++- Grammatical Range and Accuracy: 8.0
++
++### Detailed Feedback:
++Good essay."""
++
++# the model's answer for a weak essay
++BOLD_WITH_ABBREVIATIONS = """### IELTS Writing Evaluation
++
++**Score: 3.5**
++
++**Detailed Feedback:**
++- **Task Achievement (TA): 3.5** - While the essay addresses both views...
++- **Coherence and Cohesion (CC): 3** - The essay lacks logical organization...
++- **Lexical Resource (LR): 3** - The vocabulary used is limited...
++- **Grammatical Range and Accuracy (GRA): 3** - The essay contains numerous errors...
++- **Overall Band Score: 3.5** - Considering all criteria..."""
++
++# the Task 1 answer that was saved as band 0
++SCORING_LINE_ONLY = """The essay effectively summarizes the changes. In terms of lexical resource, the essay uses
++appropriate vocabulary.
++
++Scoring: 8.0
++Overall, this essay demonstrates strong task achievement... an 8 out of 9 band score."""
++
++REAL_ZERO = """Overall Band Score: 0
++Task Achievement: 0
++Coherence and Cohesion: 0
++Lexical Resource: 0
++Grammatical Range and Accuracy: 0
++### Detailed Feedback:
++The response is memorised and does not address the question."""
++
++ALL = {"Task Achievement", "Coherence & Cohesion", "Lexical Resource", "Grammatical Range & Accuracy"}
++
++
++class ParseScores(unittest.TestCase):
++    def test_standard_format(self):
++        overall, criteria = _parse_scores(STANDARD)
++        self.assertEqual(overall, 8.0)
++        self.assertEqual(criteria, {"Task Achievement": 8.0, "Coherence & Cohesion": 8.5,
++                                    "Lexical Resource": 7.5, "Grammatical Range & Accuracy": 8.0})
++
++    def test_bold_labels_with_abbreviations(self):
++        overall, criteria = _parse_scores(BOLD_WITH_ABBREVIATIONS)
++        self.assertEqual(overall, 3.5)
++        self.assertEqual(criteria, {"Task Achievement": 3.5, "Coherence & Cohesion": 3.0,
++                                    "Lexical Resource": 3.0, "Grammatical Range & Accuracy": 3.0})
++
++    def test_scoring_line_is_the_overall_band(self):
++        overall, criteria = _parse_scores(SCORING_LINE_ONLY)
++        self.assertEqual(overall, 8.0)
++        self.assertEqual(criteria, {})
++
++    def test_a_real_band_zero_is_kept(self):
++        overall, criteria = _parse_scores(REAL_ZERO)
++        self.assertEqual(overall, 0.0)
++        self.assertEqual(set(criteria), ALL)
++
++    def test_no_band_is_none_not_zero(self):
++        self.assertEqual(_parse_scores("A thoughtful essay with clear paragraphs."), (None, {}))
++
++    def test_overall_from_criteria_rounds_to_half_bands(self):
++        def overall(ta, cc, lr, gra):
++            return _parse_scores(
++                f"Task Achievement: {ta}\nCoherence and Cohesion: {cc}\n"
++                f"Lexical Resource: {lr}\nGrammatical Range and Accuracy: {gra}"
++            )[0]
++        self.assertEqual(overall(6, 6, 6, 6.5), 6.0)   # 6.125
++        self.assertEqual(overall(6, 6.5, 6, 6.5), 6.5)  # 6.25 rounds up
++        self.assertEqual(overall(7, 7, 7, 6.5), 7.0)   # 6.875
++        self.assertEqual(overall(6, 7, 7, 7), 7.0)     # 6.75 rounds up
++
++    def test_a_criterion_score_is_not_the_overall(self):
++        overall, _ = _parse_scores("Task Achievement Score: 7\nThe essay is clear.")
++        self.assertIsNone(overall)
++
++    def test_out_of_range_numbers_are_not_bands(self):
++        self.assertIsNone(_parse_scores("Score: 85")[0])
++
++    def test_leaked_special_tokens_end_the_feedback(self):
++        self.assertEqual(_clean_feedback("Good.<|end_of_document|>\nUnrelated text"), "Good.")
++
++
++class FakeResponse:
++    def __init__(self, text):
++        self._text = text
++
++    def raise_for_status(self):
++        pass
++
++    def json(self):
++        return {"choices": [{"message": {"content": self._text}}]}
++
++
++class Evaluate(unittest.TestCase):
++    def run_with(self, answers, token=""):
++        calls = []
++
++        class Client:
++            async def post(self, url, headers, json):
++                calls.append((headers, json))
++                return FakeResponse(answers[len(calls) - 1])
++
++        request = WritingRequest(
++            attempt_id="a", response_id="r", exam_type="IELTS", task_type="Task 2",
++            question="Discuss both views and give your opinion.", content="word " * 300,
++        )
++        with mock.patch.object(evaluation_llm, "_get_http_client", return_value=Client()), \
++                mock.patch.object(evaluation_llm.settings, "HF_TOKEN", token), \
++                mock.patch.object(evaluation_llm.settings, "LLM_FORMAT_RETRIES", 2), \
++                mock.patch.object(evaluation_llm, "check_word_count_guardrail", return_value=None):
++            result = asyncio.run(evaluation_llm.evaluate_writing_with_local_llm(request))
++        return result, calls
++
++    def test_first_complete_answer_is_used(self):
++        result, calls = self.run_with([STANDARD])
++        self.assertEqual((result.overall_score, len(calls)), (8.0, 1))
++        self.assertNotIn("Authorization", calls[0][0])
++
++    def test_retries_with_a_format_reminder_when_no_band(self):
++        result, calls = self.run_with(["Nice essay, no numbers.", STANDARD])
++        self.assertEqual((result.overall_score, len(calls)), (8.0, 2))
++        self.assertIn("Overall Band Score: <band>", calls[1][1]["messages"][1]["content"])
++        self.assertGreater(calls[1][1]["temperature"], calls[0][1]["temperature"])
++
++    def test_keeps_the_best_answer(self):
++        result, calls = self.run_with([SCORING_LINE_ONLY, "No numbers.", "Still none."])
++        self.assertEqual((result.overall_score, result.sub_scores, len(calls)), (8.0, {}, 3))
++
++    def test_no_band_after_retries_is_an_error_not_band_zero(self):
++        with self.assertRaises(LlmParseError):
++            self.run_with(["No numbers."] * 3)
++
++    def test_sends_the_token_only_when_set(self):
++        _, calls = self.run_with([STANDARD], token="secret")
++        self.assertEqual(calls[0][0]["Authorization"], "Bearer secret")
++
++
++if __name__ == "__main__":
++    unittest.main()

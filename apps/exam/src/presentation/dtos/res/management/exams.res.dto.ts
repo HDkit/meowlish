@@ -12,6 +12,9 @@ class ExamDto implements exam.FoundExamsForManagement_ExamManagementMinimalInfo 
 	id!: string;
 
 	@Expose()
+	slug?: string;
+
+	@Expose()
 	status!: string;
 
 	@Expose()

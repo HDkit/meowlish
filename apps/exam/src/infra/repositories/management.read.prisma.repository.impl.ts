@@ -4,7 +4,10 @@ import {
 } from '../../domain/read-models/management/exam-info.read-model';
 import { QuestionManagementInfo } from '../../domain/read-models/management/question-info.read-model';
 import { SectionManagementInfo } from '../../domain/read-models/management/section-info.read-model';
-import { IManagementReadRepository } from '../../domain/repositories/management.read.repository';
+import {
+	ExamTarget,
+	IManagementReadRepository,
+} from '../../domain/repositories/management.read.repository';
 import { ExamStatus } from '../../enums/exam-status.enum';
 import { SectionType } from '../../enums/section-type.enum';
 import { TransactionHost } from '@nestjs-cls/transactional';
@@ -45,7 +48,7 @@ export class ManagementPrismaRepositoryImpl implements IManagementReadRepository
 					createdAt: { gt: filter.createdTimeRange.from, lt: filter.createdTimeRange.to },
 				}),
 				...(filter?.updatedTimeRange && {
-					createdAt: { gt: filter.updatedTimeRange.from, lt: filter.updatedTimeRange.to },
+					updatedAt: { gt: filter.updatedTimeRange.from, lt: filter.updatedTimeRange.to },
 				}),
 			},
 			select: {
@@ -55,12 +58,15 @@ export class ManagementPrismaRepositoryImpl implements IManagementReadRepository
 				updatedAt: true,
 				title: true,
 				status: true,
+				slug: true,
 			},
 			orderBy: [
 				...(options?.sortBy ?
 					[{ [options.sortBy.key]: options.sortBy.direction.toLowerCase() }]
 				:	[]),
-				{ id: dir === -1 ? 'desc' : 'asc' },
+				// Same order both ways: Prisma reverses it itself for a negative `take` and returns
+				// the rows just before the cursor in this order.
+				{ id: 'asc' },
 			],
 			...(options?.lastId && {
 				cursor: { id: options.lastId },
@@ -68,7 +74,7 @@ export class ManagementPrismaRepositoryImpl implements IManagementReadRepository
 			}),
 			take: dir * limit,
 		});
-		return foundExams;
+		return foundExams.map(e => ({ ...e, slug: e.slug ?? undefined }));
 	}
 
 	async getExamDetail(examId: string): Promise<ExamManagementDetailedInfo | null> {
@@ -81,6 +87,7 @@ export class ManagementPrismaRepositoryImpl implements IManagementReadRepository
 				updatedAt: true,
 				title: true,
 				status: true,
+				slug: true,
 				description: true,
 				duration: true,
 				sections: {
@@ -96,10 +103,34 @@ export class ManagementPrismaRepositoryImpl implements IManagementReadRepository
 
 		return {
 			...foundExam,
+			slug: foundExam.slug ?? undefined,
 			description: foundExam.description ?? undefined,
 			sectionIds: foundExam.sections.map(s => s.id),
 			tags: foundExam.examTags.map(t => t.tag.name),
 		};
+	}
+
+	async getExamCreator(target: ExamTarget): Promise<string | null> {
+		const select = { createdBy: true } as const;
+		if ('examId' in target) {
+			const found = await this.txHost.tx.exam.findUnique({
+				where: { id: target.examId },
+				select: select,
+			});
+			return found?.createdBy ?? null;
+		}
+		if ('sectionId' in target) {
+			const found = await this.txHost.tx.section.findUnique({
+				where: { id: target.sectionId },
+				select: { exam: { select: select } },
+			});
+			return found?.exam.createdBy ?? null;
+		}
+		const found = await this.txHost.tx.question.findUnique({
+			where: { id: target.questionId },
+			select: { section: { select: { exam: { select: select } } } },
+		});
+		return found?.section.exam.createdBy ?? null;
 	}
 
 	async getSectionDetail(sectionId: string): Promise<SectionManagementInfo | null> {

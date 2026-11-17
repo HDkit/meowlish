@@ -1,8 +1,9 @@
+import { RequesterReqDto } from './requester.req.dto';
 import { resource } from '@server/generated';
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 
-export class AddCardToListReqDto implements resource.AddCardToListRequest {
+export class AddCardToListReqDto extends RequesterReqDto implements resource.AddCardToListRequest {
 	@IsString()
 	listId!: string;
 

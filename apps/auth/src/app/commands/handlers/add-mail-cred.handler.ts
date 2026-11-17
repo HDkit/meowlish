@@ -25,7 +25,7 @@ export class AddMailCredCommandHandler implements ICommandHandler<AddMailCredCom
 			new Credential({
 				identifier: payload.mail,
 				loginType: LoginType.Mail,
-				secretHash: payload.password,
+				secretHash: await Credential.hashSecret(payload.password),
 			}),
 		);
 		await this.identityRepository.save(identity);

@@ -8,8 +8,8 @@ import {
 	IsEnum,
 	IsInt,
 	IsOptional,
-	IsPositive,
 	IsString,
+	Min,
 	ValidateNested,
 } from 'class-validator';
 
@@ -77,7 +77,7 @@ export class UpdateQuestionDto implements exam.UpdateQuestionDto {
 
 	@IsInt()
 	@IsOptional()
-	@IsPositive()
+	@Min(0)
 	points?: number;
 
 	@IsEnum(QuestionType)
@@ -107,4 +107,10 @@ export class UpdateQuestionDto implements exam.UpdateQuestionDto {
 	@IsString({ each: true })
 	@ArrayUnique()
 	removeFiles!: string[];
+
+	@IsString()
+	requesterId!: string;
+
+	@IsBoolean()
+	privileged!: boolean;
 }

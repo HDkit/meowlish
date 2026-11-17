@@ -7,6 +7,7 @@ model UserBadge {
 
   updatedAt DateTime @updatedAt
 
+  @@unique([uid, badgeName])
   @@index([updatedAt, id])
   @@map("user_badges")
 }

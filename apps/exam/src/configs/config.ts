@@ -3,7 +3,7 @@ import { z } from 'zod/v4';
 
 const dbVarsSchema = z.object({
 	host: z.string(),
-	port: z.coerce.number().default(5432),
+	port: z.preprocess(v => (v === '' ? undefined : v), z.coerce.number().default(5432)),
 	username: z.string(),
 	password: z.string(),
 	dbName: z.string(),
@@ -23,13 +23,25 @@ const mqSchema = z.object({
 
 const servicesSchema = z.object({
 	file: z.object({
+		/** Full `host:port`; overrides host/port when set. */
+		url: z.string().optional(),
 		port: z.coerce.number(),
 		host: z.string(),
 	}),
 });
 
+/** Listeners: gRPC on HOST:PORT, health HTTP on HOST:HEALTH_PORT. */
+const serverSchema = z.object({
+	host: z.string().default('127.0.0.1'),
+	port: z.preprocess(v => (v === '' ? undefined : v), z.coerce.number().int().default(50050)),
+	healthPort: z.preprocess(v => (v === '' ? undefined : v), z.coerce.number().int().default(9102)),
+});
+
 export const envFileSchema = z.object({
 	env: z.union([z.literal('development'), z.literal('production')]),
+	server: serverSchema,
+	/** Signs pagination cursors (see CursorPaginationFactory). */
+	cursorSecret: z.string().min(32).optional(),
 	database: dbVarsSchema,
 	redis: redisVarsSchema,
 	messageQueue: mqSchema,
@@ -41,6 +53,12 @@ export type IEnvVars = z.infer<typeof envFileSchema>;
 // map your env vars to ConfigService's properties
 const loadEnv = (): DeepStringify<IEnvVars> => ({
 	env: process.env.NODE_ENV,
+	server: {
+		host: process.env.HOST,
+		port: process.env.PORT,
+		healthPort: process.env.HEALTH_PORT,
+	},
+	cursorSecret: process.env.CURSOR_SECRET || undefined,
 	database: {
 		host: process.env.POSTGRES_HOST,
 		port: process.env.POSTGRES_PORT,
@@ -60,6 +78,7 @@ const loadEnv = (): DeepStringify<IEnvVars> => ({
 	},
 	microservicesConnection: {
 		file: {
+			url: process.env.FILE_SERVICE_URL,
 			port: process.env.FILE_SERVICE_PORT,
 			host: process.env.FILE_SERVICE_HOST,
 		},

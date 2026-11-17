@@ -9,6 +9,7 @@ import {
 	IsOptional,
 	IsPositive,
 	IsString,
+	Max,
 	ValidateNested,
 } from 'class-validator';
 
@@ -21,6 +22,11 @@ class FilterOptionsDto implements exam.FindExamsDto_FilterOption {
 	@IsOptional()
 	@IsString({ each: true })
 	tags: string[] = [];
+
+	@IsArray()
+	@IsOptional()
+	@IsString({ each: true })
+	requiredTags: string[] = [];
 }
 
 class SortOptionsDto implements exam.FindExamsDto_SortOption {
@@ -30,6 +36,8 @@ class SortOptionsDto implements exam.FindExamsDto_SortOption {
 	@IsEnum(SortDirection)
 	direction!: SortDirection;
 }
+
+const MAX_PAGE_LIMIT = 100;
 
 export class FindExamsDto implements exam.FindExamsDto {
 	@Type(() => FilterOptionsDto)
@@ -49,5 +57,11 @@ export class FindExamsDto implements exam.FindExamsDto {
 	@IsInt()
 	@IsOptional()
 	@IsPositive()
+	@Max(MAX_PAGE_LIMIT)
 	limit?: number;
+
+	@IsInt()
+	@IsOptional()
+	@IsPositive()
+	page?: number;
 }

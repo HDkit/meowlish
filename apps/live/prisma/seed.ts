@@ -78,7 +78,127 @@ const ROOMS = [
 	},
 ];
 
+/** More topic rooms so the room list has a second page (one short conversation each). */
+const TOPIC_ROOMS: [string, string[]][] = [
+	[
+		'ielts-writing-task-2',
+		[
+			'Ai chữa giúp mình mở bài Task 2 với?',
+			'Gửi lên đây mình xem nhé.',
+			'Nhớ nêu rõ quan điểm ngay đoạn mở bài.',
+		],
+	],
+	[
+		'ielts-speaking-partner',
+		['Tìm bạn luyện Speaking buổi tối.', 'Mình nè, 8h tối được không?', 'Ok, luyện Part 2 nhé.'],
+	],
+	[
+		'toeic-part-7-reading',
+		[
+			'Part 7 mình toàn hết giờ.',
+			'Đọc câu hỏi trước rồi mới đọc bài.',
+			'Thử áp dụng xem sao, cảm ơn!',
+		],
+	],
+	[
+		'toeic-listening-tips',
+		[
+			'Part 3 nghe nhanh quá.',
+			'Đọc trước câu hỏi trong lúc nghe hướng dẫn.',
+			'Hay đấy, mai mình thử.',
+		],
+	],
+	[
+		'ngu-phap-hang-ngay',
+		['Hôm nay ôn thì hiện tại hoàn thành.', 'Have/has + V3, đúng không ạ?', 'Chuẩn rồi!'],
+	],
+	[
+		'tu-vung-moi-ngay',
+		[
+			'Từ của ngày: resilient — kiên cường.',
+			'Đặt câu: She is resilient after failures.',
+			'Hay quá!',
+		],
+	],
+	[
+		'phat-am-chuan',
+		['Mình hay đọc sai âm /θ/.', 'Đặt lưỡi giữa hai hàm răng nhé.', 'Think, three, thank…'],
+	],
+	[
+		'luyen-de-cuoi-tuan',
+		['Cuối tuần này làm full test TOEIC không?', 'Có, 9h sáng Chủ nhật.', 'Hẹn nhé!'],
+	],
+	[
+		'goc-hoi-dap',
+		[
+			'Phân biệt affect và effect thế nào?',
+			'Affect là động từ, effect thường là danh từ.',
+			'Rõ rồi, cảm ơn bạn.',
+		],
+	],
+	[
+		'english-for-work',
+		[
+			'Email xin nghỉ phép viết sao cho lịch sự?',
+			'"I would like to request a day off on…"',
+			'Cảm ơn nha.',
+		],
+	],
+	[
+		'doc-sach-tieng-anh',
+		['Mọi người đang đọc sách gì?', 'Mình đọc "Atomic Habits" bản tiếng Anh.', 'Nghe hay đó!'],
+	],
+	[
+		'phim-va-series',
+		[
+			'Xem phim có phụ đề Anh có giúp không?',
+			'Có, nhất là khi nghe lại từng đoạn.',
+			'Mình đang xem Friends.',
+		],
+	],
+	[
+		'nhom-hoc-sinh-vien',
+		['Có bạn nào ôn thi đầu ra B1 không?', 'Mình nè!', 'Lập nhóm ôn chung đi.'],
+	],
+	[
+		'du-hoc-va-hoc-bong',
+		['IELTS bao nhiêu thì xin học bổng được?', 'Thường từ 6.5 trở lên.', 'Phải cố gắng thôi.'],
+	],
+	[
+		'tieng-anh-giao-tiep',
+		['Nói "tôi hiểu rồi" tự nhiên hơn thế nào?', '"Got it" hoặc "Makes sense".', 'Cảm ơn bạn!'],
+	],
+	[
+		'flashcard-chia-se',
+		[
+			'Mình vừa công khai bộ từ vựng Marketing.',
+			'Lưu về rồi, cảm ơn nha!',
+			'Có góp ý gì cứ đề xuất thay đổi nhé.',
+		],
+	],
+	[
+		'dong-luc-hoc-tap',
+		['Chuỗi 10 ngày rồi mọi người ơi!', 'Giỏi quá, giữ vững nhé.', 'Mình mới được 3 ngày thôi.'],
+	],
+	[
+		'ielts-reading-hard',
+		[
+			'True/False/Not Given khó quá.',
+			'Not Given là khi bài không nhắc tới.',
+			'Mình hay nhầm với False.',
+		],
+	],
+	[
+		'toeic-900',
+		['Mục tiêu 900 TOEIC, cần lộ trình.', 'Luyện Part 5, 6 thật chắc trước.', 'Ok, cảm ơn anh.'],
+	],
+	['tro-chuyen-tu-do', ['Hello everyone!', 'Hi! How are you today?', "I'm good, thanks."]],
+];
+
 async function main() {
+	for (const [name, messages] of TOPIC_ROOMS) {
+		ROOMS.push({ name: name, scheduledLiveUrl: null, scheduledTime: null, logs: messages });
+	}
 	for (const room of ROOMS) {
 		const existing = await prisma.room.findUnique({ where: { name: room.name } });
 		if (existing) {

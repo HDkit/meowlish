@@ -1,0 +1,554 @@
+{
+  'apiVersion': 1,
+  'groups':
+    [
+      {
+        'orgId': 1,
+        'name': 'platform',
+        'folder': 'Meowlish',
+        'interval': '1m',
+        'rules':
+          [
+            {
+              'uid': 'meowlish-service-not-ready',
+              'title': 'ServiceNotReady',
+              'condition': 'C',
+              'for': '2m',
+              'noDataState': 'OK',
+              'execErrState': 'Error',
+              'data':
+                [
+                  {
+                    'refId': 'A',
+                    'relativeTimeRange': { 'from': 600, 'to': 0 },
+                    'datasourceUid': 'prometheus',
+                    'model':
+                      {
+                        'refId': 'A',
+                        'expr': 'max by (service) (service_ready)',
+                        'instant': true,
+                        'intervalMs': 1000,
+                        'maxDataPoints': 43200,
+                      },
+                  },
+                  {
+                    'refId': 'B',
+                    'datasourceUid': '__expr__',
+                    'model':
+                      {
+                        'refId': 'B',
+                        'type': 'reduce',
+                        'expression': 'A',
+                        'reducer': 'last',
+                        'settings': { 'mode': 'dropNN' },
+                      },
+                  },
+                  {
+                    'refId': 'C',
+                    'datasourceUid': '__expr__',
+                    'model':
+                      {
+                        'refId': 'C',
+                        'type': 'threshold',
+                        'expression': 'B',
+                        'conditions': [{ 'evaluator': { 'type': 'lt', 'params': [1] } }],
+                      },
+                  },
+                ],
+              'annotations': { 'summary': '{{ $labels.service }} reports not ready for 2m' },
+              'labels': { 'severity': 'critical' },
+            },
+            {
+              'uid': 'meowlish-missing-auth',
+              'title': 'ServiceMissing',
+              'condition': 'C',
+              'for': '1m',
+              'noDataState': 'OK',
+              'execErrState': 'Error',
+              'data':
+                [
+                  {
+                    'refId': 'A',
+                    'relativeTimeRange': { 'from': 600, 'to': 0 },
+                    'datasourceUid': 'prometheus',
+                    'model':
+                      {
+                        'refId': 'A',
+                        'expr': 'absent_over_time(service_ready{service="auth"}[2m])',
+                        'instant': true,
+                        'intervalMs': 1000,
+                        'maxDataPoints': 43200,
+                      },
+                  },
+                  {
+                    'refId': 'B',
+                    'datasourceUid': '__expr__',
+                    'model':
+                      {
+                        'refId': 'B',
+                        'type': 'reduce',
+                        'expression': 'A',
+                        'reducer': 'last',
+                        'settings': { 'mode': 'dropNN' },
+                      },
+                  },
+                  {
+                    'refId': 'C',
+                    'datasourceUid': '__expr__',
+                    'model':
+                      {
+                        'refId': 'C',
+                        'type': 'threshold',
+                        'expression': 'B',
+                        'conditions': [{ 'evaluator': { 'type': 'gt', 'params': [0] } }],
+                      },
+                  },
+                ],
+              'annotations': { 'summary': 'auth has stopped reporting service_ready' },
+              'labels': { 'severity': 'critical', 'service': 'auth' },
+            },
+            {
+              'uid': 'meowlish-missing-authorization',
+              'title': 'ServiceMissing',
+              'condition': 'C',
+              'for': '1m',
+              'noDataState': 'OK',
+              'execErrState': 'Error',
+              'data':
+                [
+                  {
+                    'refId': 'A',
+                    'relativeTimeRange': { 'from': 600, 'to': 0 },
+                    'datasourceUid': 'prometheus',
+                    'model':
+                      {
+                        'refId': 'A',
+                        'expr': 'absent_over_time(service_ready{service="authorization"}[2m])',
+                        'instant': true,
+                        'intervalMs': 1000,
+                        'maxDataPoints': 43200,
+                      },
+                  },
+                  {
+                    'refId': 'B',
+                    'datasourceUid': '__expr__',
+                    'model':
+                      {
+                        'refId': 'B',
+                        'type': 'reduce',
+                        'expression': 'A',
+                        'reducer': 'last',
+                        'settings': { 'mode': 'dropNN' },
+                      },
+                  },
+                  {
+                    'refId': 'C',
+                    'datasourceUid': '__expr__',
+                    'model':
+                      {
+                        'refId': 'C',
+                        'type': 'threshold',
+                        'expression': 'B',
+                        'conditions': [{ 'evaluator': { 'type': 'gt', 'params': [0] } }],
+                      },
+                  },
+                ],
+              'annotations': { 'summary': 'authorization has stopped reporting service_ready' },
+              'labels': { 'severity': 'critical', 'service': 'authorization' },
+            },
+            {
+              'uid': 'meowlish-missing-exam',
+              'title': 'ServiceMissing',
+              'condition': 'C',
+              'for': '1m',
+              'noDataState': 'OK',
+              'execErrState': 'Error',
+              'data':
+                [
+                  {
+                    'refId': 'A',
+                    'relativeTimeRange': { 'from': 600, 'to': 0 },
+                    'datasourceUid': 'prometheus',
+                    'model':
+                      {
+                        'refId': 'A',
+                        'expr': 'absent_over_time(service_ready{service="exam"}[2m])',
+                        'instant': true,
+                        'intervalMs': 1000,
+                        'maxDataPoints': 43200,
+                      },
+                  },
+                  {
+                    'refId': 'B',
+                    'datasourceUid': '__expr__',
+                    'model':
+                      {
+                        'refId': 'B',
+                        'type': 'reduce',
+                        'expression': 'A',
+                        'reducer': 'last',
+                        'settings': { 'mode': 'dropNN' },
+                      },
+                  },
+                  {
+                    'refId': 'C',
+                    'datasourceUid': '__expr__',
+                    'model':
+                      {
+                        'refId': 'C',
+                        'type': 'threshold',
+                        'expression': 'B',
+                        'conditions': [{ 'evaluator': { 'type': 'gt', 'params': [0] } }],
+                      },
+                  },
+                ],
+              'annotations': { 'summary': 'exam has stopped reporting service_ready' },
+              'labels': { 'severity': 'critical', 'service': 'exam' },
+            },
+            {
+              'uid': 'meowlish-missing-achievement',
+              'title': 'ServiceMissing',
+              'condition': 'C',
+              'for': '1m',
+              'noDataState': 'OK',
+              'execErrState': 'Error',
+              'data':
+                [
+                  {
+                    'refId': 'A',
+                    'relativeTimeRange': { 'from': 600, 'to': 0 },
+                    'datasourceUid': 'prometheus',
+                    'model':
+                      {
+                        'refId': 'A',
+                        'expr': 'absent_over_time(service_ready{service="achievement"}[2m])',
+                        'instant': true,
+                        'intervalMs': 1000,
+                        'maxDataPoints': 43200,
+                      },
+                  },
+                  {
+                    'refId': 'B',
+                    'datasourceUid': '__expr__',
+                    'model':
+                      {
+                        'refId': 'B',
+                        'type': 'reduce',
+                        'expression': 'A',
+                        'reducer': 'last',
+                        'settings': { 'mode': 'dropNN' },
+                      },
+                  },
+                  {
+                    'refId': 'C',
+                    'datasourceUid': '__expr__',
+                    'model':
+                      {
+                        'refId': 'C',
+                        'type': 'threshold',
+                        'expression': 'B',
+                        'conditions': [{ 'evaluator': { 'type': 'gt', 'params': [0] } }],
+                      },
+                  },
+                ],
+              'annotations': { 'summary': 'achievement has stopped reporting service_ready' },
+              'labels': { 'severity': 'critical', 'service': 'achievement' },
+            },
+            {
+              'uid': 'meowlish-missing-resource',
+              'title': 'ServiceMissing',
+              'condition': 'C',
+              'for': '1m',
+              'noDataState': 'OK',
+              'execErrState': 'Error',
+              'data':
+                [
+                  {
+                    'refId': 'A',
+                    'relativeTimeRange': { 'from': 600, 'to': 0 },
+                    'datasourceUid': 'prometheus',
+                    'model':
+                      {
+                        'refId': 'A',
+                        'expr': 'absent_over_time(service_ready{service="resource"}[2m])',
+                        'instant': true,
+                        'intervalMs': 1000,
+                        'maxDataPoints': 43200,
+                      },
+                  },
+                  {
+                    'refId': 'B',
+                    'datasourceUid': '__expr__',
+                    'model':
+                      {
+                        'refId': 'B',
+                        'type': 'reduce',
+                        'expression': 'A',
+                        'reducer': 'last',
+                        'settings': { 'mode': 'dropNN' },
+                      },
+                  },
+                  {
+                    'refId': 'C',
+                    'datasourceUid': '__expr__',
+                    'model':
+                      {
+                        'refId': 'C',
+                        'type': 'threshold',
+                        'expression': 'B',
+                        'conditions': [{ 'evaluator': { 'type': 'gt', 'params': [0] } }],
+                      },
+                  },
+                ],
+              'annotations': { 'summary': 'resource has stopped reporting service_ready' },
+              'labels': { 'severity': 'critical', 'service': 'resource' },
+            },
+            {
+              'uid': 'meowlish-missing-file-service',
+              'title': 'ServiceMissing',
+              'condition': 'C',
+              'for': '1m',
+              'noDataState': 'OK',
+              'execErrState': 'Error',
+              'data':
+                [
+                  {
+                    'refId': 'A',
+                    'relativeTimeRange': { 'from': 600, 'to': 0 },
+                    'datasourceUid': 'prometheus',
+                    'model':
+                      {
+                        'refId': 'A',
+                        'expr': 'absent_over_time(service_ready{service="file-service"}[2m])',
+                        'instant': true,
+                        'intervalMs': 1000,
+                        'maxDataPoints': 43200,
+                      },
+                  },
+                  {
+                    'refId': 'B',
+                    'datasourceUid': '__expr__',
+                    'model':
+                      {
+                        'refId': 'B',
+                        'type': 'reduce',
+                        'expression': 'A',
+                        'reducer': 'last',
+                        'settings': { 'mode': 'dropNN' },
+                      },
+                  },
+                  {
+                    'refId': 'C',
+                    'datasourceUid': '__expr__',
+                    'model':
+                      {
+                        'refId': 'C',
+                        'type': 'threshold',
+                        'expression': 'B',
+                        'conditions': [{ 'evaluator': { 'type': 'gt', 'params': [0] } }],
+                      },
+                  },
+                ],
+              'annotations': { 'summary': 'file-service has stopped reporting service_ready' },
+              'labels': { 'severity': 'critical', 'service': 'file-service' },
+            },
+            {
+              'uid': 'meowlish-missing-gateway',
+              'title': 'ServiceMissing',
+              'condition': 'C',
+              'for': '1m',
+              'noDataState': 'OK',
+              'execErrState': 'Error',
+              'data':
+                [
+                  {
+                    'refId': 'A',
+                    'relativeTimeRange': { 'from': 600, 'to': 0 },
+                    'datasourceUid': 'prometheus',
+                    'model':
+                      {
+                        'refId': 'A',
+                        'expr': 'absent_over_time(service_ready{service="gateway"}[2m])',
+                        'instant': true,
+                        'intervalMs': 1000,
+                        'maxDataPoints': 43200,
+                      },
+                  },
+                  {
+                    'refId': 'B',
+                    'datasourceUid': '__expr__',
+                    'model':
+                      {
+                        'refId': 'B',
+                        'type': 'reduce',
+                        'expression': 'A',
+                        'reducer': 'last',
+                        'settings': { 'mode': 'dropNN' },
+                      },
+                  },
+                  {
+                    'refId': 'C',
+                    'datasourceUid': '__expr__',
+                    'model':
+                      {
+                        'refId': 'C',
+                        'type': 'threshold',
+                        'expression': 'B',
+                        'conditions': [{ 'evaluator': { 'type': 'gt', 'params': [0] } }],
+                      },
+                  },
+                ],
+              'annotations': { 'summary': 'gateway has stopped reporting service_ready' },
+              'labels': { 'severity': 'critical', 'service': 'gateway' },
+            },
+            {
+              'uid': 'meowlish-missing-live',
+              'title': 'ServiceMissing',
+              'condition': 'C',
+              'for': '1m',
+              'noDataState': 'OK',
+              'execErrState': 'Error',
+              'data':
+                [
+                  {
+                    'refId': 'A',
+                    'relativeTimeRange': { 'from': 600, 'to': 0 },
+                    'datasourceUid': 'prometheus',
+                    'model':
+                      {
+                        'refId': 'A',
+                        'expr': 'absent_over_time(service_ready{service="live"}[2m])',
+                        'instant': true,
+                        'intervalMs': 1000,
+                        'maxDataPoints': 43200,
+                      },
+                  },
+                  {
+                    'refId': 'B',
+                    'datasourceUid': '__expr__',
+                    'model':
+                      {
+                        'refId': 'B',
+                        'type': 'reduce',
+                        'expression': 'A',
+                        'reducer': 'last',
+                        'settings': { 'mode': 'dropNN' },
+                      },
+                  },
+                  {
+                    'refId': 'C',
+                    'datasourceUid': '__expr__',
+                    'model':
+                      {
+                        'refId': 'C',
+                        'type': 'threshold',
+                        'expression': 'B',
+                        'conditions': [{ 'evaluator': { 'type': 'gt', 'params': [0] } }],
+                      },
+                  },
+                ],
+              'annotations': { 'summary': 'live has stopped reporting service_ready' },
+              'labels': { 'severity': 'critical', 'service': 'live' },
+            },
+            {
+              'uid': 'meowlish-missing-notification',
+              'title': 'ServiceMissing',
+              'condition': 'C',
+              'for': '1m',
+              'noDataState': 'OK',
+              'execErrState': 'Error',
+              'data':
+                [
+                  {
+                    'refId': 'A',
+                    'relativeTimeRange': { 'from': 600, 'to': 0 },
+                    'datasourceUid': 'prometheus',
+                    'model':
+                      {
+                        'refId': 'A',
+                        'expr': 'absent_over_time(service_ready{service="notification"}[2m])',
+                        'instant': true,
+                        'intervalMs': 1000,
+                        'maxDataPoints': 43200,
+                      },
+                  },
+                  {
+                    'refId': 'B',
+                    'datasourceUid': '__expr__',
+                    'model':
+                      {
+                        'refId': 'B',
+                        'type': 'reduce',
+                        'expression': 'A',
+                        'reducer': 'last',
+                        'settings': { 'mode': 'dropNN' },
+                      },
+                  },
+                  {
+                    'refId': 'C',
+                    'datasourceUid': '__expr__',
+                    'model':
+                      {
+                        'refId': 'C',
+                        'type': 'threshold',
+                        'expression': 'B',
+                        'conditions': [{ 'evaluator': { 'type': 'gt', 'params': [0] } }],
+                      },
+                  },
+                ],
+              'annotations': { 'summary': 'notification has stopped reporting service_ready' },
+              'labels': { 'severity': 'critical', 'service': 'notification' },
+            },
+            {
+              'uid': 'meowlish-missing-mock-ai-scorer',
+              'title': 'ServiceMissing',
+              'condition': 'C',
+              'for': '1m',
+              'noDataState': 'OK',
+              'execErrState': 'Error',
+              'data':
+                [
+                  {
+                    'refId': 'A',
+                    'relativeTimeRange': { 'from': 600, 'to': 0 },
+                    'datasourceUid': 'prometheus',
+                    'model': {
+                        'refId': 'A',
+                        # Opt-in service: only alert when it ran in the last hour and then went quiet.
+                        'expr': '(count_over_time(service_ready{service="mock-ai-scorer"}[1h]) > 0) unless (count_over_time(service_ready{service="mock-ai-scorer"}[2m]) > 0)',
+                        'instant': true,
+                        'intervalMs': 1000,
+                        'maxDataPoints': 43200,
+                      },
+                  },
+                  {
+                    'refId': 'B',
+                    'datasourceUid': '__expr__',
+                    'model':
+                      {
+                        'refId': 'B',
+                        'type': 'reduce',
+                        'expression': 'A',
+                        'reducer': 'last',
+                        'settings': { 'mode': 'dropNN' },
+                      },
+                  },
+                  {
+                    'refId': 'C',
+                    'datasourceUid': '__expr__',
+                    'model':
+                      {
+                        'refId': 'C',
+                        'type': 'threshold',
+                        'expression': 'B',
+                        'conditions': [{ 'evaluator': { 'type': 'gt', 'params': [0] } }],
+                      },
+                  },
+                ],
+              'annotations': { 'summary': 'mock-ai-scorer has stopped reporting service_ready' },
+              'labels': { 'severity': 'warning', 'service': 'mock-ai-scorer' },
+            },
+          ],
+      },
+    ],
+}

@@ -4,7 +4,11 @@ export interface IRoomRepository {
 		options: { url?: string | null; time?: Date | null },
 	): Promise<void>;
 	canJoinRoom(roomId: string, uid: string): Promise<boolean>;
-	createRoom(name: string): Promise<string>;
+	/** Whether a `banneds` row exists for this user in this room. */
+	isBannedFrom(roomId: string, uid: string): Promise<boolean>;
+	createRoom(name: string, createdBy?: string): Promise<string>;
+	/** Owner of a live room: undefined when the room does not exist, null when it has no recorded owner. */
+	getRoomOwner(roomId: string): Promise<string | null | undefined>;
 	removeRoom(roomId: string): Promise<void>;
 	banUserFrom(roomId: string, uid: string, reason: string): Promise<void>;
 	unbanUserFrom(roomId: string, uid: string): Promise<void>;

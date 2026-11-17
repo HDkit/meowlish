@@ -24,4 +24,24 @@ export class UpdatePreferencesReqDto implements notification.UpdatePreferencesRe
 	@IsBoolean()
 	@IsOptional()
 	systemEnabled?: boolean;
+
+	@IsBoolean()
+	@IsOptional()
+	blogCommentEnabled?: boolean;
+
+	@IsBoolean()
+	@IsOptional()
+	commentReplyEnabled?: boolean;
+
+	@IsBoolean()
+	@IsOptional()
+	forumReplyEnabled?: boolean;
+
+	@IsBoolean()
+	@IsOptional()
+	forumQuoteEnabled?: boolean;
+
+	@IsBoolean()
+	@IsOptional()
+	flashcardEnabled?: boolean;
 }

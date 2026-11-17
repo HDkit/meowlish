@@ -1,5 +1,5 @@
 import { resource } from '@server/generated';
-import { IsArray, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class CreateFlashCardReqDto implements resource.CreateFlashCardRequest {
 	@IsString()
@@ -8,9 +8,10 @@ export class CreateFlashCardReqDto implements resource.CreateFlashCardRequest {
 	@IsString()
 	definition!: string;
 
+	/** An uploaded file (file-service id); '' on update removes the image. */
 	@IsOptional()
 	@IsString()
-	image?: string;
+	imageFileId?: string;
 
 	@IsOptional()
 	@IsString()
@@ -38,4 +39,8 @@ export class CreateFlashCardReqDto implements resource.CreateFlashCardRequest {
 	@IsOptional()
 	@IsString()
 	listId!: string;
+
+	@IsBoolean()
+	@IsOptional()
+	mayAttachAnyFile?: boolean;
 }

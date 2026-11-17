@@ -1,7 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsMimeType, IsNumber, IsString } from 'class-validator';
+import { file } from '@server/generated';
+import { IsBoolean, IsInt, IsMimeType, IsPositive, IsString } from 'class-validator';
 
-export class GetPresignedUrlDto {
+export class GetPresignedUrlDto implements Omit<file.GetPresignedUrlDto, 'uploadedBy'> {
 	@IsBoolean()
 	@ApiProperty()
 	isPublicFile!: boolean;
@@ -10,11 +11,19 @@ export class GetPresignedUrlDto {
 	@ApiProperty()
 	fileName!: string;
 
-	@IsNumber()
-	@ApiProperty({ type: Number })
+	@IsInt()
+	@IsPositive()
+	@ApiProperty({
+		type: Number,
+		minimum: 1,
+		description: 'Size in bytes. file-service rejects files over 10 MB with 400.',
+	})
 	fileSize!: number;
 
 	@IsMimeType()
-	@ApiProperty()
+	@ApiProperty({
+		description:
+			'file-service accepts image/jpeg, image/png, application/pdf, video/mp4 and audio/mpeg; anything else is 400.',
+	})
 	contentType!: string;
 }

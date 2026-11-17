@@ -9,6 +9,9 @@ export class UpdateMailPasswordDto implements auth.UpdateMailPasswordDto {
 	id!: string;
 
 	@IsString()
+	currentPassword!: string;
+
+	@IsString()
 	@IsStrongPassword()
 	password!: string;
 }

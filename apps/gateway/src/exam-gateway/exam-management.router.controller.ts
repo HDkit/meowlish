@@ -1,6 +1,6 @@
 import { HasPermissions } from '../auth/decorators/permissions.decorator';
-import { ResourceAccess } from '../auth/decorators/resource-access.decorator';
 import { HasRoles } from '../auth/decorators/roles.decorator';
+import { requesterOf } from '../auth/functions/requester';
 import { type AuthenticatedRequest } from '../types/authenticated-request';
 import { EXAM_CLIENT } from './constants/exam';
 import { CreateExamDto } from './dtos/req/management/create-exam.req.dto';
@@ -69,8 +69,16 @@ export class ExamManagementGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Create a nested section inside a section' })
 	@ApiResponseEntity(CreatedSectionDto)
 	@SerializeOptions({ type: CreatedSectionDto })
-	createSectionInSection(@Param('id') id: string, @Body() body: CreateSectionDto) {
-		const res = this.examManagementService.createSection({ ...body, sectionId: id });
+	createSectionInSection(
+		@Req() req: AuthenticatedRequest,
+		@Param('id') id: string,
+		@Body() body: CreateSectionDto,
+	) {
+		const res = this.examManagementService.createSection({
+			...body,
+			sectionId: id,
+			...requesterOf(req.user, [Role.Admin]),
+		});
 		return res;
 	}
 
@@ -78,56 +86,102 @@ export class ExamManagementGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Create a question inside a section' })
 	@ApiResponseEntity(CreatedQuestionDto)
 	@SerializeOptions({ type: CreatedQuestionDto })
-	createQuestion(@Param('id') id: string, @Body() body: CreateQuestionDto) {
-		const res = this.examManagementService.createQuestion({ ...body, sectionId: id });
+	createQuestion(
+		@Req() req: AuthenticatedRequest,
+		@Param('id') id: string,
+		@Body() body: CreateQuestionDto,
+	) {
+		const res = this.examManagementService.createQuestion({
+			...body,
+			sectionId: id,
+			...requesterOf(req.user, [Role.Admin]),
+		});
 		return res;
 	}
 
 	@Patch('sections/:id')
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Update a section' })
-	updateSection(@Param('id') id: string, @Body() body: UpdateSectionDto) {
-		const res = this.examManagementService.updateSection({ ...body, id: id });
+	updateSection(
+		@Req() req: AuthenticatedRequest,
+		@Param('id') id: string,
+		@Body() body: UpdateSectionDto,
+	) {
+		const res = this.examManagementService.updateSection({
+			...body,
+			id: id,
+			...requesterOf(req.user, [Role.Admin]),
+		});
 		return res;
 	}
 
 	@Patch('questions/:id')
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Update a question' })
-	updateQuestion(@Param('id') id: string, @Body() body: UpdateQuestionDto) {
-		const res = this.examManagementService.updateQuestion({ ...body, id: id });
+	updateQuestion(
+		@Req() req: AuthenticatedRequest,
+		@Param('id') id: string,
+		@Body() body: UpdateQuestionDto,
+	) {
+		const res = this.examManagementService.updateQuestion({
+			...body,
+			id: id,
+			...requesterOf(req.user, [Role.Admin]),
+		});
 		return res;
 	}
 
 	@Delete('sections/:id')
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Delete a section' })
-	deleteSection(@Param('id') id: string) {
-		const res = this.examManagementService.deleteSection({ id: id });
+	deleteSection(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
+		const res = this.examManagementService.deleteSection({
+			id: id,
+			...requesterOf(req.user, [Role.Admin]),
+		});
 		return res;
 	}
 
 	@Delete('questions/:id')
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Delete a question' })
-	deleteQuestion(@Param('id') id: string) {
-		const res = this.examManagementService.deleteQuestion({ id: id });
+	deleteQuestion(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
+		const res = this.examManagementService.deleteQuestion({
+			id: id,
+			...requesterOf(req.user, [Role.Admin]),
+		});
 		return res;
 	}
 
 	@Patch('sections/:id/move')
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Move a section' })
-	moveSection(@Param('id') id: string, @Body() body: MoveSectionDto) {
-		const res = this.examManagementService.moveSection({ ...body, id: id });
+	moveSection(
+		@Req() req: AuthenticatedRequest,
+		@Param('id') id: string,
+		@Body() body: MoveSectionDto,
+	) {
+		const res = this.examManagementService.moveSection({
+			...body,
+			id: id,
+			...requesterOf(req.user, [Role.Admin]),
+		});
 		return res;
 	}
 
 	@Patch('questions/:id/move')
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Move a question' })
-	moveQuestion(@Param('id') id: string, @Body() body: MoveQuestionDto) {
-		const res = this.examManagementService.moveQuestion({ ...body, id: id });
+	moveQuestion(
+		@Req() req: AuthenticatedRequest,
+		@Param('id') id: string,
+		@Body() body: MoveQuestionDto,
+	) {
+		const res = this.examManagementService.moveQuestion({
+			...body,
+			id: id,
+			...requesterOf(req.user, [Role.Admin]),
+		});
 		return res;
 	}
 
@@ -178,26 +232,27 @@ export class ExamManagementGatewayController implements OnModuleInit {
 	@Patch(':id')
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Update an exam' })
-	@ResourceAccess({
-		resourceType: 'exam',
-		resourceIdParam: 'id',
-		rules: [{ roles: [Role.Admin] }, { roles: [Role.Mod], requireOwnership: true }],
-	})
-	updateExam(@Param('id') id: string, @Body() body: UpdateExamDto) {
-		const res = this.examManagementService.updateExam({ ...body, id: id });
+	updateExam(
+		@Req() req: AuthenticatedRequest,
+		@Param('id') id: string,
+		@Body() body: UpdateExamDto,
+	) {
+		const res = this.examManagementService.updateExam({
+			...body,
+			id: id,
+			...requesterOf(req.user, [Role.Admin]),
+		});
 		return res;
 	}
 
 	@Delete(':id')
 	@ApiEmptyResponseEntity()
 	@ApiOperation({ summary: 'Delete an exam' })
-	@ResourceAccess({
-		resourceType: 'exam',
-		resourceIdParam: 'id',
-		rules: [{ roles: [Role.Admin] }, { roles: [Role.Mod], requireOwnership: true }],
-	})
-	deleteExam(@Param('id') id: string) {
-		const res = this.examManagementService.deleteExam({ id: id });
+	deleteExam(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
+		const res = this.examManagementService.deleteExam({
+			id: id,
+			...requesterOf(req.user, [Role.Admin]),
+		});
 		return res;
 	}
 
@@ -214,8 +269,16 @@ export class ExamManagementGatewayController implements OnModuleInit {
 	@ApiOperation({ summary: 'Create a section inside an exam' })
 	@ApiResponseEntity(CreatedSectionDto)
 	@SerializeOptions({ type: CreatedSectionDto })
-	createSectionInExam(@Param('id') id: string, @Body() body: CreateSectionDto) {
-		const res = this.examManagementService.createSection({ ...body, examId: id });
+	createSectionInExam(
+		@Req() req: AuthenticatedRequest,
+		@Param('id') id: string,
+		@Body() body: CreateSectionDto,
+	) {
+		const res = this.examManagementService.createSection({
+			...body,
+			examId: id,
+			...requesterOf(req.user, [Role.Admin]),
+		});
 		return res;
 	}
 }

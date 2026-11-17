@@ -253,7 +253,7 @@ export class IeltsLExamSect34Seeder {
 							contentType: SectionType.Question,
 							directive: `<div><p><em>Label the diagram below.</em><br/>
 <em>Write <strong>NO MORE THAN TWO WORDS</strong> for each answer.</em></p>
-<img src="SYSTEM_444c3d348da9908c25bbfb578d51c993a52b9854.jpg" alt="Immune response diagram"/></div>`,
+<img src="SYSTEM_sim.jpg" alt="Immune response diagram"/></div>`,
 							questions: {
 								create: [
 									{
@@ -264,7 +264,7 @@ export class IeltsLExamSect34Seeder {
 											create: [{ key: 'F', isCorrect: true }],
 										},
 										questionFiles: {
-											create: [{ fileId: 'SYSTEM_444c3d348da9908c25bbfb578d51c993a52b9854.jpg' }],
+											create: [{ fileId: 'SYSTEM_sim.jpg' }],
 										},
 										questionTags: { create: this.tagNamesToIdInputs(['IELTS Listening P1-4']) },
 									},

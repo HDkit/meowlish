@@ -35,7 +35,10 @@ export class ReportDto {
 	targetId?: string;
 
 	@Expose()
-	@ApiPropertyOptional()
+	@ApiPropertyOptional({
+		description:
+			'Who moved the report to a final status (resolved, rejected, dismissed, closed). Absent while it is open.',
+	})
 	resolvedBy?: string;
 
 	@Expose()

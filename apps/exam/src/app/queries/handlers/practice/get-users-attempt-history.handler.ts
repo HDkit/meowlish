@@ -9,19 +9,18 @@ import {
 } from '../../practice/exam.get-users-attempt-history.query';
 import { Inject } from '@nestjs/common';
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
-import { CursorPaginationHelper } from '@server/utils';
+import { CursorPaginationFactory, CursorPaginationHelper } from '@server/utils';
 
 @QueryHandler(GetUsersAttemptHistoryQuery)
 export class GetUsersAttemptHistoryHandler implements IQueryHandler<GetUsersAttemptHistoryQuery> {
 	private readonly cursorPaginationHelper: CursorPaginationHelper;
 
 	constructor(
+		cursorPaginationFactory: CursorPaginationFactory,
 		@Inject(IPracticeReadRepositoryToken)
 		private readonly practiceReadRepository: IPracticeReadRepository,
 	) {
-		this.cursorPaginationHelper = new CursorPaginationHelper(
-			`${process.env.HOST}${process.env.PORT}GetUsersAttemptHistory`,
-		);
+		this.cursorPaginationHelper = cursorPaginationFactory.create('GetUsersAttemptHistory');
 	}
 
 	async execute(query: GetUsersAttemptHistoryQuery): Promise<GetUsersAttemptHistoryQueryResult> {

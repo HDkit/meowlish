@@ -1,96 +1,100 @@
 import { Badge, BadgeType } from '../enums/badge.enum';
 
+/**
+ * Badge names and descriptions as users see them (the app is in Vietnamese; the frontend's badge
+ * catalogue, `src/lib/badges.ts`, uses the same texts). The badge notification quotes `displayName`.
+ */
 export const BADGE_INFORMATION: Record<
 	Badge,
 	{ displayName: string; description: string; type: BadgeType }
 > = {
 	[Badge.LoginSevenDaysStreak]: {
-		displayName: 'Regular',
-		description: 'Logged in 7 days in a row',
+		displayName: 'Đều đặn',
+		description: 'Học 7 ngày liên tiếp',
 		type: BadgeType.Login,
 	},
 	[Badge.LoginTwoWeeksStreak]: {
-		displayName: 'Busy Bee',
-		description: 'Logged in 14 days consecutively',
+		displayName: 'Chú ong chăm chỉ',
+		description: 'Học 14 ngày liên tiếp',
 		type: BadgeType.Login,
 	},
 	[Badge.LoginOneMonthStreak]: {
-		displayName: 'No pain, no gain',
-		description: 'Maintained a 30-day login streak',
+		displayName: 'Không ngại khó',
+		description: 'Học 30 ngày liên tiếp',
 		type: BadgeType.Login,
 	},
 	[Badge.LoginOneYearStreak]: {
 		displayName: 'V.I.P',
-		description: 'Logged in every day for a year',
+		description: 'Học mỗi ngày suốt một năm',
 		type: BadgeType.Login,
 	},
 
 	[Badge.LoginSevenDays]: {
-		displayName: 'Getting Into the Groove',
-		description: 'Logged in for 7 total days',
+		displayName: 'Bắt nhịp',
+		description: 'Học tổng cộng 7 ngày',
 		type: BadgeType.Login,
 	},
 	[Badge.LoginTwoWeeks]: {
-		displayName: 'Consistent Explorer',
-		description: 'Logged in for 14 total days',
+		displayName: 'Nhà khám phá',
+		description: 'Học tổng cộng 14 ngày',
 		type: BadgeType.Login,
 	},
 	[Badge.LoginOneMonth]: {
-		displayName: 'Dedicated Learner',
-		description: 'Logged in for 30 total days',
+		displayName: 'Học viên tận tụy',
+		description: 'Học tổng cộng 30 ngày',
 		type: BadgeType.Login,
 	},
 	[Badge.LoginOneYear]: {
-		displayName: 'Anniversary Goal',
-		description: 'Logged in for 365 total days',
+		displayName: 'Tròn một năm',
+		description: 'Học tổng cộng 365 ngày',
 		type: BadgeType.Login,
 	},
 
 	[Badge.FirstCompleteAttempt]: {
-		displayName: 'First Step Taken',
-		description: 'Completed your first attempt',
+		displayName: 'Bước đầu tiên',
+		description: 'Hoàn thành bài thi đầu tiên',
 		type: BadgeType.AttemptCount,
 	},
 	[Badge.TenthCompleteAttempt]: {
-		displayName: 'Warming Up',
-		description: 'Completed 10 attempts',
+		displayName: 'Khởi động',
+		description: 'Hoàn thành 10 bài thi',
 		type: BadgeType.AttemptCount,
 	},
 	[Badge.HundredthCompleteAttempt]: {
-		displayName: 'Centurion of Effort',
-		description: 'Completed 100 attempts',
+		displayName: 'Bách chiến',
+		description: 'Hoàn thành 100 bài thi',
 		type: BadgeType.AttemptCount,
 	},
 
 	[Badge.FirstGoodScore]: {
-		displayName: 'Nice One',
-		description: 'Achieved your first good score',
+		displayName: 'Khá lắm!',
+		description: 'Đạt điểm tốt lần đầu',
 		type: BadgeType.AttemptScore,
 	},
 	[Badge.TenthGoodScore]: {
-		displayName: 'Sharpening Skills',
-		description: 'Achieved 10 good scores',
+		displayName: 'Ngày càng giỏi',
+		description: 'Đạt điểm tốt 10 lần',
 		type: BadgeType.AttemptScore,
 	},
 	[Badge.HundredthGoodScore]: {
-		displayName: 'Excellence Habit',
-		description: 'Achieved 100 good scores',
+		displayName: 'Thói quen xuất sắc',
+		description: 'Đạt điểm tốt 100 lần',
 		type: BadgeType.AttemptScore,
 	},
 
 	[Badge.FirstPerfectScore]: {
-		displayName: 'Flawless Start',
-		description: 'Achieved your first perfect score',
+		displayName: 'Hoàn hảo',
+		description: 'Đạt điểm tuyệt đối lần đầu',
 		type: BadgeType.AttemptScore,
 	},
 	[Badge.TenthPerfectScore]: {
-		displayName: 'Precision Pro',
-		description: 'Achieved 10 perfect scores',
+		displayName: 'Chính xác tuyệt đối',
+		description: 'Đạt điểm tuyệt đối 10 lần',
 		type: BadgeType.AttemptScore,
 	},
 	[Badge.HundredthPerfectScore]: {
-		displayName: 'Perfectionist',
-		description: 'Achieved 100 perfect scores',
+		displayName: 'Người cầu toàn',
+		description: 'Đạt điểm tuyệt đối 100 lần',
 		type: BadgeType.AttemptScore,
 	},
 };

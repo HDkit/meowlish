@@ -4,7 +4,7 @@ import { DeleteBlogReqDto } from '../dtos/req/delete-blog.req.dto';
 import { GetBlogReqDto } from '../dtos/req/get-blog.req.dto';
 import { ListBlogsReqDto } from '../dtos/req/list-blogs.req.dto';
 import { UpdateBlogReqDto } from '../dtos/req/update-blog.req.dto';
-import { BlogDto, ListBlogsDto } from '../dtos/res/blog.res.dto';
+import { BlogDto, ListBlogTagsDto, ListBlogsDto } from '../dtos/res/blog.res.dto';
 import { Controller, SerializeOptions, UseFilters } from '@nestjs/common';
 import { Payload } from '@nestjs/microservices';
 import { resource } from '@server/generated';
@@ -38,5 +38,10 @@ export class BlogController implements resource.BlogServiceController {
 	@SerializeOptions({ type: ListBlogsDto, strategy: 'exposeAll' })
 	async listBlogs(@Payload() data: ListBlogsReqDto): Promise<ListBlogsDto> {
 		return this.blogService.listBlogs(data);
+	}
+
+	@SerializeOptions({ type: ListBlogTagsDto, strategy: 'exposeAll' })
+	async listBlogTags(): Promise<ListBlogTagsDto> {
+		return { tags: await this.blogService.listBlogTags() };
 	}
 }

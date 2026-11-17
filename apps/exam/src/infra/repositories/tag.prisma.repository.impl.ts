@@ -1,8 +1,20 @@
 import { ITagRepository } from '../../domain/repositories/tag.repository';
+import { translatePrismaErrors } from './prisma-errors';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import { Injectable, MethodNotAllowedException, NotFoundException } from '@nestjs/common';
+import {
+	BadRequestException,
+	ConflictException,
+	Injectable,
+	NotFoundException,
+} from '@nestjs/common';
 import { PrismaClient, Tag as PrismaTag } from '@prisma-client/exam';
+
+const tagNameTaken = (): Error => new ConflictException('A tag with this name already exists');
+
+/** Tag names are unique (P2002 on insert or rename). */
+const createUniquelyNamed = <T>(create: () => Promise<T>): Promise<T> =>
+	translatePrismaErrors(create, { P2002: tagNameTaken });
 
 @Injectable()
 export class TagPrismaRepositoryImpl implements ITagRepository {
@@ -32,9 +44,11 @@ export class TagPrismaRepositoryImpl implements ITagRepository {
 					where: { lft: { gt: parent.rgt } },
 					data: { lft: { increment: 2 } },
 				});
-				const newTag = await this.txHost.tx.tag.create({
-					data: { name: name, lft: parent.rgt, rgt: parent.rgt + 1 },
-				});
+				const newTag = await createUniquelyNamed(() =>
+					this.txHost.tx.tag.create({
+						data: { name: name, lft: parent.rgt, rgt: parent.rgt + 1 },
+					}),
+				);
 				return newTag.id;
 			} else {
 				const latestTagRoot = await this.txHost.tx.tag.findFirst({
@@ -43,9 +57,11 @@ export class TagPrismaRepositoryImpl implements ITagRepository {
 					},
 				});
 				const highestRgt = latestTagRoot?.rgt ?? 0;
-				const newTag = await this.txHost.tx.tag.create({
-					data: { name: name, lft: highestRgt + 1, rgt: highestRgt + 2 },
-				});
+				const newTag = await createUniquelyNamed(() =>
+					this.txHost.tx.tag.create({
+						data: { name: name, lft: highestRgt + 1, rgt: highestRgt + 2 },
+					}),
+				);
 				return newTag.id;
 			}
 		});
@@ -132,7 +148,7 @@ export class TagPrismaRepositoryImpl implements ITagRepository {
 				if (!parent) throw new NotFoundException('Destination tag not found');
 				// cannot move into its own subtree
 				if (parent.lft >= node.lft && parent.rgt <= node.rgt) {
-					throw new MethodNotAllowedException('Cannot move tag into its own subtree');
+					throw new BadRequestException('Cannot move tag into its own subtree');
 				}
 				newlpos = parent.rgt;
 			} else {
@@ -180,10 +196,14 @@ export class TagPrismaRepositoryImpl implements ITagRepository {
 	}
 
 	async updateTag(id: string, name: string): Promise<void> {
-		await this.txHost.tx.tag.update({
-			where: { id: id },
-			data: { name: name },
-		});
+		await translatePrismaErrors(
+			() =>
+				this.txHost.tx.tag.update({
+					where: { id: id },
+					data: { name: name },
+				}),
+			{ P2002: tagNameTaken, P2025: () => new NotFoundException('Tag not found') },
+		);
 	}
 
 	private async viewTrees(id?: string): Promise<void> {

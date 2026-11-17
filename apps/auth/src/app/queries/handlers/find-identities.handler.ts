@@ -12,7 +12,7 @@ import { Inject, OnModuleInit, ServiceUnavailableException } from '@nestjs/commo
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { ClientGrpc } from '@nestjs/microservices';
 import { file } from '@server/generated';
-import { CursorPaginationHelper } from '@server/utils';
+import { CursorPaginationFactory, CursorPaginationHelper } from '@server/utils';
 import { firstValueFrom } from 'rxjs';
 
 @QueryHandler(FindIdentitiesQuery)
@@ -23,13 +23,12 @@ export class FindIdentitiesQueryHandler
 	private fileService!: file.FileServiceClient;
 
 	constructor(
+		cursorPaginationFactory: CursorPaginationFactory,
 		@Inject(IIdentityReadRepositoryToken)
 		private readonly identityReadRepository: IIdentityReadRepository,
 		@Inject(FILE_CLIENT) private readonly fileClient: ClientGrpc,
 	) {
-		this.cursorPaginationHelper = new CursorPaginationHelper(
-			`${process.env.HOST}${process.env.PORT}FindIdentities`,
-		);
+		this.cursorPaginationHelper = cursorPaginationFactory.create('FindIdentities');
 	}
 
 	onModuleInit() {
@@ -47,6 +46,8 @@ export class FindIdentitiesQueryHandler
 			decodedCursor?.usernameOrCredentialOrId ?? payload.usernameOrCredentialOrId;
 		const inUseHasRoles = decodedCursor?.hasRoles ?? payload.hasRoles;
 		const inUseHasPerms = decodedCursor?.hasPerms ?? payload.hasPerms;
+		// A request may narrow a cursor to usernames, never widen it.
+		const usernameOnly = !!(payload.usernameOnly || decodedCursor?.usernameOnly);
 		const inUseLimit = payload.limit ?? decodedCursor?.limit ?? 10;
 		const direction = decodedCursor?.direction ?? 1;
 
@@ -54,6 +55,7 @@ export class FindIdentitiesQueryHandler
 			usernameOrCredentialIdentifierOrId: inUseIdentifier,
 			hasRoles: inUseHasRoles,
 			hasPerms: inUseHasPerms,
+			usernameOnly: usernameOnly,
 			lastId: decodedCursor?.lastId,
 			limit: inUseLimit,
 			direction: direction,
@@ -71,6 +73,7 @@ export class FindIdentitiesQueryHandler
 
 		const encodedNextCursor = this.cursorPaginationHelper.encodeCursor<FindIdentitiesCursor>({
 			usernameOrCredentialOrId: inUseIdentifier,
+			usernameOnly: usernameOnly,
 			hasRoles: inUseHasRoles,
 			hasPerms: inUseHasPerms,
 			lastId: identities.at(-1)?.id,
@@ -79,6 +82,7 @@ export class FindIdentitiesQueryHandler
 		});
 		const encodedPrevCursor = this.cursorPaginationHelper.encodeCursor<FindIdentitiesCursor>({
 			usernameOrCredentialOrId: inUseIdentifier,
+			usernameOnly: usernameOnly,
 			hasRoles: inUseHasRoles,
 			hasPerms: inUseHasPerms,
 			lastId: identities.at(0)?.id,

@@ -28,15 +28,33 @@ export class AttemptScoreBadgeManager
 		this.badges = new Set(constructorOptions.badges);
 	}
 
+	/** A scored attempt (`exam.attempt.scored`): counts it as good (>= 80 %) or perfect (100 %). */
 	updateProgress(score: number, totalPoints: number) {
-		const rank = totalPoints === 0 ? 0 : score / totalPoints;
-		if (rank >= 0.8 && rank < 1) {
-			this.good++;
+		this.count(tierOf(score, totalPoints), 1);
+	}
+
+	/**
+	 * An attempt whose score changed later (`exam.attempt.rescored`, AI writing feedback): move it
+	 * from the tier of its previous score to the tier of the new one. Expressed as a difference, so
+	 * the result is right whichever of `scored` and `rescored` is processed first (a counter can be
+	 * briefly negative in between). Badges are only ever added.
+	 */
+	rescore(previousScore: number, score: number, totalPoints: number) {
+		const before = tierOf(previousScore, totalPoints);
+		const after = tierOf(score, totalPoints);
+		if (before === after) return;
+		this.count(before, -1);
+		this.count(after, 1);
+	}
+
+	private count(tier: ScoreTier, delta: number) {
+		if (tier === 'good') {
+			this.good += delta;
 			if (this.good >= 1) this.addBadge(Badge.FirstGoodScore);
 			if (this.good >= 10) this.addBadge(Badge.TenthGoodScore);
 			if (this.good >= 100) this.addBadge(Badge.HundredthGoodScore);
-		} else if (rank === 1) {
-			this.perfect++;
+		} else if (tier === 'perfect') {
+			this.perfect += delta;
 			if (this.perfect >= 1) this.addBadge(Badge.FirstPerfectScore);
 			if (this.perfect >= 10) this.addBadge(Badge.TenthPerfectScore);
 			if (this.perfect >= 100) this.addBadge(Badge.HundredthPerfectScore);
@@ -50,3 +68,12 @@ export class AttemptScoreBadgeManager
 		}
 	}
 }
+
+type ScoreTier = 'none' | 'good' | 'perfect';
+
+const tierOf = (score: number, totalPoints: number): ScoreTier => {
+	const rank = totalPoints === 0 ? 0 : score / totalPoints;
+	if (rank === 1) return 'perfect';
+	if (rank >= 0.8 && rank < 1) return 'good';
+	return 'none';
+};

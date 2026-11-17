@@ -9,23 +9,36 @@ import {
 } from '../../practice/exam.find-exams.query';
 import { Inject } from '@nestjs/common';
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
-import { CursorPaginationHelper } from '@server/utils';
+import { CursorPaginationFactory, CursorPaginationHelper } from '@server/utils';
 
 @QueryHandler(FindExamsQuery)
 export class FindExamsHandler implements IQueryHandler<FindExamsQuery> {
 	private readonly cursorPaginationHelper: CursorPaginationHelper;
 
 	constructor(
+		cursorPaginationFactory: CursorPaginationFactory,
 		@Inject(IPracticeReadRepositoryToken)
 		private readonly practiceReadRepository: IPracticeReadRepository,
 	) {
-		this.cursorPaginationHelper = new CursorPaginationHelper(
-			`${process.env.HOST}${process.env.PORT}FindExams`,
-		);
+		this.cursorPaginationHelper = cursorPaginationFactory.create('FindExams');
 	}
 
 	async execute(query: FindExamsQuery): Promise<FindExamsQueryResult> {
 		const payload = query.payload;
+		if (payload.page !== undefined) {
+			// page mode: numbered pages over the catalogue, with a total for the page links
+			const limit = payload.limit ?? 10;
+			const [exams, totalCount] = await Promise.all([
+				this.practiceReadRepository.findExams({
+					filter: payload.filter,
+					sortBy: payload.sortBy,
+					limit: limit,
+					page: payload.page,
+				}),
+				this.practiceReadRepository.countExams(payload.filter),
+			]);
+			return { exams: exams, nextCursor: '', prevCursor: '', totalCount: totalCount };
+		}
 		const decodedCursor =
 			payload.cursor ?
 				this.cursorPaginationHelper.decodeCursor<FindExamsCursor>(payload.cursor)

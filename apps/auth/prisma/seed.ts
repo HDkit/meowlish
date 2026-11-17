@@ -3,6 +3,12 @@ import { PrismaClient } from '@prisma-client/auth';
 import { Permission, Role } from '@server/typing';
 import bcrypt from 'bcrypt';
 
+/**
+ * Shared demo account for public testers. These credentials are public by design: the account
+ * can't change its password, sign-in methods, username or phone, and a reseed restores it.
+ */
+export const DEMO_ACCOUNT = { email: 'demo@lingriser.test', password: 'Demo@12345' };
+
 const prisma = new PrismaClient();
 
 async function seedPermissions() {
@@ -177,6 +183,59 @@ async function seedAdminUser() {
 	});
 }
 
+async function seedDemoUser() {
+	const passwordHash = await bcrypt.hash(DEMO_ACCOUNT.password, 10);
+
+	const studentRole = await prisma.role.findFirstOrThrow({
+		where: { name: Role.Student },
+	});
+
+	const identity = await prisma.identity.upsert({
+		where: { username: 'demo' },
+		update: { isDemo: true },
+		create: {
+			id: 'demo',
+			version: 1,
+			username: 'demo',
+			fullName: 'Tài khoản demo',
+			isDemo: true,
+		},
+	});
+
+	// Always reset the hash, so a reseed restores the password if it was ever changed.
+	await prisma.credential.upsert({
+		where: {
+			identifier_loginType: {
+				identifier: DEMO_ACCOUNT.email,
+				loginType: LoginType.Mail,
+			},
+		},
+		update: {
+			secretHash: passwordHash,
+		},
+		create: {
+			identityId: identity.id,
+			identifier: DEMO_ACCOUNT.email,
+			loginType: LoginType.Mail,
+			secretHash: passwordHash,
+		},
+	});
+
+	await prisma.identityRole.upsert({
+		where: {
+			identityId_roleId: {
+				identityId: identity.id,
+				roleId: studentRole.id,
+			},
+		},
+		update: {},
+		create: {
+			identityId: identity.id,
+			roleId: studentRole.id,
+		},
+	});
+}
+
 const SEED_USERS = [
 	{
 		id: '8ac3508e-d8bc-425f-9b4d-04461d9bd0ec',
@@ -257,10 +316,17 @@ async function seedTestUsers() {
 }
 
 async function main() {
+	// SEED_ONLY=demo (re)creates just the demo account, for a live DB where the full seed would
+	// reset the admin password and add the test users.
+	if (process.env.SEED_ONLY === 'demo') {
+		await seedDemoUser();
+		return;
+	}
 	await seedPermissions();
 	await seedRoles();
 	await seedRolePermissions();
 	await seedAdminUser();
+	await seedDemoUser();
 	await seedTestUsers();
 }
 

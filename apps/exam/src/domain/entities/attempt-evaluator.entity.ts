@@ -13,6 +13,8 @@ export class AttemptResponseResult implements IEntity<AttemptResponseResult> {
 		public readonly questionId: string,
 		public readonly answers: string[],
 		isCorrect?: boolean | null,
+		/** Band (0–9) the AI scorer gave a writing answer; null until its feedback arrives. */
+		public readonly writingBand: number | null = null,
 	) {
 		this.answers = answers.map(a => a.toLowerCase()).sort();
 		this.isCorrect = !!isCorrect;
@@ -38,7 +40,12 @@ export class AttemptEvaluator
 	extends AggregateRoot<Event<any>>
 	implements IAggregate<AttemptEvaluator>
 {
+	/** Highest band the AI writing scorer gives (IELTS scale). */
+	public static readonly maxWritingBand = 9;
+
 	public readonly id: string;
+	/** Optimistic-lock version of the attempt row as loaded. */
+	public readonly version: number;
 	public readonly questions: AttemptQuestion[];
 	public readonly responses: Map<string, AttemptResponseResult>;
 	public score: number;
@@ -46,6 +53,7 @@ export class AttemptEvaluator
 
 	public constructor(constructorOptions: {
 		id: string;
+		version?: number;
 		questions: AttemptQuestion[];
 		responses: AttemptResponseResult[];
 		score?: number;
@@ -53,20 +61,19 @@ export class AttemptEvaluator
 	}) {
 		super();
 		this.id = constructorOptions.id;
+		this.version = constructorOptions.version ?? 0;
 		this.questions = constructorOptions.questions;
 		this.responses = new Map(constructorOptions.responses.map(r => [r.questionId, r]));
 		this.score = constructorOptions.score ?? 0;
 		this.totalPoints = constructorOptions.totalPoints ?? 0;
 	}
 
+	/**
+	 * First scoring, right after submit: scores the objective answers, asks the AI scorer to grade
+	 * each writing answer (writing.submitted) and announces the score (attempt.scored).
+	 */
 	public evaluateScore(): void {
-		this.questions.forEach(question => {
-			this.totalPoints += question.points;
-			const response = this.responses.get(question.id);
-			if (response) {
-				this.score += this.scoreFor(question, response);
-			}
-		});
+		this.computeScore(true);
 		this.apply(
 			new AttemptScoredEvent({
 				attemptId: this.id,
@@ -76,8 +83,35 @@ export class AttemptEvaluator
 		);
 	}
 
-	private scoreFor(question: AttemptQuestion, response: AttemptResponseResult): number {
+	/**
+	 * Re-scores after AI feedback for a writing answer was saved, so its points count. Raises no
+	 * events: the writing answers are already being graded, and re-announcing attempt.scored would
+	 * count the attempt twice towards achievements.
+	 */
+	public recomputeScore(): void {
+		this.computeScore(false);
+	}
+
+	private computeScore(requestWritingScoring: boolean): void {
+		this.score = 0;
+		this.totalPoints = 0;
+		this.questions.forEach(question => {
+			this.totalPoints += question.points;
+			const response = this.responses.get(question.id);
+			if (response) {
+				this.score += this.scoreFor(question, response, requestWritingScoring);
+			}
+		});
+	}
+
+	private scoreFor(
+		question: AttemptQuestion,
+		response: AttemptResponseResult,
+		requestWritingScoring: boolean,
+	): number {
 		if (question.type === QuestionType.Writing) {
+			if (response.writingBand !== null) return this.writingPoints(question, response.writingBand);
+			if (!requestWritingScoring) return 0;
 			this.apply(
 				new WritingSubmittedEvent({
 					attemptId: this.id,
@@ -102,5 +136,11 @@ export class AttemptEvaluator
 		}
 		response.setIsCorrect(false);
 		return 0;
+	}
+
+	/** Scales the AI band (0–9) to the question's points; the score column is an integer. */
+	private writingPoints(question: AttemptQuestion, band: number): number {
+		const ratio = Math.min(Math.max(band / AttemptEvaluator.maxWritingBand, 0), 1);
+		return Math.round(question.points * ratio);
 	}
 }

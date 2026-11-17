@@ -2,95 +2,68 @@ import { PrismaClient } from '@prisma-client/notification';
 
 const prisma = new PrismaClient();
 
+/**
+ * Notifications are produced only by real events (badge earned, report created for admins, report
+ * status changed for the reporter), so the seed creates none: invented ones ("Tuần này bạn đã học
+ * được 5 bài mới", a "first lesson" badge that doesn't exist, ...) looked nothing like what the
+ * system sends. Earlier seeds created such rows with ids `seed-<hash>`; remove them so a re-seed
+ * also cleans existing databases. Users without saved preferences get every notification, so no
+ * preference rows are needed either.
+ *
+ * The one exception is the shared demo account: it gets the "badge earned" notifications the
+ * system would have sent for the badges the achievement seed gives it (same type, title, message
+ * and data as `AchievementEarnedHandler`), with ids `seed-demo-badge-*`.
+ */
+const DAY = 24 * 60 * 60 * 1000;
+const DEMO_UID = 'demo';
+/** Display names of the demo badges seeded in apps/achievement/prisma/seed.ts, oldest first. */
+const DEMO_BADGES = [
+	{ id: 'first-complete-attempt', name: 'First Step Taken' },
+	{ id: 'tenth-complete-attempt', name: 'Warming Up' },
+	{ id: 'first-good-score', name: 'Nice One' },
+	{ id: 'login-seven-days', name: 'Getting Into the Groove' },
+	{ id: 'login-seven-days-streak', name: 'Regular' },
+];
+
 async function main() {
-	const identities = await prisma.$queryRaw<{ id: string }[]>`SELECT id FROM identities`.catch(
-		() => [],
-	);
+	const { count } = await prisma.notification.deleteMany({
+		where: { id: { startsWith: 'seed-' }, NOT: { id: { startsWith: 'seed-demo-' } } },
+	});
+	console.warn(`Removed ${count} placeholder notifications from earlier seeds`);
 
-	if (identities.length === 0) {
-		console.warn('No identities found, connecting to auth_db...');
-	}
-
-	const userIds =
-		identities.length > 0 ?
-			identities.map(i => i.id)
-		:	[
-				'admin',
-				'8ac3508e-d8bc-425f-9b4d-04461d9bd0ec',
-				'4292d890-805f-4fca-b007-8ce887d87f3d',
-				'f5553ed6-6eac-4be8-af62-fbb4226f2e9f',
-				'2261ce28-2f42-4420-b5af-580f8d4b8abe',
-				'3a2fbb54-984f-4318-bff0-218dc2a9f12c',
-			];
-
-	const notifications = userIds.flatMap(recipientId => [
-		{
-			recipientId: recipientId,
-			type: 'system',
-			title: 'Chào mừng bạn đến với nền tảng!',
-			message: 'Cảm ơn bạn đã đăng ký. Hãy khám phá các tính năng học tập thú vị nhé!',
-			data: { action: '/dashboard' },
-		},
-		{
-			recipientId: recipientId,
-			type: 'achievement',
-			title: 'Thành tích mới!',
-			message: 'Bạn đã hoàn thành bài học đầu tiên. Hãy tiếp tục phát huy nhé!',
-			data: { badge: 'first_lesson' },
-		},
-		{
-			recipientId: recipientId,
-			type: 'system',
-			title: 'Cập nhật hệ thống',
-			message: 'Nền tảng vừa được cập nhật với nhiều tính năng mới. Hãy trải nghiệm ngay!',
-			data: { version: '2.0' },
-		},
-		{
-			recipientId: recipientId,
-			type: 'report',
-			title: 'Báo cáo học tập',
-			message: 'Tuần này bạn đã học được 5 bài mới. Tiến bộ rõ rệt!',
-			data: { lessonsCompleted: 5, week: 12 },
-		},
-		{
-			recipientId: recipientId,
-			type: 'system',
-			title: 'Mẹo học tập',
-			message: 'Học từ vựng mỗi ngày 10 từ sẽ giúp bạn cải thiện đáng kể vốn từ vựng sau 1 tháng.',
-			data: { tip: 'daily_vocab' },
-		},
-	]);
-
-	for (const n of notifications) {
+	const today = Math.floor(Date.now() / DAY) * DAY;
+	for (const [i, badge] of DEMO_BADGES.entries()) {
+		const createdAt = new Date(today - (DEMO_BADGES.length - i) * 5 * DAY + 10 * 60 * 60 * 1000);
+		const id = `seed-demo-badge-${badge.id}`;
+		// the account already got this one for real
+		const real = await prisma.notification.findFirst({
+			where: {
+				recipientId: DEMO_UID,
+				type: 'achievement',
+				id: { not: id },
+				data: { path: ['badgeName'], equals: badge.name },
+			},
+		});
+		if (real) continue;
+		// create only: keeps whether a tester has read it
 		await prisma.notification.upsert({
-			where: { id: n.recipientId + n.type + n.title },
+			where: { id: id },
 			update: {},
 			create: {
-				id: `${n.recipientId}-${n.type}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-				...n,
-				isRead: Math.random() > 0.5,
-				readAt: Math.random() > 0.5 ? new Date() : null,
+				id: id,
+				recipientId: DEMO_UID,
+				type: 'achievement',
+				title: 'Đạt thành tích mới!',
+				message: `Bạn vừa nhận huy hiệu "${badge.name}". Tiếp tục phát huy nhé!`,
+				data: { badgeName: badge.name },
+				// the older ones have been seen
+				isRead: i < DEMO_BADGES.length - 2,
+				readAt: i < DEMO_BADGES.length - 2 ? createdAt : null,
+				createdAt: createdAt,
 			},
 		});
 	}
-
-	// Seed notification preferences
-	for (const id of userIds) {
-		await prisma.notificationPreference.upsert({
-			where: { identityId: id },
-			update: {},
-			create: {
-				identityId: id,
-				emailEnabled: true,
-				pushEnabled: true,
-				achievementEnabled: true,
-				reportEnabled: true,
-				systemEnabled: true,
-			},
-		});
-	}
-
-	console.warn(`Seeded ${notifications.length} notifications and ${userIds.length} preferences`);
+	console.warn(`Seeded ${DEMO_BADGES.length} badge notifications for the demo account`);
 }
 
 main()

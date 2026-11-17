@@ -11,7 +11,7 @@
 			"outputs": ["{projectRoot}/src"],
 			"inputs": ["{workspaceRoot}/proto/**/*.proto"],
 			"options": {
-				"command": "pnpm proto:gen:window"
+				"command": "pnpm proto:gen"
 			}
 		},
 		"lint": { "executor": "nx:noop" }

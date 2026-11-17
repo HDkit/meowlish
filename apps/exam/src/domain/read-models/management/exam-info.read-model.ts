@@ -5,6 +5,7 @@ export type ExamManagementMinimalInfo = {
 	updatedAt: Date;
 	title: string;
 	status: string;
+	slug?: string;
 };
 
 export type ExamManagementDetailedInfo = ExamManagementMinimalInfo & {

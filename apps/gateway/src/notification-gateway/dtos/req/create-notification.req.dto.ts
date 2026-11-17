@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { notification } from '@server/generated';
-import { IsOptional, IsString } from 'class-validator';
+import { IsJSON, IsOptional, IsString } from 'class-validator';
 
 export class CreateNotificationDto implements notification.CreateNotificationRequest {
 	@IsString()
@@ -19,8 +19,8 @@ export class CreateNotificationDto implements notification.CreateNotificationReq
 	@ApiProperty()
 	message!: string;
 
+	@IsJSON()
 	@IsOptional()
-	@IsString()
-	@ApiPropertyOptional()
+	@ApiPropertyOptional({ description: 'JSON-encoded payload' })
 	data?: string;
 }

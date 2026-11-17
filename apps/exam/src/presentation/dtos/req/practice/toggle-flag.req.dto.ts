@@ -7,4 +7,7 @@ export class ToggleFlagDto implements exam.ToggleFlagDto {
 
 	@IsString()
 	questionId!: string;
+
+	@IsString()
+	userId!: string;
 }

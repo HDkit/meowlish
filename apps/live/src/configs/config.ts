@@ -3,7 +3,7 @@ import { z } from 'zod/v4';
 
 const dbVarsSchema = z.object({
 	host: z.string(),
-	port: z.coerce.number().default(5432),
+	port: z.preprocess(v => (v === '' ? undefined : v), z.coerce.number().default(5432)),
 	username: z.string(),
 	password: z.string(),
 	dbName: z.string(),
@@ -21,11 +21,52 @@ const mqSchema = z.object({
 	port: z.coerce.number(),
 });
 
+const DEV_CORS_ORIGINS = 'http://localhost:6767,http://localhost:5173';
+
+/** Comma-separated origins -> list. Never contains `*`: credentials are always allowed. */
+const corsOriginsSchema = z.preprocess(
+	v =>
+		typeof v === 'string' ?
+			v
+				.split(',')
+				.map(o => o.trim().replace(/\/+$/, ''))
+				.filter(o => o && o !== '*')
+		:	[],
+	z.array(z.string()),
+);
+
+/** CORS_ORIGINS, or the local dev front-ends when unset outside production. */
+const loadCorsOrigins = () =>
+	process.env.CORS_ORIGINS ?? (process.env.NODE_ENV === 'production' ? '' : DEV_CORS_ORIGINS);
+
+/** auth gRPC address (revocation check at socket connect); `url` overrides host:port. */
+const authServiceSchema = z.object({
+	url: z.string().optional(),
+	host: z.string(),
+	port: z.coerce.number(),
+});
+
+/** Listeners: gRPC on GRPC_HOST:GRPC_PORT, HTTP on HTTP_HOST:HTTP_PORT. */
+const serverSchema = z.object({
+	grpcHost: z.string().default('127.0.0.1'),
+	grpcPort: z.preprocess(v => (v === '' ? undefined : v), z.coerce.number().int().default(50050)),
+	httpHost: z.string().default('127.0.0.1'),
+	httpPort: z.preprocess(v => (v === '' ? undefined : v), z.coerce.number().int().default(1511)),
+});
+
 export const envFileSchema = z.object({
 	env: z.union([z.literal('development'), z.literal('production')]),
+	server: serverSchema,
+	/** Origins allowed by CORS (HTTP and socket.io); empty means no cross-origin access. */
+	corsOrigins: corsOriginsSchema,
+	/** Signs pagination cursors (see CursorPaginationFactory). */
+	cursorSecret: z.string().min(32).optional(),
+	/** RS256 public key matching auth's JWT_PRIVATE_KEY; sockets are rejected without it. */
+	jwtPublicKey: z.string().optional(),
 	database: dbVarsSchema,
 	redis: redisVarsSchema,
 	messageQueue: mqSchema,
+	authService: authServiceSchema,
 });
 
 export type IEnvVars = z.infer<typeof envFileSchema>;
@@ -33,6 +74,15 @@ export type IEnvVars = z.infer<typeof envFileSchema>;
 // map your env vars to ConfigService's properties
 const loadEnv = (): DeepStringify<IEnvVars> => ({
 	env: process.env.NODE_ENV,
+	server: {
+		grpcHost: process.env.GRPC_HOST,
+		grpcPort: process.env.GRPC_PORT,
+		httpHost: process.env.HTTP_HOST,
+		httpPort: process.env.HTTP_PORT,
+	},
+	corsOrigins: loadCorsOrigins(),
+	cursorSecret: process.env.CURSOR_SECRET || undefined,
+	jwtPublicKey: process.env.JWT_PUBLIC_KEY || undefined,
 	database: {
 		host: process.env.POSTGRES_HOST,
 		port: process.env.POSTGRES_PORT,
@@ -49,6 +99,11 @@ const loadEnv = (): DeepStringify<IEnvVars> => ({
 		port: process.env.RMQ_PORT,
 		user: process.env.RMQ_USER,
 		password: process.env.RMQ_PASS,
+	},
+	authService: {
+		url: process.env.AUTH_SERVICE_URL || undefined,
+		host: process.env.AUTH_SERVICE_HOST,
+		port: process.env.AUTH_SERVICE_PORT,
 	},
 });
 

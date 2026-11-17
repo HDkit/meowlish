@@ -15,6 +15,9 @@ class MinimalExamInfoDto implements exam.Exams_MinimalExamInfo {
 	id!: string;
 
 	@Expose()
+	slug?: string;
+
+	@Expose()
 	name!: string;
 
 	@Expose()
@@ -34,4 +37,7 @@ export class ExamsInfoDto implements exam.Exams {
 
 	@Expose()
 	prevCursor!: string;
+
+	@Expose()
+	totalCount?: number;
 }

@@ -1,5 +1,5 @@
 import { resource } from '@server/generated';
-import { IsArray, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class UpdateBlogReqDto implements resource.UpdateBlogRequest {
 	@IsString()
@@ -16,4 +16,8 @@ export class UpdateBlogReqDto implements resource.UpdateBlogRequest {
 	@IsArray()
 	@IsString({ each: true })
 	tags!: string[];
+
+	@IsBoolean()
+	@IsOptional()
+	replaceTags!: boolean;
 }

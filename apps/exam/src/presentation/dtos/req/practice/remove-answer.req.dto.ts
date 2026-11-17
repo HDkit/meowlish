@@ -11,4 +11,7 @@ export class RemoveAnswerDto implements exam.RemoveAnswerDto {
 	@IsOptional()
 	@IsString()
 	answer?: string;
+
+	@IsString()
+	userId!: string;
 }

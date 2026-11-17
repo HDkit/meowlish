@@ -7,7 +7,7 @@ import {
 	ISectionRepositoryToken,
 } from '../../../../domain/repositories/section.repository';
 import { MoveSectionCommand } from '../../staff/exam.move-section.command';
-import { Inject, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, NotFoundException } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 
 @CommandHandler(MoveSectionCommand)
@@ -22,6 +22,9 @@ export class MoveSectionHandler implements ICommandHandler<MoveSectionCommand> {
 
 		// move to new section
 		if (parentId) {
+			// the closure trigger would refuse it too, but as an opaque database error (502)
+			if (await this.sectionRepository.isInSubtreeOf(parentId, sectionId))
+				throw new BadRequestException('Cannot move a section under itself or its descendant');
 			// can only move to section in the exam
 			const newParentSection = await this.sectionRepository.findOneInTheSameExamAsSection(
 				parentId,

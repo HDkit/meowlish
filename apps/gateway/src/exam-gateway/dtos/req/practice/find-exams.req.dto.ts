@@ -1,5 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { exam } from '@server/generated';
 import { SortDirection } from '@server/typing';
+import { ToStringArray } from '@server/utils';
 import { Type } from 'class-transformer';
 import {
 	IsArray,
@@ -9,10 +11,11 @@ import {
 	IsOptional,
 	IsPositive,
 	IsString,
+	Max,
 	ValidateNested,
 } from 'class-validator';
 
-class FilterOptionsDto {
+class FilterOptionsDto implements exam.FindExamsDto_FilterOption {
 	@IsOptional()
 	@IsString()
 	@ApiPropertyOptional()
@@ -21,11 +24,28 @@ class FilterOptionsDto {
 	@IsArray()
 	@IsOptional()
 	@IsString({ each: true })
-	@ApiPropertyOptional({ type: [String] })
+	@ApiPropertyOptional({
+		type: [String],
+		description: 'Exams with ANY of these tag names (a descendant tag also matches)',
+	})
+	// one query value (`filter[tags]=X`) arrives as a string
+	@ToStringArray()
 	tags: string[] = [];
+
+	@IsArray()
+	@IsOptional()
+	@IsString({ each: true })
+	@ApiPropertyOptional({
+		type: [String],
+		description:
+			'Exams with EVERY one of these tag names (or a descendant of each), e.g. ["TOEIC"]',
+	})
+	// one query value (`filter[tags]=X`) arrives as a string
+	@ToStringArray()
+	requiredTags: string[] = [];
 }
 
-class SortOptionsDto {
+class SortOptionsDto implements exam.FindExamsDto_SortOption {
 	@IsIn(['attemptsCount', 'updatedAt'])
 	@ApiProperty({ enum: ['attemptsCount', 'updatedAt'] })
 	key!: 'attemptsCount' | 'updatedAt';
@@ -35,7 +55,9 @@ class SortOptionsDto {
 	direction!: SortDirection;
 }
 
-export class FindExamsDto {
+const MAX_PAGE_LIMIT = 100;
+
+export class FindExamsDto implements exam.FindExamsDto {
 	@Type(() => FilterOptionsDto)
 	@IsOptional()
 	@ValidateNested()
@@ -57,6 +79,18 @@ export class FindExamsDto {
 	@IsInt()
 	@IsOptional()
 	@IsPositive()
-	@ApiPropertyOptional({ type: Number })
+	@Max(MAX_PAGE_LIMIT)
+	@ApiPropertyOptional({ type: Number, minimum: 1, maximum: 100 })
 	limit?: number;
+
+	@Type(() => Number)
+	@IsInt()
+	@IsOptional()
+	@IsPositive()
+	@Max(10_000)
+	@ApiPropertyOptional({
+		type: Number,
+		description: 'Page number (1-based): page pagination with `totalCount`; `cursor` is ignored',
+	})
+	page?: number;
 }

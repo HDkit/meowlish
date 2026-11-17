@@ -1,5 +1,5 @@
 import { exam } from '@server/generated';
-import { IsInt, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString } from 'class-validator';
 
 export class CreateSectionDto implements exam.CreateSectionDto {
 	@IsOptional()
@@ -13,4 +13,10 @@ export class CreateSectionDto implements exam.CreateSectionDto {
 	@IsOptional()
 	@IsString()
 	sectionId?: string;
+
+	@IsString()
+	requesterId!: string;
+
+	@IsBoolean()
+	privileged!: boolean;
 }

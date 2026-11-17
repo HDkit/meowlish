@@ -51,6 +51,12 @@ import { GetExamCountsQuery } from '../../app/queries/management/exam.get-counts
 import { GetExamManagementDetailsQuery } from '../../app/queries/management/exam.get-exam-details.query';
 import { GetQuestionManagementDetailsQuery } from '../../app/queries/management/exam.get-question-details.query';
 import { GetSectionManagementDetailsQuery } from '../../app/queries/management/exam.get-section-details.query';
+import { FileOwnershipService } from '../../app/services/file-ownership.service';
+import {
+	ExamTarget,
+	IManagementReadRepository,
+	IManagementReadRepositoryToken,
+} from '../../domain/repositories/management.read.repository';
 import { CreateExamDto } from '../dtos/req/management/create-exam.req.dto';
 import { CreateQuestionDto } from '../dtos/req/management/create-question.req.dto';
 import { CreateSectionDto } from '../dtos/req/management/create-section.req.dto';
@@ -75,7 +81,14 @@ import { ExamDetailedManagementInfoDto } from '../dtos/res/management/exam.res.d
 import { ExamsManagementInfoDto } from '../dtos/res/management/exams.res.dto';
 import { QuestionManagementInfoDto } from '../dtos/res/management/question.res.dto';
 import { SectionManagementInfoDto } from '../dtos/res/management/sections.res.dto';
-import { Controller, SerializeOptions, UseFilters } from '@nestjs/common';
+import {
+	Controller,
+	ForbiddenException,
+	Inject,
+	NotFoundException,
+	SerializeOptions,
+	UseFilters,
+} from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { Payload } from '@nestjs/microservices';
 import { exam } from '@server/generated';
@@ -88,7 +101,30 @@ export class ExamManagementController implements exam.ExamManagementServiceContr
 	constructor(
 		private readonly commandBus: CommandBus,
 		private readonly queryBus: QueryBus,
+		@Inject(IManagementReadRepositoryToken)
+		private readonly managementReadRepository: IManagementReadRepository,
+		private readonly fileOwnership: FileOwnershipService,
 	) {}
+
+	/** 403 when a non-privileged requester attaches a file they did not upload. */
+	private async assertCanAttach(
+		fileIds: string[] | undefined,
+		who: { requesterId: string; privileged: boolean },
+	): Promise<void> {
+		if (who.privileged) return;
+		await this.fileOwnership.assertOwnedBy(fileIds ?? [], who.requesterId);
+	}
+
+	/** 404 when the target (or its exam) is missing; 403 unless the requester created the exam or is privileged. */
+	private async assertCanModify(
+		target: ExamTarget,
+		who: { requesterId: string; privileged: boolean },
+	): Promise<void> {
+		const creator = await this.managementReadRepository.getExamCreator(target);
+		if (creator === null) throw new NotFoundException('Exam not found');
+		if (!who.privileged && creator !== who.requesterId)
+			throw new ForbiddenException('Only the exam creator or an admin can modify this exam');
+	}
 
 	@SerializeOptions({ type: CreatedExamDto })
 	async createExam(@Payload() request: CreateExamDto): Promise<CreatedExamDto> {
@@ -99,6 +135,10 @@ export class ExamManagementController implements exam.ExamManagementServiceContr
 
 	@SerializeOptions({ type: CreatedSectionDto })
 	async createSection(@Payload() request: CreateSectionDto): Promise<CreatedSectionDto> {
+		await this.assertCanModify(
+			request.sectionId ? { sectionId: request.sectionId } : { examId: request.examId ?? '' },
+			request,
+		);
 		return await this.commandBus.execute(
 			new CreateSectionCommand(new CreateSectionCommandPayload(request)),
 		);
@@ -106,48 +146,61 @@ export class ExamManagementController implements exam.ExamManagementServiceContr
 
 	@SerializeOptions({ type: CreatedQuestionDto })
 	async createQuestion(@Payload() request: CreateQuestionDto): Promise<CreatedQuestionDto> {
+		await this.assertCanModify({ sectionId: request.sectionId }, request);
 		return await this.commandBus.execute(
 			new CreateQuestionCommand(new CreateQuestionCommandPayload(request.sectionId, request.index)),
 		);
 	}
 
 	async updateExam(@Payload() request: UpdateExamDto): Promise<void> {
+		await this.assertCanModify({ examId: request.id }, request);
 		await this.commandBus.execute(new UpdateExamCommand(new UpdateExamCommandPayload(request)));
 	}
 
 	async updateSection(@Payload() request: UpdateSectionDto): Promise<void> {
+		await this.assertCanModify({ sectionId: request.id }, request);
+		await this.assertCanAttach(request.addFiles, request);
 		await this.commandBus.execute(
 			new UpdateSectionCommand(new UpdateSectionCommandPayload(request)),
 		);
 	}
 
 	async updateQuestion(@Payload() request: UpdateQuestionDto): Promise<void> {
+		await this.assertCanModify({ questionId: request.id }, request);
+		await this.assertCanAttach(request.addFiles, request);
 		await this.commandBus.execute(
 			new UpdateQuestionCommand(new UpdateQuestionCommandPayload(request)),
 		);
 	}
 
 	async deleteExam(@Payload() request: DeleteExamDto): Promise<void> {
+		await this.assertCanModify({ examId: request.id }, request);
 		await this.commandBus.execute(new DeleteExamCommand(new DeleteExamCommandPayload(request.id)));
 	}
 
 	async deleteSection(@Payload() request: DeleteSectionDto): Promise<void> {
+		await this.assertCanModify({ sectionId: request.id }, request);
 		await this.commandBus.execute(
 			new DeleteSectionCommand(new DeleteSectionCommandPayload(request.id)),
 		);
 	}
 
 	async deleteQuestion(@Payload() request: DeleteQuestionDto): Promise<void> {
+		await this.assertCanModify({ questionId: request.id }, request);
 		await this.commandBus.execute(
 			new DeleteQuestionCommand(new DeleteQuestionCommandPayload(request.id)),
 		);
 	}
 
 	async moveSection(@Payload() request: MoveSectionDto): Promise<void> {
+		await this.assertCanModify({ sectionId: request.id }, request);
+		if (request.parentId) await this.assertCanModify({ sectionId: request.parentId }, request);
 		await this.commandBus.execute(new MoveSectionCommand(new MoveSectionCommandPayload(request)));
 	}
 
 	async moveQuestion(@Payload() request: MoveQuestionDto): Promise<void> {
+		await this.assertCanModify({ questionId: request.id }, request);
+		if (request.sectionId) await this.assertCanModify({ sectionId: request.sectionId }, request);
 		await this.commandBus.execute(new MoveQuestionCommand(new MoveQuestionCommandPayload(request)));
 	}
 

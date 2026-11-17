@@ -1,5 +1,5 @@
 import { auth } from '@server/generated';
-import { IsInt, IsOptional, IsPositive, IsString } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsPositive, IsString } from 'class-validator';
 
 export class FindIdentityIdsDto implements auth.FindIdentityIdsDto {
 	@IsOptional()
@@ -14,4 +14,8 @@ export class FindIdentityIdsDto implements auth.FindIdentityIdsDto {
 	@IsOptional()
 	@IsPositive()
 	limit?: number;
+
+	@IsBoolean()
+	@IsOptional()
+	usernameOnly?: boolean;
 }

@@ -1,5 +1,5 @@
 import { exam } from '@server/generated';
-import { IsInt, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString } from 'class-validator';
 
 export class MoveQuestionDto implements exam.MoveQuestionDto {
 	@IsString()
@@ -12,4 +12,10 @@ export class MoveQuestionDto implements exam.MoveQuestionDto {
 	@IsOptional()
 	@IsString()
 	sectionId?: string;
+
+	@IsString()
+	requesterId!: string;
+
+	@IsBoolean()
+	privileged!: boolean;
 }

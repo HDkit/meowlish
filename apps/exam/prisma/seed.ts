@@ -1,5 +1,6 @@
 import { seedAttempts } from './seed/attempts';
 import { seedExams } from './seed/exams';
+import { seedGoals } from './seed/goals';
 import { seedTags } from './seed/tags';
 import { PrismaClient } from '@prisma-client/exam';
 
@@ -10,6 +11,7 @@ async function main() {
 	await seedTags(prisma);
 	await seedExams(prisma);
 	await seedAttempts(prisma);
+	await seedGoals(prisma);
 }
 
 main()

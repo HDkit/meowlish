@@ -26,6 +26,18 @@ export class FlashCardListDto implements resource.FlashCardListResponse {
 
 	@Expose()
 	updatedAt!: string;
+
+	@Expose()
+	forkedFromId?: string;
+
+	@Expose()
+	forkedFromName?: string;
+
+	@Expose()
+	forkedFromAuthorId?: string;
+
+	@Expose()
+	forkCount!: number;
 }
 
 export class FlashCardListDetailDto implements resource.FlashCardListDetailResponse {
@@ -54,11 +66,29 @@ export class FlashCardListDetailDto implements resource.FlashCardListDetailRespo
 	updatedAt!: string;
 
 	@Expose()
+	forkedFromId?: string;
+
+	@Expose()
+	forkedFromName?: string;
+
+	@Expose()
+	forkedFromAuthorId?: string;
+
+	@Expose()
+	forkCount!: number;
+
+	@Expose()
 	@Type(() => FlashCardDto)
 	flashCards!: FlashCardDto[];
 
 	@Expose()
 	totalCards!: number;
+
+	@Expose()
+	openProposalCount!: number;
+
+	@Expose()
+	upstreamAvailable!: boolean;
 }
 
 export class ListFlashCardListsDto implements resource.ListFlashCardListsResponse {

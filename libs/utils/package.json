@@ -7,21 +7,22 @@
 	"types": "./src/index.d.ts",
 	"dependencies": {
 		"@nestjs/cqrs": "11.0.3",
-		"@nestjs/microservices": "11.1.17",
+		"@nestjs/microservices": "11.2.8",
 		"class-validator": "0.14.4",
-		"@nestjs/common": "11.1.17",
-		"@grpc/grpc-js": "1.14.3",
+		"@nestjs/common": "11.2.8",
+		"@grpc/grpc-js": "1.14.7",
 		"@server/logger": "0.0.1",
 		"@server/typing": "0.0.1",
-		"@nestjs/core": "11.1.17",
+		"@nestjs/core": "11.2.8",
 		"rxjs": "7.8.2",
 		"zod": "3.25.76",
-		"tslib": "2.8.1",
+		"tslib": "2.9.1",
 		"@types/express": "5.0.0",
-		"@nestjs/swagger": "11.2.6",
+		"@nestjs/swagger": "11.4.8",
 		"@golevelup/nestjs-rabbitmq": "7.1.2",
-		"@nestjs/websockets": "11.1.19",
-		"socket.io": "4.8.3",
-    "class-transformer": "0.5.1"
+		"@nestjs/websockets": "11.2.8",
+		"socket.io": "4.8.4",
+    "class-transformer": "0.5.1",
+    "@nestjs/config": "4.0.4"
 	}
 }

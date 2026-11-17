@@ -15,6 +15,9 @@ export class ExamDetailDto implements exam.DetailedExamInfo {
 	id!: string;
 
 	@Expose()
+	slug?: string;
+
+	@Expose()
 	name!: string;
 
 	@Expose()

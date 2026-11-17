@@ -2,17 +2,20 @@ import {
 	type ISectionRepository,
 	ISectionRepositoryToken,
 } from '../../../../domain/repositories/section.repository';
+import { FileAddedPublisher } from '../../../events/publishers/file-added.publisher';
 import { UpdateSectionCommand } from '../../staff/exam.update-section.command';
+import { Transactional } from '@nestjs-cls/transactional';
 import { Inject, NotFoundException } from '@nestjs/common';
-import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 
 @CommandHandler(UpdateSectionCommand)
 export class UpdateSectionHandler implements ICommandHandler<UpdateSectionCommand> {
 	constructor(
 		@Inject(ISectionRepositoryToken) private readonly sectionRepository: ISectionRepository,
-		private readonly eventBus: EventBus,
+		private readonly fileAddedPublisher: FileAddedPublisher,
 	) {}
 
+	@Transactional()
 	public async execute(command: UpdateSectionCommand): Promise<void> {
 		const payload = command.payload;
 		const section = await this.sectionRepository.findOne(payload.id);
@@ -23,6 +26,6 @@ export class UpdateSectionHandler implements ICommandHandler<UpdateSectionComman
 		if (payload.addFiles) payload.addFiles.forEach(t => section.addFile(t));
 		if (payload.removeFiles) payload.removeFiles.forEach(t => section.removeFile(t));
 		await this.sectionRepository.save(section);
-		this.eventBus.publishAll(section.getUncommittedEvents());
+		await this.fileAddedPublisher.publish(section.getUncommittedEvents());
 	}
 }

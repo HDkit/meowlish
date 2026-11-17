@@ -2,7 +2,17 @@ import { ExamStatus } from '../../../../enums/exam-status.enum';
 import { exam } from '@server/generated';
 import { SortDirection } from '@server/typing';
 import { Type } from 'class-transformer';
-import { IsDate, IsEnum, IsIn, IsInt, IsOptional, IsString, ValidateNested } from 'class-validator';
+import {
+	IsDate,
+	IsEnum,
+	IsIn,
+	IsInt,
+	IsOptional,
+	IsPositive,
+	IsString,
+	Max,
+	ValidateNested,
+} from 'class-validator';
 
 class TimeRangeDto implements exam.FindExamsManagementDto_TimeRange {
 	@Type(() => Date)
@@ -47,6 +57,8 @@ class SortOptionsDto implements exam.FindExamsManagementDto_SortOption {
 	key!: 'updatedAt' | 'createdAt';
 }
 
+const MAX_PAGE_LIMIT = 100;
+
 export class FindExamsForManagentDto implements exam.FindExamsManagementDto {
 	@IsOptional()
 	@IsString()
@@ -59,6 +71,8 @@ export class FindExamsForManagentDto implements exam.FindExamsManagementDto {
 
 	@IsInt()
 	@IsOptional()
+	@IsPositive()
+	@Max(MAX_PAGE_LIMIT)
 	limit?: number;
 
 	@Type(() => SortOptionsDto)

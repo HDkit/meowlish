@@ -1,4 +1,5 @@
 export type UserLoggedInIntegrationEvent = {
 	uid: string;
-	date: Date;
+	/** ISO 8601; the same string the broker used to receive for a serialized `Date`. */
+	date: string;
 };

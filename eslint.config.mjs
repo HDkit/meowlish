@@ -112,6 +112,8 @@ export default [
 						'filter',
 						'class-transformer',
 						'class-validator',
+						// UseCls must wrap Transactional (decorators apply bottom-up), so it sorts above it.
+						'cls',
 						'unknown',
 						'module',
 						'controller',
@@ -126,6 +128,7 @@ export default [
 						filter: '^UseFilters$',
 						'class-transformer': ['^Exclude$', '^Expose$', '^Transform$', '^Type$'],
 						'class-validator': ['Is.*', 'Max.*', 'Min.*', 'Validate.*', 'Has.*'],
+						cls: '^UseCls$',
 						module: '^Module$',
 						controller: '^Controller$',
 						injectable: '^Injectable$',

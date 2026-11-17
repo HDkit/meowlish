@@ -19,6 +19,10 @@ class MinimalExamInfoDto {
 	id!: string;
 
 	@Expose()
+	@ApiPropertyOptional({ description: 'Readable URL key; lookups accept it in place of the id' })
+	slug?: string;
+
+	@Expose()
 	@ApiProperty()
 	name!: string;
 
@@ -44,4 +48,8 @@ export class ExamsInfoDto {
 	@Expose()
 	@ApiProperty()
 	prevCursor!: string;
+
+	@Expose()
+	@ApiPropertyOptional({ description: 'Page mode only: every matching exam' })
+	totalCount?: number;
 }

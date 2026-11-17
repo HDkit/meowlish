@@ -1,7 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { exam } from '@server/generated';
 import { IsString, Length } from 'class-validator';
 
-export class AddNoteDto {
+export class AddNoteDto implements Omit<exam.AddNoteDto, 'attemptId' | 'questionId' | 'userId'> {
 	@IsString()
 	@ApiProperty()
 	@Length(0, 500)

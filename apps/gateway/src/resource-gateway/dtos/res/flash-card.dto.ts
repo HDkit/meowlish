@@ -15,8 +15,15 @@ export class FlashCardDto {
 	definition!: string;
 
 	@Expose()
-	@ApiPropertyOptional()
+	@ApiPropertyOptional({
+		description:
+			"URL to show: the image file's URL when the card has one (imageFileId), else the image URL of a card from before image uploads.",
+	})
 	image?: string;
+
+	@Expose()
+	@ApiPropertyOptional({ description: 'The image file (file-service id), if the card has one' })
+	imageFileId?: string;
 
 	@Expose()
 	@ApiPropertyOptional()
@@ -41,6 +48,13 @@ export class FlashCardDto {
 	@Expose()
 	@ApiProperty({ type: [String] })
 	tags!: string[];
+
+	@Expose()
+	@ApiPropertyOptional({
+		description:
+			'0-based place in its list, set by "add a card to a list". Absent for cards never placed: those come first in a list, newest first, then placed cards by position.',
+	})
+	position?: number;
 
 	@Expose()
 	@ApiProperty({ type: String, format: 'date-time' })

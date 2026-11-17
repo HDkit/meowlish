@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
 
 class ExamDto {
@@ -13,6 +13,10 @@ class ExamDto {
 	@Expose()
 	@ApiProperty()
 	id!: string;
+
+	@Expose()
+	@ApiPropertyOptional({ description: 'Readable URL key; lookups accept it in place of the id' })
+	slug?: string;
 
 	@Expose()
 	@ApiProperty()

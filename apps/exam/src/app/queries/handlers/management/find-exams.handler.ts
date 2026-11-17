@@ -9,19 +9,18 @@ import {
 } from '../../management/exam.find-exams.query';
 import { Inject } from '@nestjs/common';
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
-import { CursorPaginationHelper } from '@server/utils';
+import { CursorPaginationFactory, CursorPaginationHelper } from '@server/utils';
 
 @QueryHandler(FindExamsForManagementQuery)
 export class FindExamsForManagementHandler implements IQueryHandler<FindExamsForManagementQuery> {
 	private readonly cursorPaginationHelper: CursorPaginationHelper;
 
 	constructor(
+		cursorPaginationFactory: CursorPaginationFactory,
 		@Inject(IManagementReadRepositoryToken)
 		private readonly managementReadRepository: IManagementReadRepository,
 	) {
-		this.cursorPaginationHelper = new CursorPaginationHelper(
-			`${process.env.HOST}${process.env.PORT}FindExamsManagement`,
-		);
+		this.cursorPaginationHelper = cursorPaginationFactory.create('FindExamsManagement');
 	}
 
 	async execute(query: FindExamsForManagementQuery): Promise<FindExamsForManagementQueryResult> {

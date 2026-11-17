@@ -1,171 +1,229 @@
-import { TransactionHost } from '@nestjs-cls/transactional';
+import {
+	type FlashCardListDetailReadModel,
+	type FlashCardListReadModel,
+	type FlashCardListsPageReadModel,
+} from '../../domain/read-models/flash-card-list.read-model';
+import { type FlashCardListPageReadModel } from '../../domain/read-models/flash-card.read-model';
+import { ResourceEventsPublisher } from '../events/resource-events.publisher';
+import {
+	CARD_ORDER,
+	WITH_FORK_COUNT,
+	toFlashCardListReadModel,
+	toFlashCardReadModel,
+	visibleListsWhere,
+} from '../mappers/flash-card.mapper';
+import {
+	type CreateFlashCardListInput,
+	type ListCardsInListInput,
+	type ListFlashCardListsInput,
+	type UpdateFlashCardListInput,
+} from '../types/flash-card-list.input';
+import { toSkipTake } from '../types/pagination';
+import { type Requester } from '../types/requester';
+import { CardImageRefsService } from './card-image-refs.service';
+import { CardImageUrlService } from './card-image-url.service';
+import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { FlashCard, FlashCardList, Prisma, PrismaClient } from '@prisma-client/resource';
-import { resource } from '@server/generated';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { FlashCardList, Prisma, PrismaClient } from '@prisma-client/resource';
+import { FlashCardProposalStatus } from '@server/typing';
 
 @Injectable()
 export class FlashcardListService {
-	constructor(private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>) {}
+	constructor(
+		private readonly txHost: TransactionHost<TransactionalAdapterPrisma<PrismaClient>>,
+		private readonly events: ResourceEventsPublisher,
+		private readonly imageRefs: CardImageRefsService,
+		private readonly imageUrls: CardImageUrlService,
+	) {}
 
-	private mapToResponse(entity: FlashCardList): resource.FlashCardListResponse {
-		return {
-			id: entity.id,
-			name: entity.name,
-			description: entity.description || '',
-			authorId: entity.authorId,
-			isPublic: entity.isPublic,
-			tags: entity.tags,
-			createdAt: entity.createdAt.toISOString(),
-			updatedAt: entity.updatedAt.toISOString(),
-		};
+	/** Loads a list the requester may modify (owner, or privileged). */
+	private async findOwnedList(id: string, requester: Requester): Promise<FlashCardList> {
+		const list = await this.txHost.tx.flashCardList.findUnique({ where: { id: id } });
+		// Hide lists the requester can't even see, so private list ids don't leak.
+		if (!list || (!list.isPublic && list.authorId !== requester.id && !requester.privileged)) {
+			throw new NotFoundException('FlashCardList not found');
+		}
+		if (list.authorId !== requester.id && !requester.privileged) {
+			throw new ForbiddenException('You do not own this flash card list');
+		}
+		return list;
 	}
 
-	private mapCardToResponse(entity: FlashCard): resource.FlashCardResponse {
-		return {
-			id: entity.id,
-			word: entity.word,
-			definition: entity.definition,
-			image: entity.image ?? undefined,
-			partOfSpeech: entity.partOfSpeech ?? undefined,
-			pronunciation: entity.pronunciation ?? undefined,
-			examples: entity.examples,
-			notes: entity.notes ?? undefined,
-			authorId: entity.authorId,
-			tags: entity.tags,
-			createdAt: entity.createdAt.toISOString(),
-			updatedAt: entity.updatedAt.toISOString(),
-		};
-	}
-
-	async createFlashCardList(
-		data: resource.CreateFlashCardListRequest,
-	): Promise<resource.FlashCardListResponse> {
+	async createFlashCardList(data: CreateFlashCardListInput): Promise<FlashCardListReadModel> {
 		const created = await this.txHost.tx.flashCardList.create({
 			data: {
-				name: data.name as string,
+				name: data.name,
 				description: data.description,
-				authorId: data.authorId as string,
+				authorId: data.authorId,
 				isPublic: data.isPublic ?? false,
-				tags: data.tags || [],
+				tags: data.tags,
 			},
 		});
-		return this.mapToResponse(created);
+		return toFlashCardListReadModel(created);
 	}
 
-	async getFlashCardList(id: string): Promise<resource.FlashCardListDetailResponse> {
-		const entity = await this.txHost.tx.flashCardList.findUnique({
-			where: { id: id },
-			include: { cards: true },
+	async getFlashCardList(id: string, requester: Requester): Promise<FlashCardListDetailReadModel> {
+		const entity = await this.txHost.tx.flashCardList.findFirst({
+			where: { id: id, ...visibleListsWhere(requester) },
+			include: { cards: { orderBy: CARD_ORDER }, ...WITH_FORK_COUNT },
 		});
 		if (!entity) throw new NotFoundException('FlashCardList not found');
 
+		const mayReview = requester.privileged || entity.authorId === requester.id;
+		const [openProposalCount, upstream] = await Promise.all([
+			mayReview ?
+				this.txHost.tx.flashCardListProposal.count({
+					where: { targetListId: id, status: FlashCardProposalStatus.Open },
+				})
+			:	0,
+			entity.forkedFromId ?
+				this.txHost.tx.flashCardList.findFirst({
+					where: { id: entity.forkedFromId, ...visibleListsWhere(requester) },
+					select: { id: true },
+				})
+			:	null,
+		]);
+
+		const cards = entity.cards.map(toFlashCardReadModel);
+		await this.imageUrls.resolve(cards);
 		return {
-			...this.mapToResponse(entity),
-			flashCards: entity.cards.map(card => this.mapCardToResponse(card)),
+			...toFlashCardListReadModel(entity),
+			flashCards: cards,
 			totalCards: entity.cards.length,
+			openProposalCount: openProposalCount,
+			upstreamAvailable: upstream !== null,
 		};
 	}
 
 	async updateFlashCardList(
-		data: resource.UpdateFlashCardListRequest,
-	): Promise<resource.FlashCardListResponse> {
-		const entity = await this.txHost.tx.flashCardList.findUnique({ where: { id: data.id } });
-		if (!entity) throw new NotFoundException('FlashCardList not found');
+		data: UpdateFlashCardListInput,
+		requester: Requester,
+	): Promise<FlashCardListReadModel> {
+		await this.findOwnedList(data.id, requester);
 
 		const updated = await this.txHost.tx.flashCardList.update({
 			where: { id: data.id },
 			data: {
-				name: data.name ?? undefined,
-				description: data.description ?? undefined,
-				isPublic: data.isPublic ?? undefined,
-				tags: data.tags && data.tags.length > 0 ? data.tags : undefined,
+				name: data.name,
+				description: data.description,
+				isPublic: data.isPublic,
+				tags: data.replaceTags || data.tags.length > 0 ? data.tags : undefined,
 			},
+			include: WITH_FORK_COUNT,
 		});
-		return this.mapToResponse(updated);
+		return toFlashCardListReadModel(updated);
 	}
 
-	async deleteFlashCardList(id: string): Promise<void> {
-		const entity = await this.txHost.tx.flashCardList.findUnique({ where: { id: id } });
-		if (!entity) throw new NotFoundException('FlashCardList not found');
+	@Transactional()
+	async deleteFlashCardList(id: string, requester: Requester): Promise<void> {
+		// Lock the list first: a card being added to it meanwhile either commits before (and is
+		// deleted below) or fails its foreign key after, so no card escapes the image release.
+		await this.txHost.tx.$queryRaw`SELECT id FROM flash_card_lists WHERE id = ${id} FOR UPDATE`;
+		await this.findOwnedList(id, requester);
 
+		// Delete the cards ourselves (not by the FK cascade) to release their images; their
+		// ownership records must go too.
+		const cardIds = await this.imageRefs.deleteCards({ listId: id });
 		await this.txHost.tx.flashCardList.delete({ where: { id: id } });
+		await this.events.resourcesDeleted('flashcard', cardIds);
 	}
 
 	async listFlashCardLists(
-		data: resource.ListFlashCardListsRequest,
-	): Promise<resource.ListFlashCardListsResponse> {
-		const page = data.page || 1;
-		const limit = data.limit || 10;
-		const skip = (page - 1) * limit;
-
-		const where: Prisma.FlashCardListWhereInput = {};
-		if (data.authorId) where.authorId = data.authorId;
-		if (data.isPublic !== undefined) where.isPublic = data.isPublic;
-		if (data.tags && data.tags.length > 0) where.tags = { hasSome: data.tags };
+		data: ListFlashCardListsInput,
+		requester: Requester,
+	): Promise<FlashCardListsPageReadModel> {
+		const filters: Prisma.FlashCardListWhereInput = {};
+		if (data.authorId) filters.authorId = data.authorId;
+		if (data.isPublic !== undefined) filters.isPublic = data.isPublic;
+		if (data.tags.length > 0) filters.tags = { hasSome: data.tags };
+		const name = data.name?.trim();
+		if (name) filters.name = { contains: name, mode: 'insensitive' };
+		const where: Prisma.FlashCardListWhereInput = {
+			AND: [filters, visibleListsWhere(requester)],
+		};
 
 		const [lists, totalCount] = await Promise.all([
 			this.txHost.tx.flashCardList.findMany({
 				where: where,
-				skip: skip,
-				take: limit,
+				include: WITH_FORK_COUNT,
+				...toSkipTake(data),
 				orderBy: { createdAt: 'desc' },
 			}),
 			this.txHost.tx.flashCardList.count({ where: where }),
 		]);
 
-		return {
-			lists: lists.map(list => this.mapToResponse(list)),
-			totalCount: totalCount,
-		};
+		return { lists: lists.map(toFlashCardListReadModel), totalCount: totalCount };
 	}
 
-	async addCardToList(data: resource.AddCardToListRequest): Promise<void> {
-		const list = await this.txHost.tx.flashCardList.findUnique({ where: { id: data.listId } });
-		if (!list) throw new NotFoundException('FlashCardList not found');
+	/**
+	 * Moves a card into this list (or within it) at `position`, a 0-based index in the list's current
+	 * order (`CARD_ORDER`), clamped to the end; no position appends. The list's cards are renumbered
+	 * 0..n-1 in their current order around it, so unplaced cards keep their place and the result is
+	 * gap-free. The list row is locked first, so concurrent moves into one list don't interleave.
+	 */
+	@Transactional()
+	async addCardToList(
+		listId: string,
+		flashCardId: string,
+		requester: Requester,
+		position?: number,
+	): Promise<void> {
+		await this.txHost.tx.$queryRaw`SELECT id FROM flash_card_lists WHERE id = ${listId} FOR UPDATE`;
+		const list = await this.findOwnedList(listId, requester);
 
-		const card = await this.txHost.tx.flashCard.findUnique({ where: { id: data.flashCardId } });
+		const card = await this.txHost.tx.flashCard.findUnique({ where: { id: flashCardId } });
 		if (!card) throw new NotFoundException('FlashCard not found');
+		if (card.authorId !== list.authorId) {
+			throw new ForbiddenException('Only cards by the list author can be moved into it');
+		}
+
+		const others = await this.txHost.tx.flashCard.findMany({
+			where: { listId: listId, id: { not: flashCardId } },
+			orderBy: CARD_ORDER,
+			select: { id: true, position: true },
+		});
+		const index = Math.min(position ?? others.length, others.length);
+		const renumbered = others
+			.map((c, i) => ({ id: c.id, from: c.position, to: i < index ? i : i + 1 }))
+			.filter(c => c.from !== c.to);
 
 		await this.txHost.tx.flashCard.update({
-			where: { id: data.flashCardId },
-			data: { listId: data.listId },
+			where: { id: flashCardId },
+			data: { listId: listId, position: index },
 		});
-	}
-
-	async removeCardFromList(data: resource.RemoveCardFromListRequest): Promise<void> {
-		// Here we could either delete the flashcard or set listId to null (but our schema makes listId required).
-		// Since listId is required, "removing a card from list" essentially means deleting the card.
-		// If we want to strictly just remove the reference, we need to make listId optional in schema.prisma.
-		// Let's assume for this implementation we just delete it from DB if it's removed from its list.
-		const card = await this.txHost.tx.flashCard.findFirst({
-			where: { id: data.flashCardId, listId: data.listId },
-		});
-		if (!card) throw new NotFoundException('Card not found in the specified list');
-
-		await this.txHost.tx.flashCard.delete({ where: { id: data.flashCardId } });
+		if (renumbered.length > 0) {
+			// One statement for the rest; raw, so reordering doesn't bump their `updatedAt`.
+			await this.txHost.tx.$executeRaw`
+				UPDATE flash_cards AS c SET position = v.position
+				FROM unnest(${renumbered.map(c => c.id)}::text[], ${renumbered.map(c => c.to)}::int[])
+					AS v(id, position)
+				WHERE c.id = v.id`;
+		}
 	}
 
 	async listCardsInList(
-		data: resource.ListCardsInListRequest,
-	): Promise<resource.ListFlashCardsResponse> {
-		const page = data.page || 1;
-		const limit = data.limit || 10;
-		const skip = (page - 1) * limit;
+		data: ListCardsInListInput,
+		requester: Requester,
+	): Promise<FlashCardListPageReadModel> {
+		const list = await this.txHost.tx.flashCardList.findFirst({
+			where: { id: data.listId, ...visibleListsWhere(requester) },
+			select: { id: true },
+		});
+		if (!list) throw new NotFoundException('FlashCardList not found');
 
+		const where: Prisma.FlashCardWhereInput = { listId: data.listId };
 		const [cards, totalCount] = await Promise.all([
 			this.txHost.tx.flashCard.findMany({
-				where: { listId: data.listId },
-				skip: skip,
-				take: limit,
-				orderBy: { createdAt: 'desc' },
+				where: where,
+				...toSkipTake(data),
+				orderBy: CARD_ORDER,
 			}),
-			this.txHost.tx.flashCard.count({ where: { listId: data.listId } }),
+			this.txHost.tx.flashCard.count({ where: where }),
 		]);
 
-		return {
-			flashCards: cards.map(card => this.mapCardToResponse(card)),
-			totalCount: totalCount,
-		};
+		const flashCards = cards.map(toFlashCardReadModel);
+		await this.imageUrls.resolve(flashCards);
+		return { flashCards: flashCards, totalCount: totalCount };
 	}
 }

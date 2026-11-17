@@ -1,5 +1,6 @@
 import { FindIdentitiesByPhoneQueryHandler } from './find-identities-by-phone.handler';
 import { FindIdentitiesQueryHandler } from './find-identities.handler';
+import { FindIdentityIdsByRoleQueryHandler } from './find-identity-ids-by-role.handler';
 import { FindIdentityIdsQueryHandler } from './find-identity-ids.handler';
 import { GetCredentialsQueryHandler } from './get-credentials.handler';
 import { GetGoogleCalendarTokenQueryHandler } from './get-google-calendar-token.handler';
@@ -12,6 +13,7 @@ export const AuthQueryHandlers = [
 	FindIdentitiesQueryHandler,
 	FindIdentitiesByPhoneQueryHandler,
 	FindIdentityIdsQueryHandler,
+	FindIdentityIdsByRoleQueryHandler,
 	GetRolesQueryHandler,
 	GetPermissionsQueryHandler,
 	GetCredentialsQueryHandler,

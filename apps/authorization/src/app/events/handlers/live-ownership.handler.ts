@@ -2,28 +2,37 @@ import {
 	type IOwnershipRepository,
 	IOwnershipRepositoryToken,
 } from '../../../domain/repositories/ownership.repository';
-import type { ResourceCreatedEvent } from '../integration-events';
+import { ResourceCreatedEvent, ResourceDeletedEvent } from '../integration-events';
+import { OWNERSHIP_QUEUES } from './ownership-queues';
 import { RabbitPayload, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
+import { Transactional } from '@nestjs-cls/transactional';
 import { Inject, Injectable, UseFilters } from '@nestjs/common';
 import { AppLoggerService } from '@server/logger';
-import { GlobalRmqExceptionFilter } from '@server/utils';
+import { InboxService, unwrapEvent } from '@server/messaging';
+import { GlobalRmqExceptionFilter, validatePayload } from '@server/utils';
+import { UseCls } from 'nestjs-cls';
 
 @Injectable()
 export class RoomCreatedHandler {
 	constructor(
 		@Inject(IOwnershipRepositoryToken) private readonly ownershipRepository: IOwnershipRepository,
+		private readonly inbox: InboxService,
 		private readonly logger: AppLoggerService,
 	) {}
 
 	@UseFilters(GlobalRmqExceptionFilter)
+	@UseCls()
 	@RabbitSubscribe({
 		connection: 'sub',
 		exchange: 'eventbus',
 		routingKey: 'live.room.created',
-		queue: 'authorization.events.room.created',
-		queueOptions: { durable: true },
+		...OWNERSHIP_QUEUES.roomCreated.subscribe,
 	})
-	async handle(@RabbitPayload() payload: ResourceCreatedEvent) {
+	@Transactional()
+	async handle(@RabbitPayload() message: unknown): Promise<void> {
+		const { id, payload: raw } = unwrapEvent<unknown>(message);
+		if (!(await this.inbox.claim(id, OWNERSHIP_QUEUES.roomCreated.name))) return;
+		const payload = await validatePayload(ResourceCreatedEvent, raw);
 		this.logger.debug(`Registering ownership: room ${payload.resourceId} -> ${payload.ownerId}`);
 		await this.ownershipRepository.registerOwnership('room', payload.resourceId, payload.ownerId);
 	}
@@ -33,18 +42,23 @@ export class RoomCreatedHandler {
 export class RoomDeletedHandler {
 	constructor(
 		@Inject(IOwnershipRepositoryToken) private readonly ownershipRepository: IOwnershipRepository,
+		private readonly inbox: InboxService,
 		private readonly logger: AppLoggerService,
 	) {}
 
 	@UseFilters(GlobalRmqExceptionFilter)
+	@UseCls()
 	@RabbitSubscribe({
 		connection: 'sub',
 		exchange: 'eventbus',
 		routingKey: 'live.room.deleted',
-		queue: 'authorization.events.room.deleted',
-		queueOptions: { durable: true },
+		...OWNERSHIP_QUEUES.roomDeleted.subscribe,
 	})
-	async handle(@RabbitPayload() payload: { resourceId: string }) {
+	@Transactional()
+	async handle(@RabbitPayload() message: unknown): Promise<void> {
+		const { id, payload: raw } = unwrapEvent<unknown>(message);
+		if (!(await this.inbox.claim(id, OWNERSHIP_QUEUES.roomDeleted.name))) return;
+		const payload = await validatePayload(ResourceDeletedEvent, raw);
 		this.logger.debug(`Removing ownership: room ${payload.resourceId}`);
 		await this.ownershipRepository.removeOwnership('room', payload.resourceId);
 	}

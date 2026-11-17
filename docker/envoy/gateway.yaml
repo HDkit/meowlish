@@ -21,6 +21,10 @@ static_resources:
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
                 stat_prefix: ingress_http
+                # write the real client IP into X-Forwarded-For (ignore a client-supplied one);
+                # the gateway trusts exactly this one hop (TRUST_PROXY=1)
+                use_remote_address: true
+                xff_num_trusted_hops: 0
                 upgrade_configs:
                   - upgrade_type: websocket
                 route_config:

@@ -12,4 +12,5 @@ export type IdentityReadModel = {
 
 export type HydratedIdentityReadModel = Omit<IdentityReadModel, 'permissions' | 'isLocked'> & {
 	phoneNumber?: string;
+	isDemo: boolean;
 };

@@ -1,7 +1,11 @@
+import { RequesterReqDto } from './requester.req.dto';
 import { resource } from '@server/generated';
-import { IsArray, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
 
-export class UpdateFlashCardReqDto implements resource.UpdateFlashCardRequest {
+export class UpdateFlashCardReqDto
+	extends RequesterReqDto
+	implements resource.UpdateFlashCardRequest
+{
 	@IsString()
 	id!: string;
 
@@ -13,9 +17,10 @@ export class UpdateFlashCardReqDto implements resource.UpdateFlashCardRequest {
 	@IsString()
 	definition?: string;
 
+	/** An uploaded file (file-service id); '' on update removes the image. */
 	@IsOptional()
 	@IsString()
-	image?: string;
+	imageFileId?: string;
 
 	@IsOptional()
 	@IsString()
@@ -36,4 +41,16 @@ export class UpdateFlashCardReqDto implements resource.UpdateFlashCardRequest {
 	@IsArray()
 	@IsString({ each: true })
 	tags!: string[];
+
+	@IsBoolean()
+	@IsOptional()
+	replaceExamples!: boolean;
+
+	@IsBoolean()
+	@IsOptional()
+	replaceTags!: boolean;
+
+	@IsBoolean()
+	@IsOptional()
+	mayAttachAnyFile?: boolean;
 }
