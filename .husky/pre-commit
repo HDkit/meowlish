@@ -1,2 +1,3 @@
 pnpm exec nx affected -t format, lint
-pnpm exec nx affected -t test
+# Lower priority so a commit on a busy host doesn't starve the running services.
+nice -n 10 pnpm exec nx affected -t test
