@@ -2,6 +2,14 @@
 
 What was fixed from [`backlog.md`](roadmap.md) (now [`roadmap.md`](roadmap.md)), and how. Newest first. Each entry says what was wrong, what changed (files), what it means for running systems, and how it is tested. The backlog row is deleted in the same commit as the fix.
 
+## Chat: a changed live URL needed a page reload (November 2026)
+
+- **Problem:** after `PATCH /chat/rooms/:roomId/schedule`, nobody in the room saw the new stream until they reloaded `/chat`: live saved the row and told no one. The frontend also kept the room it opened as a frozen copy, so even the moderator who changed the URL kept seeing the old one.
+- **Fix:** `RoomPrismaRepositoryImpl.updateRoomSchedule` returns the schedule as saved, and `ChatService.updateRoomSchedule` then calls `ChatGateway.announceRoomSchedule`, which emits socket.io `room-schedule` `{ roomId, scheduledLiveUrl, scheduledDate }` (null when cleared, ISO date) to the room; the Redis adapter delivers it from any replica. A missing room (404) announces nothing (`apps/live/src/domain/repositories/room.repository.ts`, `app/infra/repositories/room.prisma.repository.ts`, `app/services/chat.service.ts`, `app/services/chat.gateway.ts`). Docs: `flows/live-and-notification.md`.
+- **Frontend:** the open room keeps its own state, updated by the user's save and by `room-schedule` (`src/lib/room-schedule.ts`, `ChatPage.tsx`); the room list follows it.
+- **Deploy:** live, then the frontend. Either alone is harmless: an old frontend ignores the event, a new one without it still shows its own saves.
+- **Tests:** `apps/live/src/test/app/services/chat.service.update-room-schedule.spec.ts` (announces what was saved, null clears, nothing for a missing room), `chat.gateway.spec.ts` ("announceRoomSchedule"). Frontend: `src/lib/room-schedule.test.ts`. Checked on production with a temporary room (deleted afterwards): a viewer already in the room saw the new stream 91 ms after the change and lost it 40 ms after it was cleared, without reloading.
+
 ## Practice activity for any month or date range (November 2026)
 
 - **Problem:** "Hoạt động luyện tập" could only show the last 3 months, 6 months or year, always ending today. There was no way to look at a given month or at any start and end date.

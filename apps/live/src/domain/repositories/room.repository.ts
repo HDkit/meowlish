@@ -1,8 +1,12 @@
+/** A room's live-stream schedule as stored; null when not set. */
+export type RoomSchedule = { scheduledLiveUrl: string | null; scheduledTime: Date | null };
+
 export interface IRoomRepository {
+	/** Sets or clears the schedule (undefined leaves a field alone) and returns it as saved. */
 	updateRoomSchedule(
 		roomId: string,
 		options: { url?: string | null; time?: Date | null },
-	): Promise<void>;
+	): Promise<RoomSchedule>;
 	canJoinRoom(roomId: string, uid: string): Promise<boolean>;
 	/** Whether a `banneds` row exists for this user in this room. */
 	isBannedFrom(roomId: string, uid: string): Promise<boolean>;

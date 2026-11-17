@@ -213,4 +213,20 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect, On
 	closeRoom(roomId: string) {
 		this.server.in(roomId).socketsLeave(roomId);
 	}
+
+	/**
+	 * Tells everyone in the room (on every replica, through the Redis adapter) its new live-stream
+	 * schedule, as saved: `room-schedule` with `{ roomId, scheduledLiveUrl, scheduledDate }`, null
+	 * for a cleared field, the date as an ISO string.
+	 */
+	announceRoomSchedule(
+		roomId: string,
+		schedule: { scheduledLiveUrl: string | null; scheduledTime: Date | null },
+	) {
+		this.server.to(roomId).emit('room-schedule', {
+			roomId: roomId,
+			scheduledLiveUrl: schedule.scheduledLiveUrl,
+			scheduledDate: schedule.scheduledTime?.toISOString() ?? null,
+		});
+	}
 }

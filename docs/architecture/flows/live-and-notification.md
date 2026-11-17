@@ -86,7 +86,8 @@ Set or clear the scheduled live-stream URL and time.
 - **Flow**:
   1. Gateway `UpdateRoomScheduleDto { url?, time? (Date), setUrlNull?, setTimeNull? }`; a non-empty `url` must match `^https?://(www\.)?(youtube\.com|youtu\.be|twitch\.tv)/` or 400 (checked in the controller, not in live).
   2. → `live.ChatService/UpdateRoomSchedule` → `ChatService.updateRoomSchedule`: `setUrlNull`/`setTimeNull` turn into `null`, otherwise `undefined` leaves the column alone.
-  3. `RoomPrismaRepositoryImpl.updateRoomSchedule`: single `Room.update` where `{ id, isDeleted: false }` on `scheduled_live_url`, `scheduled_time`. No transaction, no event, no socket notification.
+  3. `RoomPrismaRepositoryImpl.updateRoomSchedule`: single `Room.update` where `{ id, isDeleted: false }` on `scheduled_live_url`, `scheduled_time`, returning both as saved. No transaction, no event.
+  4. Then `ChatGateway.announceRoomSchedule` emits socket.io `room-schedule` `{ roomId, scheduledLiveUrl, scheduledDate }` (null for a cleared field, the date as an ISO string) to the room, on every replica through the Redis adapter, so people already in the room see the new stream without reloading. A missing room (404) announces nothing.
 - **Errors**: 400 bad URL; 403 from the guard; admin on a missing or deleted room → 404 `Room not found` (Prisma P2025 mapped in the repository).
 
 ### POST /api/v1/chat/rooms/:roomId/ban

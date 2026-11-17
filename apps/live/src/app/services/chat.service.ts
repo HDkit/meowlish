@@ -155,10 +155,12 @@ export class ChatService {
 		roomId: string,
 		options: { url?: string; time?: Date; setUrlNull?: boolean; setTimeNull?: boolean },
 	): Promise<void> {
-		await this.roomRepository.updateRoomSchedule(roomId, {
+		const schedule = await this.roomRepository.updateRoomSchedule(roomId, {
 			url: options.setUrlNull ? null : options.url,
 			time: options.setTimeNull ? null : options.time,
 		});
+		// after the write: people already in the room see the new stream without reloading
+		this.chatGateway.announceRoomSchedule(roomId, schedule);
 	}
 
 	@Transactional()
