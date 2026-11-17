@@ -549,20 +549,24 @@ message UserStats {
 
 message GetUserActivityDto {
 	google.protobuf.StringValue          uid  = 1;
-	// how many UTC days back from today to return (default 182)
+	// how many UTC days back from today to return (default 182); not with from/to
 	optional google.protobuf.Int32Value days = 2;
+	// or an explicit range of UTC days, YYYY-MM-DD, both included (at most 371 days); both or neither
+	optional google.protobuf.StringValue from = 3;
+	optional google.protobuf.StringValue to   = 4;
 }
 
 // Finished attempts per UTC day. Streaks count consecutive UTC days with at least one finished
 // attempt, over the user's whole history.
 message UserActivity {
 	string       from           = 1; // first day of the range, YYYY-MM-DD (UTC)
-	string       to             = 2; // today, YYYY-MM-DD (UTC)
+	string       to             = 2; // last day of the range (today unless from/to were sent)
 	repeated Day days           = 3; // only days with activity, ascending
 	int32        current_streak = 4;
 	int32        longest_streak = 5;
 	int32        active_days    = 6; // all-time
 	int32        total_attempts = 7; // all-time
+	string       today          = 8; // YYYY-MM-DD (UTC); streaks are counted up to it
 
 	message Day {
 		string date     = 1;

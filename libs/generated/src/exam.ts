@@ -535,8 +535,13 @@ export interface GetUserActivityDto {
   uid:
     | string
     | undefined;
-  /** how many UTC days back from today to return (default 182) */
-  days?: number | undefined;
+  /** how many UTC days back from today to return (default 182); not with from/to */
+  days?:
+    | number
+    | undefined;
+  /** or an explicit range of UTC days, YYYY-MM-DD, both included (at most 371 days); both or neither */
+  from?: string | undefined;
+  to?: string | undefined;
 }
 
 /**
@@ -546,7 +551,7 @@ export interface GetUserActivityDto {
 export interface UserActivity {
   /** first day of the range, YYYY-MM-DD (UTC) */
   from: string;
-  /** today, YYYY-MM-DD (UTC) */
+  /** last day of the range (today unless from/to were sent) */
   to: string;
   /** only days with activity, ascending */
   days: UserActivity_Day[];
@@ -556,6 +561,8 @@ export interface UserActivity {
   activeDays: number;
   /** all-time */
   totalAttempts: number;
+  /** YYYY-MM-DD (UTC); streaks are counted up to it */
+  today: string;
 }
 
 export interface UserActivity_Day {
@@ -6059,6 +6066,12 @@ export const GetUserActivityDto: MessageFns<GetUserActivityDto> = {
     if (message.days !== undefined) {
       Int32Value.encode({ value: message.days! }, writer.uint32(18).fork()).join();
     }
+    if (message.from !== undefined) {
+      StringValue.encode({ value: message.from! }, writer.uint32(26).fork()).join();
+    }
+    if (message.to !== undefined) {
+      StringValue.encode({ value: message.to! }, writer.uint32(34).fork()).join();
+    }
     return writer;
   },
 
@@ -6091,6 +6104,22 @@ export const GetUserActivityDto: MessageFns<GetUserActivityDto> = {
             message.days = Int32Value.decode(reader, reader.uint32()).value;
             continue;
           }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.from = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.to = StringValue.decode(reader, reader.uint32()).value;
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -6105,7 +6134,7 @@ export const GetUserActivityDto: MessageFns<GetUserActivityDto> = {
 };
 
 function createBaseUserActivity(): UserActivity {
-  return { from: "", to: "", days: [], currentStreak: 0, longestStreak: 0, activeDays: 0, totalAttempts: 0 };
+  return { from: "", to: "", days: [], currentStreak: 0, longestStreak: 0, activeDays: 0, totalAttempts: 0, today: "" };
 }
 
 export const UserActivity: MessageFns<UserActivity> = {
@@ -6130,6 +6159,9 @@ export const UserActivity: MessageFns<UserActivity> = {
     }
     if (message.totalAttempts !== 0) {
       writer.uint32(56).int32(message.totalAttempts);
+    }
+    if (message.today !== "") {
+      writer.uint32(66).string(message.today);
     }
     return writer;
   },
@@ -6201,6 +6233,14 @@ export const UserActivity: MessageFns<UserActivity> = {
             }
 
             message.totalAttempts = reader.int32();
+            continue;
+          }
+          case 8: {
+            if (tag !== 66) {
+              break;
+            }
+
+            message.today = reader.string();
             continue;
           }
         }

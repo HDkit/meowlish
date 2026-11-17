@@ -258,6 +258,8 @@ export class ExamPracticeGatewayController implements OnModuleInit {
 		const res = this.examPracticeService.getUserActivity({
 			uid: request.user.sub,
 			days: query.days,
+			from: query.from,
+			to: query.to,
 		});
 		return res;
 	}

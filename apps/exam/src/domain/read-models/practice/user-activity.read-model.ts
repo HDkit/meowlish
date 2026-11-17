@@ -9,7 +9,10 @@ export type ActivityDayRow = {
 
 export type UserActivity = {
 	from: string;
+	/** last day of the range */
 	to: string;
+	/** the UTC day streaks are counted up to */
+	today: string;
 	days: { date: string; attempts: number; minutes: number }[];
 	currentStreak: number;
 	longestStreak: number;
@@ -22,6 +25,27 @@ const dayMs = 24 * 60 * 60 * 1000;
 /** YYYY-MM-DD of the UTC day containing `date`. */
 export function utcDayKey(date: Date): string {
 	return date.toISOString().slice(0, 10);
+}
+
+/** UTC days, YYYY-MM-DD, both included. */
+export type ActivityRange = { from: string; to: string };
+
+/** True for a real calendar day written YYYY-MM-DD (not 2026-02-30). */
+export function isDayKey(value: string): boolean {
+	if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+	const ms = Date.parse(`${value}T00:00:00Z`);
+	return !Number.isNaN(ms) && utcDayKey(new Date(ms)) === value;
+}
+
+/** Number of days in the range, both ends included. */
+export function rangeLength(range: ActivityRange): number {
+	return dayNumber(range.to) - dayNumber(range.from) + 1;
+}
+
+/** The `days` UTC days ending today (inclusive). */
+export function lastDays(now: Date, days: number): ActivityRange {
+	const to = utcDayKey(now);
+	return { from: utcDayKey(new Date(Date.parse(`${to}T00:00:00Z`) - (days - 1) * dayMs)), to: to };
 }
 
 function dayNumber(key: string): number {
@@ -50,22 +74,26 @@ export function computeStreaks(
 	return { current: sinceLast <= 1 ? run : 0, longest: longest };
 }
 
-/** Builds the activity view for the `rangeDays` UTC days ending today (inclusive). */
+/**
+ * The activity view for a range of UTC days: the days in the range, plus all-time totals and
+ * streaks counted up to today (whatever the range).
+ */
 export function buildUserActivity(
 	rows: ActivityDayRow[],
 	now: Date,
-	rangeDays: number,
+	range: ActivityRange,
 ): UserActivity {
-	const to = utcDayKey(now);
-	const from = utcDayKey(new Date(Date.parse(`${to}T00:00:00Z`) - (rangeDays - 1) * dayMs));
+	const { from, to } = range;
+	const today = utcDayKey(now);
 	const active = rows.filter(r => r.attempts > 0);
 	const streaks = computeStreaks(
 		active.map(r => r.date),
-		to,
+		today,
 	);
 	return {
 		from: from,
 		to: to,
+		today: today,
 		days: active
 			.filter(r => r.date >= from && r.date <= to)
 			.sort((a, b) => a.date.localeCompare(b.date))

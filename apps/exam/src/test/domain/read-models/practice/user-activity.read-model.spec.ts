@@ -1,6 +1,9 @@
 import {
 	buildUserActivity,
 	computeStreaks,
+	isDayKey,
+	lastDays,
+	rangeLength,
 	utcDayKey,
 } from '../../../../domain/read-models/practice/user-activity.read-model';
 
@@ -32,8 +35,13 @@ describe('buildUserActivity', () => {
 
 	it('uses UTC days for the range and today', () => {
 		expect(utcDayKey(new Date('2026-11-13T23:59:59Z'))).toBe('2026-11-13');
-		const activity = buildUserActivity([], now, 7);
-		expect(activity).toMatchObject({ from: '2026-11-07', to: '2026-11-13', days: [] });
+		const activity = buildUserActivity([], now, lastDays(now, 7));
+		expect(activity).toMatchObject({
+			from: '2026-11-07',
+			to: '2026-11-13',
+			today: '2026-11-13',
+			days: [],
+		});
 	});
 
 	it('returns only in-range active days, but all-time totals and streaks', () => {
@@ -44,7 +52,7 @@ describe('buildUserActivity', () => {
 				{ date: '2026-11-13', attempts: 3, seconds: 3600 },
 			],
 			now,
-			30,
+			lastDays(now, 30),
 		);
 		expect(activity.days).toEqual([
 			{ date: '2026-11-12', attempts: 1, minutes: 1 },
@@ -56,5 +64,37 @@ describe('buildUserActivity', () => {
 			activeDays: 3,
 			totalAttempts: 6,
 		});
+	});
+});
+
+describe('activity ranges', () => {
+	const now = new Date('2026-11-13T22:30:00Z');
+	const rows = [
+		{ date: '2025-12-31', attempts: 1, seconds: 60 },
+		{ date: '2026-01-01', attempts: 2, seconds: 600 },
+		{ date: '2026-01-31', attempts: 1, seconds: 120 },
+		{ date: '2026-02-01', attempts: 1, seconds: 60 },
+		{ date: '2026-11-13', attempts: 1, seconds: 60 },
+	];
+
+	it('returns only the days of a past range, with streaks still counted up to today', () => {
+		const activity = buildUserActivity(rows, now, { from: '2026-01-01', to: '2026-01-31' });
+		expect(activity.days.map(d => d.date)).toEqual(['2026-01-01', '2026-01-31']);
+		expect(activity).toMatchObject({
+			from: '2026-01-01',
+			to: '2026-01-31',
+			today: '2026-11-13',
+			currentStreak: 1,
+			activeDays: 5,
+			totalAttempts: 6,
+		});
+	});
+
+	it('checks day keys and counts both ends', () => {
+		expect(isDayKey('2026-02-28')).toBe(true);
+		expect(isDayKey('2026-02-30')).toBe(false);
+		expect(isDayKey('2026-2-1')).toBe(false);
+		expect(rangeLength({ from: '2026-01-01', to: '2026-01-31' })).toBe(31);
+		expect(rangeLength(lastDays(now, 371))).toBe(371);
 	});
 });

@@ -421,7 +421,7 @@ All require a signed-in user. `uid` is `req.user.sub`.
   - Filters: `examId`. Sort by `endedAt`, `startedAt`, `examId` or `score`. `limit` defaults to 10, at most 100.
   - Returns `AttemptsHistoryDto`, which includes each attempt's `score`.
 - `GET /api/v1/exams/practice/my/stats`: `getUserStats`. Raw SQL over `attempts` (count, average percentage) plus per-tag accuracy over `attempt_responses` ⋈ `questions` ⋈ `question_tags` ⋈ `tags`. Returns `UserStatsDto`.
-- `GET /api/v1/exams/practice/my/activity?days`: `GetUserActivityQueryHandler`. `days` is 1-371 (default 182) and is clamped again in the handler. Daily counts and streaks over UTC days from `attempts.ended_at`. Returns `UserActivityDto`.
+- `GET /api/v1/exams/practice/my/activity?days` or `?from&to`: `GetUserActivityQueryHandler`. Either `days` (1-371, default 182, clamped again in the handler) for the days ending today, or `from` and `to` (UTC days `YYYY-MM-DD`, both included, at most 371 days, any dates including the past) for an explicit range. 400 when both kinds are sent, only one end is sent, a day is not a real date, or `from > to`. Daily counts over UTC days from `attempts.ended_at` for the range; streaks and all-time totals are always counted up to today. Returns `UserActivityDto` (`from`/`to` = the range, `today`).
 - `GET /api/v1/exams/practice/my/skills`: `GetUserSkillStatsQueryHandler`. Looks at the latest 100 finished attempts and maps skills through `tag_skills` on exam, section and question tags. Returns `UserSkillStatsDto`.
 
 ## Tags (`TagGatewayController`)
