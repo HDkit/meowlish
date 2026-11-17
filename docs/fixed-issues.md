@@ -2,6 +2,14 @@
 
 What was fixed from [`backlog.md`](roadmap.md) (now [`roadmap.md`](roadmap.md)), and how. Newest first. Each entry says what was wrong, what changed (files), what it means for running systems, and how it is tested. The backlog row is deleted in the same commit as the fix.
 
+## Public blogs (November 2026)
+
+- **Problem:** every blog route needed a session, so visitors who were not signed in could not read the blog at all (the frontend sent /blog to the login page).
+- **Fix:** the four blog reads are `@IsPublic()`: `GET /resources/blogs`, `GET /resources/blogs/tags`, `GET /resources/blogs/:id` and `GET /resources/blogs/:id/comments` (`apps/gateway/src/resource-gateway/resource.router.controller.ts`). None of them sends a requester, and blogs have no private state, so nothing new is exposed. Writing blogs and comments still needs a session. Author names already come from the public `GET /auth/hydrate-many`. Docs: `flows/resource.md`.
+- **Frontend:** `/blog` and `/blog/<id>` are public in the middleware (`/blog-management` stays protected). Anonymous visitors get "Đăng nhập để bình luận" and "Trả lời" links to `/auth?mode=login&next=<post>#comments-heading`. Login, register and Google login (through sessionStorage) return to `next`, accepted only as a path on the site (`src/lib/login-redirect.ts`). The sidebar offers "Đăng nhập" instead of the account and logout entries.
+- **Deploy:** gateway, then the frontend. An old gateway with the new frontend shows anonymous visitors an error on /blog.
+- **Tests:** gateway `resource.router.controller.spec.ts` ("blog visibility": reads public, writes not). Frontend: `src/lib/login-redirect.test.ts` (open redirects, auth pages).
+
 ## Flash card images in file-service (November 2026)
 
 - **Problem:** a flash card's image was a free URL string (`flash_cards.image`). Users could not upload a picture, any external URL was hot-linked (the frontend showed it only when it started with `http(s)://`), and nothing checked or cleaned it up.

@@ -1,3 +1,4 @@
+import { IsPublic } from '../auth/decorators/public.decorator';
 import { ResourceAccess } from '../auth/decorators/resource-access.decorator';
 import { HasRoles } from '../auth/decorators/roles.decorator';
 import { hasAnyRole, requesterOf } from '../auth/functions/requester';
@@ -103,6 +104,7 @@ export class ResourceGatewayController implements OnModuleInit {
 
 	// before 'blogs/:id', so "tags" isn't taken for an id
 	@Get('blogs/tags')
+	@IsPublic()
 	@ApiOperation({ summary: 'List every tag used by blog posts, most used first' })
 	@ApiResponseEntity(ListBlogTagsDto)
 	@SerializeOptions({ type: ListBlogTagsDto, strategy: 'exposeAll' })
@@ -111,6 +113,7 @@ export class ResourceGatewayController implements OnModuleInit {
 	}
 
 	@Get('blogs/:id')
+	@IsPublic()
 	@ApiOperation({ summary: 'Get a blog post by ID or slug' })
 	@ApiResponseEntity(BlogDto)
 	@SerializeOptions({ type: BlogDto, strategy: 'exposeAll' })
@@ -156,6 +159,7 @@ export class ResourceGatewayController implements OnModuleInit {
 	}
 
 	@Get('blogs')
+	@IsPublic()
 	@ApiOperation({ summary: 'List blog posts' })
 	@ApiResponseEntity(ListBlogsDto)
 	@SerializeOptions({ type: ListBlogsDto, strategy: 'exposeAll' })
@@ -166,6 +170,7 @@ export class ResourceGatewayController implements OnModuleInit {
 	// ── Blog comments ────────────────────────────────────────────────────────
 
 	@Get('blogs/:id/comments')
+	@IsPublic()
 	@ApiOperation({
 		summary: 'List comments of a blog post by ID or slug (top-level paged, with nested replies)',
 	})
